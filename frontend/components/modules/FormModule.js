@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Use environment variable or default to localhost for development
@@ -15,9 +15,120 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
     const [answers, setAnswers] = useState({}); // { [stepId]: value }
     const [submitting, setSubmitting] = useState(false);
     const [completed, setCompleted] = useState(false);
+    const [templates, setTemplates] = useState([]);
+    const [showTemplateModal, setShowTemplateModal] = useState(false);
+    const [loadingTemplates, setLoadingTemplates] = useState(false);
 
     const currentStep = timeline[currentStepIndex];
     const isLastStep = currentStepIndex === timeline.length - 1;
+
+    // Fetch templates on mount
+    useEffect(() => {
+        fetchTemplates();
+    }, []);
+
+    const fetchTemplates = async () => {
+        setLoadingTemplates(true);
+        try {
+            const response = await fetch(`${API_URL}/templates`);
+            if (response.ok) {
+                const data = await response.json();
+                setTemplates(data);
+            } else {
+                console.error('Failed to fetch templates');
+            }
+        } catch (error) {
+            console.error('Error fetching templates:', error);
+        } finally {
+            setLoadingTemplates(false);
+        }
+    };
+
+    const handleCloseTemplateModal = () => {
+        setShowTemplateModal(false);
+    };
+
+    const handleShowTemplateModal = () => {
+        setShowTemplateModal(true);
+    };
+
+    const handleLoadTemplate = (template) => {
+        // Load template data into answers
+        if (template.data && template.data.answers) {
+            setAnswers(prev => ({ ...prev, ...template.data.answers }));
+        }
+        setShowTemplateModal(false);
+        Alert.alert('Success', 'Template loaded successfully!');
+    };
+
+    const handleDeleteTemplate = async (id, name) => {
+        Alert.alert(
+            "Delete Template",
+            `Are you sure you want to delete "${name}"?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const response = await fetch(`${API_URL}/templates/${id}`, {
+                                method: 'DELETE',
+                            });
+                            if (response.ok) {
+                                fetchTemplates();
+                            } else {
+                                Alert.alert("Error", "Failed to delete template.");
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert("Error", "Failed to delete template.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const renderTemplateModal = () => {
+        if (!showTemplateModal) return null;
+
+        return (
+            <Modal
+                visible={showTemplateModal}
+                transparent
+                animationType="fade"
+                onRequestClose={handleCloseTemplateModal}
+            >
+                <View style={styles.dialogOverlay}>
+                    <View style={styles.dialog}>
+                        <Text style={styles.dialogTitle}>Load from Template</Text>
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            {loadingTemplates ? (
+                                <ActivityIndicator size="small" color="#007AFF" />
+                            ) : templates.map(t => (
+                                <View key={t.id} style={styles.templateItemWrapper}>
+                                    <TouchableOpacity style={styles.templateItem} onPress={() => handleLoadTemplate(t)}>
+                                        <Text style={styles.templateItemName}>{t.name}</Text>
+                                        <Text style={styles.templateItemDesc}>{t.description}</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.deleteTemplateBtn} onPress={() => handleDeleteTemplate(t.id, t.name)}>
+                                        <Ionicons name="trash-outline" size={20} color="#FF453A" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                            {!loadingTemplates && templates.length === 0 && (
+                                <Text style={{ color: '#666', textAlign: 'center', padding: 20 }}>No templates found.</Text>
+                            )}
+                        </ScrollView>
+                        <TouchableOpacity style={styles.dialogCloseBtn} onPress={handleCloseTemplateModal}>
+                            <Text style={styles.dialogCloseText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
 
     const handleNext = async () => {
         if (currentStep.type === 'field') {
@@ -133,6 +244,8 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
 
     return (
         <View style={styles.container}>
+            {renderTemplateModal()}
+
             <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${((currentStepIndex + 1) / timeline.length) * 100}%` }]} />
             </View>
@@ -170,6 +283,12 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Template Load Button */}
+            <TouchableOpacity style={styles.templateButton} onPress={handleShowTemplateModal}>
+                <Ionicons name="folder-open-outline" size={18} color="#007AFF" />
+                <Text style={styles.templateButtonText}>Load Template</Text>
+            </TouchableOpacity>
         </View>
     );
 }
@@ -267,7 +386,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         padding: 20,
         gap: 12,
-        // backgroundColor: '#121212', // Optional: background for sticky footer
     },
     backButton: {
         flex: 1,
@@ -289,6 +407,80 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     nextButtonText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    templateButton: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+        borderRadius: 8,
+    },
+    templateButtonText: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 6,
+    },
+    dialogOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    dialog: {
+        backgroundColor: '#1E1E1E',
+        borderRadius: 20,
+        padding: 24,
+        width: '85%',
+        maxWidth: 400,
+    },
+    dialogTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#FFF',
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    templateItemWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    templateItem: {
+        flex: 1,
+        backgroundColor: '#2C2C2C',
+        borderRadius: 12,
+        padding: 16,
+    },
+    templateItemName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFF',
+    },
+    templateItemDesc: {
+        fontSize: 14,
+        color: '#888',
+        marginTop: 4,
+    },
+    deleteTemplateBtn: {
+        padding: 8,
+        marginLeft: 8,
+    },
+    dialogCloseBtn: {
+        marginTop: 16,
+        padding: 16,
+        backgroundColor: '#333',
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    dialogCloseText: {
         color: '#FFF',
         fontSize: 16,
         fontWeight: '600',
