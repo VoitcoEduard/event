@@ -35,19 +35,28 @@ export default function AdminScreen({ onNavigate, setEvent }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [editingId, setEditingId] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         fetchEvents();
     }, []);
 
     const fetchEvents = async () => {
+        setIsLoading(true);
         try {
             const response = await fetch(`${API_URL}/events`);
             const data = await response.json();
-            setEvents(data || []);
+            if (Array.isArray(data)) {
+                setEvents(data);
+            } else {
+                console.error('Fetched data is not an array:', data);
+                setEvents([]);
+            }
         } catch (error) {
             console.error('Error fetching events:', error);
             Alert.alert('Error', 'Failed to fetch events');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -181,17 +190,23 @@ export default function AdminScreen({ onNavigate, setEvent }) {
                 <Text style={styles.sectionTitle}>Upcoming Events</Text>
 
                 <View style={styles.eventsGrid}>
-                    {events.map((event) => (
-                        <EventCard
-                            key={event.id}
-                            event={event}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onViewDetails={handleViewDetails}
-                        />
-                    ))}
-                    {events.length === 0 && (
-                        <Text style={styles.emptyText}>No events found. Create one above!</Text>
+                    {isLoading ? (
+                        <Text style={styles.emptyText}>Loading events...</Text>
+                    ) : (
+                        <>
+                            {events.map((event) => (
+                                <EventCard
+                                    key={event.id}
+                                    event={event}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDelete}
+                                    onViewDetails={handleViewDetails}
+                                />
+                            ))}
+                            {events.length === 0 && (
+                                <Text style={styles.emptyText}>No events found. Create one above!</Text>
+                            )}
+                        </>
                     )}
                 </View>
 

@@ -352,46 +352,27 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
 
                     {/* Add Module Form (Inline for now) */}
                     {moduleModalVisible && (
-                        <View style={styles.addModuleForm}>
-                            <Text style={styles.formTitle}>Add New Module</Text>
-                            <Text style={styles.label}>Module Type</Text>
-                            <View style={styles.typeSelector}>
-                                <TouchableOpacity style={[styles.typeOption, styles.selectedType]}>
-                                    <Text style={styles.typeOptionText}>Form / Survey</Text>
+                        <View style={styles.addModuleContainer}>
+                            <View style={styles.addModuleHeader}>
+                                <Text style={styles.formTitle}>Select a Module</Text>
+                                <TouchableOpacity onPress={() => setModuleModalVisible(false)}>
+                                    <Text style={{ color: '#AAA', fontSize: 20 }}>✕</Text>
                                 </TouchableOpacity>
                             </View>
 
-                            <Text style={styles.label}>Module Name</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g. Feedback Form"
-                                placeholderTextColor="#666"
-                                value={newModuleName}
-                                onChangeText={setNewModuleName}
-                            />
-
-                            <Text style={styles.label}>Question</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g. What did you like most?"
-                                placeholderTextColor="#666"
-                                value={newModuleQuestion}
-                                onChangeText={setNewModuleQuestion}
-                            />
-
-                            <View style={styles.formActions}>
-                                <TouchableOpacity
-                                    style={styles.cancelButton}
-                                    onPress={() => setModuleModalVisible(false)}
-                                >
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.saveButton}
-                                    onPress={handleAddModule}
-                                >
-                                    <Text style={styles.saveButtonText}>Add Module</Text>
-                                </TouchableOpacity>
+                            <View style={styles.moduleTypeGrid}>
+                                {[
+                                    { id: 'form', title: 'Form / Survey', icon: '📝', desc: 'Collect structured feedback.' },
+                                    { id: 'poll', title: 'Live Poll', icon: '📊', desc: 'Real-time voting.' },
+                                    { id: 'qa', title: 'Q&A', icon: '❓', desc: 'Upvote questions.' },
+                                    { id: 'quiz', title: 'Quiz', icon: '🏆', desc: 'Competitions.' }
+                                ].map((item) => (
+                                    <TouchableOpacity key={item.id} style={styles.moduleTypeCard}>
+                                        <Text style={styles.moduleTypeIcon}>{item.icon}</Text>
+                                        <Text style={styles.moduleTypeTitle}>{item.title}</Text>
+                                        <Text style={styles.moduleTypeDesc}>{item.desc}</Text>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
                         </View>
                     )}
@@ -785,6 +766,52 @@ const styles = StyleSheet.create({
     typeOptionText: {
         color: '#FFF',
         fontWeight: '600',
+    },
+    addModuleContainer: {
+        marginTop: 20,
+        backgroundColor: '#252525',
+        padding: 24,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    addModuleHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    moduleTypeGrid: {
+        flexDirection: 'row',
+        gap: 16,
+        flexWrap: 'wrap',
+    },
+    moduleTypeCard: {
+        backgroundColor: '#333',
+        borderRadius: 12,
+        padding: 20,
+        flex: 1,
+        minWidth: 140,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#444',
+    },
+    moduleTypeIcon: {
+        fontSize: 32,
+        marginBottom: 12,
+    },
+    moduleTypeTitle: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '700',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    moduleTypeDesc: {
+        color: '#888',
+        fontSize: 12,
+        textAlign: 'center',
+        lineHeight: 16,
     },
     formActions: {
         flexDirection: 'row',
