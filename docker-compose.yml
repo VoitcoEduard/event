@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MONGO_URI=mongodb://mongo:27017
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+      # Expose additional ports if needed for development/tunneling
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CI=true
+      - WEB_PORT=8081
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
