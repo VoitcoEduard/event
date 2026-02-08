@@ -49,6 +49,21 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/templates", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		switch r.Method {
+		case "GET":
+			handlers.GetTemplates(w, r)
+		case "POST":
+			handlers.SaveTemplate(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	http.HandleFunc("/events/", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 		if r.Method == "OPTIONS" {
@@ -66,6 +81,13 @@ func main() {
 		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/status") {
 			if r.Method == "PUT" {
 				handlers.UpdateModuleStatus(w, r)
+				return
+			}
+		}
+
+		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/publish") {
+			if r.Method == "PUT" {
+				handlers.PublishModule(w, r)
 				return
 			}
 		}

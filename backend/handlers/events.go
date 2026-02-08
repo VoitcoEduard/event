@@ -29,6 +29,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	event.ID = generateID()
 	event.IsActive = false // Default to inactive
 	event.CreatedAt = time.Now()
+	event.Modules = []models.Module{} // Initialize as empty array to avoid null in DB
 
 	collection := db.GetCollection("events")
 	_, err := collection.InsertOne(context.Background(), event)
@@ -200,16 +201,37 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 	}
 	id := path[len(prefix) : len(path)-len(suffix)]
 
-	var module models.Module
-	if err := json.NewDecoder(r.Body).Decode(&module); err != nil {
+	// Use a temporary struct to parse the incoming JSON more flexibly
+	var input struct {
+		Type string         `json:"type"`
+		Name string         `json:"name"`
+		Data map[string]any `json:"data"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	module.ID = generateID() // Simple ID generation
-	module.Status = models.ModuleStatusPending
+	// Create the module with proper type conversion
+	module := models.Module{
+		ID:     generateID(),
+		Type:   models.ModuleType(input.Type),
+		Name:   input.Name,
+		Status: models.ModuleStatusPending,
+		Data:   make(map[string]any),
+	}
+
+	// Copy data if provided
+	if input.Data != nil {
+		module.Data = input.Data
+	}
 
 	collection := db.GetCollection("events")
+
+	// Pre-check/Fix: Ensure modules array is initialized if it's currently null
+	// This fixes existing events where modules might be null
+	_, _ = collection.UpdateOne(context.Background(), bson.M{"_id": id, "modules": nil}, bson.M{"$set": bson.M{"modules": []models.Module{}}})
+
 	filter := bson.M{"_id": id}
 	update := bson.M{"$push": bson.M{"modules": module}}
 
@@ -276,6 +298,118 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Module status updated"})
+}
+
+func SaveTemplate(w http.ResponseWriter, r *http.Request) {
+	var template models.Template
+	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if template.Name == "" {
+		http.Error(w, "Template name is required", http.StatusBadRequest)
+		return
+	}
+
+	template.ID = generateID() // Simple ID, or use UUID in real app
+	template.CreatedAt = time.Now()
+
+	collection := db.GetCollection("templates")
+	_, err := collection.InsertOne(context.Background(), template)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(template)
+}
+
+func GetTemplates(w http.ResponseWriter, r *http.Request) {
+	collection := db.GetCollection("templates")
+	cursor, err := collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var templates []models.Template
+	if err := cursor.All(context.Background(), &templates); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(templates)
+}
+
+// PublishModule finalizes configuration and makes it ready (conceptually "creates table")
+func PublishModule(w http.ResponseWriter, r *http.Request) {
+	// URL: /events/{id}/modules/{moduleId}/publish
+	path := r.URL.Path
+	parts := make([]string, 0)
+	current := ""
+	for _, c := range path {
+		if c == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+	// Expected: ["events", "123456", "modules", "654321", "publish"]
+	if len(parts) < 5 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	eventID := parts[1]
+	moduleID := parts[3]
+
+	var input struct {
+		Data map[string]any `json:"data"` // Final configuration data
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("events")
+	filter := bson.M{"_id": eventID, "modules.id": moduleID}
+
+	// Determine status. If we are "publishing", maybe we set it to active immediately,
+	// or just "ready". For now, let's keep it 'pending' until manually activated,
+	// OR assume publishing means "configuration done".
+	// The user prompt says: "when configuraiton ... confirmed ... create table".
+	// And "when admin set module active ... invite appears".
+	// So this step is "Confirmation".
+
+	update := bson.M{
+		"$set": bson.M{
+			"modules.$.data": input.Data,
+			// We could add a specific flag like modules.$.configured = true
+		},
+	}
+
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if result.MatchedCount == 0 {
+		http.Error(w, "Event or Module not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Module published/configured"})
 }
 
 func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {

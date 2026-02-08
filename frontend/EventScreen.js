@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import FormModule from './components/modules/FormModule';
 
 const API_URL = 'http://localhost:8080';
 
 export default function EventScreen({ event, onNavigate, userId }) {
     const [currentEvent, setCurrentEvent] = useState(event);
-    const [activeModule, setActiveModule] = useState(null);
+    const [activeModules, setActiveModules] = useState([]);
+    const [selectedModule, setSelectedModule] = useState(null);
 
     useEffect(() => {
         if (!event?.id) return;
@@ -20,14 +22,10 @@ export default function EventScreen({ event, onNavigate, userId }) {
                     const data = await response.json();
                     setCurrentEvent(data);
 
-                    // Check for active module
+                    // Check for active modules
                     if (data.modules) {
-                        const active = data.modules.find(m => m.status === 'active');
-                        // Only update if changed to avoid re-renders
-                        setActiveModule(prev => {
-                            if (prev?.id === active?.id && prev?.status === active?.status) return prev;
-                            return active || null;
-                        });
+                        const active = data.modules.filter(m => m.status === 'active');
+                        setActiveModules(active);
                     }
                 }
             } catch (error) {
@@ -38,6 +36,15 @@ export default function EventScreen({ event, onNavigate, userId }) {
         return () => clearInterval(interval);
     }, [event?.id]);
 
+    const handleModuleComplete = () => {
+        // Optionally remove from list or just show completed state within module
+        // For now, we keep it selected but FormModule shows "Thank you"
+        // Or we can deselect after a delay
+        setTimeout(() => {
+            setSelectedModule(null);
+        }, 2000);
+    };
+
     if (!currentEvent) {
         return (
             <View style={styles.container}>
@@ -45,6 +52,30 @@ export default function EventScreen({ event, onNavigate, userId }) {
                 <TouchableOpacity onPress={() => onNavigate('main')} style={styles.backButton}>
                     <Text style={styles.backButtonText}>Go Back</Text>
                 </TouchableOpacity>
+            </View>
+        );
+    }
+
+    if (selectedModule) {
+        return (
+            <View style={styles.container}>
+                <StatusBar style="light" />
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => setSelectedModule(null)} style={styles.backLink}>
+                        <Ionicons name="arrow-back" size={24} color="#FFF" />
+                        <Text style={styles.backLinkText}>Back to Event</Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.moduleWrapper}>
+                    {selectedModule.type === 'form' && (
+                        <FormModule
+                            module={selectedModule}
+                            eventId={currentEvent.id}
+                            userId={userId}
+                            onComplete={handleModuleComplete}
+                        />
+                    )}
+                </View>
             </View>
         );
     }
@@ -58,24 +89,37 @@ export default function EventScreen({ event, onNavigate, userId }) {
                     <Text style={styles.eventName}>{currentEvent.name}</Text>
                 </View>
 
-                {activeModule ? (
-                    <View style={styles.moduleContainer}>
-                        {activeModule.type === 'form' && (
-                            <FormModule
-                                module={activeModule}
-                                eventId={currentEvent.id}
-                                userId={userId}
-                            />
-                        )}
-                        {/* Add other module types here */}
-                    </View>
-                ) : (
-                    <View style={styles.card}>
-                        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
-                        <Text style={styles.message}>Waiting for host to start the next activity...</Text>
-                        <Text style={styles.subMessage}>Sit tight and get ready!</Text>
-                    </View>
-                )}
+                <View style={styles.listContainer}>
+                    {activeModules.length > 0 ? (
+                        <>
+                            <Text style={styles.sectionTitle}>Active Activities</Text>
+                            {activeModules.map(module => (
+                                <TouchableOpacity
+                                    key={module.id}
+                                    style={styles.moduleCard}
+                                    onPress={() => setSelectedModule(module)}
+                                >
+                                    <View style={styles.iconContainer}>
+                                        <Text style={styles.moduleIcon}>
+                                            {module.type === 'form' ? '📝' : '📊'}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.moduleInfo}>
+                                        <Text style={styles.moduleTitle}>{module.name}</Text>
+                                        <Text style={styles.moduleSubtitle}>Tap to start</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={24} color="#666" />
+                                </TouchableOpacity>
+                            ))}
+                        </>
+                    ) : (
+                        <View style={styles.waitingCard}>
+                            <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
+                            <Text style={styles.message}>Waiting for host to start the next activity...</Text>
+                            <Text style={styles.subMessage}>Sit tight and get ready!</Text>
+                        </View>
+                    )}
+                </View>
 
                 <TouchableOpacity
                     style={styles.leaveButton}
@@ -91,7 +135,7 @@ export default function EventScreen({ event, onNavigate, userId }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#121212', // Dark theme matching admin
+        backgroundColor: '#121212',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -99,10 +143,13 @@ const styles = StyleSheet.create({
         width: '90%',
         maxWidth: 400,
         alignItems: 'center',
+        flex: 1,
+        paddingTop: 60,
     },
     header: {
         marginBottom: 40,
         alignItems: 'center',
+        width: '100%',
     },
     statusText: {
         color: '#888',
@@ -117,7 +164,55 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         textAlign: 'center',
     },
-    card: {
+    listContainer: {
+        width: '100%',
+        flex: 1,
+    },
+    sectionTitle: {
+        color: '#888',
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 16,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    moduleCard: {
+        backgroundColor: '#1E1E1E',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: '#333',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    moduleIcon: {
+        fontSize: 24,
+    },
+    moduleInfo: {
+        flex: 1,
+    },
+    moduleTitle: {
+        color: '#FFF',
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    moduleSubtitle: {
+        color: '#30D158',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    waitingCard: {
         backgroundColor: '#1E1E1E',
         borderRadius: 20,
         padding: 40,
@@ -126,10 +221,6 @@ const styles = StyleSheet.create({
         marginBottom: 40,
         borderWidth: 1,
         borderColor: '#333',
-    },
-    moduleContainer: {
-        width: '100%',
-        marginBottom: 40,
     },
     loader: {
         marginBottom: 20,
@@ -154,6 +245,7 @@ const styles = StyleSheet.create({
         borderColor: '#333',
         width: '100%',
         alignItems: 'center',
+        marginBottom: 40,
     },
     leaveButtonText: {
         color: '#FF453A',
@@ -172,4 +264,22 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontSize: 16,
     },
+    backLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        padding: 16,
+        marginBottom: 10,
+    },
+    backLinkText: {
+        color: '#FFF',
+        fontSize: 16,
+        marginLeft: 8,
+    },
+    moduleWrapper: {
+        flex: 1,
+        width: '100%',
+        maxWidth: 600,
+        paddingHorizontal: 20,
+    }
 });
