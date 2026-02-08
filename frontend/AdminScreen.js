@@ -4,14 +4,27 @@ import { StatusBar } from 'expo-status-bar';
 
 const API_URL = 'http://localhost:8080';
 
-const EventCard = ({ event, onEdit, onDelete }) => (
+const EventCard = ({ event, onEdit, onDelete, onToggleStatus }) => (
     <View style={styles.eventCard}>
         <View style={styles.cardHeader}>
-            <Text style={styles.eventName}>{event.name}</Text>
-            <Text style={styles.eventId}>ID: {event.id}</Text>
+            <View>
+                <Text style={styles.eventName}>{event.name}</Text>
+                <Text style={styles.eventId}>ID: {event.id}</Text>
+            </View>
+            <View style={[styles.statusBadge, event.isActive ? styles.statusActive : styles.statusInactive]}>
+                <Text style={styles.statusText}>{event.isActive ? 'ACTIVE' : 'INACTIVE'}</Text>
+            </View>
         </View>
         <Text style={styles.eventDescription}>{event.description}</Text>
         <View style={styles.cardActions}>
+            <TouchableOpacity
+                style={[styles.cardAction, event.isActive ? styles.deactivateAction : styles.activateAction]}
+                onPress={() => onToggleStatus(event)}
+            >
+                <Text style={[styles.cardActionText, event.isActive ? styles.deactivateText : styles.activateText]}>
+                    {event.isActive ? 'Stop Event' : 'Start Event'}
+                </Text>
+            </TouchableOpacity>
             <TouchableOpacity style={[styles.cardAction, styles.editAction]} onPress={() => onEdit(event)}>
                 <Text style={styles.cardActionText}>Edit</Text>
             </TouchableOpacity>
@@ -40,6 +53,25 @@ export default function AdminScreen({ onNavigate }) {
         } catch (error) {
             console.error('Error fetching events:', error);
             Alert.alert('Error', 'Failed to fetch events');
+        }
+    };
+
+    const handleToggleStatus = async (event) => {
+        try {
+            const response = await fetch(`${API_URL}/events/${event.id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive: !event.isActive }),
+            });
+
+            if (response.ok) {
+                fetchEvents();
+            } else {
+                Alert.alert('Error', 'Failed to update status');
+            }
+        } catch (error) {
+            console.error('Error updating status:', error);
+            Alert.alert('Error', 'Failed to update status');
         }
     };
 
@@ -171,6 +203,7 @@ export default function AdminScreen({ onNavigate }) {
                             event={event}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
+                            onToggleStatus={handleToggleStatus}
                         />
                     ))}
                     {events.length === 0 && (
@@ -319,6 +352,22 @@ const styles = StyleSheet.create({
         color: '#666',
         fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     },
+    statusBadge: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 4,
+    },
+    statusActive: {
+        backgroundColor: 'rgba(48, 209, 88, 0.2)',
+    },
+    statusInactive: {
+        backgroundColor: 'rgba(255, 69, 58, 0.2)',
+    },
+    statusText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#FFF',
+    },
     eventDescription: {
         fontSize: 15,
         color: '#AAAAAA',
@@ -328,6 +377,7 @@ const styles = StyleSheet.create({
     cardActions: {
         flexDirection: 'row',
         gap: 12,
+        flexWrap: 'wrap',
     },
     cardAction: {
         paddingVertical: 8,
@@ -343,10 +393,24 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 59, 48, 0.1)',
         borderColor: 'rgba(255, 59, 48, 0.3)',
     },
+    activateAction: {
+        backgroundColor: 'rgba(48, 209, 88, 0.1)',
+        borderColor: 'rgba(48, 209, 88, 0.3)',
+    },
+    deactivateAction: {
+        backgroundColor: 'rgba(255, 179, 64, 0.1)',
+        borderColor: 'rgba(255, 179, 64, 0.3)',
+    },
     cardActionText: {
         color: '#FFFFFF',
         fontSize: 13,
         fontWeight: '600',
+    },
+    activateText: {
+        color: '#30D158',
+    },
+    deactivateText: {
+        color: '#FFB340',
     },
     deleteText: {
         color: '#FF453A',

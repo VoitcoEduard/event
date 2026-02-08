@@ -36,10 +36,30 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/events/connect", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method == "POST" {
+			handlers.ConnectToEvent(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	http.HandleFunc("/events/", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
 		if r.Method == "OPTIONS" {
 			return
+		}
+
+		// Check for /status suffix
+		if len(r.URL.Path) > 7 && r.URL.Path[len(r.URL.Path)-7:] == "/status" {
+			if r.Method == "PUT" {
+				handlers.UpdateEventStatus(w, r)
+				return
+			}
 		}
 
 		switch r.Method {

@@ -27,6 +27,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	event.ID = generateID()
+	event.IsActive = false // Default to inactive
 	event.CreatedAt = time.Now()
 
 	collection := db.GetCollection("events")
@@ -108,4 +109,61 @@ func DeleteEvent(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Event deleted"})
+}
+
+func ConnectToEvent(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Pin string `json:"pin"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("events")
+	var event models.Event
+	err := collection.FindOne(context.Background(), bson.M{"_id": input.Pin}).Decode(&event)
+	if err != nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
+
+	if !event.IsActive {
+		http.Error(w, "Event is not active", http.StatusForbidden)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(event)
+}
+
+func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL: /events/{id}/status
+	// Simple parsing assuming correct format
+	path := r.URL.Path
+	prefix := "/events/"
+	suffix := "/status"
+	if len(path) <= len(prefix)+len(suffix) {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	id := path[len(prefix) : len(path)-len(suffix)]
+
+	var input struct {
+		IsActive bool `json:"isActive"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("events")
+	_, err := collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": bson.M{"isActive": input.IsActive}})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Event status updated"})
 }

@@ -1,8 +1,48 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-export default function MainScreen({ onNavigate }) {
+const API_URL = 'http://localhost:8080';
+
+export default function MainScreen({ onNavigate, onJoinEvent }) {
+    const [pin, setPin] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleConnect = async () => {
+        if (!pin || pin.length !== 6) {
+            Alert.alert('Error', 'Please enter a valid 6-digit PIN');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/events/connect`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin }),
+            });
+
+            if (response.ok) {
+                const event = await response.json();
+                onJoinEvent(event);
+            } else {
+                const errorData = await response.text();
+                // Check for specific error message or default
+                if (response.status === 404) {
+                    Alert.alert('Error', 'Event not found. Check your PIN.');
+                } else if (response.status === 403) {
+                    Alert.alert('Event Locked', 'This event is not active currently.');
+                } else {
+                    Alert.alert('Error', 'Failed to connect to event.');
+                }
+            }
+        } catch (error) {
+            console.error('Connection error:', error);
+            Alert.alert('Error', 'Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -12,17 +52,37 @@ export default function MainScreen({ onNavigate }) {
                 <Text style={styles.subtitle}>Minimalist Design</Text>
 
                 <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Connect to Event</Text>
                     <Text style={styles.cardText}>
-                        Welcome to your new app experience. Clean, fast, and simple.
+                        Enter the 6-digit PIN code to join the live event.
                     </Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="000000"
+                        placeholderTextColor="#CCC"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        value={pin}
+                        onChangeText={setPin}
+                    />
+                    <TouchableOpacity
+                        style={styles.connectButton}
+                        onPress={handleConnect}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#FFF" />
+                        ) : (
+                            <Text style={styles.connectButtonText}>Connect</Text>
+                        )}
+                    </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
-                    style={styles.button}
+                    style={styles.adminLink}
                     onPress={() => onNavigate('admin')}
-                    activeOpacity={0.8}
                 >
-                    <Text style={styles.buttonText}>Go to Admin Dashboard</Text>
+                    <Text style={styles.adminLinkText}>Go to Admin Dashboard</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -32,7 +92,7 @@ export default function MainScreen({ onNavigate }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FAFAFA', // Lightest gray, almost white
+        backgroundColor: '#FAFAFA',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -43,8 +103,8 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 32,
-        fontWeight: '800', // Extra bold
-        color: '#1A1A1A', // Nearly black
+        fontWeight: '800',
+        color: '#1A1A1A',
         marginBottom: 8,
         letterSpacing: -0.5,
     },
@@ -58,47 +118,66 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: '#FFFFFF',
-        padding: 24,
-        borderRadius: 16,
+        padding: 32,
+        borderRadius: 24,
         width: '100%',
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+        elevation: 8,
         marginBottom: 32,
         borderWidth: 1,
         borderColor: '#F0F0F0',
+        alignItems: 'center',
+    },
+    cardTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#1A1A1A',
+        marginBottom: 8,
     },
     cardText: {
-        fontSize: 16,
-        color: '#444444',
-        lineHeight: 24,
+        fontSize: 15,
+        color: '#666',
         textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
     },
-    button: {
-        backgroundColor: '#1A1A1A',
+    input: {
+        backgroundColor: '#F5F5F7',
+        width: '100%',
+        borderRadius: 12,
+        padding: 16,
+        fontSize: 24,
+        fontWeight: '700',
+        textAlign: 'center',
+        letterSpacing: 8,
+        marginBottom: 24,
+        color: '#1A1A1A',
+    },
+    connectButton: {
+        backgroundColor: '#007AFF',
         paddingVertical: 16,
-        paddingHorizontal: 32,
         borderRadius: 12,
         width: '100%',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.1,
+        shadowColor: '#007AFF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
         shadowRadius: 8,
-        elevation: 4,
     },
-    buttonText: {
+    connectButtonText: {
         color: '#FFFFFF',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '600',
-        letterSpacing: 0.5,
+    },
+    adminLink: {
+        padding: 16,
+    },
+    adminLinkText: {
+        color: '#666',
+        fontSize: 14,
+        fontWeight: '500',
     },
 });
