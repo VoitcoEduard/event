@@ -22,7 +22,7 @@ func main() {
 
 	// Register Handlers
 	http.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+		enableCors(w, r)
 		if r.Method == "OPTIONS" {
 			return
 		}
@@ -38,7 +38,7 @@ func main() {
 	})
 
 	http.HandleFunc("/events/connect", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+		enableCors(w, r)
 		if r.Method == "OPTIONS" {
 			return
 		}
@@ -50,7 +50,7 @@ func main() {
 	})
 
 	http.HandleFunc("/templates", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+		enableCors(w, r)
 		if r.Method == "OPTIONS" {
 			return
 		}
@@ -65,7 +65,7 @@ func main() {
 	})
 
 	http.HandleFunc("/events/", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+		enableCors(w, r)
 		if r.Method == "OPTIONS" {
 			return
 		}
@@ -121,7 +121,10 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		DebugLog("Received request: %s %s", r.Method, r.URL.Path)
-		enableCors(&w)
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		response := Response{Message: "Hello from Go Backend!"}
@@ -140,8 +143,13 @@ func main() {
 	}
 }
 
-func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+func enableCors(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	// Handle preflight OPTIONS request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+	}
 }

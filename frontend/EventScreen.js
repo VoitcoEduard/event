@@ -4,7 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import FormModule from './components/modules/FormModule';
 
-const API_URL = 'http://localhost:8080';
+// Use environment variable or default to localhost for development
+const API_URL = typeof window !== 'undefined' && window.location
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8080'
+        : `http://${window.location.hostname}:8080`)
+    : 'http://localhost:8080';
 
 export default function EventScreen({ event, onNavigate, userId }) {
     const [currentEvent, setCurrentEvent] = useState(event);

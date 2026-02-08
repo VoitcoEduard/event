@@ -29,7 +29,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	event.ID = generateID()
 	event.IsActive = false // Default to inactive
 	event.CreatedAt = time.Now()
-	event.Modules = []models.Module{} // Initialize as empty array to avoid null in DB
+	event.Modules = []models.Module{} // Initialize as empty array to avoid nil in DB
 
 	collection := db.GetCollection("events")
 	_, err := collection.InsertOne(context.Background(), event)
@@ -190,6 +190,7 @@ func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Event status updated"})
 }
+
 func AddModule(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL: /events/{id}/modules
 	path := r.URL.Path
@@ -384,17 +385,9 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("events")
 	filter := bson.M{"_id": eventID, "modules.id": moduleID}
 
-	// Determine status. If we are "publishing", maybe we set it to active immediately,
-	// or just "ready". For now, let's keep it 'pending' until manually activated,
-	// OR assume publishing means "configuration done".
-	// The user prompt says: "when configuraiton ... confirmed ... create table".
-	// And "when admin set module active ... invite appears".
-	// So this step is "Confirmation".
-
 	update := bson.M{
 		"$set": bson.M{
 			"modules.$.data": input.Data,
-			// We could add a specific flag like modules.$.configured = true
 		},
 	}
 
@@ -458,4 +451,25 @@ func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
+}
+
+func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL: /templates/{id}
+	path := r.URL.Path
+	prefix := "/templates/"
+	if len(path) <= len(prefix) {
+		http.Error(w, "ID required", http.StatusBadRequest)
+		return
+	}
+	id := path[len(prefix):]
+
+	collection := db.GetCollection("templates")
+	_, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Template deleted"})
 }

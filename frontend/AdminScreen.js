@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-const API_URL = 'http://localhost:8080';
+// Use environment variable or default to localhost for development
+const API_URL = typeof window !== 'undefined' && window.location
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8080'
+        : `http://${window.location.hostname}:8080`)
+    : 'http://localhost:8080';
 
 const EventCard = ({ event, onEdit, onDelete, onViewDetails }) => (
     <View style={styles.eventCard}>

@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Platform, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = 'http://localhost:8080';
+// Use environment variable or default to localhost for development
+const API_URL = typeof window !== 'undefined' && window.location
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8080'
+        : `http://${window.location.hostname}:8080`)
+    : 'http://localhost:8080';
 
 export default function FormModuleConfig({ visible, module, eventId, onClose, onUpdate }) {
     const [timeline, setTimeline] = useState([]);
@@ -141,6 +146,35 @@ export default function FormModuleConfig({ visible, module, eventId, onClose, on
                 ]
             );
         }
+    };
+
+    const handleDeleteTemplate = async (id, name) => {
+        Alert.alert(
+            "Delete Template",
+            `Are you sure you want to delete "${name}"?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const response = await fetch(`${API_URL}/templates/${id}`, {
+                                method: 'DELETE',
+                            });
+                            if (response.ok) {
+                                fetchTemplates();
+                            } else {
+                                Alert.alert("Error", "Failed to delete template.");
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert("Error", "Failed to delete template.");
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const handleSaveAsTemplate = async () => {
@@ -325,10 +359,15 @@ export default function FormModuleConfig({ visible, module, eventId, onClose, on
                                 <Text style={styles.dialogTitle}>Start from Template</Text>
                                 <ScrollView style={{ maxHeight: 300 }}>
                                     {templates.map(t => (
-                                        <TouchableOpacity key={t.id} style={styles.templateItem} onPress={() => handleLoadTemplate(t)}>
-                                            <Text style={styles.templateItemName}>{t.name}</Text>
-                                            <Text style={styles.templateItemDesc}>{t.description}</Text>
-                                        </TouchableOpacity>
+                                        <View key={t.id} style={styles.templateItemWrapper}>
+                                            <TouchableOpacity style={styles.templateItem} onPress={() => handleLoadTemplate(t)}>
+                                                <Text style={styles.templateItemName}>{t.name}</Text>
+                                                <Text style={styles.templateItemDesc}>{t.description}</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.deleteTemplateBtn} onPress={() => handleDeleteTemplate(t.id, t.name)}>
+                                                <Ionicons name="trash-outline" size={20} color="#FF453A" />
+                                            </TouchableOpacity>
+                                        </View>
                                     ))}
                                     {templates.length === 0 && <Text style={{ color: '#666', textAlign: 'center', padding: 20 }}>No templates found.</Text>}
                                 </ScrollView>
@@ -611,11 +650,24 @@ const styles = StyleSheet.create({
         color: '#FFF',
         marginBottom: 16,
     },
-    templateItem: {
-        padding: 12,
+    templateItemWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: '#2C2C2E',
         borderRadius: 8,
         marginBottom: 8,
+        overflow: 'hidden',
+    },
+    templateItem: {
+        flex: 1,
+        padding: 12,
+    },
+    deleteTemplateBtn: {
+        padding: 12,
+        backgroundColor: 'rgba(255, 69, 58, 0.1)',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     templateItemName: {
         fontSize: 16,

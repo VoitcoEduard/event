@@ -5,7 +5,12 @@ import QRCode from 'react-qr-code';
 import { Ionicons } from '@expo/vector-icons';
 import FormModuleConfig from './components/modules/FormModuleConfig';
 
-const API_URL = 'http://localhost:8080';
+// Use environment variable or default to localhost for development
+const API_URL = typeof window !== 'undefined' && window.location
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8080'
+        : `http://${window.location.hostname}:8080`)
+    : 'http://localhost:8080';
 
 export default function AdminEventDetailsScreen({ event, onBack }) {
     const [currentEvent, setCurrentEvent] = useState(event);
