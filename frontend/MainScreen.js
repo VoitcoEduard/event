@@ -7,10 +7,12 @@ const API_URL = 'http://localhost:8080';
 export default function MainScreen({ onNavigate, onJoinEvent }) {
     const [pin, setPin] = useState('');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleConnect = async () => {
+        setError('');
         if (!pin || pin.length !== 6) {
-            Alert.alert('Error', 'Please enter a valid 6-digit PIN');
+            setError('Please enter a valid 6-digit PIN');
             return;
         }
 
@@ -29,16 +31,16 @@ export default function MainScreen({ onNavigate, onJoinEvent }) {
                 const errorData = await response.text();
                 // Check for specific error message or default
                 if (response.status === 404) {
-                    Alert.alert('Error', 'Event not found. Check your PIN.');
+                    setError('Event not found. Check your PIN.');
                 } else if (response.status === 403) {
-                    Alert.alert('Event Locked', 'This event is not active currently.');
+                    setError('This event is not active currently.');
                 } else {
-                    Alert.alert('Error', 'Failed to connect to event.');
+                    setError('Failed to connect to event.');
                 }
             }
         } catch (error) {
             console.error('Connection error:', error);
-            Alert.alert('Error', 'Network error. Please try again.');
+            setError('Network error. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -63,8 +65,12 @@ export default function MainScreen({ onNavigate, onJoinEvent }) {
                         keyboardType="number-pad"
                         maxLength={6}
                         value={pin}
-                        onChangeText={setPin}
+                        onChangeText={(text) => {
+                            setPin(text);
+                            setError('');
+                        }}
                     />
+                    {error ? <Text style={styles.errorText}>{error}</Text> : null}
                     <TouchableOpacity
                         style={styles.connectButton}
                         onPress={handleConnect}
@@ -178,6 +184,13 @@ const styles = StyleSheet.create({
     adminLinkText: {
         color: '#666',
         fontSize: 14,
+        fontWeight: '500',
+    },
+    errorText: {
+        color: '#FF3B30',
+        fontSize: 14,
+        marginBottom: 16,
+        textAlign: 'center',
         fontWeight: '500',
     },
 });
