@@ -63,6 +63,8 @@ func main() {
 		}
 
 		switch r.Method {
+		case "GET":
+			handlers.GetEvent(w, r)
 		case "PUT":
 			handlers.UpdateEvent(w, r)
 		case "DELETE":

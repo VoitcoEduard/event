@@ -61,6 +61,28 @@ func GetEvents(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(events)
 }
 
+func GetEvent(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL: /events/{id}
+	path := r.URL.Path
+	prefix := "/events/"
+	if len(path) <= len(prefix) {
+		http.Error(w, "ID required", http.StatusBadRequest)
+		return
+	}
+	id := path[len(prefix):]
+
+	collection := db.GetCollection("events")
+	var event models.Event
+	err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&event)
+	if err != nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(event)
+}
+
 func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL (naive approach since using net/http)
 	// Assuming /events/{id}

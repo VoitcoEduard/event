@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import MainScreen from './MainScreen';
 import AdminScreen from './AdminScreen';
+import AdminEventDetailsScreen from './AdminEventDetailsScreen';
 import EventScreen from './EventScreen';
 
 export default function App() {
@@ -41,7 +42,15 @@ export default function App() {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'admin':
-        return <AdminScreen onNavigate={handleNavigate} />;
+        return <AdminScreen onNavigate={handleNavigate} setEvent={setCurrentEvent} />;
+      case 'admin_event_details': // New case
+        return (
+          <AdminEventDetailsScreen
+            event={currentEvent}
+            onNavigate={handleNavigate}
+            onBack={() => handleNavigate('admin')}
+          />
+        );
       case 'event':
         return <EventScreen event={currentEvent} onNavigate={handleNavigate} />;
       case 'main':

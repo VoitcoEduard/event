@@ -2,14 +2,16 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: golang:alpine
+    working_dir: /app
     ports:
       - "8080:8080"
     environment:
       - PORT=8080
       - MONGO_URI=mongodb://mongo:27017
+    volumes:
+      - ./backend:/app
+    command: sh -c "go mod download && go run ."
     depends_on:
       - mongo
 

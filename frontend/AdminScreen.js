@@ -4,9 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 
 const API_URL = 'http://localhost:8080';
 
-const EventCard = ({ event, onEdit, onDelete, onToggleStatus }) => (
+const EventCard = ({ event, onEdit, onDelete, onViewDetails }) => (
     <View style={styles.eventCard}>
-        <View style={styles.cardHeader}>
+        <TouchableOpacity style={styles.cardHeader} onPress={() => onViewDetails(event)}>
             <View>
                 <Text style={styles.eventName}>{event.name}</Text>
                 <Text style={styles.eventId}>ID: {event.id}</Text>
@@ -14,16 +14,11 @@ const EventCard = ({ event, onEdit, onDelete, onToggleStatus }) => (
             <View style={[styles.statusBadge, event.isActive ? styles.statusActive : styles.statusInactive]}>
                 <Text style={styles.statusText}>{event.isActive ? 'ACTIVE' : 'INACTIVE'}</Text>
             </View>
-        </View>
+        </TouchableOpacity>
         <Text style={styles.eventDescription}>{event.description}</Text>
         <View style={styles.cardActions}>
-            <TouchableOpacity
-                style={[styles.cardAction, event.isActive ? styles.deactivateAction : styles.activateAction]}
-                onPress={() => onToggleStatus(event)}
-            >
-                <Text style={[styles.cardActionText, event.isActive ? styles.deactivateText : styles.activateText]}>
-                    {event.isActive ? 'Stop Event' : 'Start Event'}
-                </Text>
+            <TouchableOpacity style={[styles.cardAction, styles.viewAction]} onPress={() => onViewDetails(event)}>
+                <Text style={styles.cardActionText}>Manage Event</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.cardAction, styles.editAction]} onPress={() => onEdit(event)}>
                 <Text style={styles.cardActionText}>Edit</Text>
@@ -35,7 +30,7 @@ const EventCard = ({ event, onEdit, onDelete, onToggleStatus }) => (
     </View>
 );
 
-export default function AdminScreen({ onNavigate }) {
+export default function AdminScreen({ onNavigate, setEvent }) {
     const [events, setEvents] = useState([]);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -56,24 +51,7 @@ export default function AdminScreen({ onNavigate }) {
         }
     };
 
-    const handleToggleStatus = async (event) => {
-        try {
-            const response = await fetch(`${API_URL}/events/${event.id}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isActive: !event.isActive }),
-            });
-
-            if (response.ok) {
-                fetchEvents();
-            } else {
-                Alert.alert('Error', 'Failed to update status');
-            }
-        } catch (error) {
-            console.error('Error updating status:', error);
-            Alert.alert('Error', 'Failed to update status');
-        }
-    };
+    // handleToggleStatus removed from here as it moved to details page
 
     const handleSubmit = async () => {
         if (!name || !description) {
@@ -143,6 +121,12 @@ export default function AdminScreen({ onNavigate }) {
         setEditingId(event.id);
     };
 
+    const handleViewDetails = (event) => {
+        setEvent(event);
+        onNavigate('admin_event_details');
+    };
+
+
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
@@ -203,7 +187,7 @@ export default function AdminScreen({ onNavigate }) {
                             event={event}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
-                            onToggleStatus={handleToggleStatus}
+                            onViewDetails={handleViewDetails}
                         />
                     ))}
                     {events.length === 0 && (
@@ -256,6 +240,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: 24,
         paddingBottom: 40,
+        alignItems: 'center',
     },
     sectionTitle: {
         fontSize: 20,
@@ -264,6 +249,10 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         letterSpacing: -0.5,
         marginTop: 10,
+        width: '100%', // Ensuring title aligns left within centered container if possible, or center if textalign center
+        maxWidth: 1200,
+        alignSelf: 'center',
+        textAlign: 'left',
     },
     formCard: {
         backgroundColor: '#1E1E1E',
@@ -272,6 +261,8 @@ const styles = StyleSheet.create({
         marginBottom: 30,
         borderWidth: 1,
         borderColor: '#2C2C2C',
+        width: '100%',
+        maxWidth: 800,
     },
     formTitle: {
         fontSize: 18,
@@ -325,14 +316,28 @@ const styles = StyleSheet.create({
     },
     eventsGrid: {
         marginBottom: 30,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 16, // Use gap for spacing between rows and columns
+        width: '100%',
+        maxWidth: 1200,
+        alignSelf: 'center',
     },
     eventCard: {
         backgroundColor: '#1E1E1E',
         borderRadius: 16,
         padding: 24,
-        marginBottom: 16,
+        marginBottom: 0, // Margin bottom handled by gap in grid
         borderWidth: 1,
         borderColor: '#2C2C2C',
+        // Desktop-first approach as requested: 
+        // 3 cards per row approx, minus gaps. 
+        // calc(33.33% - 11px) roughly handles gap of 16px for 3 items
+        // Or specific width ~350px
+        minWidth: 300,
+        flex: 1,
+        // max-width to prevent them from getting too wide on huge screens if only 1 item
+        maxWidth: 600,
     },
     cardHeader: {
         flexDirection: 'row',

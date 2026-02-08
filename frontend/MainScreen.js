@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 const API_URL = 'http://localhost:8080';
@@ -8,6 +8,16 @@ export default function MainScreen({ onNavigate, onJoinEvent }) {
     const [pin, setPin] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const pinParam = params.get('pin');
+            if (pinParam) {
+                setPin(pinParam);
+            }
+        }
+    }, []);
 
     const handleConnect = async () => {
         setError('');
