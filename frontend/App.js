@@ -11,8 +11,8 @@ export default function App() {
   const [currentEvent, setCurrentEvent] = useState(null);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const savedScreen = localStorage.getItem('currentScreen');
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const savedScreen = sessionStorage.getItem('currentScreen');
       if (savedScreen) {
         if (savedScreen === 'event') {
           setCurrentScreen('main');
@@ -20,7 +20,9 @@ export default function App() {
           setCurrentScreen(savedScreen);
         }
       }
+    }
 
+    if (typeof window !== 'undefined' && window.localStorage) {
       // User ID Generation
       let uid = localStorage.getItem('userId');
       if (!uid) {
@@ -39,8 +41,8 @@ export default function App() {
 
   const handleNavigate = (screen) => {
     setCurrentScreen(screen);
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem('currentScreen', screen);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.setItem('currentScreen', screen);
     }
   };
 

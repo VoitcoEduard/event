@@ -199,71 +199,93 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
             <StatusBar style="light" />
 
             <View style={styles.header}>
-                <TouchableOpacity onPress={onBack} style={styles.backLink}>
-                    <Text style={styles.backLinkText}>← Back to Dashboard</Text>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Event Dashboard</Text>
+                <View style={styles.headerTopRow}>
+                    <TouchableOpacity onPress={onBack} style={styles.backLink}>
+                        <Text style={styles.backLinkText}>← Back</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Event Dashboard</Text>
+                </View>
                 <Text style={styles.headerSubtitle}>{currentEvent.name}</Text>
             </View>
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
 
-                {/* 1. Event Info Card */}
-                <View style={styles.card}>
+                {/* Unified Dashboard Card */}
+                <View style={[styles.card, styles.unifiedCard]}>
                     <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>Event Details</Text>
+                        <View>
+                            <Text style={styles.cardTitle}>Event Overview</Text>
+                            <Text style={styles.cardDescription}>Manage details, sharing, and controls.</Text>
+                        </View>
                         <StatusIndicator />
                     </View>
 
-                    <View style={styles.infoRow}>
-                        <Text style={styles.label}>Event Name:</Text>
-                        <Text style={styles.value}>{currentEvent.name}</Text>
-                    </View>
+                    <View style={styles.unifiedContent}>
+                        {/* Left Column: Details & Controls */}
+                        <View style={styles.leftColumn}>
+                            <View style={styles.infoGrid}>
+                                <View style={styles.infoItem}>
+                                    <Text style={styles.label}>Description</Text>
+                                    <Text style={styles.value}>{currentEvent.description}</Text>
+                                </View>
 
-                    <View style={styles.infoRow}>
-                        <Text style={styles.label}>Description:</Text>
-                        <Text style={styles.value}>{currentEvent.description}</Text>
-                    </View>
+                                <View style={styles.infoItem}>
+                                    <Text style={styles.label}>PIN Code</Text>
+                                    <View style={styles.pinContainer}>
+                                        <Text style={styles.pinText}>{currentEvent.id}</Text>
+                                    </View>
+                                </View>
+                            </View>
 
-                    <View style={styles.infoRow}>
-                        <Text style={styles.label}>PIN Code:</Text>
-                        <View style={styles.pinContainer}>
-                            <Text style={styles.pinText}>{currentEvent.id}</Text>
+                            <View style={styles.controlSection}>
+                                <Text style={styles.sectionLabel}>Event Controls</Text>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, currentEvent.isActive ? styles.stopButton : styles.startButton]}
+                                    onPress={handleToggleStatus}
+                                >
+                                    <Text style={styles.actionButtonText}>
+                                        {currentEvent.isActive ? 'STOP EVENT' : 'START EVENT'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <Text style={styles.controlHint}>
+                                    {currentEvent.isActive
+                                        ? 'Event is live. Users can connect.'
+                                        : 'Event is stopped. Users cannot connect.'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Divider for desktop */}
+                        <View style={styles.verticalDivider} />
+
+                        {/* Right Column: Share Access */}
+                        <View style={styles.rightColumn}>
+                            <Text style={styles.sectionLabel}>Share Access</Text>
+                            <View style={styles.qrCodeContainer}>
+                                {Platform.OS === 'web' ? (
+                                    <div style={{ background: 'white', padding: '12px', borderRadius: '12px' }}>
+                                        <QRCode
+                                            value={getShareLink()}
+                                            size={160}
+                                            style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                            viewBox={`0 0 256 256`}
+                                        />
+                                    </div>
+                                ) : (
+                                    <View style={styles.qrPlaceholder}>
+                                        <Text style={styles.qrPlaceholderText}>QR on Web</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
+                                <Text style={styles.copyButtonText}>Copy Link</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
 
-                {/* 2. Share Access Card (New) */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Share Access</Text>
-                    <Text style={styles.cardDescription}>
-                        Share this QR code or link with participants to let them join the event directly.
-                    </Text>
-
-                    <View style={styles.qrCodeContainer}>
-                        {Platform.OS === 'web' ? (
-                            <div style={{ background: 'white', padding: '16px', borderRadius: '16px' }}>
-                                <QRCode
-                                    value={getShareLink()}
-                                    size={200}
-                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                    viewBox={`0 0 256 256`}
-                                />
-                            </div>
-                        ) : (
-                            <View style={styles.qrPlaceholder}>
-                                <Text style={styles.qrPlaceholderText}>QR Code available on Web</Text>
-                            </View>
-                        )}
-                    </View>
-
-                    <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
-                        <Text style={styles.copyButtonText}>Copy Shareable Link</Text>
-                    </TouchableOpacity>
-                </View>
-
                 {/* 3. Modules Management Card */}
-                <View style={[styles.card, { minWidth: 600 }]}>
+                <View style={[styles.card, { minWidth: 600, flex: 2 }]}>
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardTitle}>Event Modules</Text>
                         <TouchableOpacity
@@ -274,7 +296,7 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
                         </TouchableOpacity>
                     </View>
                     <Text style={styles.cardDescription}>
-                        Manage interactive modules for this event. Only one module can be active at a time to focus user attention.
+                        Manage interactive modules for this event.
                     </Text>
 
                     {currentEvent.modules && currentEvent.modules.length > 0 ? (
@@ -375,24 +397,7 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
                     )}
                 </View>
 
-                {/* 3. Control Card */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Event Controls</Text>
-                    <Text style={styles.cardDescription}>
-                        Manage the lifecycle of the event. Stopping the event will disconnect all users.
-                    </Text>
-
-                    <TouchableOpacity
-                        style={[styles.actionButton, currentEvent.isActive ? styles.stopButton : styles.startButton]}
-                        onPress={handleToggleStatus}
-                    >
-                        <Text style={styles.actionButtonText}>
-                            {currentEvent.isActive ? 'STOP EVENT' : 'START EVENT'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Placeholder for more cards */}
+                {/* Stats Card - keeping separate as it might grow */}
                 <View style={[styles.card, styles.statsCard]}>
                     <Text style={styles.cardTitle}>Quick Stats</Text>
                     <View style={styles.statsGrid}>
@@ -418,36 +423,103 @@ const styles = StyleSheet.create({
         backgroundColor: '#121212',
     },
     header: {
-        paddingTop: 60,
-        paddingBottom: 20,
+        paddingTop: 20, // Reduced from 60
+        paddingBottom: 16, // Reduced from 20
         paddingHorizontal: 24,
         backgroundColor: '#1E1E1E',
         borderBottomWidth: 1,
         borderBottomColor: '#2C2C2C',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+    },
+    headerTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 4,
     },
     backLink: {
-        marginBottom: 10,
+        // marginBottom: 10, removed
     },
     backLinkText: {
         color: '#007AFF',
-        fontSize: 16,
+        fontSize: 14,
     },
     headerTitle: {
-        fontSize: 14,
-        color: '#888',
+        fontSize: 12,
+        color: '#666',
         textTransform: 'uppercase',
-        letterSpacing: 1,
         fontWeight: '600',
+        letterSpacing: 1,
     },
     headerSubtitle: {
-        fontSize: 28,
-        fontWeight: '800',
+        fontSize: 20, // Reduced from 28
+        fontWeight: '700',
         color: '#FFF',
-        marginTop: 4,
     },
     content: {
         flex: 1,
     },
+    unifiedCard: {
+        minWidth: 600,
+        flex: 3,
+    },
+    unifiedContent: {
+        flexDirection: 'row',
+        gap: 40,
+        flexWrap: 'wrap',
+    },
+    leftColumn: {
+        flex: 2,
+        minWidth: 300,
+    },
+    rightColumn: {
+        flex: 1,
+        minWidth: 250,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#252525',
+        borderRadius: 16,
+        padding: 24,
+    },
+    verticalDivider: {
+        width: 1,
+        backgroundColor: '#333',
+        height: '100%',
+        display: Platform.OS === 'web' ? 'flex' : 'none',
+    },
+    infoGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 20,
+        marginBottom: 30,
+    },
+    infoItem: {
+        minWidth: 150,
+        flex: 1,
+    },
+    controlSection: {
+        marginTop: 'auto',
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#2C2C2C',
+    },
+    sectionLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#FFF',
+        marginBottom: 16,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    controlHint: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 12,
+        textAlign: 'center',
+    },
+
     scrollContent: {
         padding: 24,
         paddingBottom: 40,
