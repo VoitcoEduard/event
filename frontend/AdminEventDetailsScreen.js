@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Clipboard, Alert, Platform, TextInput, Modal, FlatList } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Clipboard, Alert, Platform, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import QRCode from 'react-qr-code';
 import { Ionicons } from '@expo/vector-icons';
+import FormModuleConfig from './components/modules/FormModuleConfig';
 
 const API_URL = 'http://localhost:8080';
 
@@ -22,9 +23,6 @@ export default function AdminEventDetailsScreen({ event, onBack }) {
     // Timeline Editor State
     const [selectedModule, setSelectedModule] = useState(null);
     const [configModalVisible, setConfigModalVisible] = useState(false);
-    const [timeline, setTimeline] = useState([]); // Array of steps: { type: 'field'|'message', id: string, data: {} }
-    const [templates, setTemplates] = useState([]);
-    const [showTemplateModal, setShowTemplateModal] = useState(false);
 
 
     useEffect(() => {
@@ -160,216 +158,11 @@ export default function AdminEventDetailsScreen({ event, onBack }) {
         }
     };
 
-    const renderTimelineEditor = () => (
-        <Modal visible={configModalVisible} animationType="slide">
-            <View style={styles.modalContainer}>
-                <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Configure {selectedModule?.name}</Text>
-                    <TouchableOpacity onPress={() => setConfigModalVisible(false)}>
-                        <Ionicons name="close" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
 
-                <View style={styles.toolbar}>
-                    <TouchableOpacity style={styles.toolBtn} onPress={() => addTimelineStep('field')}>
-                        <Ionicons name="add-circle" size={20} color="#FFF" />
-                        <Text style={styles.toolBtnText}>Add Field</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.toolBtn} onPress={() => addTimelineStep('message')}>
-                        <Ionicons name="chatbubble" size={20} color="#FFF" />
-                        <Text style={styles.toolBtnText}>Add Message</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.toolBtn} onPress={() => setShowTemplateModal(true)}>
-                        <Ionicons name="copy" size={20} color="#FFF" />
-                        <Text style={styles.toolBtnText}>Load Template</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <ScrollView style={styles.timelineList}>
-                    {timeline.map((step, index) => (
-                        <View key={step.id} style={styles.stepCard}>
-                            <View style={styles.stepHeader}>
-                                <Text style={styles.stepType}>{index + 1}. {step.type.toUpperCase()}</Text>
-                                <TouchableOpacity onPress={() => removeStep(step.id)}>
-                                    <Ionicons name="trash" size={20} color="#FF453A" />
-                                </TouchableOpacity>
-                            </View>
-
-                            {step.type === 'field' ? (
-                                <>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Field Label (e.g. Birthday)"
-                                        placeholderTextColor="#666"
-                                        value={step.data.label}
-                                        onChangeText={(text) => updateStep(step.id, 'label', text)}
-                                    />
-                                    <View style={styles.typeSelector}>
-                                        {['text', 'number', 'date'].map(ft => (
-                                            <TouchableOpacity
-                                                key={ft}
-                                                style={[styles.typeBtn, step.data.fieldType === ft && styles.typeBtnActive]}
-                                                onPress={() => updateStep(step.id, 'fieldType', ft)}
-                                            >
-                                                <Text style={[styles.typeBtnText, step.data.fieldType === ft && styles.typeBtnTextActive]}>
-                                                    {ft}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </>
-                            ) : (
-                                <TextInput
-                                    style={[styles.input, { height: 80 }]}
-                                    placeholder="Message Content"
-                                    placeholderTextColor="#666"
-                                    multiline
-                                    value={step.data.content}
-                                    onChangeText={(text) => updateStep(step.id, 'content', text)}
-                                />
-                            )}
-                        </View>
-                    ))}
-                </ScrollView>
-
-                <View style={styles.footer}>
-                    <TouchableOpacity style={styles.secondaryBtn} onPress={saveAsTemplate}>
-                        <Text style={styles.secondaryBtnText}>Save as Template</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.primaryBtn} onPress={publishModule}>
-                        <Text style={styles.primaryBtnText}>Publish Configuration</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <Modal visible={showTemplateModal} transparent animationType="fade">
-                    <View style={styles.centeredView}>
-                        <View style={styles.modalView}>
-                            <Text style={styles.modalTitle}>Select Template</Text>
-                            <FlatList
-                                data={templates}
-                                keyExtractor={item => item.id}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity style={styles.templateItem} onPress={() => loadTemplate(item)}>
-                                        <Text style={styles.templateName}>{item.name}</Text>
-                                        <Text style={styles.templateDesc}>{item.description}</Text>
-                                    </TouchableOpacity>
-                                )}
-                            />
-                            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowTemplateModal(false)}>
-                                <Text style={styles.closeBtnText}>Close</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </Modal>
-            </View>
-        </Modal>
-    );
-
-    const fetchTemplates = async () => {
-        try {
-            const response = await fetch(`${API_URL}/templates`);
-            if (response.ok) {
-                const data = await response.json();
-                setTemplates(data || []);
-            }
-        } catch (error) {
-            console.error('Error fetching templates:', error);
-        }
-    };
 
     const handleConfigureModule = (module) => {
         setSelectedModule(module);
-        // Load existing data if any
-        if (module.data && module.data.timeline) {
-            setTimeline(module.data.timeline);
-        } else {
-            setTimeline([]);
-        }
         setConfigModalVisible(true);
-        fetchTemplates();
-    };
-
-    const addTimelineStep = (type) => {
-        const newStep = {
-            id: Date.now().toString(),
-            type: type,
-            data: type === 'field'
-                ? { label: 'New Field', fieldType: 'text' }
-                : { content: 'New Message' }
-        };
-        setTimeline([...timeline, newStep]);
-    };
-
-    const updateStep = (id, key, value) => {
-        setTimeline(timeline.map(step =>
-            step.id === id ? { ...step, data: { ...step.data, [key]: value } } : step
-        ));
-    };
-
-    const removeStep = (id) => {
-        setTimeline(timeline.filter(step => step.id !== id));
-    };
-
-    const publishModule = async () => {
-        try {
-            const response = await fetch(`${API_URL}/events/${currentEvent.id}/modules/${selectedModule.id}/publish`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    data: { timeline: timeline }
-                })
-            });
-
-            if (response.ok) {
-                Alert.alert('Success', 'Module published successfully!');
-                setConfigModalVisible(false);
-                fetchEventDetails(); // Refresh
-            } else {
-                Alert.alert('Error', 'Failed to publish module.');
-            }
-        } catch (error) {
-            console.error('Error publishing module:', error);
-            Alert.alert('Error', 'Failed to publish module.');
-        }
-    };
-
-    const saveAsTemplate = async () => {
-        if (Platform.OS === 'web') {
-            const name = prompt("Enter template name:");
-            if (name) handleSaveTemplate(name);
-        } else {
-            Alert.prompt("Template Name", "Enter a name for this template:", (name) => {
-                if (name) handleSaveTemplate(name);
-            });
-        }
-    };
-
-    const handleSaveTemplate = async (name) => {
-        try {
-            const response = await fetch(`${API_URL}/templates`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    description: "Created from event " + currentEvent.name,
-                    moduleType: selectedModule.type,
-                    data: { timeline: timeline }
-                })
-            });
-            if (response.ok) {
-                Alert.alert("Success", "Template saved!");
-                fetchTemplates();
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const loadTemplate = (template) => {
-        if (template.data && template.data.timeline) {
-            setTimeline(template.data.timeline);
-            setShowTemplateModal(false);
-        }
     };
 
     const handleUpdateModuleStatus = async (moduleId, newStatus) => {
@@ -624,7 +417,15 @@ export default function AdminEventDetailsScreen({ event, onBack }) {
                 </View>
 
             </ScrollView>
-            {renderTimelineEditor()}
+            {configModalVisible && (
+                <FormModuleConfig
+                    visible={configModalVisible}
+                    module={selectedModule}
+                    eventId={currentEvent.id}
+                    onClose={() => setConfigModalVisible(false)}
+                    onUpdate={() => fetchEventDetails()}
+                />
+            )}
         </View>
     );
 }
