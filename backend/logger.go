@@ -2,6 +2,8 @@
 
 package main
 
+import "fmt"
+
 func DebugLog(format string, args ...interface{}) {
-	// No-op for non-debug builds
+	fmt.Printf("[LOG] "+format+"\n", args...)
 }

@@ -15,17 +15,27 @@ export default function App() {
       const savedScreen = localStorage.getItem('currentScreen');
       if (savedScreen) {
         if (savedScreen === 'event') {
-          // If we were on event page, we need event data. 
-          // For now, let's just go back to main if no event data is persisted.
-          // Or we could persist event data too. 
-          // Since the user only asked for admin page specifically:
           setCurrentScreen('main');
         } else {
           setCurrentScreen(savedScreen);
         }
       }
+
+      // User ID Generation
+      let uid = localStorage.getItem('userId');
+      if (!uid) {
+        uid = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('userId', uid);
+      }
     }
   }, []);
+
+  const getUserId = () => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem('userId');
+    }
+    return 'unknown_user';
+  };
 
   const handleNavigate = (screen) => {
     setCurrentScreen(screen);
@@ -52,7 +62,7 @@ export default function App() {
           />
         );
       case 'event':
-        return <EventScreen event={currentEvent} onNavigate={handleNavigate} />;
+        return <EventScreen event={currentEvent} onNavigate={handleNavigate} userId={getUserId()} />;
       case 'main':
       default:
         return <MainScreen onNavigate={handleNavigate} onJoinEvent={handleJoinEvent} />;

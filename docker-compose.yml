@@ -9,6 +9,7 @@ services:
     environment:
       - PORT=8080
       - MONGO_URI=mongodb://mongo:27017
+      - GOPROXY=https://proxy.golang.org,direct
     volumes:
       - ./backend:/app
     command: sh -c "go mod download && go run ."

@@ -1,9 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import FormModule from './components/modules/FormModule';
 
-export default function EventScreen({ event, onNavigate }) {
-    if (!event) {
+const API_URL = 'http://localhost:8080';
+
+export default function EventScreen({ event, onNavigate, userId }) {
+    const [currentEvent, setCurrentEvent] = useState(event);
+    const [activeModule, setActiveModule] = useState(null);
+
+    useEffect(() => {
+        if (!event?.id) return;
+
+        // Poll for event updates every 3 seconds
+        const interval = setInterval(async () => {
+            try {
+                const response = await fetch(`${API_URL}/events/${event.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setCurrentEvent(data);
+
+                    // Check for active module
+                    if (data.modules) {
+                        const active = data.modules.find(m => m.status === 'active');
+                        // Only update if changed to avoid re-renders
+                        setActiveModule(prev => {
+                            if (prev?.id === active?.id && prev?.status === active?.status) return prev;
+                            return active || null;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [event?.id]);
+
+    if (!currentEvent) {
         return (
             <View style={styles.container}>
                 <Text style={styles.errorText}>No event data found.</Text>
@@ -20,14 +55,27 @@ export default function EventScreen({ event, onNavigate }) {
             <View style={styles.content}>
                 <View style={styles.header}>
                     <Text style={styles.statusText}>Connected to</Text>
-                    <Text style={styles.eventName}>{event.name}</Text>
+                    <Text style={styles.eventName}>{currentEvent.name}</Text>
                 </View>
 
-                <View style={styles.card}>
-                    <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
-                    <Text style={styles.message}>Waiting for host to start the game...</Text>
-                    <Text style={styles.subMessage}>Sit tight and get ready!</Text>
-                </View>
+                {activeModule ? (
+                    <View style={styles.moduleContainer}>
+                        {activeModule.type === 'form' && (
+                            <FormModule
+                                module={activeModule}
+                                eventId={currentEvent.id}
+                                userId={userId}
+                            />
+                        )}
+                        {/* Add other module types here */}
+                    </View>
+                ) : (
+                    <View style={styles.card}>
+                        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
+                        <Text style={styles.message}>Waiting for host to start the next activity...</Text>
+                        <Text style={styles.subMessage}>Sit tight and get ready!</Text>
+                    </View>
+                )}
 
                 <TouchableOpacity
                     style={styles.leaveButton}
@@ -43,7 +91,7 @@ export default function EventScreen({ event, onNavigate }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#121212', // Dark theme matching admin but for user
+        backgroundColor: '#121212', // Dark theme matching admin
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -78,6 +126,10 @@ const styles = StyleSheet.create({
         marginBottom: 40,
         borderWidth: 1,
         borderColor: '#333',
+    },
+    moduleContainer: {
+        width: '100%',
+        marginBottom: 40,
     },
     loader: {
         marginBottom: 20,

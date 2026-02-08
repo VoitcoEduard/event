@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
@@ -52,6 +53,28 @@ func main() {
 		enableCors(&w)
 		if r.Method == "OPTIONS" {
 			return
+		}
+
+		// Check for modules related paths
+		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/response") {
+			if r.Method == "POST" {
+				handlers.SubmitModuleResponse(w, r)
+				return
+			}
+		}
+
+		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/status") {
+			if r.Method == "PUT" {
+				handlers.UpdateModuleStatus(w, r)
+				return
+			}
+		}
+
+		if strings.HasSuffix(r.URL.Path, "/modules") {
+			if r.Method == "POST" {
+				handlers.AddModule(w, r)
+				return
+			}
 		}
 
 		// Check for /status suffix

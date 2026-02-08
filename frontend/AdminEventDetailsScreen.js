@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Clipboard, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Clipboard, Alert, Platform, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import QRCode from 'react-qr-code';
 
@@ -8,6 +8,11 @@ const API_URL = 'http://localhost:8080';
 export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
     const [currentEvent, setCurrentEvent] = useState(event);
     const [activeStatusAnim] = useState(new Animated.Value(event?.isActive ? 1 : 0));
+
+    // Module Management State
+    const [moduleModalVisible, setModuleModalVisible] = useState(false);
+    const [newModuleName, setNewModuleName] = useState('');
+    const [newModuleQuestion, setNewModuleQuestion] = useState('');
 
     useEffect(() => {
         // Refresh event data periodically or on mount to ensure status is up to date
@@ -108,6 +113,68 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
         }
     };
 
+    const handleAddModule = async () => {
+        if (!newModuleName.trim() || !newModuleQuestion.trim()) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        try {
+            const moduleData = {
+                type: 'form',
+                name: newModuleName,
+                questions: [
+                    {
+                        id: 'q1', // Simple ID for now
+                        text: newModuleQuestion,
+                        type: 'text'
+                    }
+                ]
+            };
+
+            const response = await fetch(`${API_URL}/events/${currentEvent.id}/modules`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(moduleData),
+            });
+
+            if (response.ok) {
+                const newModule = await response.json();
+                // Optimistically update or re-fetch
+                fetchEventDetails();
+                setModuleModalVisible(false);
+                setNewModuleName('');
+                setNewModuleQuestion('');
+                Alert.alert('Success', 'Module added successfully');
+            } else {
+                const errText = await response.text();
+                Alert.alert('Error', 'Failed to add module: ' + errText);
+            }
+        } catch (error) {
+            console.error('Error adding module:', error);
+            Alert.alert('Error', 'Failed to add module');
+        }
+    };
+
+    const handleUpdateModuleStatus = async (moduleId, newStatus) => {
+        try {
+            const response = await fetch(`${API_URL}/events/${currentEvent.id}/modules/${moduleId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (response.ok) {
+                fetchEventDetails(); // Refresh to get updated status
+            } else {
+                Alert.alert('Error', 'Failed to update module status');
+            }
+        } catch (error) {
+            console.error('Error updating module status:', error);
+            Alert.alert('Error', 'Failed to update module status');
+        }
+    };
+
     const StatusIndicator = () => {
         const backgroundColor = activeStatusAnim.interpolate({
             inputRange: [0, 1],
@@ -193,6 +260,119 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
                     <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
                         <Text style={styles.copyButtonText}>Copy Shareable Link</Text>
                     </TouchableOpacity>
+                </View>
+
+                {/* 3. Modules Management Card */}
+                <View style={[styles.card, { minWidth: 600 }]}>
+                    <View style={styles.cardHeader}>
+                        <Text style={styles.cardTitle}>Event Modules</Text>
+                        <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={() => setModuleModalVisible(true)}
+                        >
+                            <Text style={styles.addButtonText}>+ Add Module</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.cardDescription}>
+                        Manage interactive modules for this event. Only one module can be active at a time to focus user attention.
+                    </Text>
+
+                    {currentEvent.modules && currentEvent.modules.length > 0 ? (
+                        <View style={styles.modulesList}>
+                            {currentEvent.modules.map((module, index) => (
+                                <View key={index} style={styles.moduleItem}>
+                                    <View style={styles.moduleInfo}>
+                                        <Text style={styles.moduleName}>{module.name}</Text>
+                                        <Text style={styles.moduleType}>{module.type.toUpperCase()}</Text>
+                                        <View style={[styles.moduleStatusBadge,
+                                        module.status === 'active' ? { backgroundColor: 'rgba(48, 209, 88, 0.2)' } :
+                                            module.status === 'ended' ? { backgroundColor: 'rgba(255, 69, 58, 0.1)' } :
+                                                { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                                        ]}>
+                                            <Text style={[styles.moduleStatusText,
+                                            module.status === 'active' ? { color: '#30D158' } :
+                                                module.status === 'ended' ? { color: '#FF453A' } :
+                                                    { color: '#AAA' }
+                                            ]}>
+                                                {module.status.toUpperCase()}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.moduleActions}>
+                                        {module.status === 'pending' && (
+                                            <TouchableOpacity
+                                                style={[styles.moduleBtn, styles.activateBtn]}
+                                                onPress={() => handleUpdateModuleStatus(module.id, 'active')}
+                                            >
+                                                <Text style={styles.moduleBtnText}>Activate</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {module.status === 'active' && (
+                                            <TouchableOpacity
+                                                style={[styles.moduleBtn, styles.endBtn]}
+                                                onPress={() => handleUpdateModuleStatus(module.id, 'ended')}
+                                            >
+                                                <Text style={styles.moduleBtnText}>End</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {module.status === 'ended' && (
+                                            <Text style={styles.endedText}>Completed</Text>
+                                        )}
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    ) : (
+                        <View style={styles.emptyModules}>
+                            <Text style={styles.emptyModulesText}>No modules added yet.</Text>
+                        </View>
+                    )}
+
+                    {/* Add Module Form (Inline for now) */}
+                    {moduleModalVisible && (
+                        <View style={styles.addModuleForm}>
+                            <Text style={styles.formTitle}>Add New Module</Text>
+                            <Text style={styles.label}>Module Type</Text>
+                            <View style={styles.typeSelector}>
+                                <TouchableOpacity style={[styles.typeOption, styles.selectedType]}>
+                                    <Text style={styles.typeOptionText}>Form / Survey</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={styles.label}>Module Name</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Feedback Form"
+                                placeholderTextColor="#666"
+                                value={newModuleName}
+                                onChangeText={setNewModuleName}
+                            />
+
+                            <Text style={styles.label}>Question</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. What did you like most?"
+                                placeholderTextColor="#666"
+                                value={newModuleQuestion}
+                                onChangeText={setNewModuleQuestion}
+                            />
+
+                            <View style={styles.formActions}>
+                                <TouchableOpacity
+                                    style={styles.cancelButton}
+                                    onPress={() => setModuleModalVisible(false)}
+                                >
+                                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.saveButton}
+                                    onPress={handleAddModule}
+                                >
+                                    <Text style={styles.saveButtonText}>Add Module</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {/* 3. Control Card */}
@@ -415,5 +595,149 @@ const styles = StyleSheet.create({
     qrPlaceholderText: {
         color: '#AAA',
         textAlign: 'center',
+    },
+    addButton: {
+        backgroundColor: '#007AFF',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+    },
+    addButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    modulesList: {
+        marginBottom: 20,
+    },
+    moduleItem: {
+        backgroundColor: '#2C2C2C',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    moduleInfo: {
+        flex: 1,
+    },
+    moduleName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFF',
+        marginBottom: 4,
+    },
+    moduleType: {
+        fontSize: 12,
+        color: '#888',
+        marginBottom: 8,
+    },
+    moduleStatusBadge: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+    },
+    moduleStatusText: {
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    moduleActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    moduleBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    activateBtn: {
+        backgroundColor: '#30D158',
+    },
+    endBtn: {
+        backgroundColor: '#FF453A',
+    },
+    moduleBtnText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    endedText: {
+        color: '#666',
+        fontSize: 14,
+        fontStyle: 'italic',
+    },
+    emptyModules: {
+        padding: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        borderColor: '#444',
+        borderRadius: 12,
+    },
+    emptyModulesText: {
+        color: '#666',
+        fontSize: 16,
+    },
+    addModuleForm: {
+        marginTop: 20,
+        backgroundColor: '#252525',
+        padding: 20,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    formTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#FFF',
+        marginBottom: 20,
+    },
+    typeSelector: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    typeOption: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        backgroundColor: '#333',
+        marginRight: 10,
+    },
+    selectedType: {
+        backgroundColor: '#007AFF',
+    },
+    typeOptionText: {
+        color: '#FFF',
+        fontWeight: '600',
+    },
+    formActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 12,
+        marginTop: 10,
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        backgroundColor: '#333',
+    },
+    cancelButtonText: {
+        color: '#FFF',
+        fontWeight: '600',
+    },
+    saveButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        backgroundColor: '#30D158',
+    },
+    saveButtonText: {
+        color: '#FFF',
+        fontWeight: '600',
     },
 });
