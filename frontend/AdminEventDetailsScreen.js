@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Clipboard, Alert, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import QRCode from 'react-qr-code';
 
 const API_URL = 'http://localhost:8080';
 
@@ -88,21 +89,15 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
         }
     };
 
+    const getShareLink = () => {
+        if (typeof window !== 'undefined') {
+            return `${window.location.origin}/?pin=${currentEvent.id}`;
+        }
+        return `http://yourapp.com/?pin=${currentEvent.id}`;
+    };
+
     const copyToClipboard = () => {
-        // Construct the URL. Assuming the app is served at the current origin.
-        // If running in Expo Web locally, it's usually window.location.origin
-        // The user wants to share the link to the *event* for users.
-        // Users join by PIN usually, but if there's a direct link:
-        // We might not have a direct link structure yet, but user asked for "link for the event to be copied".
-        // Let's assume a deep link or just the PIN for now, 
-        // OR better: construct a URL that fills the PIN automatically if we supported it.
-
-        // For now, I'll copy a message with the PIN and a hypothetical URL.
-        const pin = currentEvent.id;
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'http://yourapp.com';
-        // If we implement 'pin in url' for users too, it would be origin + '/?pin=' + pin
-        const shareLink = `${origin}/?pin=${pin}`;
-
+        const shareLink = getShareLink();
         Clipboard.setString(shareLink);
         if (Platform.OS === 'web') {
             navigator.clipboard.writeText(shareLink).then(() => {
@@ -146,7 +141,7 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
 
-                {/* 1. Event Info Card with Share Link */}
+                {/* 1. Event Info Card */}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <Text style={styles.cardTitle}>Event Details</Text>
@@ -169,13 +164,38 @@ export default function AdminEventDetailsScreen({ event, onNavigate, onBack }) {
                             <Text style={styles.pinText}>{currentEvent.id}</Text>
                         </View>
                     </View>
+                </View>
+
+                {/* 2. Share Access Card (New) */}
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Share Access</Text>
+                    <Text style={styles.cardDescription}>
+                        Share this QR code or link with participants to let them join the event directly.
+                    </Text>
+
+                    <View style={styles.qrCodeContainer}>
+                        {Platform.OS === 'web' ? (
+                            <div style={{ background: 'white', padding: '16px', borderRadius: '16px' }}>
+                                <QRCode
+                                    value={getShareLink()}
+                                    size={200}
+                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                    viewBox={`0 0 256 256`}
+                                />
+                            </div>
+                        ) : (
+                            <View style={styles.qrPlaceholder}>
+                                <Text style={styles.qrPlaceholderText}>QR Code available on Web</Text>
+                            </View>
+                        )}
+                    </View>
 
                     <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
                         <Text style={styles.copyButtonText}>Copy Shareable Link</Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* 2. Control Card */}
+                {/* 3. Control Card */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Event Controls</Text>
                     <Text style={styles.cardDescription}>
@@ -255,7 +275,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: 24,
         alignItems: 'flex-start',
-        maxWidth: 1200,
+        maxWidth: 1600,
         width: '100%',
         alignSelf: 'center',
     },
@@ -263,10 +283,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#1E1E1E',
         borderRadius: 16,
         padding: 24,
-        marginBottom: 0, // Margin handled by gap
+        marginBottom: 0,
         borderWidth: 1,
         borderColor: '#2C2C2C',
-        minWidth: 300,
+        minWidth: 350,
         flex: 1,
     },
     cardHeader: {
@@ -323,7 +343,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     copyButton: {
-        marginTop: 10,
+        marginTop: 20,
         backgroundColor: '#333',
         paddingVertical: 14,
         borderRadius: 8,
@@ -353,7 +373,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     statsCard: {
-        // paddingBottom: 40,
     },
     statsGrid: {
         flexDirection: 'row',
@@ -376,5 +395,25 @@ const styles = StyleSheet.create({
     statLabel: {
         fontSize: 12,
         color: '#666',
+    },
+    qrCodeContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 10,
+        padding: 10,
+        backgroundColor: '#2C2C2C',
+        borderRadius: 12,
+    },
+    qrPlaceholder: {
+        height: 200,
+        width: 200,
+        backgroundColor: '#333',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 12,
+    },
+    qrPlaceholderText: {
+        color: '#AAA',
+        textAlign: 'center',
     },
 });
