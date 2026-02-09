@@ -6,12 +6,8 @@ COPY package*.json ./
 
 RUN npm install
 
-# Install dependencies for web support
-RUN npx expo install react-dom react-native-web @expo/metro-runtime
-
 COPY . .
 
 EXPOSE 8081
 
-# Start Expo for web
-CMD ["npx", "expo", "start", "--web", "--host", "lan"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "8081"]

@@ -29,13 +29,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
-      # Expose additional ports if needed for development/tunneling
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     environment:
-      - CI=true
-      - WEB_PORT=8081
+      - VITE_API_URL=http://localhost:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - backend
 
