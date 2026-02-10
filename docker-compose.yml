@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   backend:
     image: golang:alpine
     working_dir: /app
@@ -14,14 +27,8 @@ services:
       - ./backend:/app
     command: sh -c "go mod download && go run ."
     depends_on:
-      - mongo
-
-  mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
+      mongo:
+        condition: service_healthy
 
   frontend:
     build:
