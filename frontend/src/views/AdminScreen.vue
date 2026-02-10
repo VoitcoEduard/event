@@ -229,12 +229,12 @@ const goToMain = () => {
 
 .form-card {
   background-color: #1E1E1E;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 30px;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
   border: 1px solid #2C2C2C;
   width: 100%;
-  max-width: 800px;
+  max-width: 500px;
 }
 
 .form-title {
@@ -299,12 +299,17 @@ const goToMain = () => {
 
 .event-card {
   background-color: #1E1E1E;
-  border-radius: 16px;
-  padding: 24px;
-  min-width: 300px;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 250px;
   flex: 1;
-  max-width: 600px;
+  max-width: 350px;
   border: 1px solid #2C2C2C;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.event-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .card-header {
@@ -316,11 +321,12 @@ const goToMain = () => {
 }
 
 .event-name {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: #FFFFFF;
   flex: 1;
   margin-right: 10px;
+  margin-bottom: 8px;
 }
 
 .event-id {
@@ -347,10 +353,14 @@ const goToMain = () => {
 }
 
 .event-description {
-  font-size: 15px;
+  font-size: 14px;
   color: #AAAAAA;
-  line-height: 22;
-  margin-bottom: 20px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-actions {
@@ -360,10 +370,10 @@ const goToMain = () => {
 }
 
 .card-action {
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .view-action {
