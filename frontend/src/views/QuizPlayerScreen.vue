@@ -162,25 +162,25 @@ onMounted(async () => {
     // 2. Listen for WS updates
     quizWS.on('state:update', (session) => {
         // Update local player stats if available
-        if (session.Players && session.Players[nickname.value]) {
-            const myData = session.Players[nickname.value]
+        if (session.players && session.players[nickname.value]) {
+            const myData = session.players[nickname.value]
             const oldScore = score.value
             score.value = myData.score || 0
             
             // Calculate rank
-            const allPlayers = Object.values(session.Players)
+            const allPlayers = Object.values(session.players)
             allPlayers.sort((a, b) => b.score - a.score)
             rank.value = allPlayers.findIndex(p => p.nickname === nickname.value) + 1
         }
 
-        if (session.State) {
+        if (session.state) {
             const prevState = gameState.value
             
             // Handle State Transitions
-            if (session.State === 'question') {
+            if (session.state === 'question') {
                 // If it's a NEW question or just reconnecting
                 if (prevState !== 'question' && prevState !== 'answered') {
-                    currentQuestionIndex.value = session.CurrentIndex
+                    currentQuestionIndex.value = session.currentIndex
                     selectedAnswer.value = null
                     
                     // Simple "Get Ready" countdown if we were waiting
@@ -200,7 +200,7 @@ onMounted(async () => {
                         gameState.value = 'question'
                     }
                 }
-            } else if (session.State === 'results') {
+            } else if (session.state === 'results') {
                 // Check if correct
                 const currentQ = questions.value[currentQuestionIndex.value]
                 if (currentQ) {
@@ -217,13 +217,13 @@ onMounted(async () => {
                     }
                 }
                 gameState.value = 'result'
-            } else if (session.State === 'finished') {
+            } else if (session.state === 'finished') {
                 gameState.value = 'finished'
-            } else if (session.State === 'lobby') {
+            } else if (session.state === 'lobby') {
                 if (gameState.value !== 'enter-nickname') {
                    gameState.value = 'lobby'
                 }
-            } else if (session.State === 'leaderboard') {
+            } else if (session.state === 'leaderboard') {
                 // Determine if we show leaderboard or keep showing "result"
                 // Usually players see leaderboard too
                 // For MVP, maybe keep result screen or show simple rank

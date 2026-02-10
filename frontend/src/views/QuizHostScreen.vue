@@ -65,7 +65,8 @@
       </div>
       
       <div class="host-controls">
-         <button class="control-btn" @click="endQuestionEarly">Skip Timer</button>
+         <button v-if="timeRemaining > 0" class="control-btn" @click="endQuestionEarly">Skip Timer</button>
+         <button v-else class="control-btn primary" @click="goToResults">Go to Results</button>
       </div>
     </div>
 
@@ -191,6 +192,10 @@ const endQuestionEarly = () => {
     quizWS.send('host:show_results', { moduleId })
 }
 
+const goToResults = () => {
+    quizWS.send('host:show_results', { moduleId })
+}
+
 const nextState = () => {
     if (gameState.value === 'results') {
         gameState.value = 'leaderboard'
@@ -232,40 +237,39 @@ onMounted(async () => {
         // Sync local state with server session
         
         // Update players
-        if (session.Players) {
-            players.value = Object.values(session.Players)
+        if (session.players) {
+            players.value = Object.values(session.players)
         }
 
         // Update Game State
-        if (session.State) {
+        if (session.state) {
             const prevState = gameState.value
-            gameState.value = session.State
+            gameState.value = session.state
             
             // Handle transitions
-            if (session.State === 'question') {
+            if (session.state === 'question') {
+                const prevIndex = currentQuestionIndex.value
+                
                 // New question started
-                if (session.CurrentIndex !== undefined) {
-                    currentQuestionIndex.value = session.CurrentIndex
+                if (session.currentIndex !== undefined) {
+                    currentQuestionIndex.value = session.currentIndex
                 }
                 
-                // Calculate time remaining based on start time
-                // const elapsed = Math.floor(Date.now() / 1000) - session.StartTime
-                // const limit = currentQuestion.value?.timeLimit || 20
-                // startLocalTimer(Math.max(0, limit - elapsed))
-                
-                // Simplified: just restart timer
-                if (prevState !== 'question' || timeRemaining.value <= 0) {
+                // Restart timer ONLY if:
+                // 1. We transitioned from a non-question state
+                // 2. OR we moved to a new question index
+                if (prevState !== 'question' || (session.currentIndex !== undefined && prevIndex !== session.currentIndex)) {
                      startLocalTimer(currentQuestion.value?.timeLimit || 20)
                 }
-            } else if (session.State === 'results') {
+            } else if (session.state === 'results') {
                 clearInterval(timerInterval)
             }
         }
 
         // Update Answer Counts
-        if (session.Answers) {
+        if (session.answers) {
             const counts = { 0: 0, 1: 0, 2: 0, 3: 0 }
-            Object.values(session.Answers).forEach(ansIdx => {
+            Object.values(session.answers).forEach(ansIdx => {
                 counts[ansIdx] = (counts[ansIdx] || 0) + 1
             })
             answerCounts.value = counts

@@ -1,12 +1,15 @@
 package hub
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"sync"
 	"time"
 
+	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // QuizHub maintains the set of active clients and broadcasts messages to the
@@ -176,6 +179,26 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			session.State = "question"
 			session.CurrentIndex = 0
 			session.Answers = make(map[string]int)
+			// Load questions from DB
+			collection := db.GetCollection("events")
+			var event models.Event
+			// Find event containing this module
+			err := collection.FindOne(context.Background(), bson.M{"modules.id": client.ModuleID}).Decode(&event)
+			if err == nil {
+				for _, mod := range event.Modules {
+					if mod.ID == client.ModuleID {
+						// Extract questions
+						dataBytes, _ := json.Marshal(mod.Data)
+						var qData models.QuizModuleData
+						json.Unmarshal(dataBytes, &qData)
+						session.Questions = qData.Questions
+						break
+					}
+				}
+			} else {
+				log.Println("Error finding event for module:", client.ModuleID, err)
+			}
+
 			session.StartTime = time.Now().Unix() // Reset timer
 
 			// Broadcast first question separately if we want to hide future questions?
