@@ -1,12 +1,14 @@
 <template>
   <div class="app-container">
     <router-view />
+    <Toast />
   </div>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
 import { API_BASE_URL, getUserId } from './utils'
+import Toast from './components/Toast.vue'
 
 onMounted(() => {
   if (!sessionStorage.getItem('currentScreen')) {

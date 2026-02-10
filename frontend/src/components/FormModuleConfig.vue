@@ -155,6 +155,8 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { API_BASE_URL } from '../utils'
+import { useToast } from '../composables/useToast'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -171,7 +173,7 @@ const showTemplateModal = ref(false)
 const templateName = ref('')
 const showSaveTemplateModal = ref(false)
 
-import { API_BASE_URL } from '../utils'
+const { success, error, info } = useToast()
 
 watch(() => [props.visible, props.module], ([visible, mod]) => {
   if (visible && mod?.data?.timeline) {
@@ -217,28 +219,28 @@ const moveStep = (index, direction) => {
 
 const handlePublish = async () => {
   if (timeline.value.length === 0) {
-    alert('Your form has no steps. Please add at least one.')
+    info('Your form has no steps. Please add at least one.')
     return
   }
 
   loading.value = true
   try {
-    const response = await fetch(`${API_URL}/events/${props.eventId}/modules/${props.module.id}/publish`, {
+    const response = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}/publish`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: { timeline: timeline.value } })
     })
 
     if (response.ok) {
-      alert('Form configuration published successfully!')
+      success('Form configuration published successfully!')
       emit('update')
       handleClose()
     } else {
-      alert('Failed to publish configuration.')
+      error('Failed to publish configuration.')
     }
-  } catch (error) {
-    console.error('Error publishing:', error)
-    alert('Failed to publish configuration.')
+  } catch (err) {
+    console.error('Error publishing:', err)
+    error('Failed to publish configuration.')
   } finally {
     loading.value = false
   }
@@ -246,13 +248,13 @@ const handlePublish = async () => {
 
 const fetchTemplates = async () => {
   try {
-    const response = await fetch(`${API_URL}/templates`)
+    const response = await fetch(`${API_BASE_URL}/templates`)
     if (response.ok) {
       const data = await response.json()
       templates.value = data || []
     }
-  } catch (error) {
-    console.error('Error fetching templates:', error)
+  } catch (err) {
+    console.error('Error fetching templates:', err)
   }
 }
 
@@ -273,15 +275,15 @@ const deleteTemplate = async (id, name) => {
   if (!confirm(`Are you sure you want to delete "${name}"?`)) return
   
   try {
-    const response = await fetch(`${API_URL}/templates/${id}`, { method: 'DELETE' })
+    const response = await fetch(`${API_BASE_URL}/templates/${id}`, { method: 'DELETE' })
     if (response.ok) {
       fetchTemplates()
     } else {
-      alert('Failed to delete template.')
+      error('Failed to delete template.')
     }
-  } catch (error) {
-    console.error(error)
-    alert('Failed to delete template.')
+  } catch (err) {
+    console.error(err)
+    error('Failed to delete template.')
   }
 }
 
@@ -291,12 +293,12 @@ const openSaveTemplateModal = () => {
 
 const saveAsTemplate = async () => {
   if (!templateName.value.trim()) {
-    alert('Please enter a template name.')
+    info('Please enter a template name.')
     return
   }
 
   try {
-    const response = await fetch(`${API_URL}/templates`, {
+    const response = await fetch(`${API_BASE_URL}/templates`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -307,13 +309,13 @@ const saveAsTemplate = async () => {
       })
     })
     if (response.ok) {
-      alert('Template saved!')
+      success('Template saved!')
       showSaveTemplateModal.value = false
       templateName.value = ''
     }
-  } catch (error) {
-    console.error(error)
-    alert('Failed to save template.')
+  } catch (err) {
+    console.error(err)
+    error('Failed to save template.')
   }
 }
 
@@ -502,19 +504,18 @@ const modalStyle = computed(() => ({
   font-size: 12px;
   color: #8E8E93;
   margin-bottom: 8px;
-  text-transform: uppercase;
   font-weight: 600;
 }
 
 .input {
-  background-color: #1C1C1E;
+  background-color: #121212;
+  border: 1px solid #333;
   border-radius: 8px;
-  padding: 12px;
+  padding: 12px 16px;
+  color: white;
   font-size: 16px;
-  color: #FFF;
-  border: 1px solid #3A3A3C;
-  margin-bottom: 16px;
   width: 100%;
+  margin-bottom: 12px;
 }
 
 .input.text-area {
@@ -524,26 +525,21 @@ const modalStyle = computed(() => ({
 
 .type-selector {
   display: flex;
-  background-color: #1C1C1E;
-  border-radius: 8px;
-  padding: 4px;
-  border: 1px solid #3A3A3C;
+  gap: 8px;
 }
 
 .type-option {
-  flex: 1;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background-color: #333;
+  color: #888;
   font-size: 14px;
-  color: #8E8E93;
-  font-weight: 500;
-  background: none;
+  font-weight: 600;
 }
 
 .type-option.active {
-  background-color: #3A3A3C;
+  background-color: #007AFF;
   color: #FFF;
-  font-weight: 600;
 }
 
 .action-bar {
@@ -551,56 +547,59 @@ const modalStyle = computed(() => ({
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #1C1C1E;
-  border-top: 1px solid #2C2C2E;
-  padding: 16px;
-  padding-bottom: 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 16px 20px;
+  background-color: #1C1C1E;
+  border-top: 1px solid #2C2C2E;
 }
 
 .add-buttons {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .add-btn {
   padding: 10px 16px;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: 8px;
   font-size: 14px;
-  color: #FFF;
+  font-weight: 600;
 }
 
 .add-question {
-  background-color: #0A84FF;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007AFF;
 }
 
 .add-message {
-  background-color: #FF9F0A;
+  background-color: rgba(255, 159, 10, 0.1);
+  color: #FF9F0A;
 }
 
 .publish-btn {
-  background-color: #30D158;
+  background-color: #007AFF;
+  color: white;
   padding: 12px 24px;
-  border-radius: 10px;
-  color: #FFF;
-  font-weight: bold;
-  font-size: 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.publish-btn:disabled {
+  opacity: 0.5;
 }
 
 .dialog {
   background-color: #1C1C1E;
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   width: 85%;
   max-width: 400px;
-  border: 1px solid #3A3A3C;
 }
 
 .dialog-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   color: #FFF;
   margin-bottom: 16px;
@@ -614,21 +613,21 @@ const modalStyle = computed(() => ({
 .template-item-wrapper {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .template-item {
   flex: 1;
   background-color: #2C2C2E;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 12px;
+  padding: 16px;
   cursor: pointer;
 }
 
 .template-item-name {
   font-size: 16px;
-  color: #FFF;
   font-weight: 600;
+  color: #FFF;
 }
 
 .template-item-desc {
@@ -638,36 +637,36 @@ const modalStyle = computed(() => ({
 }
 
 .delete-template-btn {
-  padding: 12px;
-  background-color: rgba(255, 69, 58, 0.1);
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 8px;
+  margin-left: 8px;
+  background: none;
+  font-size: 20px;
 }
 
 .no-templates {
-  color: #666;
+  color: #8E8E93;
   text-align: center;
   padding: 20px;
 }
 
 .dialog-close-btn {
   margin-top: 16px;
-  padding: 12px;
-  background-color: #3A3A3C;
-  border-radius: 8px;
+  padding: 14px;
+  background-color: #2C2C2E;
+  border-radius: 12px;
   width: 100%;
   color: #FFF;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .dialog-input {
-  background-color: #2C2C2E;
-  color: #FFF;
-  padding: 12px;
+  background-color: #121212;
+  border: 1px solid #333;
   border-radius: 8px;
-  border: 1px solid #3A3A3C;
+  padding: 14px 16px;
+  color: white;
+  font-size: 16px;
   width: 100%;
   margin-bottom: 16px;
 }
@@ -675,22 +674,23 @@ const modalStyle = computed(() => ({
 .dialog-buttons {
   display: flex;
   gap: 12px;
-  justify-content: flex-end;
 }
 
 .dialog-btn {
-  padding: 10px 16px;
-  border-radius: 8px;
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .dialog-btn.cancel {
-  background-color: #333;
-  color: #FFF;
+  background-color: #2C2C2E;
+  color: #8E8E93;
 }
 
 .dialog-btn.save {
-  background-color: #0A84FF;
+  background-color: #007AFF;
   color: #FFF;
 }
 </style>

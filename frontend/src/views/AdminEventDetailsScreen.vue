@@ -156,6 +156,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QRCodeVue from 'qrcode.vue'
+import { API_BASE_URL } from '../utils'
+import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
@@ -167,7 +169,7 @@ const selectedModuleType = ref('form')
 const showConfigModal = ref(false)
 const selectedModule = ref(null)
 
-import { API_BASE_URL } from '../utils'
+const { success, error, info } = useToast()
 
 const storedEvent = sessionStorage.getItem('currentEvent')
 currentEvent.value = storedEvent ? JSON.parse(storedEvent) : null
@@ -182,14 +184,14 @@ const fetchEventDetails = async () => {
   if (!currentEvent.value?.id) return
 
   try {
-    const response = await fetch(`${API_URL}/events/${currentEvent.value.id}`)
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}`)
     if (response.ok) {
       const data = await response.json()
       currentEvent.value = data
       sessionStorage.setItem('currentEvent', JSON.stringify(data))
     }
-  } catch (error) {
-    console.error('Error fetching event details:', error)
+  } catch (err) {
+    console.error('Error fetching event details:', err)
   }
 }
 
@@ -199,7 +201,7 @@ onMounted(() => {
 
 const toggleStatus = async () => {
   try {
-    const response = await fetch(`${API_URL}/events/${currentEvent.value.id}/status`, {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !currentEvent.value.isActive })
@@ -207,13 +209,13 @@ const toggleStatus = async () => {
 
     if (response.ok) {
       currentEvent.value.isActive = !currentEvent.value.isActive
-      alert(`Event ${currentEvent.value.isActive ? 'started' : 'stopped'}`)
+      success(`Event ${currentEvent.value.isActive ? 'started' : 'stopped'}`)
     } else {
-      alert('Failed to update status')
+      error('Failed to update status')
     }
-  } catch (error) {
-    console.error('Error updating status:', error)
-    alert('Failed to update status')
+  } catch (err) {
+    console.error('Error updating status:', err)
+    error('Failed to update status')
   }
 }
 
@@ -223,7 +225,7 @@ const getShareLink = () => {
 
 const copyLink = () => {
   navigator.clipboard.writeText(getShareLink())
-  alert('Event link copied to clipboard!')
+  success('Event link copied to clipboard!')
 }
 
 const configureModule = (module) => {
@@ -238,12 +240,12 @@ const closeConfigModal = () => {
 
 const addModule = async () => {
   if (!newModuleName.value.trim()) {
-    alert('Please enter a module name')
+    info('Please enter a module name')
     return
   }
 
   try {
-    const response = await fetch(`${API_URL}/events/${currentEvent.value.id}/modules`, {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -257,19 +259,19 @@ const addModule = async () => {
       fetchEventDetails()
       showModuleModal.value = false
       newModuleName.value = ''
-      alert('Module added. Now please configure it.')
+      success('Module added. Now please configure it.')
     } else {
-      alert('Failed to add module')
+      error('Failed to add module')
     }
-  } catch (error) {
-    console.error('Error adding module:', error)
-    alert('Failed to add module')
+  } catch (err) {
+    console.error('Error adding module:', err)
+    error('Failed to add module')
   }
 }
 
 const updateModuleStatus = async (moduleId, newStatus) => {
   try {
-    const response = await fetch(`${API_URL}/events/${currentEvent.value.id}/modules/${moduleId}/status`, {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${moduleId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
@@ -278,11 +280,11 @@ const updateModuleStatus = async (moduleId, newStatus) => {
     if (response.ok) {
       fetchEventDetails()
     } else {
-      alert('Failed to update module status')
+      error('Failed to update module status')
     }
-  } catch (error) {
-    console.error('Error updating module status:', error)
-    alert('Failed to update module status')
+  } catch (err) {
+    console.error('Error updating module status:', err)
+    error('Failed to update module status')
   }
 }
 
@@ -487,7 +489,6 @@ const goBack = () => {
   text-align: center;
 }
 
-/* Modules Card Styles */
 .modules-card {
   min-height: 400px;
 }
@@ -499,8 +500,6 @@ const goBack = () => {
   color: #FFF;
   font-size: 13px;
   font-weight: 600;
-  border: none;
-  cursor: pointer;
 }
 
 .modules-list {
@@ -508,39 +507,38 @@ const goBack = () => {
 }
 
 .module-item {
-  background-color: #252525;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid #333;
+  padding: 16px;
+  background-color: #2C2C2E;
+  border-radius: 12px;
+  margin-bottom: 12px;
 }
 
 .module-info {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .module-name {
   font-size: 16px;
   font-weight: 600;
   color: #FFF;
-  margin-bottom: 4px;
 }
 
 .module-type {
   font-size: 12px;
   color: #888;
-  margin-bottom: 8px;
 }
 
 .module-status-badge {
-  padding: 4px 8px;
-  border-radius: 6px;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
   font-size: 10px;
   font-weight: 700;
-  display: inline-block;
 }
 
 .module-status-badge.status-active {
@@ -549,95 +547,80 @@ const goBack = () => {
 }
 
 .module-status-badge.status-ended {
-  background-color: rgba(255, 69, 58, 0.1);
+  background-color: rgba(255, 69, 58, 0.2);
   color: #FF453A;
 }
 
 .module-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .module-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
-  border: none;
-  cursor: pointer;
 }
 
-.config-btn { background-color: #FF9500; color: #FFF; }
-.activate-btn { background-color: #30D158; color: #FFF; }
-.end-btn { background-color: #FF453A; color: #FFF; }
+.module-btn.config-btn {
+  background-color: #333;
+  color: #FFF;
+}
+
+.module-btn.activate-btn {
+  background-color: #28cd41;
+  color: #FFF;
+}
+
+.module-btn.end-btn {
+  background-color: #ff3b30;
+  color: #FFF;
+}
 
 .ended-text {
-  color: #666;
-  font-size: 14px;
-  font-style: italic;
+  font-size: 12px;
+  color: #888;
 }
 
 .empty-modules {
-  padding: 60px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  border: 1px dashed #444;
-  border-radius: 12px;
-  margin-top: 20px;
+  justify-content: center;
+  padding: 60px;
 }
 
 .empty-modules-text {
   color: #666;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.status-badge {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.status-badge.active {
-  background-color: rgba(48, 209, 88, 0.2);
-  color: #30D158;
-}
-
-.status-badge.inactive {
-  background-color: rgba(255, 69, 58, 0.2);
-  color: #FF453A;
-}
-
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 100;
 }
 
 .add-module-container {
   background-color: #1E1E1E;
   border-radius: 16px;
   padding: 24px;
-  width: 90%;
+  width: 85%;
   max-width: 400px;
-  border: 1px solid #333;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
 
 .add-module-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .form-title {
@@ -647,55 +630,47 @@ const goBack = () => {
 }
 
 .close-btn {
-  color: #AAA;
-  font-size: 24px;
   background: none;
   border: none;
+  color: #888;
+  font-size: 20px;
   cursor: pointer;
-  padding: 0;
-  line-height: 1;
 }
 
 .input-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #AAA;
+  font-size: 12px;
+  color: #888;
   margin-bottom: 8px;
-  margin-top: 16px;
+  font-weight: 600;
 }
 
 .module-input {
-  background-color: #2C2C2C;
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 15px;
-  color: #FFF;
+  background-color: #121212;
   border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: white;
+  font-size: 16px;
   width: 100%;
-  box-sizing: border-box;
+  margin-bottom: 16px;
 }
 
 .dropdown {
-  background-color: #2C2C2C;
+  background-color: #2C2C2E;
   border-radius: 8px;
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #333;
+  padding: 12px 16px;
+  margin-bottom: 16px;
   color: #FFF;
+  font-size: 14px;
 }
 
 .add-module-button {
   background-color: #007AFF;
   padding: 14px;
   border-radius: 8px;
-  margin-top: 30px;
   width: 100%;
   color: #FFF;
-  font-size: 15px;
   font-weight: 600;
-  border: none;
-  cursor: pointer;
+  font-size: 16px;
 }
 </style>

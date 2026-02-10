@@ -103,6 +103,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { API_BASE_URL } from '../utils'
+import { useToast } from '../composables/useToast'
 
 const props = defineProps({
   module: { type: Object, required: true },
@@ -125,12 +127,12 @@ const currentStep = computed(() => timeline.value[currentStepIndex.value])
 const isLastStep = computed(() => currentStepIndex.value === timeline.value.length - 1)
 const progressWidth = computed(() => ((currentStepIndex.value + 1) / timeline.value.length) * 100)
 
-import { API_BASE_URL } from '../utils'
+const { success, error, info } = useToast()
 
 const fetchTemplates = async () => {
   loadingTemplates.value = true
   try {
-    const response = await fetch(`${API_URL}/templates`)
+    const response = await fetch(`${API_BASE_URL}/templates`)
     if (response.ok) {
       const data = await response.json()
       templates.value = data || []
@@ -156,22 +158,22 @@ const loadTemplate = (template) => {
     answers.value = { ...answers.value, ...template.data.answers }
   }
   showTemplateModal.value = false
-  alert('Template loaded successfully!')
+  success('Template loaded successfully!')
 }
 
 const deleteTemplate = async (id, name) => {
   if (!confirm(`Are you sure you want to delete "${name}"?`)) return
   
   try {
-    const response = await fetch(`${API_URL}/templates/${id}`, { method: 'DELETE' })
+    const response = await fetch(`${API_BASE_URL}/templates/${id}`, { method: 'DELETE' })
     if (response.ok) {
       fetchTemplates()
     } else {
-      alert('Failed to delete template.')
+      error('Failed to delete template.')
     }
-  } catch (error) {
-    console.error(error)
-    alert('Failed to delete template.')
+  } catch (err) {
+    console.error(err)
+    error('Failed to delete template.')
   }
 }
 
@@ -185,7 +187,7 @@ const handleNext = async () => {
   if (currentStep.value.type === 'field') {
     const answer = answers.value[currentStep.value.id]
     if (!answer || (typeof answer === 'string' && !answer.trim())) {
-      alert('Please provide an answer.')
+      info('Please provide an answer.')
       return
     }
   }
@@ -200,7 +202,7 @@ const handleNext = async () => {
 const handleSubmit = async () => {
   submitting.value = true
   try {
-    const response = await fetch(`${API_URL}/events/${props.eventId}/modules/${props.module.id}/response`, {
+    const response = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}/response`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -213,11 +215,11 @@ const handleSubmit = async () => {
       completed.value = true
       emit('complete')
     } else {
-      alert('Failed to submit response.')
+      error('Failed to submit response.')
     }
-  } catch (error) {
-    console.error('Error submitting response:', error)
-    alert('Failed to submit response.')
+  } catch (err) {
+    console.error('Error submitting response:', err)
+    error('Failed to submit response.')
   } finally {
     submitting.value = false
   }
@@ -498,12 +500,14 @@ const handleSubmit = async () => {
   width: 20px;
   height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border-top-color: #007AFF;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

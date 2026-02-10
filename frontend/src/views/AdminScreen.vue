@@ -88,6 +88,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { API_BASE_URL } from '../utils'
+import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const events = ref([])
@@ -95,6 +96,8 @@ const name = ref('')
 const description = ref('')
 const editingId = ref(null)
 const isLoading = ref(false)
+
+const { success, error, info } = useToast()
 
 const fetchEvents = async () => {
   isLoading.value = true
@@ -106,8 +109,8 @@ const fetchEvents = async () => {
     } else {
       events.value = []
     }
-  } catch (error) {
-    console.error('Error fetching events:', error)
+  } catch (err) {
+    console.error('Error fetching events:', err)
   } finally {
     isLoading.value = false
   }
@@ -119,7 +122,7 @@ onMounted(() => {
 
 const handleSubmit = async () => {
   if (!name.value || !description.value) {
-    alert('Please fill in all fields')
+    info('Please fill in all fields')
     return
   }
 
@@ -140,13 +143,13 @@ const handleSubmit = async () => {
       description.value = ''
       editingId.value = null
       fetchEvents()
-      alert(`Event ${editingId.value ? 'updated' : 'created'} successfully`)
+      success(`Event ${editingId.value ? 'updated' : 'created'} successfully`)
     } else {
-      alert('Failed to save event')
+      error('Failed to save event')
     }
-  } catch (error) {
-    console.error('Error saving event:', error)
-    alert('Failed to save event')
+  } catch (err) {
+    console.error('Error saving event:', err)
+    error('Failed to save event')
   }
 }
 
@@ -158,11 +161,11 @@ const deleteEvent = async (id) => {
     if (response.ok) {
       fetchEvents()
     } else {
-      alert('Failed to delete event')
+      error('Failed to delete event')
     }
-  } catch (error) {
-    console.error('Error deleting event:', error)
-    alert('Failed to delete event')
+  } catch (err) {
+    console.error('Error deleting event:', err)
+    error('Failed to delete event')
   }
 }
 

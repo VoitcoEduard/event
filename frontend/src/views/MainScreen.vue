@@ -69,7 +69,7 @@ const handleConnect = async () => {
 
   loading.value = true
   try {
-    const response = await fetch(`${API_URL}/events/connect`, {
+    const response = await fetch(`${API_BASE_URL}/events/connect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin: pin.value })

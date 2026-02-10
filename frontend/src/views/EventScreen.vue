@@ -81,7 +81,7 @@ const fetchEvent = async () => {
   if (!currentEvent.value?.id) return
   
   try {
-    const response = await fetch(`${API_URL}/events/${currentEvent.value.id}`)
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}`)
     if (response.ok) {
       const data = await response.json()
       currentEvent.value = data
