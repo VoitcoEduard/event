@@ -29,7 +29,7 @@ func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 8 {
+	if len(parts) < 7 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
@@ -68,7 +68,7 @@ func GetQuizState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 8 {
+	if len(parts) < 7 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
@@ -93,7 +93,7 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 8 {
+	if len(parts) < 7 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
@@ -112,11 +112,6 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 		for _, mod := range event.Modules {
 			if mod.ID == moduleID {
 				// unmarshal data
-				// Need to be careful about strict typing of Data.
-				// In Event model: Data is interface{}.
-				// We need to marshal/unmarshal or type assert if we used a struct.
-				// Since Mongo driver decodes into map[string]interface{} by default for interface{},
-				// we might need to re-marshal.
 				dataBytes, _ := json.Marshal(mod.Data)
 				var qData models.QuizModuleData
 				json.Unmarshal(dataBytes, &qData)
@@ -148,7 +143,7 @@ func NextQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 8 {
+	if len(parts) < 7 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
@@ -178,7 +173,7 @@ func GetQuizResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 8 {
+	if len(parts) < 7 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}

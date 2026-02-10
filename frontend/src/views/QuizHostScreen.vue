@@ -197,8 +197,7 @@ const nextState = () => {
     } else if (gameState.value === 'leaderboard') {
         if (isLastQuestion.value) {
             // End quiz
-            // We might want a specific 'host:end_quiz' or just finished state
-            // Logic handled in frontend for now to transition
+            quizWS.send('host:end_quiz', { moduleId })
             gameState.value = 'finished'
         } else {
             quizWS.send('host:next_question', { moduleId })
