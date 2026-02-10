@@ -38,7 +38,7 @@
               @click="selectModule(module)"
             >
               <div class="icon-container">
-                <span class="module-icon">{{ module.type === 'form' ? '📝' : '📊' }}</span>
+                <span class="module-icon">{{ module.type === 'form' ? '📝' : (module.type === 'quiz' ? '🎮' : '📊') }}</span>
               </div>
               <div class="module-info">
                 <p class="module-title">{{ module.name }}</p>
@@ -109,6 +109,10 @@ onUnmounted(() => {
 })
 
 const selectModule = (module) => {
+  if (module.type === 'quiz') {
+    router.push(`/quiz/${currentEvent.value.id}/${module.id}/player`)
+    return
+  }
   selectedModule.value = module
 }
 

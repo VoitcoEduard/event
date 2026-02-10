@@ -92,6 +92,13 @@
                 Configure
               </button>
               <button 
+                v-if="module.type === 'quiz'"
+                class="module-btn host-btn" 
+                @click="hostQuiz(module)"
+              >
+                Host
+              </button>
+              <button 
                 class="module-btn"
                 :class="module.isActive ? 'stop-button' : 'start-button'"
                 @click="toggleModuleStatus(module)"
@@ -109,8 +116,17 @@
     </div>
 
     <FormModuleConfig
-      v-if="showConfigModal"
-      :visible="showConfigModal"
+      v-if="showConfigModal && selectedModule?.type === 'form'"
+      :visible="showConfigModal && selectedModule?.type === 'form'"
+      :module="selectedModule"
+      :event-id="currentEvent?.id"
+      @close="closeConfigModal"
+      @update="fetchEventDetails"
+    />
+
+    <QuizModuleConfig
+      v-if="showConfigModal && selectedModule?.type === 'quiz'"
+      :visible="showConfigModal && selectedModule?.type === 'quiz'"
       :module="selectedModule"
       :event-id="currentEvent?.id"
       @close="closeConfigModal"
@@ -133,9 +149,10 @@
         />
 
         <p class="input-label">Module Type</p>
-        <div class="dropdown">
-          <span>📝 Form</span>
-        </div>
+        <select v-model="selectedModuleType" class="dropdown-select">
+          <option value="form">📝 Form</option>
+          <option value="quiz">🎮 Quiz</option>
+        </select>
 
         <button class="add-module-button" @click="addModule">
           Add Module
@@ -149,6 +166,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
+import QuizModuleConfig from '../components/QuizModuleConfig.vue'
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
@@ -230,6 +248,10 @@ const configureModule = (module) => {
 const closeConfigModal = () => {
   showConfigModal.value = false
   selectedModule.value = null
+}
+
+const hostQuiz = (module) => {
+  router.push(`/quiz/${currentEvent.value.id}/${module.id}/host`)
 }
 
 const addModule = async () => {
@@ -642,6 +664,23 @@ const goBack = () => {
   font-size: 16px;
   width: 100%;
   margin-bottom: 16px;
+}
+
+.module-btn.host-btn {
+  background-color: #5E5CE6;
+  color: #FFF;
+}
+
+.dropdown-select {
+  background-color: #2C2C2E;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: #FFF;
+  font-size: 14px;
+  border: 1px solid #3A3A3C;
+  width: 100%;
+  appearance: none;
 }
 
 .dropdown {

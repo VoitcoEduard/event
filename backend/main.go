@@ -8,6 +8,7 @@ import (
 
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
+	"github.com/user/go-expo-sample/backend/hub"
 )
 
 type Response struct {
@@ -19,6 +20,18 @@ func main() {
 
 	// Connect to MongoDB
 	db.ConnectDB()
+
+	// Initialize QuizHub
+	quizHub := hub.NewQuizHub()
+	go quizHub.Run()
+
+	// Inject QuizHub into handlers
+	handlers.SetQuizHub(quizHub)
+
+	// WebSocket Endpoint
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		hub.ServeWs(quizHub, w, r)
+	})
 
 	// Register Handlers
 	http.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +101,30 @@ func main() {
 		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/publish") {
 			if r.Method == "PUT" {
 				handlers.PublishModule(w, r)
+				return
+			}
+		}
+
+		// Quiz routes
+		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/quiz/") {
+			if strings.HasSuffix(r.URL.Path, "/questions") && r.Method == "PUT" {
+				handlers.UpdateQuizQuestions(w, r)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/state") && r.Method == "GET" {
+				handlers.GetQuizState(w, r)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/start") && r.Method == "POST" {
+				handlers.StartQuiz(w, r)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/next") && r.Method == "POST" {
+				handlers.NextQuestion(w, r)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/results") && r.Method == "GET" {
+				handlers.GetQuizResults(w, r)
 				return
 			}
 		}

@@ -8,7 +8,9 @@ type ModuleType string
 
 const (
 	ModuleTypeForm ModuleType = "form"
+	ModuleTypeQuiz ModuleType = "quiz"
 	// Add other module types here
+
 )
 
 type Module struct {
