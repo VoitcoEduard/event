@@ -11,20 +11,12 @@ const (
 	// Add other module types here
 )
 
-type ModuleStatus string
-
-const (
-	ModuleStatusPending ModuleStatus = "pending"
-	ModuleStatusActive  ModuleStatus = "active"
-	ModuleStatusEnded   ModuleStatus = "ended"
-)
-
 type Module struct {
-	ID     string         `json:"id" bson:"id"`
-	Type   ModuleType     `json:"type" bson:"type"`
-	Status ModuleStatus   `json:"status" bson:"status"`
-	Name   string         `json:"name" bson:"name"`
-	Data   map[string]any `json:"data" bson:"data"` // Generic data holder, now including timeline configuration
+	ID       string         `json:"id" bson:"id"`
+	Type     ModuleType     `json:"type" bson:"type"`
+	IsActive bool           `json:"isActive" bson:"isActive"`
+	Name     string         `json:"name" bson:"name"`
+	Data     map[string]any `json:"data" bson:"data"` // Generic data holder, now including timeline configuration
 }
 
 type Template struct {

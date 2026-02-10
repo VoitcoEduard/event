@@ -80,30 +80,24 @@
               <span 
                 class="module-status-badge"
                 :class="{
-                  'status-active': module.status === 'active',
-                  'status-ended': module.status === 'ended'
+                  'status-active': module.isActive,
+                  'status-inactive': !module.isActive
                 }"
               >
-                {{ module.status.toUpperCase() }}
+                {{ module.isActive ? 'ACTIVE' : 'INACTIVE' }}
               </span>
             </div>
             <div class="module-actions">
-              <template v-if="module.status === 'pending'">
-                <button class="module-btn config-btn" @click="configureModule(module)">
-                  Configure
-                </button>
-                <button class="module-btn activate-btn" @click="updateModuleStatus(module.id, 'active')">
-                  Activate
-                </button>
-              </template>
-              <template v-if="module.status === 'active'">
-                <button class="module-btn end-btn" @click="updateModuleStatus(module.id, 'ended')">
-                  End
-                </button>
-              </template>
-              <template v-if="module.status === 'ended'">
-                <p class="ended-text">Completed</p>
-              </template>
+              <button class="module-btn config-btn" @click="configureModule(module)">
+                Configure
+              </button>
+              <button 
+                class="module-btn"
+                :class="module.isActive ? 'stop-button' : 'start-button'"
+                @click="toggleModuleStatus(module)"
+              >
+                {{ module.isActive ? 'Stop' : 'Start' }}
+              </button>
             </div>
           </div>
         </div>
@@ -269,12 +263,12 @@ const addModule = async () => {
   }
 }
 
-const updateModuleStatus = async (moduleId, newStatus) => {
+const toggleModuleStatus = async (module) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${moduleId}/status`, {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify({ isActive: !module.isActive })
     })
 
     if (response.ok) {
@@ -546,9 +540,9 @@ const goBack = () => {
   color: #30D158;
 }
 
-.module-status-badge.status-ended {
-  background-color: rgba(255, 69, 58, 0.2);
-  color: #FF453A;
+.module-status-badge.status-inactive {
+  background-color: rgba(136, 136, 136, 0.2);
+  color: #888;
 }
 
 .module-actions {
@@ -568,19 +562,14 @@ const goBack = () => {
   color: #FFF;
 }
 
-.module-btn.activate-btn {
+.module-btn.start-button {
   background-color: #28cd41;
   color: #FFF;
 }
 
-.module-btn.end-btn {
+.module-btn.stop-button {
   background-color: #ff3b30;
   color: #FFF;
-}
-
-.ended-text {
-  font-size: 12px;
-  color: #888;
 }
 
 .empty-modules {

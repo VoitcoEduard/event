@@ -215,11 +215,11 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 
 	// Create the module with proper type conversion
 	module := models.Module{
-		ID:     generateID(),
-		Type:   models.ModuleType(input.Type),
-		Name:   input.Name,
-		Status: models.ModuleStatusPending,
-		Data:   make(map[string]any),
+		ID:       generateID(),
+		Type:     models.ModuleType(input.Type),
+		Name:     input.Name,
+		IsActive: false,
+		Data:     make(map[string]any),
 	}
 
 	// Copy data if provided
@@ -276,7 +276,7 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 	moduleID := parts[3]
 
 	var input struct {
-		Status models.ModuleStatus `json:"status"`
+		IsActive bool `json:"isActive"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -285,7 +285,7 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 
 	collection := db.GetCollection("events")
 	filter := bson.M{"_id": eventID, "modules.id": moduleID}
-	update := bson.M{"$set": bson.M{"modules.$.status": input.Status}}
+	update := bson.M{"$set": bson.M{"modules.$.isActive": input.IsActive}}
 
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
