@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Alert, Platform, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 // Use environment variable or default to localhost for development
@@ -12,18 +12,18 @@ const API_URL = typeof window !== 'undefined' && window.location
 const EventCard = ({ event, onEdit, onDelete, onViewDetails }) => (
     <View style={styles.eventCard}>
         <TouchableOpacity style={styles.cardHeader} onPress={() => onViewDetails(event)}>
-            <View>
-                <Text style={styles.eventName}>{event.name}</Text>
+            <View style={styles.cardHeaderContent}>
+                <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
                 <Text style={styles.eventId}>ID: {event.id}</Text>
             </View>
             <View style={[styles.statusBadge, event.isActive ? styles.statusActive : styles.statusInactive]}>
                 <Text style={styles.statusText}>{event.isActive ? 'ACTIVE' : 'INACTIVE'}</Text>
             </View>
         </TouchableOpacity>
-        <Text style={styles.eventDescription}>{event.description}</Text>
+        <Text style={styles.eventDescription} numberOfLines={2}>{event.description}</Text>
         <View style={styles.cardActions}>
             <TouchableOpacity style={[styles.cardAction, styles.viewAction]} onPress={() => onViewDetails(event)}>
-                <Text style={styles.cardActionText}>Manage Event</Text>
+                <Text style={styles.cardActionText}>Manage</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.cardAction, styles.editAction]} onPress={() => onEdit(event)}>
                 <Text style={styles.cardActionText}>Edit</Text>
@@ -41,6 +41,11 @@ export default function AdminScreen({ onNavigate, setEvent }) {
     const [description, setDescription] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [showForm, setShowForm] = useState(false);
+    const scrollViewRef = useRef(null);
+
+    const { width } = useWindowDimensions();
+    const isDesktop = width >= 768;
 
     useEffect(() => {
         fetchEvents();
@@ -65,8 +70,6 @@ export default function AdminScreen({ onNavigate, setEvent }) {
         }
     };
 
-    // handleToggleStatus removed from here as it moved to details page
-
     const handleSubmit = async () => {
         if (!name || !description) {
             Alert.alert('Error', 'Please fill in all fields');
@@ -87,6 +90,7 @@ export default function AdminScreen({ onNavigate, setEvent }) {
                 setName('');
                 setDescription('');
                 setEditingId(null);
+                setShowForm(false);
                 fetchEvents();
                 Alert.alert('Success', `Event ${editingId ? 'updated' : 'created'} successfully`);
             } else {
@@ -133,6 +137,24 @@ export default function AdminScreen({ onNavigate, setEvent }) {
         setName(event.name);
         setDescription(event.description);
         setEditingId(event.id);
+        setShowForm(true);
+        // Scroll to top to show the form
+        scrollViewRef.current?.scrollTo({ x: 0, y: 0, animated: true });
+    };
+
+    const handleCreateNew = () => {
+        setName('');
+        setDescription('');
+        setEditingId(null);
+        setShowForm(true);
+        scrollViewRef.current?.scrollTo({ x: 0, y: 0, animated: true });
+    };
+
+    const handleCancelForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setName('');
+        setDescription('');
     };
 
     const handleViewDetails = (event) => {
@@ -146,55 +168,63 @@ export default function AdminScreen({ onNavigate, setEvent }) {
             <StatusBar style="light" />
 
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Event Admin</Text>
-                <Text style={styles.headerSubtitle}>Manage Events Listings</Text>
+                <View>
+                    <Text style={styles.headerTitle}>Event Admin</Text>
+                    <Text style={styles.headerSubtitle}>Manage Events Listings</Text>
+                </View>
+                {!showForm && (
+                    <TouchableOpacity style={styles.createButton} onPress={handleCreateNew}>
+                        <Text style={styles.createButtonText}>+ New Event</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <ScrollView
+                ref={scrollViewRef}
                 style={styles.content}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                <View style={styles.formCard}>
-                    <Text style={styles.formTitle}>{editingId ? 'Edit Event' : 'New Event'}</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Event Name"
-                        placeholderTextColor="#666"
-                        value={name}
-                        onChangeText={setName}
-                    />
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Description"
-                        placeholderTextColor="#666"
-                        value={description}
-                        onChangeText={setDescription}
-                        multiline
-                        numberOfLines={3}
-                    />
-                    <View style={styles.formActions}>
-                        {editingId && (
+                {showForm && (
+                    <View style={styles.formCard}>
+                        <Text style={styles.formTitle}>{editingId ? 'Edit Event' : 'New Event'}</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Event Name"
+                            placeholderTextColor="#666"
+                            value={name}
+                            onChangeText={setName}
+                        />
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Description"
+                            placeholderTextColor="#666"
+                            value={description}
+                            onChangeText={setDescription}
+                            multiline
+                            numberOfLines={3}
+                        />
+                        <View style={styles.formActions}>
                             <TouchableOpacity
                                 style={styles.cancelButton}
-                                onPress={() => {
-                                    setEditingId(null);
-                                    setName('');
-                                    setDescription('');
-                                }}
+                                onPress={handleCancelForm}
                             >
                                 <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
-                        )}
-                        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                            <Text style={styles.submitButtonText}>{editingId ? 'Update Event' : 'Create Event'}</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                                <Text style={styles.submitButtonText}>{editingId ? 'Update Event' : 'Create Event'}</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
+                )}
+
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>
+                        {events.length > 0 ? 'All Events' : 'No Events'}
+                    </Text>
                 </View>
 
-                <Text style={styles.sectionTitle}>Upcoming Events</Text>
-
-                <View style={styles.eventsGrid}>
+                <View style={[styles.eventsGrid, isDesktop && styles.eventsGridDesktop]}>
                     {isLoading ? (
                         <Text style={styles.emptyText}>Loading events...</Text>
                     ) : (
@@ -208,8 +238,13 @@ export default function AdminScreen({ onNavigate, setEvent }) {
                                     onViewDetails={handleViewDetails}
                                 />
                             ))}
-                            {events.length === 0 && (
-                                <Text style={styles.emptyText}>No events found. Create one above!</Text>
+                            {events.length === 0 && !showForm && (
+                                <View style={styles.emptyStateContainer}>
+                                    <Text style={styles.emptyText}>No events found.</Text>
+                                    <TouchableOpacity style={styles.createLink} onPress={handleCreateNew}>
+                                        <Text style={styles.createLinkText}>Create one now</Text>
+                                    </TouchableOpacity>
+                                </View>
                             )}
                         </>
                     )}
@@ -233,26 +268,39 @@ const styles = StyleSheet.create({
         backgroundColor: '#121212',
     },
     header: {
-        paddingTop: 60,
-        paddingBottom: 20,
+        paddingVertical: 20,
         paddingHorizontal: 24,
         backgroundColor: '#1E1E1E',
         borderBottomWidth: 1,
         borderBottomColor: '#2C2C2C',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     headerTitle: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: '800',
         color: '#FFFFFF',
         letterSpacing: -0.5,
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#888888',
         textTransform: 'uppercase',
         letterSpacing: 1,
         fontWeight: '600',
+    },
+    createButton: {
+        backgroundColor: '#007AFF',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    createButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+        fontSize: 14,
     },
     content: {
         flex: 1,
@@ -262,27 +310,32 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
         alignItems: 'center',
     },
+    sectionHeader: {
+        width: '100%',
+        maxWidth: 1200,
+        marginBottom: 16,
+        alignSelf: 'center',
+    },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '700',
         color: '#FFFFFF',
-        marginBottom: 20,
         letterSpacing: -0.5,
-        marginTop: 10,
-        width: '100%', // Ensuring title aligns left within centered container if possible, or center if textalign center
-        maxWidth: 1200,
-        alignSelf: 'center',
-        textAlign: 'left',
     },
     formCard: {
         backgroundColor: '#1E1E1E',
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: 12,
+        padding: 24,
         marginBottom: 30,
         borderWidth: 1,
-        borderColor: '#2C2C2C',
+        borderColor: '#007AFF', // Highlight form when active
         width: '100%',
         maxWidth: 800,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     formTitle: {
         fontSize: 18,
@@ -298,7 +351,7 @@ const styles = StyleSheet.create({
         color: '#FFF',
         padding: 12,
         marginBottom: 12,
-        fontSize: 16,
+        fontSize: 15,
     },
     textArea: {
         height: 80,
@@ -308,10 +361,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-end',
         gap: 10,
+        marginTop: 8,
     },
     submitButton: {
-        backgroundColor: '#007AFF', // Clean blue for action
-        paddingVertical: 12,
+        backgroundColor: '#007AFF',
+        paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
         alignItems: 'center',
@@ -319,10 +373,10 @@ const styles = StyleSheet.create({
     submitButtonText: {
         color: '#FFF',
         fontWeight: '600',
-        fontSize: 15,
+        fontSize: 14,
     },
     cancelButton: {
-        paddingVertical: 12,
+        paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
         alignItems: 'center',
@@ -332,32 +386,30 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         color: '#AAA',
         fontWeight: '600',
-        fontSize: 15,
+        fontSize: 14,
     },
     eventsGrid: {
         marginBottom: 30,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 16, // Use gap for spacing between rows and columns
+        flexDirection: 'column', // Mobile first
+        gap: 12,
         width: '100%',
         maxWidth: 1200,
         alignSelf: 'center',
     },
+    eventsGridDesktop: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
     eventCard: {
         backgroundColor: '#1E1E1E',
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 0, // Margin bottom handled by gap in grid
+        borderRadius: 12,
+        padding: 16, // Reduced padding
+        marginBottom: 0,
         borderWidth: 1,
         borderColor: '#2C2C2C',
-        // Desktop-first approach as requested: 
-        // 3 cards per row approx, minus gaps. 
-        // calc(33.33% - 11px) roughly handles gap of 16px for 3 items
-        // Or specific width ~350px
-        minWidth: 300,
+        minWidth: 280, // Slightly smaller base width
         flex: 1,
-        // max-width to prevent them from getting too wide on huge screens if only 1 item
-        maxWidth: 600,
+        maxWidth: 400, // Reduced max width to keep cards compact
     },
     cardHeader: {
         flexDirection: 'row',
@@ -365,102 +417,108 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         marginBottom: 8,
     },
+    cardHeaderContent: {
+        flex: 1,
+        marginRight: 8,
+    },
     eventName: {
-        fontSize: 18,
+        fontSize: 16, // Smaller title
         fontWeight: '700',
         color: '#FFFFFF',
-        flex: 1,
-        marginRight: 10,
+        marginBottom: 2,
     },
     eventId: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#666',
         fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     },
     statusBadge: {
-        paddingVertical: 4,
-        paddingHorizontal: 8,
+        paddingVertical: 2,
+        paddingHorizontal: 6,
         borderRadius: 4,
     },
     statusActive: {
-        backgroundColor: 'rgba(48, 209, 88, 0.2)',
+        backgroundColor: 'rgba(48, 209, 88, 0.15)',
     },
     statusInactive: {
-        backgroundColor: 'rgba(255, 69, 58, 0.2)',
+        backgroundColor: 'rgba(255, 69, 58, 0.15)',
     },
     statusText: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '700',
         color: '#FFF',
+        textTransform: 'uppercase',
     },
     eventDescription: {
-        fontSize: 15,
+        fontSize: 13,
         color: '#AAAAAA',
-        lineHeight: 22,
-        marginBottom: 20,
+        lineHeight: 18,
+        marginBottom: 16,
+        height: 36, // Fixed height for 2 lines approx
     },
     cardActions: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 8,
         flexWrap: 'wrap',
     },
     cardAction: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 6,
         borderWidth: 1,
     },
+    viewAction: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: '#444',
+    },
     editAction: {
-        backgroundColor: '#2A2A2A',
-        borderColor: '#333',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: '#444',
     },
     deleteAction: {
-        backgroundColor: 'rgba(255, 59, 48, 0.1)',
-        borderColor: 'rgba(255, 59, 48, 0.3)',
-    },
-    activateAction: {
-        backgroundColor: 'rgba(48, 209, 88, 0.1)',
-        borderColor: 'rgba(48, 209, 88, 0.3)',
-    },
-    deactivateAction: {
-        backgroundColor: 'rgba(255, 179, 64, 0.1)',
-        borderColor: 'rgba(255, 179, 64, 0.3)',
+        backgroundColor: 'rgba(255, 59, 48, 0.05)',
+        borderColor: 'rgba(255, 59, 48, 0.2)',
     },
     cardActionText: {
-        color: '#FFFFFF',
-        fontSize: 13,
+        color: '#E0E0E0',
+        fontSize: 12,
         fontWeight: '600',
     },
-    activateText: {
-        color: '#30D158',
-    },
-    deactivateText: {
-        color: '#FFB340',
-    },
     deleteText: {
-        color: '#FF453A',
+        color: '#FF6B60',
+    },
+    emptyStateContainer: {
+        alignItems: 'center',
+        padding: 40,
+        width: '100%',
     },
     emptyText: {
         color: '#666',
         fontStyle: 'italic',
         textAlign: 'center',
-        marginTop: 20,
+        marginBottom: 10,
+    },
+    createLink: {
+        padding: 10,
+    },
+    createLinkText: {
+        color: '#007AFF',
+        fontWeight: '600',
     },
     backButton: {
-        backgroundColor: '#FFFFFF',
-        paddingVertical: 18,
-        borderRadius: 14,
+        backgroundColor: '#2C2C2C', // Darker back button
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderRadius: 10,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        alignSelf: 'center',
         marginTop: 10,
+        borderWidth: 1,
+        borderColor: '#333',
     },
     backButtonText: {
-        color: '#000000',
-        fontSize: 16,
-        fontWeight: '700',
-        letterSpacing: 0.5,
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
