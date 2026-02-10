@@ -480,8 +480,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     unifiedCard: {
-        minWidth: 600,
-        flex: 3,
+        minWidth: 320,
+        maxWidth: 700,
+        width: '100%',
     },
     unifiedContent: {
         flexDirection: 'row',
@@ -556,8 +557,9 @@ const styles = StyleSheet.create({
         marginBottom: 0,
         borderWidth: 1,
         borderColor: '#2C2C2C',
-        minWidth: 350,
-        flex: 1,
+        minWidth: 320,
+        maxWidth: 700,
+        width: '100%',
     },
     cardHeader: {
         flexDirection: 'row',
