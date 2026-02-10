@@ -11,57 +11,54 @@
     </div>
 
     <div class="scroll-content">
-      <div class="card unified-card">
+      <div class="card event-sidebar">
         <div class="card-header">
           <div>
             <p class="card-title">Event Overview</p>
-            <p class="card-description">Manage details, sharing, and controls.</p>
+            <p class="card-description">Manage details & sharing.</p>
           </div>
           <span class="status-badge" :class="currentEvent?.isActive ? 'active' : 'inactive'">
-            {{ currentEvent?.isActive ? 'ACTIVE - RUNNING' : 'INACTIVE - STOPPED' }}
+            {{ currentEvent?.isActive ? 'ACTIVE' : 'STOPPED' }}
           </span>
         </div>
 
-        <div class="unified-content">
-          <div class="left-column">
-            <div class="info-grid">
-              <div class="info-item">
-                <p class="label">Description</p>
-                <p class="value">{{ currentEvent?.description }}</p>
-              </div>
-              <div class="info-item">
-                <p class="label">PIN Code</p>
-                <div class="pin-container">
-                  <p class="pin-text">{{ currentEvent?.id }}</p>
-                </div>
-              </div>
-            </div>
+        <div class="sidebar-content">
+          <div class="info-group">
+            <p class="label">Description</p>
+            <p class="value">{{ currentEvent?.description }}</p>
+          </div>
 
-            <div class="control-section">
-              <p class="section-label">Event Controls</p>
-              <button 
-                class="action-button"
-                :class="currentEvent?.isActive ? 'stop-button' : 'start-button'"
-                @click="toggleStatus"
-              >
-                {{ currentEvent?.isActive ? 'STOP EVENT' : 'START EVENT' }}
-              </button>
-              <p class="control-hint">
-                {{ currentEvent?.isActive 
-                  ? 'Event is live. Users can connect.' 
-                  : 'Event is stopped. Users cannot connect.' }}
-              </p>
+          <div class="info-group">
+            <p class="label">PIN Code</p>
+            <div class="pin-display">
+              <span class="pin-text">{{ currentEvent?.id }}</span>
             </div>
           </div>
 
-          <div class="vertical-divider"></div>
-
-          <div class="right-column">
-            <p class="section-label">Share Access</p>
-            <div class="qr-code-container" v-html="qrCodeSVG"></div>
-            <button class="copy-button" @click="copyLink">
+          <div class="info-group">
+            <p class="label">Share Access</p>
+            <div class="qr-wrapper">
+              <QRCodeVue :value="qrCodeValue" :size="120" level="H" />
+            </div>
+            <button class="copy-btn" @click="copyLink">
               Copy Link
             </button>
+          </div>
+
+          <div class="control-group">
+            <p class="section-label">Event Controls</p>
+            <button 
+              class="action-button"
+              :class="currentEvent?.isActive ? 'stop-button' : 'start-button'"
+              @click="toggleStatus"
+            >
+              {{ currentEvent?.isActive ? 'STOP EVENT' : 'START EVENT' }}
+            </button>
+            <p class="control-hint">
+              {{ currentEvent?.isActive 
+                ? 'Event is live.' 
+                : 'Event is stopped.' }}
+            </p>
           </div>
         </div>
       </div>
@@ -158,6 +155,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
+import QRCodeVue from 'qrcode.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -174,36 +172,10 @@ import { API_BASE_URL } from '../utils'
 const storedEvent = sessionStorage.getItem('currentEvent')
 currentEvent.value = storedEvent ? JSON.parse(storedEvent) : null
 
-const generateQRCode = (text) => {
-  const size = 160
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-    <rect width="100%" height="100%" fill="white"/>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="${size-24}" height="${size-24}" x="12" y="12">
-      <rect width="256" height="256" fill="white"/>
-      ${generateQRMatrix(text)}
-    </svg>
-  </svg>`
-  return svg
-}
-
-const generateQRMatrix = (text) => {
-  let matrix = ''
-  const cellSize = 16
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 16; x++) {
-      if (Math.sin(Math.sin(x * y * 123) + text.length) > 0.5) {
-        matrix += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
-      }
-    }
-  }
-  return matrix
-}
-
-const qrCodeSVG = computed(() => {
-  const link = currentEvent.value 
+const qrCodeValue = computed(() => {
+  return currentEvent.value 
     ? `${window.location.origin}/?pin=${currentEvent.value.id}`
     : ''
-  return generateQRCode(link)
 })
 
 const fetchEventDetails = async () => {
@@ -326,19 +298,15 @@ const goBack = () => {
 }
 
 .header {
-  padding-top: 20px;
-  padding-bottom: 16px;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding: 20px 24px;
   background-color: #1E1E1E;
   border-bottom: 1px solid #2C2C2C;
 }
 
 .header-top {
   display: flex;
-  flex-direction: row;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 4px;
 }
 
@@ -346,6 +314,8 @@ const goBack = () => {
   color: #007AFF;
   font-size: 14px;
   background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .header-title {
@@ -364,11 +334,18 @@ const goBack = () => {
 
 .scroll-content {
   padding: 24px;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(400px, 2.5fr);
   gap: 24px;
   max-width: 1600px;
   margin: 0 auto;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .scroll-content {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card {
@@ -376,184 +353,169 @@ const goBack = () => {
   border-radius: 16px;
   padding: 24px;
   border: 1px solid #2C2C2C;
-  min-width: 350px;
 }
 
-.unified-card {
-  flex: 3;
-  min-width: 600px;
+.event-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
-}
-
-.card-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #FFF;
   margin-bottom: 12px;
 }
 
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFF;
+  margin-bottom: 4px;
+}
+
 .card-description {
-  font-size: 14px;
+  font-size: 13px;
   color: #AAA;
-  line-height: 20;
 }
 
-.unified-content {
-  display: flex;
-  gap: 40px;
-  flex-wrap: wrap;
-}
-
-.left-column {
-  flex: 2;
-  min-width: 300px;
-}
-
-.right-column {
-  flex: 1;
-  min-width: 250px;
+.sidebar-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #252525;
-  border-radius: 16px;
-  padding: 24px;
+  gap: 24px;
 }
 
-.vertical-divider {
-  width: 1px;
-  background-color: #333;
-}
-
-.info-grid {
+.info-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.info-item {
-  min-width: 150px;
-  flex: 1;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .label {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 4px;
+  font-size: 11px;
+  color: #666;
   text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .value {
-  font-size: 16px;
+  font-size: 15px;
   color: #FFF;
 }
 
-.pin-container {
+.pin-display {
   background-color: #000;
-  padding: 10px;
+  padding: 12px;
   border-radius: 8px;
-  display: inline-block;
+  text-align: center;
+  border: 1px solid #333;
 }
 
 .pin-text {
-  font-size: 24px;
+  font-size: 28px;
   color: #FFF;
   font-weight: bold;
-  letter-spacing: 2px;
+  letter-spacing: 4px;
   font-family: monospace;
 }
 
-.control-section {
-  margin-top: auto;
+.qr-wrapper {
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  align-self: center;
+}
+
+.copy-btn {
+  margin-top: 8px;
+  background-color: #333;
+  padding: 10px;
+  border-radius: 8px;
+  width: 100%;
+  color: #FFF;
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid #444;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.copy-btn:hover {
+  background-color: #444;
+}
+
+.control-group {
+  margin-top: 10px;
   padding-top: 20px;
   border-top: 1px solid #2C2C2C;
 }
 
 .section-label {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: #FFF;
-  margin-bottom: 16px;
+  color: #888;
+  margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .action-button {
-  padding: 16px;
-  border-radius: 8px;
-  width: 100%;
-  font-weight: 700;
-  font-size: 16px;
-  color: #FFF;
-}
-
-.start-button {
-  background-color: #30D158;
-}
-
-.stop-button {
-  background-color: #FF453A;
-}
-
-.control-hint {
-  font-size: 12px;
-  color: #666;
-  margin-top: 12px;
-  text-align: center;
-}
-
-.qr-code-container {
-  background: white;
-  padding: 12px;
-  border-radius: 12px;
-}
-
-.copy-button {
-  margin-top: 20px;
-  background-color: #333;
   padding: 14px;
   border-radius: 8px;
   width: 100%;
-  color: #FFF;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
-  border: 1px solid #444;
+  color: #FFF;
+  border: none;
+  cursor: pointer;
 }
 
+.start-button {
+  background-color: #28cd41;
+}
+
+.stop-button {
+  background-color: #ff3b30;
+}
+
+.control-hint {
+  font-size: 11px;
+  color: #666;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Modules Card Styles */
 .modules-card {
-  flex: 2;
-  min-width: 600px;
+  min-height: 400px;
 }
 
 .add-button {
   background-color: #007AFF;
-  padding: 8px 16px;
+  padding: 6px 14px;
   border-radius: 20px;
   color: #FFF;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  border: none;
+  cursor: pointer;
 }
 
 .modules-list {
-  margin-bottom: 20px;
+  margin-top: 20px;
 }
 
 .module-item {
-  background-color: #2C2C2C;
+  background-color: #252525;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid #333;
 }
 
 .module-info {
@@ -599,21 +561,15 @@ const goBack = () => {
 .module-btn {
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  border: none;
+  cursor: pointer;
 }
 
-.config-btn {
-  background-color: #FF9500;
-}
-
-.activate-btn {
-  background-color: #30D158;
-}
-
-.end-btn {
-  background-color: #FF453A;
-}
+.config-btn { background-color: #FF9500; color: #FFF; }
+.activate-btn { background-color: #30D158; color: #FFF; }
+.end-btn { background-color: #FF453A; color: #FFF; }
 
 .ended-text {
   color: #666;
@@ -622,23 +578,24 @@ const goBack = () => {
 }
 
 .empty-modules {
-  padding: 40px;
+  padding: 60px;
   display: flex;
   justify-content: center;
   align-items: center;
   border: 1px dashed #444;
   border-radius: 12px;
+  margin-top: 20px;
 }
 
 .empty-modules-text {
   color: #666;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .status-badge {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -652,6 +609,7 @@ const goBack = () => {
   color: #FF453A;
 }
 
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -662,22 +620,24 @@ const goBack = () => {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
 }
 
 .add-module-container {
-  background-color: #252525;
+  background-color: #1E1E1E;
   border-radius: 16px;
   padding: 24px;
-  width: 85%;
+  width: 90%;
   max-width: 400px;
   border: 1px solid #333;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
 
 .add-module-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .form-title {
@@ -688,12 +648,16 @@ const goBack = () => {
 
 .close-btn {
   color: #AAA;
-  font-size: 20px;
+  font-size: 24px;
   background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
 }
 
 .input-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #AAA;
   margin-bottom: 8px;
@@ -701,18 +665,20 @@ const goBack = () => {
 }
 
 .module-input {
-  background-color: #1E1E1E;
-  border-radius: 12px;
-  padding: 16px;
-  font-size: 16px;
+  background-color: #2C2C2C;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 15px;
   color: #FFF;
   border: 1px solid #333;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dropdown {
-  background-color: #1E1E1E;
-  border-radius: 12px;
-  padding: 16px;
+  background-color: #2C2C2C;
+  border-radius: 8px;
+  padding: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -722,12 +688,14 @@ const goBack = () => {
 
 .add-module-button {
   background-color: #007AFF;
-  padding: 16px;
-  border-radius: 12px;
-  margin-top: 24px;
+  padding: 14px;
+  border-radius: 8px;
+  margin-top: 30px;
   width: 100%;
   color: #FFF;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
+  border: none;
+  cursor: pointer;
 }
 </style>
