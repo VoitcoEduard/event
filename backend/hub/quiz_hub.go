@@ -174,31 +174,44 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		if !client.IsHost {
 			return
 		}
+		// Load questions from DB (outside lock ideally, but here we are in lock)
+		// To fix potential blocking:
+		// We are already in lock. We should launch a goroutine to fetch and then update?
+		// No, that complicates order. Check if we can release lock?
+		// client.ModuleID is safe.
+		// Let's optimize: unlock, fetch, lock.
+		h.mu.Unlock()
+
+		collection := db.GetCollection("events")
+		var event models.Event
+		var questions []models.QuizQuestion
+
+		// Find event containing this module
+		err := collection.FindOne(context.TODO(), bson.M{"modules.id": client.ModuleID}).Decode(&event)
+		if err == nil {
+			for _, mod := range event.Modules {
+				if mod.ID == client.ModuleID {
+					// Extract questions
+					dataBytes, _ := json.Marshal(mod.Data)
+					var qData models.QuizModuleData
+					json.Unmarshal(dataBytes, &qData)
+					questions = qData.Questions
+					break
+				}
+			}
+		} else {
+			log.Println("Error finding event for module:", client.ModuleID, err)
+		}
+
+		h.mu.Lock()
+
+		// Re-fetch session in case it changed while unlocked (unlikely for start_quiz but good practice)
 		session := h.sessions[client.ModuleID]
 		if session != nil {
 			session.State = "question"
 			session.CurrentIndex = 0
 			session.Answers = make(map[string]int)
-			// Load questions from DB
-			collection := db.GetCollection("events")
-			var event models.Event
-			// Find event containing this module
-			err := collection.FindOne(context.Background(), bson.M{"modules.id": client.ModuleID}).Decode(&event)
-			if err == nil {
-				for _, mod := range event.Modules {
-					if mod.ID == client.ModuleID {
-						// Extract questions
-						dataBytes, _ := json.Marshal(mod.Data)
-						var qData models.QuizModuleData
-						json.Unmarshal(dataBytes, &qData)
-						session.Questions = qData.Questions
-						break
-					}
-				}
-			} else {
-				log.Println("Error finding event for module:", client.ModuleID, err)
-			}
-
+			session.Questions = questions         // Assigned loaded questions
 			session.StartTime = time.Now().Unix() // Reset timer
 
 			// Broadcast first question separately if we want to hide future questions?
@@ -323,6 +336,21 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				}
 			}
 
+			h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
+				Type:    "state:update",
+				Payload: session,
+			})
+		}
+
+	case "host:show_leaderboard":
+		if !client.IsHost {
+			return
+		}
+		session := h.sessions[client.ModuleID]
+		if session != nil {
+			session.State = "leaderboard"
+			// Leaderboard data is derived from Players map on client side mostly,
+			// but we can ensure scores are accurate.
 			h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 				Type:    "state:update",
 				Payload: session,

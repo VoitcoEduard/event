@@ -92,7 +92,7 @@
 
        <div class="host-controls">
          <button class="control-btn primary" @click="nextState">
-           {{ isLastQuestion ? 'End Quiz' : 'Next Question' }}
+           {{ gameState === 'results' ? 'Show Leaderboard' : (isLastQuestion ? 'End Quiz' : 'Next Question') }}
          </button>
        </div>
     </div>
@@ -198,12 +198,12 @@ const goToResults = () => {
 
 const nextState = () => {
     if (gameState.value === 'results') {
-        gameState.value = 'leaderboard'
+        // Transition to Leaderboard
+        quizWS.send('host:show_leaderboard', { moduleId })
     } else if (gameState.value === 'leaderboard') {
         if (isLastQuestion.value) {
             // End quiz
             quizWS.send('host:end_quiz', { moduleId })
-            gameState.value = 'finished'
         } else {
             quizWS.send('host:next_question', { moduleId })
         }
