@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform, Modal } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform, Modal, Picker } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Use environment variable or default to localhost for development
@@ -13,6 +13,7 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
     const timeline = module.data?.timeline || [];
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [answers, setAnswers] = useState({}); // { [stepId]: value }
+    const [otherAnswers, setOtherAnswers] = useState({}); // { [stepId]: other text value }
     const [submitting, setSubmitting] = useState(false);
     const [completed, setCompleted] = useState(false);
     const [templates, setTemplates] = useState([]);
@@ -56,6 +57,9 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
         // Load template data into answers
         if (template.data && template.data.answers) {
             setAnswers(prev => ({ ...prev, ...template.data.answers }));
+        }
+        if (template.data && template.data.otherAnswers) {
+            setOtherAnswers(prev => ({ ...prev, ...template.data.otherAnswers }));
         }
         setShowTemplateModal(false);
         Alert.alert('Success', 'Template loaded successfully!');
@@ -130,12 +134,44 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
         );
     };
 
+    const isSelectionType = (fieldType) => {
+        return ['radio', 'checkbox', 'dropdown'].includes(fieldType);
+    };
+
+    const hasSelection = (stepId) => {
+        const answer = answers[stepId];
+        if (!answer) return false;
+        if (Array.isArray(answer)) return answer.length > 0;
+        return !!answer;
+    };
+
     const handleNext = async () => {
         if (currentStep.type === 'field') {
-            const answer = answers[currentStep.id];
-            if (!answer || (typeof answer === 'string' && !answer.trim())) {
-                Alert.alert('Validation', 'Please provide an answer.');
-                return;
+            const fieldType = currentStep.data?.fieldType;
+            const stepId = currentStep.id;
+            const answer = answers[stepId];
+
+            if (isSelectionType(fieldType)) {
+                // For selection types, check if at least one option is selected
+                if (!hasSelection(stepId)) {
+                    Alert.alert('Validation', 'Please select an option.');
+                    return;
+                }
+
+                // For checkbox with allowOther, the __other__ value should have text
+                if (fieldType === 'checkbox' && Array.isArray(answer) && answer.includes('__other__')) {
+                    const otherValue = otherAnswers[stepId];
+                    if (!otherValue || !otherValue.trim()) {
+                        Alert.alert('Validation', 'Please specify your answer for "Other".');
+                        return;
+                    }
+                }
+            } else {
+                // For text, number, date types
+                if (!answer || (typeof answer === 'string' && !answer.trim())) {
+                    Alert.alert('Validation', 'Please provide an answer.');
+                    return;
+                }
             }
         }
 
@@ -160,7 +196,8 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: userId,
-                    data: answers
+                    data: answers,
+                    otherAnswers: otherAnswers
                 }),
             });
 
@@ -182,6 +219,46 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
         setAnswers(prev => ({ ...prev, [currentStep.id]: text }));
     };
 
+    const updateOtherAnswer = (text) => {
+        setOtherAnswers(prev => ({ ...prev, [currentStep.id]: text }));
+    };
+
+    const selectRadioOption = (value) => {
+        setAnswers(prev => ({ ...prev, [currentStep.id]: value }));
+    };
+
+    const toggleCheckboxOption = (value) => {
+        const currentValues = answers[currentStep.id] || [];
+        const newValues = Array.isArray(currentValues) ? [...currentValues] : [];
+
+        if (value === '__other__') {
+            const otherIndex = newValues.indexOf('__other__');
+            if (otherIndex >= 0) {
+                newValues.splice(otherIndex, 1);
+            } else {
+                newValues.push('__other__');
+            }
+        } else {
+            const optionIndex = newValues.indexOf(value);
+            if (optionIndex >= 0) {
+                newValues.splice(optionIndex, 1);
+            } else {
+                newValues.push(value);
+            }
+        }
+
+        setAnswers(prev => ({ ...prev, [currentStep.id]: newValues }));
+    };
+
+    const isCheckboxSelected = (value) => {
+        const currentValues = answers[currentStep.id];
+        return Array.isArray(currentValues) && currentValues.includes(value);
+    };
+
+    const updateDropdownAnswer = (value) => {
+        setAnswers(prev => ({ ...prev, [currentStep.id]: value }));
+    };
+
     if (completed) {
         return (
             <View style={styles.container}>
@@ -200,6 +277,131 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
             </View>
         );
     }
+
+    const renderRadioOptions = () => {
+        const options = currentStep.data.predefinedAnswers || [];
+        const selectedValue = answers[currentStep.id];
+        const allowOther = currentStep.data.allowOther;
+        const otherPlaceholder = currentStep.data.otherPlaceholder || 'Please specify...';
+        const otherValue = otherAnswers[currentStep.id];
+
+        return (
+            <View>
+                {options.map((option) => (
+                    <TouchableOpacity
+                        key={option.id}
+                        style={styles.selectionOption}
+                        onPress={() => selectRadioOption(option.value)}
+                    >
+                        <View style={[styles.radioCircle, selectedValue === option.value && styles.radioCircleSelected]}>
+                            {selectedValue === option.value && <View style={styles.radioDot} />}
+                        </View>
+                        <Text style={styles.selectionText}>{option.text}</Text>
+                    </TouchableOpacity>
+                ))}
+                {allowOther && (
+                    <TouchableOpacity
+                        style={styles.selectionOption}
+                        onPress={() => selectRadioOption('__other__')}
+                    >
+                        <View style={[styles.radioCircle, selectedValue === '__other__' && styles.radioCircleSelected]}>
+                            {selectedValue === '__other__' && <View style={styles.radioDot} />}
+                        </View>
+                        <Text style={styles.selectionText}>Other</Text>
+                    </TouchableOpacity>
+                )}
+                {allowOther && selectedValue === '__other__' && (
+                    <TextInput
+                        style={[styles.input, { marginTop: 12 }]}
+                        placeholder={otherPlaceholder}
+                        placeholderTextColor="#666"
+                        value={otherValue || ''}
+                        onChangeText={updateOtherAnswer}
+                    />
+                )}
+            </View>
+        );
+    };
+
+    const renderCheckboxOptions = () => {
+        const options = currentStep.data.predefinedAnswers || [];
+        const allowOther = currentStep.data.allowOther;
+        const otherPlaceholder = currentStep.data.otherPlaceholder || 'Please specify...';
+        const otherValue = otherAnswers[currentStep.id];
+
+        return (
+            <View>
+                {options.map((option) => (
+                    <TouchableOpacity
+                        key={option.id}
+                        style={styles.selectionOption}
+                        onPress={() => toggleCheckboxOption(option.value)}
+                    >
+                        <View style={[styles.checkbox, isCheckboxSelected(option.value) && styles.checkboxSelected]}>
+                            {isCheckboxSelected(option.value) && <Text style={styles.checkboxCheck}>✓</Text>}
+                        </View>
+                        <Text style={styles.selectionText}>{option.text}</Text>
+                    </TouchableOpacity>
+                ))}
+                {allowOther && (
+                    <TouchableOpacity
+                        style={styles.selectionOption}
+                        onPress={() => toggleCheckboxOption('__other__')}
+                    >
+                        <View style={[styles.checkbox, isCheckboxSelected('__other__') && styles.checkboxSelected]}>
+                            {isCheckboxSelected('__other__') && <Text style={styles.checkboxCheck}>✓</Text>}
+                        </View>
+                        <Text style={styles.selectionText}>Other</Text>
+                    </TouchableOpacity>
+                )}
+                {allowOther && isCheckboxSelected('__other__') && (
+                    <TextInput
+                        style={[styles.input, { marginTop: 12 }]}
+                        placeholder={otherPlaceholder}
+                        placeholderTextColor="#666"
+                        value={otherValue || ''}
+                        onChangeText={updateOtherAnswer}
+                    />
+                )}
+            </View>
+        );
+    };
+
+    const renderDropdown = () => {
+        const options = currentStep.data.predefinedAnswers || [];
+        const selectedValue = answers[currentStep.id] || '';
+        const allowOther = currentStep.data.allowOther;
+        const otherPlaceholder = currentStep.data.otherPlaceholder || 'Please specify...';
+        const otherValue = otherAnswers[currentStep.id];
+
+        return (
+            <View>
+                <View style={styles.pickerContainer}>
+                    <Picker
+                        style={styles.picker}
+                        selectedValue={selectedValue}
+                        onValueChange={(value) => updateDropdownAnswer(value)}
+                        mode="dropdown"
+                    >
+                        <Picker.Item label="Select an option..." value="" enabled={false} />
+                        {options.map((option) => (
+                            <Picker.Item key={option.id} label={option.text} value={option.value} />
+                        ))}
+                        {allowOther && <Picker.Item label="Other" value="__other__" />}
+                    </Picker>
+                </View>
+                {allowOther && selectedValue === '__other__' && (
+                    <TextInput
+                        style={[styles.input, { marginTop: 12 }]}
+                        placeholder={otherPlaceholder}
+                        placeholderTextColor="#666"
+                        value={otherValue || ''}
+                        onChangeText={updateOtherAnswer}
+                    />
+                )}
+            </View>
+        );
+    };
 
     const renderFieldInput = () => {
         const fieldType = currentStep.data.fieldType || 'text';
@@ -227,6 +429,12 @@ export default function FormModule({ module, eventId, userId, onComplete }) {
                         onChangeText={updateAnswer}
                     />
                 );
+            case 'radio':
+                return renderRadioOptions();
+            case 'checkbox':
+                return renderCheckboxOptions();
+            case 'dropdown':
+                return renderDropdown();
             case 'text':
             default:
                 return (
@@ -377,6 +585,74 @@ const styles = StyleSheet.create({
         color: '#FFF',
         borderWidth: 1,
         borderColor: '#444',
+    },
+    selectionOptions: {
+        flexDirection: 'column',
+        gap: 12,
+    },
+    selectionOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#2C2C2C',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#444',
+    },
+    radioCircle: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        borderWidth: 2,
+        borderColor: '#666',
+        marginRight: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    radioCircleSelected: {
+        borderColor: '#007AFF',
+        backgroundColor: '#007AFF',
+    },
+    radioDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#FFF',
+    },
+    checkbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: '#666',
+        marginRight: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxSelected: {
+        borderColor: '#007AFF',
+        backgroundColor: '#007AFF',
+    },
+    checkboxCheck: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    selectionText: {
+        color: '#FFF',
+        fontSize: 16,
+    },
+    pickerContainer: {
+        backgroundColor: '#2C2C2C',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#444',
+        overflow: 'hidden',
+    },
+    picker: {
+        width: '100%',
+        color: '#FFF',
+        padding: 16,
     },
     footer: {
         position: 'absolute',

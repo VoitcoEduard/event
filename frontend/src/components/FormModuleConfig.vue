@@ -68,7 +68,7 @@
                     <p class="label">Response Type</p>
                     <div class="type-selector">
                       <button 
-                        v-for="type in ['text', 'number', 'date']" 
+                        v-for="type in ['text', 'number', 'date', 'radio', 'checkbox', 'dropdown']" 
                         :key="type"
                         class="type-option"
                         :class="{ active: step.data.fieldType === type }"
@@ -77,6 +77,80 @@
                         {{ type.charAt(0).toUpperCase() + type.slice(1) }}
                       </button>
                     </div>
+
+                    <!-- Predefined Answers Section for Selection Types -->
+                    <template v-if="['radio', 'checkbox', 'dropdown'].includes(step.data.fieldType)">
+                      <div class="predefined-answers-section">
+                        <p class="label">Predefined Answers</p>
+                        
+                        <div class="answers-list">
+                          <div 
+                            v-for="(answer, answerIndex) in (step.data.predefinedAnswers || [])" 
+                            :key="answer.id" 
+                            class="answer-item"
+                          >
+                            <input
+                              :value="answer.text"
+                              @input="updateAnswer(step.id, answerIndex, 'text', $event.target.value)"
+                              placeholder="Display text"
+                              class="input answer-input"
+                            />
+                            <input
+                              :value="answer.value"
+                              @input="updateAnswer(step.id, answerIndex, 'value', $event.target.value)"
+                              placeholder="Value"
+                              class="input answer-value-input"
+                            />
+                            <button 
+                              class="remove-answer-btn" 
+                              @click="removeAnswer(step.id, answerIndex)"
+                              title="Remove answer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <button class="add-answer-btn" @click="addAnswer(step.id)">
+                          + Add Answer
+                        </button>
+
+                        <!-- Allow Multiple Selections (Checkbox only) -->
+                        <div v-if="step.data.fieldType === 'checkbox'" class="option-toggle">
+                          <label class="toggle-label">
+                            <input
+                              type="checkbox"
+                              :checked="step.data.allowMultiple"
+                              @change="updateStep(step.id, 'allowMultiple', $event.target.checked)"
+                            />
+                            <span>Allow multiple selections</span>
+                          </label>
+                        </div>
+
+                        <!-- Allow 'Other' Option -->
+                        <div class="option-toggle">
+                          <label class="toggle-label">
+                            <input
+                              type="checkbox"
+                              :checked="step.data.allowOther"
+                              @change="updateStep(step.id, 'allowOther', $event.target.checked)"
+                            />
+                            <span>Allow 'Other' option</span>
+                          </label>
+                        </div>
+
+                        <!-- Other Option Placeholder -->
+                        <div v-if="step.data.allowOther" class="other-option-section">
+                          <p class="label">Other option placeholder</p>
+                          <input
+                            :value="step.data.otherPlaceholder || 'Please specify...'"
+                            @input="updateStep(step.id, 'otherPlaceholder', $event.target.value)"
+                            placeholder="e.g., Please specify..."
+                            class="input"
+                          />
+                        </div>
+                      </div>
+                    </template>
                   </template>
 
                   <template v-else>
@@ -119,7 +193,7 @@
                 <p class="template-item-name">{{ template.name }}</p>
                 <p class="template-item-desc">{{ template.description }}</p>
               </div>
-              <button class="delete-template-btn" @click="deleteTemplate(template.id, template.name)">
+              <button class="delete-template-btn" @click.stop="deleteTemplate(template.id, template.name)">
                 🗑
               </button>
             </div>
@@ -198,6 +272,47 @@ const updateStep = (id, key, value) => {
   timeline.value = timeline.value.map(step =>
     step.id === id ? { ...step, data: { ...step.data, [key]: value } } : step
   )
+}
+
+const addAnswer = (stepId) => {
+  timeline.value = timeline.value.map(step => {
+    if (step.id === stepId) {
+      const answers = step.data.predefinedAnswers || []
+      return {
+        ...step,
+        data: {
+          ...step.data,
+          predefinedAnswers: [
+            ...answers,
+            { id: Date.now().toString() + Math.random().toString(36).substr(2, 9), text: '', value: '' }
+          ]
+        }
+      }
+    }
+    return step
+  })
+}
+
+const updateAnswer = (stepId, answerIndex, key, value) => {
+  timeline.value = timeline.value.map(step => {
+    if (step.id === stepId) {
+      const answers = [...(step.data.predefinedAnswers || [])]
+      answers[answerIndex] = { ...answers[answerIndex], [key]: value }
+      return { ...step, data: { ...step.data, predefinedAnswers: answers } }
+    }
+    return step
+  })
+}
+
+const removeAnswer = (stepId, answerIndex) => {
+  timeline.value = timeline.value.map(step => {
+    if (step.id === stepId) {
+      const answers = [...(step.data.predefinedAnswers || [])]
+      answers.splice(answerIndex, 1)
+      return { ...step, data: { ...step.data, predefinedAnswers: answers } }
+    }
+    return step
+  })
 }
 
 const removeStep = (id) => {
@@ -540,6 +655,78 @@ const modalStyle = computed(() => ({
 .type-option.active {
   background-color: #007AFF;
   color: #FFF;
+}
+
+.predefined-answers-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #3A3A3C;
+}
+
+.answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.answer-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.answer-input {
+  flex: 2;
+  margin-bottom: 0;
+}
+
+.answer-value-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.remove-answer-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: rgba(255, 69, 58, 0.2);
+  color: #FF453A;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.add-answer-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34C759;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.option-toggle {
+  margin-top: 12px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: #FFF;
+  font-size: 14px;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #007AFF;
+}
+
+.other-option-section {
+  margin-top: 12px;
 }
 
 .action-bar {

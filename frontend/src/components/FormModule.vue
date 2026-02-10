@@ -21,6 +21,8 @@
 
         <div v-else class="field-card">
           <p class="field-label">{{ currentStep.data.label }}</p>
+          
+          <!-- Text field -->
           <textarea
             v-if="currentStep.data.fieldType === 'text'"
             :value="answers[currentStep.id] || ''"
@@ -28,12 +30,125 @@
             placeholder="Type your answer here..."
             class="field-input text-area"
           ></textarea>
+          
+          <!-- Number field -->
           <input
-            v-else
-            :type="currentStep.data.fieldType === 'number' ? 'number' : 'text'"
+            v-else-if="currentStep.data.fieldType === 'number'"
+            type="number"
             :value="answers[currentStep.id] || ''"
             @input="updateAnswer"
-            :placeholder="currentStep.data.fieldType === 'number' ? 'Type a number...' : ''"
+            placeholder="Type a number..."
+            class="field-input"
+          />
+          
+          <!-- Date field -->
+          <input
+            v-else-if="currentStep.data.fieldType === 'date'"
+            type="date"
+            :value="answers[currentStep.id] || ''"
+            @input="updateAnswer"
+            class="field-input"
+          />
+          
+          <!-- Radio buttons -->
+          <div v-else-if="currentStep.data.fieldType === 'radio'" class="selection-options">
+            <div
+              v-for="option in currentStep.data.predefinedAnswers"
+              :key="option.id"
+              class="selection-option radio-option"
+              @click="selectRadioOption(currentStep.id, option.value)"
+            >
+              <div class="selection-indicator" :class="{ selected: answers[currentStep.id] === option.value }">
+                <div class="selection-dot" v-if="answers[currentStep.id] === option.value"></div>
+              </div>
+              <span class="selection-text">{{ option.text }}</span>
+            </div>
+            <div
+              v-if="currentStep.data.allowOther"
+              class="selection-option radio-option"
+              @click="selectRadioOption(currentStep.id, '__other__')"
+            >
+              <div class="selection-indicator" :class="{ selected: answers[currentStep.id] === '__other__' }">
+                <div class="selection-dot" v-if="answers[currentStep.id] === '__other__'"></div>
+              </div>
+              <span class="selection-text">Other</span>
+            </div>
+            <input
+              v-if="currentStep.data.allowOther && answers[currentStep.id] === '__other__'"
+              type="text"
+              :value="otherAnswers[currentStep.id] || ''"
+              @input="updateOtherAnswer"
+              :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
+              class="field-input other-input"
+            />
+          </div>
+          
+          <!-- Checkboxes -->
+          <div v-else-if="currentStep.data.fieldType === 'checkbox'" class="selection-options">
+            <div
+              v-for="option in currentStep.data.predefinedAnswers"
+              :key="option.id"
+              class="selection-option checkbox-option"
+              @click="toggleCheckboxOption(currentStep.id, option.value)"
+            >
+              <div class="selection-indicator" :class="{ selected: isCheckboxSelected(currentStep.id, option.value) }">
+                <span v-if="isCheckboxSelected(currentStep.id, option.value)" class="checkbox-check">✓</span>
+              </div>
+              <span class="selection-text">{{ option.text }}</span>
+            </div>
+            <div
+              v-if="currentStep.data.allowOther"
+              class="selection-option checkbox-option"
+              @click="toggleCheckboxOption(currentStep.id, '__other__')"
+            >
+              <div class="selection-indicator" :class="{ selected: isCheckboxSelected(currentStep.id, '__other__') }">
+                <span v-if="isCheckboxSelected(currentStep.id, '__other__')" class="checkbox-check">✓</span>
+              </div>
+              <span class="selection-text">Other</span>
+            </div>
+            <input
+              v-if="currentStep.data.allowOther && isCheckboxSelected(currentStep.id, '__other__')"
+              type="text"
+              :value="otherAnswers[currentStep.id] || ''"
+              @input="updateOtherAnswer"
+              :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
+              class="field-input other-input"
+            />
+          </div>
+          
+          <!-- Dropdown -->
+          <select
+            v-else-if="currentStep.data.fieldType === 'dropdown'"
+            :value="answers[currentStep.id] || ''"
+            @change="updateDropdownAnswer"
+            class="field-input dropdown-select"
+          >
+            <option value="" disabled>Select an option...</option>
+            <option
+              v-for="option in currentStep.data.predefinedAnswers"
+              :key="option.id"
+              :value="option.value"
+            >
+              {{ option.text }}
+            </option>
+            <option v-if="currentStep.data.allowOther" value="__other__">Other</option>
+          </select>
+          <input
+            v-if="currentStep.data.fieldType === 'dropdown' && currentStep.data.allowOther && answers[currentStep.id] === '__other__'"
+            type="text"
+            :value="otherAnswers[currentStep.id] || ''"
+            @input="updateOtherAnswer"
+            :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
+            class="field-input other-input"
+          />
+          
+          <!-- Default text input for unknown types -->
+          <input
+            v-else
+            type="text"
+            :value="answers[currentStep.id] || ''"
+            @input="updateAnswer"
+            placeholder="Type your answer here..."
             class="field-input"
           />
         </div>
@@ -117,6 +232,7 @@ const emit = defineEmits(['complete'])
 const timeline = computed(() => props.module.data?.timeline || [])
 const currentStepIndex = ref(0)
 const answers = ref({})
+const otherAnswers = ref({})
 const submitting = ref(false)
 const completed = ref(false)
 const templates = ref([])
@@ -153,9 +269,54 @@ const updateAnswer = (e) => {
   answers.value = { ...answers.value, [currentStep.value.id]: value }
 }
 
+const updateOtherAnswer = (e) => {
+  const value = e.target.value
+  otherAnswers.value = { ...otherAnswers.value, [currentStep.value.id]: value }
+}
+
+const selectRadioOption = (stepId, value) => {
+  answers.value = { ...answers.value, [stepId]: value }
+}
+
+const toggleCheckboxOption = (stepId, value) => {
+  const currentValues = answers.value[stepId] || []
+  const newValues = Array.isArray(currentValues) ? [...currentValues] : []
+  
+  if (value === '__other__') {
+    const otherIndex = newValues.indexOf('__other__')
+    if (otherIndex >= 0) {
+      newValues.splice(otherIndex, 1)
+    } else {
+      newValues.push('__other__')
+    }
+  } else {
+    const optionIndex = newValues.indexOf(value)
+    if (optionIndex >= 0) {
+      newValues.splice(optionIndex, 1)
+    } else {
+      newValues.push(value)
+    }
+  }
+  
+  answers.value = { ...answers.value, [stepId]: newValues }
+}
+
+const isCheckboxSelected = (stepId, value) => {
+  const currentValues = answers.value[stepId]
+  return Array.isArray(currentValues) && currentValues.includes(value)
+}
+
+const updateDropdownAnswer = (e) => {
+  const value = e.target.value
+  answers.value = { ...answers.value, [currentStep.value.id]: value }
+}
+
 const loadTemplate = (template) => {
   if (template.data?.answers) {
     answers.value = { ...answers.value, ...template.data.answers }
+  }
+  if (template.data?.otherAnswers) {
+    otherAnswers.value = { ...otherAnswers.value, ...template.data.otherAnswers }
   }
   showTemplateModal.value = false
   success('Template loaded successfully!')
@@ -183,12 +344,44 @@ const handleBack = () => {
   }
 }
 
+const isSelectionType = (fieldType) => {
+  return ['radio', 'checkbox', 'dropdown'].includes(fieldType)
+}
+
+const hasSelection = (stepId) => {
+  const answer = answers.value[stepId]
+  if (!answer) return false
+  if (Array.isArray(answer)) return answer.length > 0
+  return !!answer
+}
+
 const handleNext = async () => {
   if (currentStep.value.type === 'field') {
-    const answer = answers.value[currentStep.value.id]
-    if (!answer || (typeof answer === 'string' && !answer.trim())) {
-      info('Please provide an answer.')
-      return
+    const fieldType = currentStep.value.data?.fieldType
+    const stepId = currentStep.value.id
+    const answer = answers.value[stepId]
+    
+    if (isSelectionType(fieldType)) {
+      // For selection types, check if at least one option is selected
+      if (!hasSelection(stepId)) {
+        info('Please select an option.')
+        return
+      }
+      
+      // For checkbox with allowOther, the __other__ value should have text
+      if (fieldType === 'checkbox' && Array.isArray(answer) && answer.includes('__other__')) {
+        const otherValue = otherAnswers.value[stepId]
+        if (!otherValue || !otherValue.trim()) {
+          info('Please specify your answer for "Other".')
+          return
+        }
+      }
+    } else {
+      // For text, number, date types
+      if (!answer || (typeof answer === 'string' && !answer.trim())) {
+        info('Please provide an answer.')
+        return
+      }
     }
   }
 
@@ -207,7 +400,8 @@ const handleSubmit = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: props.userId,
-        data: answers.value
+        data: answers.value,
+        otherAnswers: otherAnswers.value
       })
     })
 
@@ -313,6 +507,84 @@ const handleSubmit = async () => {
 .field-input.text-area {
   min-height: 100px;
   resize: vertical;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: #007AFF;
+}
+
+.selection-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.selection-option {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #2C2C2C;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: 1px solid #444;
+}
+
+.selection-option:hover {
+  background-color: #3A3A3A;
+}
+
+.selection-indicator {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #666;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.selection-indicator.selected {
+  border-color: #007AFF;
+  background-color: #007AFF;
+}
+
+.selection-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #FFF;
+}
+
+.checkbox-option .selection-indicator {
+  border-radius: 6px;
+}
+
+.checkbox-check {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.selection-text {
+  color: #FFF;
+  font-size: 16px;
+}
+
+.other-input {
+  margin-top: 12px;
+}
+
+.dropdown-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
 }
 
 .footer {
@@ -499,7 +771,7 @@ const handleSubmit = async () => {
 .loading-spinner-small {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid #666;
   border-top-color: #007AFF;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
