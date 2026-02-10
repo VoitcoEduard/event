@@ -1,63 +1,65 @@
 <template>
   <div class="event-screen">
-    <div v-if="!currentEvent" class="error-container">
-      <p class="error-text">No event data found.</p>
-      <button class="back-button" @click="goToMain">Go Back</button>
-    </div>
+    <div class="responsive-wrapper">
+      <div v-if="!currentEvent" class="error-container">
+        <p class="error-text">No event data found.</p>
+        <button class="back-button" @click="goToMain">Go Back</button>
+      </div>
 
-    <div v-else-if="selectedModule" class="module-view">
-      <div class="header">
-        <button class="back-link" @click="selectedModule = null">
-          <span class="back-arrow">←</span>
-          <span>Back to Event</span>
+      <div v-else-if="selectedModule" class="module-view">
+        <div class="module-header">
+          <button class="back-link" @click="selectedModule = null">
+            <span class="back-arrow">←</span>
+            <span>Back to Event</span>
+          </button>
+        </div>
+        <FormModule
+          v-if="selectedModule.type === 'form'"
+          :module="selectedModule"
+          :event-id="currentEvent.id"
+          :user-id="userId"
+          @complete="handleModuleComplete"
+        />
+      </div>
+
+      <div v-else class="content">
+        <div class="header">
+          <p class="status-text">Connected to</p>
+          <p class="event-name">{{ currentEvent.name }}</p>
+        </div>
+
+        <div class="list-container">
+          <template v-if="activeModules.length > 0">
+            <p class="section-title">Active Activities</p>
+            <div
+              v-for="module in activeModules"
+              :key="module.id"
+              class="module-card"
+              @click="selectModule(module)"
+            >
+              <div class="icon-container">
+                <span class="module-icon">{{ module.type === 'form' ? '📝' : '📊' }}</span>
+              </div>
+              <div class="module-info">
+                <p class="module-title">{{ module.name }}</p>
+                <p class="module-subtitle">Tap to start</p>
+              </div>
+              <span class="chevron">›</span>
+            </div>
+          </template>
+          <template v-else>
+            <div class="waiting-card">
+              <div class="loader"></div>
+              <p class="message">Waiting for host to start the next activity...</p>
+              <p class="sub-message">Sit tight and get ready!</p>
+            </div>
+          </template>
+        </div>
+
+        <button class="leave-button" @click="goToMain">
+          Leave Event
         </button>
       </div>
-      <FormModule
-        v-if="selectedModule.type === 'form'"
-        :module="selectedModule"
-        :event-id="currentEvent.id"
-        :user-id="userId"
-        @complete="handleModuleComplete"
-      />
-    </div>
-
-    <div v-else class="content">
-      <div class="header">
-        <p class="status-text">Connected to</p>
-        <p class="event-name">{{ currentEvent.name }}</p>
-      </div>
-
-      <div class="list-container">
-        <template v-if="activeModules.length > 0">
-          <p class="section-title">Active Activities</p>
-          <div
-            v-for="module in activeModules"
-            :key="module.id"
-            class="module-card"
-            @click="selectModule(module)"
-          >
-            <div class="icon-container">
-              <span class="module-icon">{{ module.type === 'form' ? '📝' : '📊' }}</span>
-            </div>
-            <div class="module-info">
-              <p class="module-title">{{ module.name }}</p>
-              <p class="module-subtitle">Tap to start</p>
-            </div>
-            <span class="chevron">›</span>
-          </div>
-        </template>
-        <template v-else>
-          <div class="waiting-card">
-            <div class="loader"></div>
-            <p class="message">Waiting for host to start the next activity...</p>
-            <p class="sub-message">Sit tight and get ready!</p>
-          </div>
-        </template>
-      </div>
-
-      <button class="leave-button" @click="goToMain">
-        Leave Event
-      </button>
     </div>
   </div>
 </template>
@@ -123,33 +125,60 @@ const goToMain = () => {
 
 <style scoped>
 .event-screen {
-  min-height: 100vh;
-  background-color: #121212;
+  height: 100vh; /* Fixed height to enable centering */
+  width: 100vw;
+  background-color: var(--background-color, #121212);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center; /* Center vertically on desktop */
+  overflow: hidden; /* Prevent body scroll */
+}
+
+.responsive-wrapper {
+  width: 100%;
+  height: 100%; /* Full height by default (mobile) */
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-color, #121212);
+  position: relative;
+}
+
+@media (min-width: 500px) {
+  .responsive-wrapper {
+    max-width: 480px; /* Constrains width */
+    height: calc(100% - 40px); /* Margin top/bottom essentially */
+    max-height: 850px; /* Reasonable max height for a "phone" view */
+    border-radius: 24px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5); /* Strong shadow for depth */
+    border: 1px solid var(--border-color, #333);
+    overflow: hidden; /* Clip content to corners */
+  }
 }
 
 .content {
-  width: 90%;
-  max-width: 400px;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   flex: 1;
-  padding-top: 60px;
+  padding: 20px;
+  padding-top: 40px;
+  overflow: hidden; /* Prevent container expansion */
 }
 
 .header {
-  margin-bottom: 40px;
+  margin-bottom: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
+  flex-shrink: 0; /* Header stays at top */
 }
 
 .status-text {
-  color: #888;
+  color: var(--text-secondary, #888);
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -157,7 +186,7 @@ const goToMain = () => {
 }
 
 .event-name {
-  color: #FFF;
+  color: var(--text-primary, #FFF);
   font-size: 32px;
   font-weight: 800;
   text-align: center;
@@ -166,10 +195,31 @@ const goToMain = () => {
 .list-container {
   width: 100%;
   flex: 1;
+  overflow-y: auto; /* Internal scrolling */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 80px; /* Space for bottom button */
+  padding-right: 4px; /* Prevent scrollbar visual clash */
+}
+
+/* Scrollbar styling for webkit */
+.list-container::-webkit-scrollbar,
+.scroll-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list-container::-webkit-scrollbar-track,
+.scroll-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list-container::-webkit-scrollbar-thumb,
+.scroll-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
 
 .section-title {
-  color: #888;
+  color: var(--text-secondary, #888);
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 16px;
@@ -178,22 +228,28 @@ const goToMain = () => {
 }
 
 .module-card {
-  background-color: #1E1E1E;
+  background-color: var(--surface-color, #1E1E1E);
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 16px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  border: 1px solid #333;
+  border: 1px solid var(--border-color, #333);
   cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.module-card:hover {
+  transform: translateY(-2px);
+  background-color: var(--surface-hover, #252525);
 }
 
 .icon-container {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background-color: #333;
+  background-color: var(--background-color, #333);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,25 +265,25 @@ const goToMain = () => {
 }
 
 .module-title {
-  color: #FFF;
+  color: var(--text-primary, #FFF);
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 4px;
 }
 
 .module-subtitle {
-  color: #30D158;
+  color: var(--primary-color, #30D158);
   font-size: 14px;
   font-weight: 500;
 }
 
 .chevron {
-  color: #666;
+  color: var(--text-secondary, #666);
   font-size: 24px;
 }
 
 .waiting-card {
-  background-color: #1E1E1E;
+  background-color: var(--surface-color, #1E1E1E);
   border-radius: 20px;
   padding: 40px;
   width: 100%;
@@ -235,14 +291,14 @@ const goToMain = () => {
   flex-direction: column;
   align-items: center;
   margin-bottom: 40px;
-  border: 1px solid #333;
+  border: 1px solid var(--border-color, #333);
 }
 
 .loader {
   width: 40px;
   height: 40px;
   border: 3px solid #333;
-  border-top-color: #007AFF;
+  border-top-color: var(--primary-color, #007AFF);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 20px;
@@ -253,7 +309,7 @@ const goToMain = () => {
 }
 
 .message {
-  color: #FFF;
+  color: var(--text-primary, #FFF);
   font-size: 18px;
   font-weight: 600;
   text-align: center;
@@ -261,24 +317,33 @@ const goToMain = () => {
 }
 
 .sub-message {
-  color: #888;
+  color: var(--text-secondary, #888);
   font-size: 14px;
   text-align: center;
 }
 
 .leave-button {
+  width: calc(100% - 40px); /* Match padding of container */
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
   padding: 16px 32px;
   border-radius: 12px;
-  border: 1px solid #333;
-  width: 100%;
+  border: 1px solid var(--border-color, #333);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 40px;
-  color: #FF453A;
+  color: var(--danger-color, #FF453A);
   font-size: 16px;
   font-weight: 600;
-  background: none;
+  background-color: var(--background-color, #121212); /* Opaque bg mostly */
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 -10px 20px rgba(0,0,0,0.2); /* Shadow to separate from list */
+}
+
+.leave-button:hover {
+  background-color: rgba(255, 69, 58, 0.1);
 }
 
 .error-container {
@@ -286,43 +351,57 @@ const goToMain = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  height: 100%;
 }
 
 .error-text {
-  color: #FF453A;
+  color: var(--danger-color, #FF453A);
   font-size: 18px;
   margin-bottom: 20px;
 }
 
 .back-button {
   padding: 10px;
-  color: #FFF;
+  color: var(--text-primary, #FFF);
   font-size: 16px;
   background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .module-view {
   width: 100%;
+  height: 100%;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Ensure module scrolling is contained */
 }
 
-.header {
+.module-header {
   display: flex;
   flex-direction: row;
   align-items: center;
   padding: 16px;
-  margin-bottom: 10px;
+  width: 100%;
+  flex-shrink: 0;
+  z-index: 20;
 }
 
 .back-link {
   display: flex;
   flex-direction: row;
   align-items: center;
-  color: #FFF;
+  color: var(--text-primary, #FFF);
   font-size: 16px;
   background: none;
+  border: none;
   padding: 8px;
+  cursor: pointer;
+}
+
+.back-link:hover {
+  opacity: 0.8;
 }
 
 .back-arrow {

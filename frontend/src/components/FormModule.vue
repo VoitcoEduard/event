@@ -117,30 +117,32 @@
           </div>
           
           <!-- Dropdown -->
-          <select
-            v-else-if="currentStep.data.fieldType === 'dropdown'"
-            :value="answers[currentStep.id] || ''"
-            @change="updateDropdownAnswer"
-            class="field-input dropdown-select"
-          >
-            <option value="" disabled>Select an option...</option>
-            <option
-              v-for="option in currentStep.data.predefinedAnswers"
-              :key="option.id"
-              :value="option.value"
+          <!-- Dropdown -->
+          <div v-else-if="currentStep.data.fieldType === 'dropdown'" class="dropdown-wrapper">
+            <select
+              :value="answers[currentStep.id] || ''"
+              @change="updateDropdownAnswer"
+              class="field-input dropdown-select"
             >
-              {{ option.text }}
-            </option>
-            <option v-if="currentStep.data.allowOther" value="__other__">Other</option>
-          </select>
-          <input
-            v-if="currentStep.data.fieldType === 'dropdown' && currentStep.data.allowOther && answers[currentStep.id] === '__other__'"
-            type="text"
-            :value="otherAnswers[currentStep.id] || ''"
-            @input="updateOtherAnswer"
-            :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
-            class="field-input other-input"
-          />
+              <option value="" disabled>Select an option...</option>
+              <option
+                v-for="option in currentStep.data.predefinedAnswers"
+                :key="option.id"
+                :value="option.value"
+              >
+                {{ option.text }}
+              </option>
+              <option v-if="currentStep.data.allowOther" value="__other__">Other</option>
+            </select>
+            <input
+              v-if="currentStep.data.allowOther && answers[currentStep.id] === '__other__'"
+              type="text"
+              :value="otherAnswers[currentStep.id] || ''"
+              @input="updateOtherAnswer"
+              :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
+              class="field-input other-input"
+            />
+          </div>
           
           <!-- Default text input for unknown types -->
           <input
@@ -423,11 +425,13 @@ const handleSubmit = async () => {
 <style scoped>
 .form-module {
   width: 100%;
+  height: 100%; /* Occupy full height of parent */
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
+  overflow: hidden; /* Contain children */
 }
 
 .progress-bar {
@@ -437,6 +441,7 @@ const handleSubmit = async () => {
   border-radius: 3px;
   margin-bottom: 20px;
   overflow: hidden;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .progress-fill {
@@ -450,7 +455,12 @@ const handleSubmit = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: 100px;
+  padding-bottom: 100px; /* Space for footer */
+  flex: 1;
+  overflow-y: auto; /* Enable internal scrolling */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  padding-left: 4px; /* Prevent scrollbar overlap visual issues if needed */
+  padding-right: 4px;
 }
 
 .step-counter {
@@ -459,6 +469,7 @@ const handleSubmit = async () => {
   font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .message-card {
@@ -470,12 +481,13 @@ const handleSubmit = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .message-text {
   font-size: 20px;
   color: #FFF;
-  line-height: 30;
+  line-height: 1.5;
   text-align: center;
 }
 
@@ -485,6 +497,7 @@ const handleSubmit = async () => {
   padding: 24px;
   width: 100%;
   border: 1px solid #333;
+  flex-shrink: 0;
 }
 
 .field-label {
@@ -595,6 +608,11 @@ const handleSubmit = async () => {
   display: flex;
   gap: 12px;
   padding: 20px;
+  background-color: inherit; /* Or match card bg if needed, but absolute in relative container is fine */
+  /* Add gradient or solid bg behind footer to hide scrolled content? */
+  background: linear-gradient(to top, rgba(18,18,18, 1) 0%, rgba(18,18,18, 0.9) 70%, rgba(18,18,18, 0) 100%);
+  /* Note: FormModule doesn't control background color, it might depend on theme */
+  z-index: 10;
 }
 
 .back-button {
