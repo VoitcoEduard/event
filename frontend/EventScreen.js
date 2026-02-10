@@ -29,7 +29,7 @@ export default function EventScreen({ event, onNavigate, userId }) {
 
                     // Check for active modules
                     if (data.modules) {
-                        const active = data.modules.filter(m => m.status === 'active');
+                        const active = data.modules.filter(m => m.isActive);
                         setActiveModules(active);
                     }
                 }

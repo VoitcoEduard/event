@@ -86,7 +86,7 @@ const fetchEvent = async () => {
       const data = await response.json()
       currentEvent.value = data
       if (data.modules) {
-        activeModules.value = data.modules.filter(m => m.status === 'active')
+        activeModules.value = data.modules.filter(m => m.isActive)
       }
     }
   } catch (error) {
