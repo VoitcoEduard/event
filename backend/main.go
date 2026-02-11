@@ -127,6 +127,10 @@ func main() {
 				handlers.GetQuizResults(w, r)
 				return
 			}
+			if strings.HasSuffix(r.URL.Path, "/reset") && r.Method == "POST" {
+				handlers.ResetQuiz(w, r)
+				return
+			}
 		}
 
 		if strings.HasSuffix(r.URL.Path, "/modules") {

@@ -21,37 +21,51 @@ type Player struct {
 	Score    int    `json:"score" bson:"score"`
 }
 
+// PlayerSignal represents a player's answer signal with metadata
+type PlayerSignal struct {
+	PlayerID      string `json:"playerId" bson:"playerId"`
+	QuestionIndex int    `json:"questionIndex" bson:"questionIndex"`
+	AnswerIndex   int    `json:"answerIndex" bson:"answerIndex"`
+	ScoreEarned   int    `json:"scoreEarned" bson:"scoreEarned"`
+	TimeSpent     int    `json:"timeSpent" bson:"timeSpent"` // ms
+	Timestamp     int64  `json:"timestamp" bson:"timestamp"`
+	Status        string `json:"status" bson:"status"` // "on_time", "grace_period", "missed"
+}
+
+// QuestionWindow tracks the timing and acceptance window for a question
+type QuestionWindow struct {
+	QuestionIndex int64  `json:"questionIndex" bson:"questionIndex"`
+	StartTime     int64  `json:"startTime" bson:"startTime"`       // Unix timestamp
+	EndTime       int64  `json:"endTime" bson:"endTime"`           // When timer expires
+	GraceEndTime  int64  `json:"graceEndTime" bson:"graceEndTime"` // EndTime + GracePeriod
+	State         string `json:"state" bson:"state"`               // "active", "grace", "closed"
+}
+
+// QuestionBatch represents a chunk of questions to be sent to clients
+type QuestionBatch struct {
+	BatchIndex   int            `json:"batchIndex"`
+	TotalBatches int            `json:"totalBatches"`
+	Questions    []QuizQuestion `json:"questions"`
+	NextBatchAt  int            `json:"nextBatchAt"` // Question index when to request next batch
+	StartIndex   int            `json:"startIndex"`  // Starting question index in this batch
+	EndIndex     int            `json:"endIndex"`    // Ending question index in this batch
+}
+
 // Quiz state - potentially transient or persisted separately
 type QuizSession struct {
-	EventID      string             `json:"eventId" bson:"eventId"`
-	ModuleID     string             `json:"moduleId" bson:"moduleId"`
-	CurrentIndex int                `json:"currentIndex" bson:"currentIndex"`
-	State        string             `json:"state" bson:"state"` // "lobby", "question", "results", "finished"
-	Players      map[string]*Player `json:"players" bson:"players"`
-	Answers      map[string]int     `json:"answers" bson:"answers"`     // playerID -> answerIndex (int)
-	StartTime    int64              `json:"startTime" bson:"startTime"` // Unix timestamp for when the question started
+	EventID         string             `json:"eventId" bson:"eventId"`
+	ModuleID        string             `json:"moduleId" bson:"moduleId"`
+	CurrentIndex    int                `json:"currentIndex" bson:"currentIndex"`
+	State           string             `json:"state" bson:"state"` // "lobby", "question", "results", "finished"
+	Players         map[string]*Player `json:"players" bson:"players"`
+	PlayerSignals   []PlayerSignal     `json:"playerSignals" bson:"playerSignals"` // All signals received
+	AnswerCounts    map[int]int        `json:"answerCounts" bson:"answerCounts"`   // answerIndex -> count
+	QuestionWindows []QuestionWindow   `json:"questionWindows" bson:"questionWindows"`
+	StartTime       int64              `json:"startTime" bson:"startTime"` // Unix timestamp for when the question started
 
-	// Server-side only (not exported to JSON generally, but maybe okay for now?
-	// Actually, we shouldn't send answers to players.
-	// But for simplicity of state sync, we might need to be careful.
-	// Let's add them but maybe control JSON output or just trust clients not to cheat for this MVP.)
-	// Better: Don't export Questions to JSON if we want to hide them.
-	// But Host needs them.
-	// We can use a separate struct or just be careful.
-	// For MVP, sending questions to everyone is "okay" but ideally we filter.
-	// Let's store them here for server logic.
+	// Batch management
+	Batches []QuestionBatch `json:"-" bson:"-"`
+
+	// Server-side only (not exported to JSON generally)
 	Questions []QuizQuestion `json:"-" bson:"-"`
-	// Note: Plan said map[string]string for Answers, but key is playerID, value is answerIndex which is int?
-	// Wait, plan said `Answers map[string]string`. Let's stick to plan but verify logic.
-	// If answerIndex is int, map[string]int is better.
-	// However, if we want to store arbitrary answers for other question types later, string might be better.
-	// Given the constraints (4 options, index 0-3), int is cleaner.
-	// BUT the plan explicitly says `Answers map[string]string // playerID -> answerIndex`.
-	// Wait, "answerIndex" implies a number. Maybe string representation of index "0", "1"?
-	// Or maybe the plan had a typo.
-	// Let's use `map[string]int` for type safety if it's an index, or `map[string]string` if it might be text.
-	// The plan says `CorrectIndex int`. So the answer is an index.
-	// I will use `map[string]int` for better type safety, deviating slightly from plan for correctness unless I see a reason not to.
-	// Actually, looking at `QuizQuestion.CorrectIndex int`, `int` makes strict sense.
-	// Wait, I'll stick to `map[string]int` for `Answers`, assuming `playerID` -> `answerIndex`.
 }

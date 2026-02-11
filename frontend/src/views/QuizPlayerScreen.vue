@@ -3,12 +3,12 @@
     <div class="bg-layer"></div>
 
     <!-- NICKNAME ENTRY (Pre-Lobby) -->
-    <div v-if="gameState === 'enter-nickname'" class="state-container name-entry-container">
+    <div v-if="state === States.LOBBY && !joined" class="state-container name-entry-container">
       <h1 class="logo">QuizTime!</h1>
       <div class="card">
-        <input 
-          v-model="nickname" 
-          placeholder="Enter Nickname" 
+        <input
+          v-model="nickname"
+          placeholder="Enter Nickname"
           class="nickname-input"
           @keyup.enter="joinLobby"
         />
@@ -19,7 +19,7 @@
     </div>
 
     <!-- LOBBY STATE -->
-    <div v-else-if="gameState === 'lobby'" class="state-container lobby-container">
+    <div v-else-if="state === States.LOBBY && joined" class="state-container lobby-container">
       <div class="lobby-content">
         <h2 class="waiting-text">You're in!</h2>
         <div class="nickname-display">{{ nickname }}</div>
@@ -29,7 +29,7 @@
     </div>
 
     <!-- GET READY STATE -->
-    <div v-else-if="gameState === 'get-ready'" class="state-container get-ready-container">
+    <div v-else-if="state === States.GET_READY" class="state-container get-ready-container">
       <div class="ready-content">
         <h1>Question {{ currentQuestionIndex + 1 }}</h1>
         <div class="countdown">{{ timeRemaining }}</div>
@@ -37,15 +37,14 @@
     </div>
 
     <!-- QUESTION/ANSWER STATE -->
-    <div v-else-if="gameState === 'question'" class="state-container question-container">
+    <div v-else-if="state === States.QUESTION_ACTIVE" class="state-container question-container">
       <div class="question-info">
          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
-         <!-- Timer bar? -->
       </div>
-      
+
       <div class="answer-grid">
-         <button 
-            v-for="(shape, idx) in shapes" 
+         <button
+            v-for="(shape, idx) in shapes"
             :key="idx"
             class="answer-btn"
             :class="['color-' + idx, { 'selected': selectedAnswer === idx }]"
@@ -58,7 +57,7 @@
     </div>
 
     <!-- ANSWER SUBMITTED (Waiting) -->
-    <div v-else-if="gameState === 'answered'" class="state-container answered-container">
+    <div v-else-if="state === States.ANSWERED" class="state-container answered-container">
        <div class="answered-content">
           <div class="spinner"></div>
           <h2>Answer Submitted!</h2>
@@ -67,11 +66,11 @@
     </div>
 
     <!-- RESULT STATE -->
-    <div v-else-if="gameState === 'result'" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
+    <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
        <div class="result-content">
           <div class="result-icon">{{ isCorrect ? '✅' : '❌' }}</div>
           <h1 class="result-title">{{ isCorrect ? 'Correct' : 'Incorrect' }}</h1>
-          
+
           <div class="score-summary">
              <div class="score-delta" v-if="isCorrect">+ {{ currentPoints }}</div>
              <div class="streak-msg" v-if="streak > 2">🔥 Streak: {{ streak }}</div>
@@ -84,7 +83,7 @@
     </div>
 
     <!-- FINISHED STATE -->
-    <div v-else-if="gameState === 'finished'" class="state-container finished-container">
+    <div v-else-if="state === States.FINISHED" class="state-container finished-container">
        <div class="finished-content">
           <h1>Quiz Over</h1>
           <div class="final-rank-badge">
@@ -103,39 +102,42 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { quizWS } from '../services/websocket'
-import { API_BASE_URL } from '../utils'
+import { useQuizStateMachine } from '../composables/useQuizStateMachine'
+import { questionCache } from '../utils/questionCache'
+import { signalQueue } from '../utils/signalQueue'
 
 const router = useRouter()
 const route = useRoute()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
 
-// State
+// State machine
+const { state, transition, canTransition, questionCache: cache, currentQuestionIndex, score, streak, States } = useQuizStateMachine()
+
+// Local state
 const nickname = ref('')
-const gameState = ref('enter-nickname') 
+const joined = ref(false)
 const selectedAnswer = ref(null)
 const isCorrect = ref(false)
-const score = ref(0)
 const currentPoints = ref(0)
-const streak = ref(0)
 const rank = ref(0)
-const currentQuestionIndex = ref(0)
 const timeRemaining = ref(5)
-const questions = ref([])
 
 const shapes = ['▲', '◆', '●', '■']
 
 // Actions
 const joinLobby = () => {
     if (!nickname.value.trim()) return
-    gameState.value = 'lobby'
     quizWS.connect(moduleId, nickname.value, false)
+    joined.value = true
 }
 
 const submitAnswer = (idx) => {
     selectedAnswer.value = idx
-    gameState.value = 'answered'
-    quizWS.send('player:answer', { answerIndex: idx })
+    transition(States.ANSWERED)
+
+    // Validate and score answer locally
+    validateAndScore(idx)
 }
 
 const goHome = () => {
@@ -145,91 +147,108 @@ const goHome = () => {
 
 let timerInterval
 
-// WS & Logic
-onMounted(async () => {
-    // 1. Fetch Questions logic
-    try {
-        const res = await fetch(`${API_BASE_URL}/events/${eventId}`)
-        const data = await res.json()
-        const mod = data.modules?.find(m => m.id === moduleId)
-        if (mod && mod.data && mod.data.questions) {
-            questions.value = mod.data.questions
-        }
-    } catch (e) {
-        console.error('Failed to load questions', e)
+// Answer validation and scoring
+const validateAndScore = (answerIndex) => {
+    // Use questionCache directly instead of the ref from state machine
+    const question = questionCache.get(currentQuestionIndex.value)
+    if (!question) {
+        console.error('Question not found in cache at index:', currentQuestionIndex.value)
+        console.log('Cache contents:', Array.from(questionCache.cache.keys()))
+        return
     }
 
-    // 2. Listen for WS updates
-    quizWS.on('state:update', (session) => {
-        // Update local player stats if available
-        if (session.players && session.players[nickname.value]) {
-            const myData = session.players[nickname.value]
-            const oldScore = score.value
-            score.value = myData.score || 0
-            
-            // Calculate rank
-            const allPlayers = Object.values(session.players)
-            allPlayers.sort((a, b) => b.score - a.score)
-            rank.value = allPlayers.findIndex(p => p.nickname === nickname.value) + 1
-        }
+    const isCorrectAnswer = answerIndex === question.correctIndex
+    isCorrect.value = isCorrectAnswer
 
-        if (session.state) {
-            const prevState = gameState.value
-            
-            // Handle State Transitions
-            if (session.state === 'question') {
-                // If it's a NEW question or just reconnecting
-                if (prevState !== 'question' && prevState !== 'answered') {
-                    currentQuestionIndex.value = session.currentIndex
-                    selectedAnswer.value = null
-                    
-                    // Simple "Get Ready" countdown if we were waiting
-                    if (prevState === 'lobby' || prevState === 'results' || prevState === 'leaderboard') {
-                         gameState.value = 'get-ready'
-                         timeRemaining.value = 3
-                         clearInterval(timerInterval)
-                         timerInterval = setInterval(() => {
-                             timeRemaining.value--
-                             if (timeRemaining.value <= 0) {
-                                 clearInterval(timerInterval)
-                                 gameState.value = 'question'
-                             }
-                         }, 1000)
-                    } else {
-                        // Late join or reconnect
-                        gameState.value = 'question'
-                    }
-                }
-            } else if (session.state === 'results') {
-                // Check if correct
-                const currentQ = questions.value[currentQuestionIndex.value]
-                if (currentQ) {
-                    const correctIdx = currentQ.correctIndex
-                    isCorrect.value = (selectedAnswer.value === correctIdx)
-                    
-                    if (isCorrect.value) {
-                         // Points calculation is simplified here, ideally derived from score delta
-                         currentPoints.value = 1000 
-                         streak.value++
-                    } else {
-                         currentPoints.value = 0
-                         streak.value = 0
-                    }
-                }
-                gameState.value = 'result'
-            } else if (session.state === 'finished') {
-                gameState.value = 'finished'
-            } else if (session.state === 'lobby') {
-                if (gameState.value !== 'enter-nickname') {
-                   gameState.value = 'lobby'
-                }
-            } else if (session.state === 'leaderboard') {
-                // Determine if we show leaderboard or keep showing "result"
-                // Usually players see leaderboard too
-                // For MVP, maybe keep result screen or show simple rank
-                // Let's stick to result screen because it shows rank
-                gameState.value = 'result' 
+    // Calculate score based on time remaining and streak
+    const timeLimit = question.timeLimit || 20
+    const timeSpent = 20 - timeRemaining.value // Simulated time spent
+
+    if (isCorrectAnswer) {
+        // Time-based scoring: 1000 points for instant answer, 500 points for half time, 250 points for almost time up
+        const baseScore = Math.max(250, 1000 - (timeSpent * 37.5))
+        const streakBonus = Math.min(streak.value * 100, 500) // Max 500 bonus for 5+ streak
+        currentPoints.value = Math.floor(baseScore + streakBonus)
+        score.value += currentPoints.value
+        streak.value++
+    } else {
+        currentPoints.value = 0
+        streak.value = 0
+    }
+
+    // Send signal to server
+    const signal = {
+        questionIndex: currentQuestionIndex.value,
+        answerIndex: answerIndex,
+        scoreEarned: currentPoints.value,
+        timeSpent: timeSpent * 1000, // Convert to ms
+        timestamp: Date.now(),
+    }
+    signalQueue.enqueue(signal)
+}
+
+// Timer logic for countdown phase
+const startCountdownTimer = () => {
+    clearInterval(timerInterval)
+    timerInterval = setInterval(() => {
+        timeRemaining.value--
+        if (timeRemaining.value <= 0) {
+            clearInterval(timerInterval)
+            // Transition to question-active after countdown
+            if (canTransition(States.QUESTION_ACTIVE)) {
+                transition(States.QUESTION_ACTIVE)
             }
+        }
+    }, 1000)
+}
+
+// Timer logic for question phase
+const startLocalTimer = (timeLimit) => {
+    timeRemaining.value = timeLimit
+    timerInterval = setInterval(() => {
+        timeRemaining.value--
+        if (timeRemaining.value <= 0) {
+            clearInterval(timerInterval)
+            transition(States.QUESTION_ENDED)
+        }
+    }, 1000)
+}
+
+// WS & Logic
+onMounted(async () => {
+    // Listen for WS updates
+    quizWS.on('cmd:state', (payload) => {
+        const newState = payload.state
+        console.log('Received state change:', newState, 'Payload:', payload)
+        
+        if (newState === States.GET_READY) {
+            // Start countdown for "get ready" phase
+            timeRemaining.value = 5
+            startCountdownTimer()
+        }
+        
+        if (canTransition(newState)) {
+            transition(newState, payload)
+        } else {
+            console.warn('Invalid state transition attempted:', state.value, '->', newState)
+        }
+    })
+
+    quizWS.on('data:batch', (batch) => {
+        questionCache.addBatch(batch)
+        console.log('Batch received, cache now has:', questionCache.cache.size, 'questions')
+    })
+
+    quizWS.on('sync:minimal', (payload) => {
+        // Handle minimal sync updates
+        console.log('Minimal sync:', payload)
+    })
+
+    quizWS.on('sync:catchup', (payload) => {
+        // Handle reconnection catchup
+        console.log('Catchup sync:', payload)
+        if (payload.missedQuestions.length > 0) {
+            console.warn(`You missed ${payload.missedQuestions.length} questions`)
         }
     })
 })
@@ -471,5 +490,4 @@ onUnmounted(() => {
     cursor: pointer;
     font-weight: bold;
 }
-
 </style>

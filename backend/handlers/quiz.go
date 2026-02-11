@@ -121,13 +121,29 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Update session state
+	// Update session state - reset players and signals when starting new quiz
 	quizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
 		s.State = "question"
 		s.CurrentIndex = 0
-		s.Answers = make(map[string]int)
+		s.PlayerSignals = []models.PlayerSignal{}
+		s.AnswerCounts = make(map[int]int)
 		s.Questions = questions
+		s.Batches = hub.CalculateBatches(questions)
 		s.StartTime = time.Now().Unix()
+		// Reset players for new quiz session
+		s.Players = make(map[string]*models.Player)
+
+		// Create question window for first question
+		if len(questions) > 0 {
+			qWindow := models.QuestionWindow{
+				QuestionIndex: int64(s.CurrentIndex),
+				StartTime:     s.StartTime,
+				EndTime:       s.StartTime + int64(questions[0].TimeLimit),
+				GraceEndTime:  s.StartTime + int64(questions[0].TimeLimit) + hub.GracePeriodSeconds,
+				State:         "active",
+			}
+			s.QuestionWindows = []models.QuestionWindow{qWindow}
+		}
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -158,7 +174,20 @@ func NextQuestion(w http.ResponseWriter, r *http.Request) {
 	quizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
 		s.CurrentIndex++
 		s.State = "question"
-		s.Answers = make(map[string]int)
+		s.AnswerCounts = make(map[int]int)
+		s.StartTime = time.Now().Unix()
+
+		// Create question window for new question
+		if s.CurrentIndex < len(s.Questions) {
+			qWindow := models.QuestionWindow{
+				QuestionIndex: int64(s.CurrentIndex),
+				StartTime:     s.StartTime,
+				EndTime:       s.StartTime + int64(s.Questions[s.CurrentIndex].TimeLimit),
+				GraceEndTime:  s.StartTime + int64(s.Questions[s.CurrentIndex].TimeLimit) + hub.GracePeriodSeconds,
+				State:         "active",
+			}
+			s.QuestionWindows = append(s.QuestionWindows, qWindow)
+		}
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -187,4 +216,25 @@ func GetQuizResults(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(session)
+}
+
+// ResetQuiz - POST /events/{id}/modules/{moduleId}/quiz/reset
+func ResetQuiz(w http.ResponseWriter, r *http.Request) {
+	if quizHub == nil {
+		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 7 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	moduleID := parts[4]
+
+	// Reset the session
+	quizHub.ResetSession(moduleID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Quiz session reset"})
 }

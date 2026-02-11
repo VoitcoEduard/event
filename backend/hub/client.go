@@ -19,7 +19,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	maxMessageSize = 65536
 )
 
 var upgrader = websocket.Upgrader{
@@ -98,11 +98,14 @@ func (c *Client) writePump() {
 				return
 			}
 			w.Write(message)
+			w.Write([]byte("\n")) // Add newline delimiter between messages
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				w.Write(<-c.send)
+				msg := <-c.send
+				w.Write(msg)
+				w.Write([]byte("\n"))
 			}
 
 			if err := w.Close(); err != nil {

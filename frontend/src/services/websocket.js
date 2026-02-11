@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../utils'
+import { signalQueue } from '../utils/signalQueue'
 
 class QuizWebSocket {
     constructor() {
@@ -33,6 +34,7 @@ class QuizWebSocket {
             console.log('WebSocket Connected')
             this.isConnected = true
             this.reconnectAttempts = 0
+            signalQueue.onReconnect()
 
             // Send join message
             const type = isHost ? 'host:join' : 'player:join'
@@ -43,18 +45,23 @@ class QuizWebSocket {
         }
 
         this.socket.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data)
-                // Dispatch logic is already defined in the original file
-                this.dispatch(message.type, message.payload)
-            } catch (e) {
-                console.error('Error parsing WS message:', e)
-            }
+            // Split by newline to handle multiple messages concatenated in one frame
+            const messages = event.data.split('\n').filter(msg => msg.trim())
+            messages.forEach(messageStr => {
+                try {
+                    const message = JSON.parse(messageStr)
+                    // Dispatch logic is already defined in the original file
+                    this.dispatch(message.type, message.payload)
+                } catch (e) {
+                    console.error('Error parsing WS message:', e, 'Raw:', messageStr)
+                }
+            })
         }
 
         this.socket.onclose = () => {
             console.log('WebSocket Disconnected')
             this.isConnected = false
+            signalQueue.onDisconnect()
 
             // Reconnection logic
             if (this.reconnectAttempts < 5) {

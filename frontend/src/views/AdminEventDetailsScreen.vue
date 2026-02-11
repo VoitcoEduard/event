@@ -286,6 +286,18 @@ const addModule = async () => {
 }
 
 const toggleModuleStatus = async (module) => {
+  // If stopping a quiz module, reset the quiz session first
+  if (module.isActive && module.type === 'quiz') {
+    try {
+      await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/quiz/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+    } catch (err) {
+      console.error('Error resetting quiz session:', err)
+    }
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/status`, {
       method: 'PUT',

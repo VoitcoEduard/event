@@ -35,7 +35,7 @@
     </div>
 
     <!-- QUESTION STATE -->
-    <div v-else-if="gameState === 'question'" class="state-container question-container">
+    <div v-else-if="gameState === 'question-active'" class="state-container question-container">
       <div class="question-header">
         <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }">
@@ -211,6 +211,8 @@ const nextState = () => {
 }
 
 const exitQuiz = () => {
+    // Reset the quiz session before exiting
+    quizWS.send('host:reset_quiz', { moduleId })
     quizWS.disconnect()
     router.push({ name: 'admin-event-details', params: { id: eventId } })
 }
@@ -233,49 +235,50 @@ onMounted(async () => {
     quizWS.connect(moduleId, '', true)
 
     // 3. Listen for updates
-    quizWS.on('state:update', (session) => {
-        // Sync local state with server session
+    quizWS.on('cmd:state', (payload) => {
+        // Handle state transitions from server
+        const prevState = gameState.value
+        gameState.value = payload.state
         
+        if (payload.currentIndex !== undefined) {
+            currentQuestionIndex.value = payload.currentIndex
+        }
+        
+        // Handle transitions
+        if (payload.state === 'question-active') {
+            // Restart timer when entering question state
+            if (prevState !== 'question-active' || payload.currentIndex !== currentQuestionIndex.value) {
+                startLocalTimer(currentQuestion.value?.timeLimit || 20)
+            }
+        } else if (payload.state === 'results') {
+            clearInterval(timerInterval)
+        } else if (payload.state === 'get-ready') {
+            // Reset answer counts for new question
+            answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
+        }
+    })
+
+    // Listen for minimal sync updates (answer counts, player info)
+    quizWS.on('sync:minimal', (payload) => {
+        // Update answer counts if provided
+        if (payload.answerCounts) {
+            answerCounts.value = payload.answerCounts
+        }
+    })
+
+    // Listen for full state updates (legacy support - includes players)
+    quizWS.on('state:update', (session) => {
         // Update players
         if (session.players) {
             players.value = Object.values(session.players)
         }
 
-        // Update Game State
-        if (session.state) {
-            const prevState = gameState.value
-            gameState.value = session.state
-            
-            // Handle transitions
-            if (session.state === 'question') {
-                const prevIndex = currentQuestionIndex.value
-                
-                // New question started
-                if (session.currentIndex !== undefined) {
-                    currentQuestionIndex.value = session.currentIndex
-                }
-                
-                // Restart timer ONLY if:
-                // 1. We transitioned from a non-question state
-                // 2. OR we moved to a new question index
-                if (prevState !== 'question' || (session.currentIndex !== undefined && prevIndex !== session.currentIndex)) {
-                     startLocalTimer(currentQuestion.value?.timeLimit || 20)
-                }
-            } else if (session.state === 'results') {
-                clearInterval(timerInterval)
-            }
-        }
-
         // Update Answer Counts
-        if (session.answers) {
-            const counts = { 0: 0, 1: 0, 2: 0, 3: 0 }
-            Object.values(session.answers).forEach(ansIdx => {
-                counts[ansIdx] = (counts[ansIdx] || 0) + 1
-            })
-            answerCounts.value = counts
+        if (session.answerCounts) {
+            answerCounts.value = session.answerCounts
         }
     })
-})
+ })
 
 onUnmounted(() => {
     clearInterval(timerInterval)
