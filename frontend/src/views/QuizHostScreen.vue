@@ -45,38 +45,34 @@
     <!-- QUESTION STATE -->
     <div v-else-if="gameState === 'question-active'" class="state-container question-container">
       <div class="question-header">
-        <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }">
           {{ timeRemaining }}
         </div>
+        <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
       </div>
 
       <div class="question-content">
-        <h2 class="question-text">{{ currentQuestion?.text }}</h2>
-        
-        <!-- Answer Histogram for Host (Hidden during question, shown in results) -->
-        <div v-if="gameState === 'results'" class="answers-stats">
-          <div class="stats-grid">
-             <div v-for="(count, idx) in 4" :key="idx" class="stat-column">
-                <div class="stat-bar-container">
-                  <div 
-                    class="stat-bar" 
-                    :class="'color-' + idx"
-                    :style="{ height: getBarHeight(idx) + '%' }"
-                  ></div>
-                </div>
-                <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
-                <div class="stat-icon">{{ getShapeIcon(idx) }}</div>
-             </div>
-          </div>
+        <div class="question-text-wrapper">
+             <h2 class="question-text">{{ currentQuestion?.text }}</h2>
         </div>
         
-        <!-- Live Answer Count during Question -->
-        <div v-else class="live-stats">
-            <div class="answered-display">
-                <span class="answered-number">{{ totalAnswered }}</span>
-                <span class="answered-label">Answers</span>
+        <!-- Answer Options Grid -->
+        <div class="answers-grid">
+            <div 
+                v-for="(answer, idx) in currentQuestion?.answers" 
+                :key="idx" 
+                class="answer-card"
+                :class="'color-' + idx"
+            >
+                <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
+                <div class="answer-text">{{ answer }}</div>
             </div>
+        </div>
+
+        <!-- Small Answer Counter in Corner -->
+        <div class="answer-counter-widget">
+            <div class="counter-value">{{ totalAnswered }}</div>
+            <div class="counter-label">Answers</div>
         </div>
       </div>
       
@@ -299,7 +295,8 @@ onMounted(async () => {
     quizWS.on('sync:minimal', (payload) => {
         // Update answer counts if provided
         if (payload.answerCounts) {
-            answerCounts.value = payload.answerCounts
+            // For reactivity, we can create a new object or update properties
+            answerCounts.value = { ...payload.answerCounts }
         }
     })
 
@@ -333,6 +330,7 @@ onUnmounted(() => {
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    font-family: 'Inter', sans-serif;
 }
 
 /* Dynamic background */
@@ -441,8 +439,11 @@ onUnmounted(() => {
 
 /* QUESTION */
 .question-container {
-    justify-content: space-between;
-    padding-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 2vw; /* Use viewport units for scaling */
+    box-sizing: border-box;
 }
 
 .question-header {
@@ -450,14 +451,14 @@ onUnmounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 40px;
+    height: 10vh; /* Fixed header height */
 }
 
 .timer {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 900;
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: rgba(255,255,255,0.1);
     display: flex;
@@ -478,17 +479,166 @@ onUnmounted(() => {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: space-between; /* Space between question and answers */
     width: 100%;
-    max-width: 1200px;
+    margin-top: 20px;
+    position: relative; /* For absolute positioning of counter */
+}
+
+.question-text-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
 .question-text {
-    font-size: 2.5rem;
+    font-size: 4vw; /* Huge text responsive to screen width */
     text-align: center;
-    margin-bottom: 60px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.5);
 }
 
+/* Answers Grid */
+.answers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px;
+    height: 40vh; /* Take up bottom 40% of screen */
+    width: 100%;
+}
+
+.answer-card {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border-radius: 8px;
+    background: white; /* Fallback */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.1s;
+    overflow: hidden;
+}
+
+.answer-icon {
+    font-size: 4rem;
+    margin-right: 20px;
+    opacity: 0.8;
+}
+
+.answer-text {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    word-break: break-word; /* Wrap long text */
+}
+
+/* Answer Count Widget */
+.answer-counter-widget {
+    position: absolute;
+    bottom: -10px; /* Slight adjust */
+    right: -10px;
+    background: #2C2C2E;
+    padding: 15px 25px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    z-index: 10;
+    border: 2px solid #555;
+}
+
+.counter-value {
+    font-size: 2.5rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.counter-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+.color-0 { background-color: #FF3B30; }
+.color-1 { background-color: #0A84FF; }
+.color-2 { background-color: #FFD60A; }
+.color-3 { background-color: #32D74B; }
+
+/* GET READY */
+.get-ready-container {
+    justify-content: center;
+    background-color: #FF3B30;
+}
+.loading-content {
+    text-align: center;
+}
+.loader {
+    width: 60px;
+    height: 60px;
+    border: 6px solid rgba(255,255,255,0.3);
+    border-top: 6px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 30px auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* RESULTS/LEADERBOARD */
+.results-container {
+    padding-top: 60px;
+}
+
+.correct-answer-reveal {
+    margin-bottom: 40px;
+    text-align: center;
+}
+.correct-answer-display {
+    font-size: 2rem;
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-top: 10px;
+    color: white; 
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.leaderboard-list {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 40px;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    background: #2C2C2E;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+}
+
+.rank { width: 40px; font-weight: bold; color: #FFD60A; }
+.name { flex: 1; font-weight: 600; }
+.score { font-weight: bold; }
+
+.control-btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    background: #3A3A3C; 
+    color: white;
+}
+.control-btn.primary { background: #0A84FF; }
+
+/* ANSWERS STATS (Results Mode) */
 .answers-stats {
     height: 300px;
     width: 100%;
@@ -536,104 +686,6 @@ onUnmounted(() => {
     margin-top: 5px;
 }
 
-.color-0 { background-color: #FF3B30; }
-.color-1 { background-color: #0A84FF; }
-.color-2 { background-color: #FFD60A; }
-.color-3 { background-color: #32D74B; }
-
-/* GET READY */
-.get-ready-container {
-    justify-content: center;
-    background-color: #FF3B30;
-}
-.loading-content {
-    text-align: center;
-}
-.loader {
-    width: 60px;
-    height: 60px;
-    border: 6px solid rgba(255,255,255,0.3);
-    border-top: 6px solid white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 30px auto;
-}
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* Live Stats */
-.live-stats {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.answered-display {
-    text-align: center;
-    background: rgba(255,255,255,0.1);
-    padding: 30px 60px;
-    border-radius: 20px;
-    animation: pulse 2s infinite;
-}
-.answered-number {
-    display: block;
-    font-size: 5rem;
-    font-weight: 900;
-}
-.answered-label {
-    font-size: 1.5rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-/* LEADERBOARD/RESULTS */
-.results-container {
-    padding-top: 60px;
-}
-
-.correct-answer-reveal {
-    margin-bottom: 40px;
-    text-align: center;
-}
-.correct-answer-display {
-    font-size: 2rem;
-    padding: 10px 20px;
-    border-radius: 8px;
-    margin-top: 10px;
-    color: white; /* Depends on brightness, but usually white text on these colors is fine or we add shadow */
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-.leaderboard-list {
-    width: 100%;
-    max-width: 800px;
-    margin-bottom: 40px;
-}
-
-.leaderboard-item {
-    display: flex;
-    align-items: center;
-    background: #2C2C2E;
-    margin-bottom: 10px;
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 1.2rem;
-}
-
-.rank { width: 40px; font-weight: bold; color: #FFD60A; }
-.name { flex: 1; font-weight: 600; }
-.score { font-weight: bold; }
-
-.control-btn {
-    padding: 12px 24px;
-    border-radius: 8px;
-    border: none;
-    font-size: 1rem;
-    cursor: pointer;
-    background: #3A3A3C; 
-    color: white;
-}
-.control-btn.primary { background: #0A84FF; }
-
 /* PODIUM */
 .podium {
     display: flex;
@@ -667,5 +719,4 @@ onUnmounted(() => {
 
 .podium-rank { font-size: 2rem; font-weight: 900; margin-bottom: 10px; }
 .podium-name { font-weight: bold; margin-bottom: 5px; }
-
 </style>

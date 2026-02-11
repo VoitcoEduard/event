@@ -393,6 +393,11 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			// Update answer counts for statistics
 			if status != "too_late" {
 				session.AnswerCounts[answerIndex]++
+				log.Printf("Answer counted for module %s: Question %d, Answer %d. Total for this answer: %d",
+					client.ModuleID, questionIndex, answerIndex, session.AnswerCounts[answerIndex])
+			} else {
+				log.Printf("Answer rejected (too_late) for module %s: Question %d, Status %s",
+					client.ModuleID, questionIndex, status)
 			}
 
 			// Send minimal sync message (answer counts for host histogram)
