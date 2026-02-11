@@ -281,8 +281,8 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			session.AnswerCounts = make(map[int]int)
 			session.Questions = questions // Assigned loaded questions
 			session.Batches = CalculateBatches(questions)
-			session.StartTime = time.Now().Unix()             // Reset timer
-			session.Players = make(map[string]*models.Player) // Reset players for new quiz
+			session.StartTime = time.Now().Unix() // Reset timer
+			// session.Players = make(map[string]*models.Player) // REMOVED: Do not reset players, keep lobby players
 
 			// Create question window for first question
 			if len(questions) > 0 {
@@ -400,16 +400,25 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 					client.ModuleID, questionIndex, status)
 			}
 
+			// Calculate actual answered count for THIS question
+			answeredCount := 0
+			for _, count := range session.AnswerCounts {
+				answeredCount += count
+			}
+
 			// Send minimal sync message (answer counts for host histogram)
 			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 				Type: "sync:minimal",
 				Payload: map[string]interface{}{
 					"questionIndex": questionIndex,
-					"answeredCount": len(session.PlayerSignals),
+					"answeredCount": answeredCount,
 					"totalPlayers":  len(session.Players),
 					"answerCounts":  session.AnswerCounts,
 				},
 			})
+
+			// Debug log for answered count at end of question
+			log.Printf("Question %d ended - answeredCount: %d / %d", questionIndex, len(session.PlayerSignals), len(session.Players))
 		}
 
 	case "player:batch_request":

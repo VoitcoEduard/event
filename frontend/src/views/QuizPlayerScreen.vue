@@ -213,6 +213,11 @@ onMounted(async () => {
         if (newState === States.GET_READY) {
             // "Get Ready" phase - Server drives transition now
             
+            // Update question index if provided
+            if (payload.currentIndex !== undefined) {
+                currentQuestionIndex.value = payload.currentIndex
+            }
+
             // Reset for new question
             selectedAnswer.value = null
             isCorrect.value = false

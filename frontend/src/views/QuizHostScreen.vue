@@ -285,7 +285,7 @@ onMounted(async () => {
             }
         } else if (payload.state === 'results') {
             clearInterval(timerInterval)
-        } else if (payload.state === 'get-ready') {
+        
             // Reset answer counts for new question
             answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
         }
