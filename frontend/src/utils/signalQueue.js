@@ -23,6 +23,10 @@ class SignalQueue {
         }
     }
 
+    setSender(senderFunc) {
+        this.sender = senderFunc
+    }
+
     flushSingle(signal) {
         // Check if signal is still valid (within grace period)
         const now = Date.now()
@@ -34,9 +38,13 @@ class SignalQueue {
             return
         }
 
-        // Send signal to server (this will be implemented with WebSocket)
-        console.log('Sending signal:', signal)
-        // quizWS.send('player:signal', signal)
+        // Send signal to server
+        if (this.sender) {
+            console.log('Sending signal:', signal)
+            this.sender(signal)
+        } else {
+            console.warn('No sender configured for signalQueue')
+        }
     }
 
     onReconnect() {

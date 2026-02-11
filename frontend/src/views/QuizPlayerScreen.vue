@@ -134,6 +134,7 @@ const joinLobby = () => {
 
 const submitAnswer = (idx) => {
     selectedAnswer.value = idx
+    clearInterval(timerInterval) // Stop the timer
     transition(States.ANSWERED)
 
     // Validate and score answer locally
@@ -162,11 +163,11 @@ const validateAndScore = (answerIndex) => {
 
     // Calculate score based on time remaining and streak
     const timeLimit = question.timeLimit || 20
-    const timeSpent = 20 - timeRemaining.value // Simulated time spent
+    const timeSpent = timeLimit - timeRemaining.value // Use actual time limit
 
     if (isCorrectAnswer) {
         // Time-based scoring: 1000 points for instant answer, 500 points for half time, 250 points for almost time up
-        const baseScore = Math.max(250, 1000 - (timeSpent * 37.5))
+        const baseScore = Math.max(250, 1000 - (timeSpent * (750 / timeLimit))) // Adjusted formula
         const streakBonus = Math.min(streak.value * 100, 500) // Max 500 bonus for 5+ streak
         currentPoints.value = Math.floor(baseScore + streakBonus)
         score.value += currentPoints.value
@@ -204,6 +205,7 @@ const startCountdownTimer = () => {
 
 // Timer logic for question phase
 const startLocalTimer = (timeLimit) => {
+    clearInterval(timerInterval)
     timeRemaining.value = timeLimit
     timerInterval = setInterval(() => {
         timeRemaining.value--
@@ -225,10 +227,19 @@ onMounted(async () => {
             // Start countdown for "get ready" phase
             timeRemaining.value = 5
             startCountdownTimer()
+            
+            // Reset for new question
+            selectedAnswer.value = null
+            isCorrect.value = false
+            currentPoints.value = 0
         }
         
         if (canTransition(newState)) {
             transition(newState, payload)
+            
+            if (newState === States.QUESTION_ACTIVE) {
+                 startLocalTimer(payload?.timeLimit || 20)
+            }
         } else {
             console.warn('Invalid state transition attempted:', state.value, '->', newState)
         }

@@ -34,6 +34,11 @@ class QuizWebSocket {
             console.log('WebSocket Connected')
             this.isConnected = true
             this.reconnectAttempts = 0
+
+            // Configure signal queue sender
+            signalQueue.setSender((signal) => {
+                this.send('player:signal', signal)
+            })
             signalQueue.onReconnect()
 
             // Send join message
