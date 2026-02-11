@@ -12,6 +12,7 @@ const routes = [
   { path: '/event', name: 'event', component: EventScreen },
   { path: '/admin', name: 'admin', component: AdminScreen },
   { path: '/admin/event/:id', name: 'admin-event-details', component: AdminEventDetailsScreen },
+  { path: '/quiz/library', name: 'quiz-library', component: () => import('../views/QuizLibraryScreen.vue') },
   { path: '/quiz/:eventId/:moduleId/host', name: 'quiz-host', component: QuizHostScreen },
   { path: '/quiz/:eventId/:moduleId/player', name: 'quiz-player', component: QuizPlayerScreen }
 ]

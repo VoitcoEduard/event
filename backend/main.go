@@ -77,6 +77,21 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/templates/", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method == "PUT" {
+			handlers.UpdateTemplate(w, r)
+			return
+		}
+		if r.Method == "DELETE" {
+			handlers.DeleteTemplate(w, r)
+			return
+		} // Handle other methods if needed
+	})
+
 	http.HandleFunc("/events/", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w, r)
 		if r.Method == "OPTIONS" {

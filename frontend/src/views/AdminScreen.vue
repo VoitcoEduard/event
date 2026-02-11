@@ -2,6 +2,9 @@
   <div class="admin-screen">
     <div class="header">
       <h1 class="header-title">Event Admin</h1>
+      <div class="header-actions">
+          <button class="library-btn" @click="goToLibrary">📚 Quiz Library</button>
+      </div>
       <p class="header-subtitle">Manage Events Listings</p>
     </div>
 
@@ -189,6 +192,10 @@ const viewDetails = (event) => {
 const goToMain = () => {
   router.push('/')
 }
+
+const goToLibrary = () => {
+  router.push('/quiz/library')
+}
 </script>
 
 <style scoped>
@@ -213,6 +220,25 @@ const goToMain = () => {
   letter-spacing: -0.5;
   margin-bottom: 4px;
 }
+
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.library-btn {
+    background-color: #333;
+    border: 1px solid #555;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.library-btn:hover { background-color: #444; }
 
 .header-subtitle {
   font-size: 14px;

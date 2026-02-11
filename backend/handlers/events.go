@@ -473,3 +473,40 @@ func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Template deleted"})
 }
+
+func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL: /templates/{id}
+	path := r.URL.Path
+	prefix := "/templates/"
+	if len(path) <= len(prefix) {
+		http.Error(w, "ID required", http.StatusBadRequest)
+		return
+	}
+	id := path[len(prefix):]
+
+	var template models.Template
+	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("templates")
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"name":        template.Name,
+			"description": template.Description,
+			"data":        template.Data,
+			"moduleType":  template.ModuleType,
+		},
+	}
+
+	_, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Template updated"})
+}

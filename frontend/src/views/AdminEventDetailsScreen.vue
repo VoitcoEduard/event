@@ -7,6 +7,9 @@
         </button>
         <p class="header-title">Event Dashboard</p>
       </div>
+      <div>
+        <button class="library-btn" @click="goToLibrary">📚 Library</button>
+      </div>
       <p class="header-subtitle">{{ currentEvent?.name }}</p>
     </div>
 
@@ -319,6 +322,10 @@ const toggleModuleStatus = async (module) => {
 const goBack = () => {
   router.push('/admin')
 }
+
+const goToLibrary = () => {
+  router.push('/quiz/library')
+}
 </script>
 
 <style scoped>
@@ -339,6 +346,19 @@ const goBack = () => {
   align-items: center;
   margin-bottom: 4px;
 }
+
+.library-btn {
+  background-color: #333;
+  border: 1px solid #555;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.library-btn:hover { background-color: #444; }
 
 .back-link {
   color: #007AFF;
