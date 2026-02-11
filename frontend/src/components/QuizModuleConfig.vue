@@ -240,7 +240,13 @@ const validateQuestions = () => {
   
   for (const q of questions.value) {
     if (!q.text.trim()) return 'All questions must have text.'
-    if (q.answers.some(a => !a.trim())) return 'All answer options must be filled.'
+    if (q.type === 'true_false') {
+      // Only check first 2 answers for T/F
+      if (q.answers.slice(0, 2).some(a => !a.trim())) return 'True/False questions must have both True and False options.'
+    } else {
+      // For standard types, ensure all 4 slots are filled (as per UI design)
+      if (q.answers.some(a => !a.trim())) return 'All answer options must be filled for multiple choice questions.'
+    }
   }
   return null
 }

@@ -228,8 +228,8 @@ const validateAndScore = (answerData) => {
         // Strict equality check for arrays
         const userIndices = Array.isArray(answerData) ? answerData : []
         // Sort for comparison
-        const sortedUser = [...userIndices].sort()
-        const sortedCorrect = [...(question.correctIndices || [])].sort()
+        const sortedUser = [...userIndices].sort((a, b) => a - b)
+        const sortedCorrect = [...(question.correctIndices || [])].sort((a, b) => a - b)
         
         isCorrectAnswer = JSON.stringify(sortedUser) === JSON.stringify(sortedCorrect)
         answerPayload = { answerIndices: userIndices }
