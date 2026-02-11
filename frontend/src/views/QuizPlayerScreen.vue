@@ -143,7 +143,8 @@ const submitAnswer = (idx) => {
 
 const goHome = () => {
     quizWS.disconnect()
-    router.push('/')
+    // Redirect to event page with ID to ensure they go back to the lobby
+    router.push({ path: '/event', query: { id: eventId } })
 }
 
 let timerInterval

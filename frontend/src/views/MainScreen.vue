@@ -52,6 +52,10 @@ onMounted(() => {
   const pinParam = params.get('pin')
   if (pinParam) {
     pin.value = pinParam
+    // Auto-connect if PIN is valid length
+    if (pin.value.length === 6) {
+        handleConnect()
+    }
   }
 })
 

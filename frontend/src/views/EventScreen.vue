@@ -75,6 +75,15 @@ const userId = ref(getUserId())
 
 const storedEvent = sessionStorage.getItem('currentEvent')
 const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : null)
+// Check logic: if no currentEvent but we have ID in query, set ID to fetch
+if (!currentEvent.value) {
+    const params = new URLSearchParams(window.location.search)
+    const idParam = params.get('id')
+    if (idParam) {
+        currentEvent.value = { id: idParam }
+    }
+}
+
 const activeModules = ref([])
 const selectedModule = ref(null)
 let pollingInterval = null
