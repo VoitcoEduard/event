@@ -148,6 +148,12 @@ func main() {
 			}
 		}
 
+		// Delete Module
+		if strings.Contains(r.URL.Path, "/modules/") && r.Method == "DELETE" {
+			handlers.DeleteModule(w, r)
+			return
+		}
+
 		if strings.HasSuffix(r.URL.Path, "/modules") {
 			if r.Method == "POST" {
 				handlers.AddModule(w, r)

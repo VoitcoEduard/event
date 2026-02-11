@@ -510,3 +510,69 @@ func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Template updated"})
 }
+
+func DeleteModule(w http.ResponseWriter, r *http.Request) {
+	// URL: /events/{id}/modules/{moduleId}
+	path := r.URL.Path
+	parts := make([]string, 0)
+	current := ""
+	for _, c := range path {
+		if c == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+
+	// Expected: ["events", "123456", "modules", "654321"]
+	// Note: if the URL ends with a slash, there effectively won't be an empty string appended if we use split logic carefully,
+	// but purely splitting by '/' usually involves an empty string at start if it starts with /.
+	// The current manual split logic skims leading slash if implemented as above loop?
+	// Re-checking the loop:
+	// "" -> '/' -> current="" -> parts append ""(skip empty check?) -> No, loop says `if current != ""`.
+	// So for "/events/1/modules/2":
+	// '/' -> push "" (if not empty) -> skipped
+	// 'e'... -> current="events"
+	// '/' -> push "events"
+	// '1'...
+	// So parts should be ["events", "1", "modules", "2"]
+
+	if len(parts) < 4 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	eventID := parts[1]
+	moduleID := parts[3]
+
+	collection := db.GetCollection("events")
+
+	// Use $pull to remove the module with the specific ID
+	filter := bson.M{"_id": eventID}
+	update := bson.M{"$pull": bson.M{"modules": bson.M{"id": moduleID}}}
+
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if result.ModifiedCount == 0 {
+		http.Error(w, "Event not found or module not found", http.StatusNotFound)
+		return
+	}
+
+	// Also delete any responses associated with this module?
+	// It's good practice to cleanup, but maybe optional. For now, let's leave responses.
+	// Users might want to keep data even if module is deleted from active list?
+	// Usually "delete module" implies "remove availability".
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Module deleted"})
+}

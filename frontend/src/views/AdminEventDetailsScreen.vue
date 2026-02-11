@@ -108,6 +108,12 @@
               >
                 {{ module.isActive ? 'Stop' : 'Start' }}
               </button>
+              <button 
+                class="module-btn delete-btn"
+                @click="deleteModule(module)"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -316,6 +322,26 @@ const toggleModuleStatus = async (module) => {
   } catch (err) {
     console.error('Error updating module status:', err)
     error('Failed to update module status')
+  }
+}
+
+const deleteModule = async (module) => {
+  if (!confirm('Are you sure you want to delete this module?')) return
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}`, {
+      method: 'DELETE'
+    })
+
+    if (response.ok) {
+      success('Module deleted')
+      fetchEventDetails()
+    } else {
+      error('Failed to delete module')
+    }
+  } catch (err) {
+    console.error('Error deleting module:', err)
+    error('Failed to delete module')
   }
 }
 
@@ -624,6 +650,17 @@ const goToLibrary = () => {
 .module-btn.stop-button {
   background-color: #ff3b30;
   color: #FFF;
+}
+
+.module-btn.delete-btn {
+  background-color: #1c1c1e;
+  color: #ff453a;
+  border: 1px solid #ff453a;
+  margin-left: 8px;
+}
+
+.module-btn.delete-btn:hover {
+  background-color: rgba(255, 69, 58, 0.1);
 }
 
 .empty-modules {
