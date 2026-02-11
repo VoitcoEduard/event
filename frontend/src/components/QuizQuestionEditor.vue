@@ -6,6 +6,14 @@
     </div>
 
     <div class="input-group">
+      <label>Question Type</label>
+      <select v-model="localQuestion.type" class="select-input" @change="handleTypeChange">
+        <option value="multiple_choice">Single Choice</option>
+        <option value="true_false">True / False</option>
+      </select>
+    </div>
+
+    <div class="input-group">
       <label>Question Text</label>
       <input 
         type="text" 
@@ -31,16 +39,17 @@
       </div>
     </div>
 
-    <div class="answers-grid">
+    <div class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
         class="answer-card"
-        :class="getAnswerColorClass(idx)"
+        :class="[getAnswerColorClass(idx), { 'hidden-answer': !isAnswerVisible(idx) }]"
+        v-show="isAnswerVisible(idx)"
       >
         <div class="answer-header">
           <span class="shape-icon">{{ getShapeIcon(idx) }}</span>
-          <div class="correct-toggle">
+          <label class="correct-toggle">
             <input 
               type="radio" 
               :name="`correct-${question.id}`" 
@@ -48,12 +57,13 @@
               @change="setCorrect(idx)"
             />
             <span class="checkmark" title="Mark as correct"></span>
-          </div>
+          </label>
         </div>
         <textarea 
           v-model="localQuestion.answers[idx]" 
           placeholder="Type answer option"
           class="answer-input"
+          :readonly="isAnswerReadOnly(idx)"
           @input="emitUpdate"
         ></textarea>
       </div>
@@ -80,18 +90,35 @@ const emit = defineEmits(['update', 'delete'])
 // Initialize local state from props
 const localQuestion = reactive({
   ...props.question,
-  // Ensure we have 4 answers
-  answers: props.question.answers && props.question.answers.length === 4 
+  type: props.question.type || 'multiple_choice',
+  // Ensure we have 4 answers for MC, but for T/F we might only have 2 effectively used
+  answers: props.question.answers && props.question.answers.length >= 2 
     ? [...props.question.answers] 
     : ['', '', '', '']
 })
 
 watch(() => props.question, (newVal) => {
-  Object.assign(localQuestion, newVal)
+  Object.assign(localQuestion, {
+      ...newVal,
+      type: newVal.type || 'multiple_choice'
+  })
 }, { deep: true })
 
 const emitUpdate = () => {
   emit('update', { ...localQuestion })
+}
+
+const handleTypeChange = () => {
+    if (localQuestion.type === 'true_false') {
+        localQuestion.answers = ['True', 'False', '', '']
+        if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
+    } else {
+        // Reset to empty if switching back, or keep if existing
+        if (localQuestion.answers[0] === 'True' && localQuestion.answers[1] === 'False') {
+             localQuestion.answers = ['', '', '', '']
+        }
+    }
+    emitUpdate()
 }
 
 const setCorrect = (idx) => {
@@ -100,13 +127,28 @@ const setCorrect = (idx) => {
 }
 
 const getAnswerColorClass = (idx) => {
+  if (localQuestion.type === 'true_false') {
+      return idx === 0 ? 'answer-blue' : 'answer-red' // True=Blue/Green, False=Red commonly
+  }
   const colors = ['red', 'blue', 'yellow', 'green']
   return `answer-${colors[idx]}`
 }
 
 const getShapeIcon = (idx) => {
+  if (localQuestion.type === 'true_false') {
+      return idx === 0 ? '✔️' : '❌'
+  }
   const shapes = ['▲', '◆', '●', '■']
   return shapes[idx]
+}
+
+const isAnswerVisible = (idx) => {
+    if (localQuestion.type === 'true_false') return idx < 2
+    return true
+}
+
+const isAnswerReadOnly = (idx) => {
+    return localQuestion.type === 'true_false'
 }
 </script>
 

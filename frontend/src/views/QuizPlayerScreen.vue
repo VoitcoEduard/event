@@ -42,16 +42,17 @@
          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
       </div>
 
-      <div class="answer-grid">
+      <div class="answer-grid" :class="{ 'true-false-grid': isTrueFalse }">
          <button
             v-for="(shape, idx) in shapes"
             :key="idx"
             class="answer-btn"
-            :class="['color-' + idx, { 'selected': selectedAnswer === idx }]"
+            :class="[isTrueFalse ? (idx === 0 ? 'color-true' : 'color-false') : 'color-' + idx, { 'selected': selectedAnswer === idx }]"
             @click="submitAnswer(idx)"
             :disabled="selectedAnswer !== null"
          >
             <span class="shape-icon">{{ shape }}</span>
+            <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? 'TRUE' : 'FALSE' }}</span>
          </button>
       </div>
     </div>
@@ -99,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { useQuizStateMachine } from '../composables/useQuizStateMachine'
@@ -123,7 +124,20 @@ const currentPoints = ref(0)
 const rank = ref(0)
 const timeRemaining = ref(5)
 
-const shapes = ['▲', '◆', '●', '■']
+const currentQuestion = computed(() => {
+    return questionCache.get(currentQuestionIndex.value)
+})
+
+const isTrueFalse = computed(() => {
+    return currentQuestion.value?.type === 'true_false'
+})
+
+const shapes = computed(() => {
+    if (isTrueFalse.value) {
+        return ['✔️', '❌']
+    }
+    return ['▲', '◆', '●', '■']
+})
 
 // Actions
 const joinLobby = () => {
@@ -425,6 +439,21 @@ onUnmounted(() => {
 .color-1 { background-color: #0A84FF; }
 .color-2 { background-color: #FFD60A; }
 .color-3 { background-color: #32D74B; }
+
+
+.true-false-grid {
+    grid-template-columns: 1fr; /* Stack vertically for T/F or keep 2 cols? Let's do 1fr 1fr but bigger */
+    height: 60%;
+}
+
+.color-true { background-color: #0A84FF; } /* Blue for True */
+.color-false { background-color: #FF3B30; } /* Red for False */
+
+.tf-label {
+    margin-left: 10px;
+    font-size: 2rem;
+    font-weight: 900;
+}
 
 /* ANSWERED */
 .answered-container {

@@ -57,12 +57,13 @@
         </div>
         
         <!-- Answer Options Grid -->
-        <div class="answers-grid">
+        <div class="answers-grid" :class="{ 'true-false-grid': isTrueFalse }">
             <div 
                 v-for="(answer, idx) in currentQuestion?.answers" 
                 :key="idx" 
                 class="answer-card"
-                :class="'color-' + idx"
+                :class="getAnswerColorClass(idx)"
+                v-show="!isTrueFalse || idx < 2"
             >
                 <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
                 <div class="answer-text">{{ answer }}</div>
@@ -88,7 +89,7 @@
        
        <div v-if="gameState === 'results'" class="correct-answer-reveal">
           <p>Correct Answer:</p>
-          <div class="correct-answer-display" :class="'color-' + currentQuestion?.correctIndex">
+          <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
              {{ getShapeIcon(currentQuestion?.correctIndex) }} 
              {{ currentQuestion?.answers[currentQuestion?.correctIndex] }}
           </div>
@@ -97,11 +98,11 @@
        <!-- Show Stats in Results -->
        <div v-if="gameState === 'results'" class="answers-stats results-mode">
           <div class="stats-grid">
-             <div v-for="(count, idx) in 4" :key="idx" class="stat-column">
+             <div v-for="(count, idx) in (isTrueFalse ? 2 : 4)" :key="idx" class="stat-column">
                 <div class="stat-bar-container">
                   <div 
                     class="stat-bar" 
-                    :class="'color-' + idx"
+                    :class="getAnswerColorClass(idx)"
                     :style="{ height: getBarHeight(idx) + '%' }"
                   ></div>
                 </div>
@@ -182,6 +183,7 @@ const totalAnswered = computed(() => Object.values(answerCounts.value).reduce((a
 const totalQuestions = computed(() => questions.value.length)
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
+const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 
 const topPlayers = computed(() => {
     return [...players.value].sort((a, b) => b.score - a.score).slice(0, 5)
@@ -194,7 +196,19 @@ const getBarHeight = (idx) => {
     return (count / max) * 100
 }
 
-const getShapeIcon = (idx) => ['▲', '◆', '●', '■'][idx]
+const getShapeIcon = (idx) => {
+    if (isTrueFalse.value) {
+        return idx === 0 ? '✔️' : '❌'
+    }
+    return ['▲', '◆', '●', '■'][idx]
+}
+
+const getAnswerColorClass = (idx) => {
+    if (isTrueFalse.value) {
+        return idx === 0 ? 'color-true' : 'color-false'
+    }
+    return 'color-' + idx
+}
 
 // Timer logic
 let timerInterval
@@ -581,6 +595,14 @@ onUnmounted(() => {
 .color-1 { background-color: #0A84FF; }
 .color-2 { background-color: #FFD60A; }
 .color-3 { background-color: #32D74B; }
+
+.color-true { background-color: #0A84FF; }
+.color-false { background-color: #FF3B30; }
+
+.true-false-grid {
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr 1fr;
+}
 
 /* GET READY */
 .get-ready-container {
