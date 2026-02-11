@@ -31,8 +31,8 @@
     <!-- GET READY STATE -->
     <div v-else-if="state === States.GET_READY" class="state-container get-ready-container">
       <div class="ready-content">
-        <h1>Question {{ currentQuestionIndex + 1 }}</h1>
-        <div class="countdown">{{ timeRemaining }}</div>
+        <h1>Get Ready!</h1>
+        <div class="loader"></div>
       </div>
     </div>
 
@@ -188,20 +188,7 @@ const validateAndScore = (answerIndex) => {
     signalQueue.enqueue(signal)
 }
 
-// Timer logic for countdown phase
-const startCountdownTimer = () => {
-    clearInterval(timerInterval)
-    timerInterval = setInterval(() => {
-        timeRemaining.value--
-        if (timeRemaining.value <= 0) {
-            clearInterval(timerInterval)
-            // Transition to question-active after countdown
-            if (canTransition(States.QUESTION_ACTIVE)) {
-                transition(States.QUESTION_ACTIVE)
-            }
-        }
-    }, 1000)
-}
+// Timer logic from countdown - REMOVED as server handles transition now
 
 // Timer logic for question phase
 const startLocalTimer = (timeLimit) => {
@@ -224,9 +211,7 @@ onMounted(async () => {
         console.log('Received state change:', newState, 'Payload:', payload)
         
         if (newState === States.GET_READY) {
-            // Start countdown for "get ready" phase
-            timeRemaining.value = 5
-            startCountdownTimer()
+            // "Get Ready" phase - Server drives transition now
             
             // Reset for new question
             selectedAnswer.value = null
@@ -368,6 +353,16 @@ onUnmounted(() => {
 }
 
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.loader {
+    width: 60px;
+    height: 60px;
+    border: 6px solid rgba(255,255,255,0.3);
+    border-top: 6px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 30px auto;
+}
 
 /* GET READY */
 .get-ready-container {

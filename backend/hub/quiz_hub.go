@@ -275,7 +275,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		// Re-fetch session in case it changed while unlocked (unlikely for start_quiz but good practice)
 		session := h.sessions[client.ModuleID]
 		if session != nil {
-			session.State = "question-active"
+			session.State = "get-ready"
 			session.CurrentIndex = 0
 			session.PlayerSignals = []models.PlayerSignal{}
 			session.AnswerCounts = make(map[int]int)
@@ -304,11 +304,36 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				})
 			}
 
-			// Notify state change - send 'get-ready' for countdown, then players will transition to 'question-active'
+			// Notify state change - send 'get-ready' for countdown
 			h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 				Type:    "cmd:state",
 				Payload: map[string]interface{}{"state": "get-ready", "currentIndex": session.CurrentIndex},
 			})
+
+			// Auto-transition to question-active after 2 seconds
+			go func(modID string, idx int) {
+				time.Sleep(2 * time.Second)
+				h.mu.Lock()
+				defer h.mu.Unlock()
+
+				sess := h.sessions[modID]
+				if sess != nil && sess.CurrentIndex == idx && sess.State == "get-ready" {
+					sess.State = "question-active"
+					sess.StartTime = time.Now().Unix()
+
+					// Update the QuestionWindow start time to now
+					if idx < len(sess.QuestionWindows) {
+						sess.QuestionWindows[idx].StartTime = sess.StartTime
+						sess.QuestionWindows[idx].EndTime = sess.StartTime + int64(sess.Questions[idx].TimeLimit)
+						sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
+					}
+
+					h.broadcastToSessionLocked(modID, ServerMessage{
+						Type:    "cmd:state",
+						Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
+					})
+				}
+			}(client.ModuleID, session.CurrentIndex)
 		}
 
 	case "player:signal":
@@ -487,7 +512,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		}
 		session := h.sessions[client.ModuleID]
 		if session != nil {
-			session.State = "question-active"
+			// session.State = "question-active" // Will be set after delay
 			session.CurrentIndex++
 			session.AnswerCounts = make(map[int]int)
 			session.StartTime = time.Now().Unix()
@@ -504,11 +529,37 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				session.QuestionWindows = append(session.QuestionWindows, qWindow)
 			}
 
-			// Notify state change
+			// Notify state change - send 'get-ready' first
+			session.State = "get-ready"
 			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 				Type:    "cmd:state",
-				Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+				Payload: map[string]interface{}{"state": "get-ready", "currentIndex": session.CurrentIndex},
 			})
+
+			// Auto-transition to question-active after 2 seconds
+			go func(modID string, idx int) {
+				time.Sleep(2 * time.Second)
+				h.mu.Lock()
+				defer h.mu.Unlock()
+
+				sess := h.sessions[modID]
+				if sess != nil && sess.CurrentIndex == idx && sess.State == "get-ready" {
+					sess.State = "question-active"
+					sess.StartTime = time.Now().Unix()
+
+					// Update the QuestionWindow start time to now
+					if idx < len(sess.QuestionWindows) {
+						sess.QuestionWindows[idx].StartTime = sess.StartTime
+						sess.QuestionWindows[idx].EndTime = sess.StartTime + int64(sess.Questions[idx].TimeLimit)
+						sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
+					}
+
+					h.broadcastToSessionLocked(modID, ServerMessage{
+						Type:    "cmd:state",
+						Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
+					})
+				}
+			}(client.ModuleID, session.CurrentIndex)
 		}
 
 	case "host:show_results":

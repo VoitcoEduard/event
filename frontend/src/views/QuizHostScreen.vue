@@ -34,6 +34,14 @@
       </div>
     </div>
 
+    <!-- GET READY STATE -->
+    <div v-else-if="gameState === 'get-ready'" class="state-container get-ready-container">
+      <div class="loading-content">
+        <h1>Get Ready!</h1>
+        <div class="loader"></div>
+      </div>
+    </div>
+
     <!-- QUESTION STATE -->
     <div v-else-if="gameState === 'question-active'" class="state-container question-container">
       <div class="question-header">
@@ -46,8 +54,8 @@
       <div class="question-content">
         <h2 class="question-text">{{ currentQuestion?.text }}</h2>
         
-        <!-- Answer Histogram for Host -->
-        <div class="answers-stats">
+        <!-- Answer Histogram for Host (Hidden during question, shown in results) -->
+        <div v-if="gameState === 'results'" class="answers-stats">
           <div class="stats-grid">
              <div v-for="(count, idx) in 4" :key="idx" class="stat-column">
                 <div class="stat-bar-container">
@@ -61,6 +69,14 @@
                 <div class="stat-icon">{{ getShapeIcon(idx) }}</div>
              </div>
           </div>
+        </div>
+        
+        <!-- Live Answer Count during Question -->
+        <div v-else class="live-stats">
+            <div class="answered-display">
+                <span class="answered-number">{{ totalAnswered }}</span>
+                <span class="answered-label">Answers</span>
+            </div>
         </div>
       </div>
       
@@ -79,6 +95,23 @@
           <div class="correct-answer-display" :class="'color-' + currentQuestion?.correctIndex">
              {{ getShapeIcon(currentQuestion?.correctIndex) }} 
              {{ currentQuestion?.answers[currentQuestion?.correctIndex] }}
+          </div>
+       </div>
+
+       <!-- Show Stats in Results -->
+       <div v-if="gameState === 'results'" class="answers-stats results-mode">
+          <div class="stats-grid">
+             <div v-for="(count, idx) in 4" :key="idx" class="stat-column">
+                <div class="stat-bar-container">
+                  <div 
+                    class="stat-bar" 
+                    :class="'color-' + idx"
+                    :style="{ height: getBarHeight(idx) + '%' }"
+                  ></div>
+                </div>
+                <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
+                <div class="stat-icon">{{ getShapeIcon(idx) }}</div>
+             </div>
           </div>
        </div>
 
@@ -148,6 +181,7 @@ const questions = ref([])
 const currentQuestionIndex = ref(0)
 const timeRemaining = ref(20)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 }) 
+const totalAnswered = computed(() => Object.values(answerCounts.value).reduce((a, b) => a + b, 0)) 
 
 const totalQuestions = computed(() => questions.value.length)
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
@@ -176,7 +210,10 @@ const startLocalTimer = (duration) => {
             timeRemaining.value--
         } else {
             clearInterval(timerInterval)
-            // Auto-transition? Maybe wait for host.
+            // Auto-transition to Results when timer hits 0
+            if (gameState.value === 'question-active') {
+                goToResults()
+            }
         }
     }, 1000)
 }
@@ -503,6 +540,50 @@ onUnmounted(() => {
 .color-1 { background-color: #0A84FF; }
 .color-2 { background-color: #FFD60A; }
 .color-3 { background-color: #32D74B; }
+
+/* GET READY */
+.get-ready-container {
+    justify-content: center;
+    background-color: #FF3B30;
+}
+.loading-content {
+    text-align: center;
+}
+.loader {
+    width: 60px;
+    height: 60px;
+    border: 6px solid rgba(255,255,255,0.3);
+    border-top: 6px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 30px auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Live Stats */
+.live-stats {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.answered-display {
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    padding: 30px 60px;
+    border-radius: 20px;
+    animation: pulse 2s infinite;
+}
+.answered-number {
+    display: block;
+    font-size: 5rem;
+    font-weight: 900;
+}
+.answered-label {
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
 
 /* LEADERBOARD/RESULTS */
 .results-container {
