@@ -308,17 +308,19 @@ onMounted(async () => {
     // Listen for full state updates (legacy support - includes players)
     quizWS.on('state:update', (session) => {
         // Update players
-        if (session.players) {
-            players.value = Object.values(session.players)
+        if (session.Players || session.players) {
+            const playersMap = session.Players || session.players
+            players.value = Object.values(playersMap)
         }
 
         // Update Answer Counts (convert string keys to numeric keys)
-        if (session.answerCounts) {
+        if (session.AnswerCounts || session.answerCounts) {
+             const counts = session.AnswerCounts || session.answerCounts
             answerCounts.value = {
-                0: session.answerCounts["0"] || 0,
-                1: session.answerCounts["1"] || 0,
-                2: session.answerCounts["2"] || 0,
-                3: session.answerCounts["3"] || 0,
+                0: counts["0"] || 0,
+                1: counts["1"] || 0,
+                2: counts["2"] || 0,
+                3: counts["3"] || 0,
             }
         }
     })

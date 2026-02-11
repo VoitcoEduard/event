@@ -197,10 +197,16 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			Score:    0,
 		}
 
-		// Notify session
+		// Notify session state (cmd:state)
 		h.broadcastToSessionLocked(moduleID, ServerMessage{
 			Type:    "cmd:state",
 			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+		})
+
+		// Notify session update (state:update) to refresh player list for host
+		h.broadcastToSessionLocked(moduleID, ServerMessage{
+			Type:    "state:update",
+			Payload: session,
 		})
 
 	case "host:join":
