@@ -393,6 +393,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			// Update answer counts for statistics
 			if status != "too_late" {
 				session.AnswerCounts[answerIndex]++
+
+				// UPDATE PLAYER SCORE
+				if player, exists := session.Players[client.PlayerID]; exists {
+					player.Score += scoreEarned
+				}
+
 				log.Printf("Answer counted for module %s: Question %d, Answer %d. Total for this answer: %d",
 					client.ModuleID, questionIndex, answerIndex, session.AnswerCounts[answerIndex])
 			} else {
@@ -590,6 +596,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				Type:    "cmd:state",
 				Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
 			})
+
+			// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES/ANSWERS
+			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+				Type:    "state:update",
+				Payload: session,
+			})
 		}
 
 	case "host:show_leaderboard":
@@ -602,6 +614,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 				Type:    "cmd:state",
 				Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+			})
+
+			// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES
+			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+				Type:    "state:update",
+				Payload: session,
 			})
 		}
 
