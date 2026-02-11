@@ -356,10 +356,25 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		if !ok {
 			return
 		}
-		answerIndexFloat, ok := data["answerIndex"].(float64)
-		if !ok {
-			return
+		// Handle both single choice (legacy/default) and multi-select
+		var answerIndices []int
+
+		// Check for "answerIndices" (multi-select)
+		if indicesInterface, ok := data["answerIndices"].([]interface{}); ok {
+			for _, v := range indicesInterface {
+				if idxFloat, ok := v.(float64); ok {
+					answerIndices = append(answerIndices, int(idxFloat))
+				}
+			}
 		}
+
+		// Fallback to single "answerIndex" if valid (and indices is empty)
+		if len(answerIndices) == 0 {
+			if answerIndexFloat, ok := data["answerIndex"].(float64); ok {
+				answerIndices = append(answerIndices, int(answerIndexFloat))
+			}
+		}
+
 		scoreEarnedFloat, ok := data["scoreEarned"].(float64)
 		if !ok {
 			return
@@ -370,7 +385,6 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		}
 
 		questionIndex := int(questionIndexFloat)
-		answerIndex := int(answerIndexFloat)
 		scoreEarned := int(scoreEarnedFloat)
 		timeSpent := int(timeSpentFloat)
 
@@ -388,25 +402,35 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			signal := models.PlayerSignal{
 				PlayerID:      client.PlayerID,
 				QuestionIndex: questionIndex,
-				AnswerIndex:   answerIndex,
+				AnswerIndices: answerIndices,
 				ScoreEarned:   scoreEarned,
 				TimeSpent:     timeSpent,
 				Timestamp:     time.Now().Unix(),
 				Status:        status,
 			}
+			// Maintain backward compatibility for single choice in DB if needed,
+			// though AnswerIndex is less useful for multi-select.
+			if len(answerIndices) == 1 {
+				signal.AnswerIndex = answerIndices[0]
+			} else {
+				signal.AnswerIndex = -1 // mixed/multi
+			}
+
 			session.PlayerSignals = append(session.PlayerSignals, signal)
 
 			// Update answer counts for statistics
 			if status != "too_late" {
-				session.AnswerCounts[answerIndex]++
+				for _, ansIdx := range answerIndices {
+					session.AnswerCounts[ansIdx]++
+				}
 
 				// UPDATE PLAYER SCORE
 				if player, exists := session.Players[client.PlayerID]; exists {
 					player.Score += scoreEarned
 				}
 
-				log.Printf("Answer counted for module %s: Question %d, Answer %d. Total for this answer: %d",
-					client.ModuleID, questionIndex, answerIndex, session.AnswerCounts[answerIndex])
+				log.Printf("Answer counted for module %s: Question %d, Answers %v. Total answers received/updated.",
+					client.ModuleID, questionIndex, answerIndices)
 			} else {
 				log.Printf("Answer rejected (too_late) for module %s: Question %d, Status %s",
 					client.ModuleID, questionIndex, status)

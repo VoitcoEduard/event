@@ -2,17 +2,19 @@ package models
 
 // Question model
 type QuizQuestion struct {
-	ID           string   `json:"id" bson:"id"`
-	Type         string   `json:"type" bson:"type"` // "multiple_choice" or "true_false"
-	Text         string   `json:"text" bson:"text"`
-	Answers      []string `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
-	CorrectIndex int      `json:"correctIndex" bson:"correctIndex"`
-	TimeLimit    int      `json:"timeLimit" bson:"timeLimit"` // seconds
+	ID             string   `json:"id" bson:"id"`
+	Type           string   `json:"type" bson:"type"` // "multiple_choice", "true_false", "multi_select"
+	Text           string   `json:"text" bson:"text"`
+	Answers        []string `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
+	CorrectIndex   int      `json:"correctIndex" bson:"correctIndex"`
+	CorrectIndices []int    `json:"correctIndices" bson:"correctIndices"` // For multi_select
+	TimeLimit      int      `json:"timeLimit" bson:"timeLimit"`           // seconds
 }
 
 const (
 	QuestionTypeMultipleChoice = "multiple_choice"
 	QuestionTypeTrueFalse      = "true_false"
+	QuestionTypeMultiSelect    = "multi_select"
 )
 
 // Quiz module data - stored in Module.Data
@@ -31,7 +33,8 @@ type Player struct {
 type PlayerSignal struct {
 	PlayerID      string `json:"playerId" bson:"playerId"`
 	QuestionIndex int    `json:"questionIndex" bson:"questionIndex"`
-	AnswerIndex   int    `json:"answerIndex" bson:"answerIndex"`
+	AnswerIndex   int    `json:"answerIndex" bson:"answerIndex"`     // For single choice
+	AnswerIndices []int  `json:"answerIndices" bson:"answerIndices"` // For multi_select
 	ScoreEarned   int    `json:"scoreEarned" bson:"scoreEarned"`
 	TimeSpent     int    `json:"timeSpent" bson:"timeSpent"` // ms
 	Timestamp     int64  `json:"timestamp" bson:"timestamp"`

@@ -42,18 +42,28 @@
          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
       </div>
 
-      <div class="answer-grid" :class="{ 'true-false-grid': isTrueFalse }">
+      <div class="answer-grid" :class="{ 'true-false-grid': isTrueFalse, 'multi-select-grid': isMultiSelect }">
          <button
             v-for="(shape, idx) in shapes"
             :key="idx"
             class="answer-btn"
-            :class="[isTrueFalse ? (idx === 0 ? 'color-true' : 'color-false') : 'color-' + idx, { 'selected': selectedAnswer === idx }]"
-            @click="submitAnswer(idx)"
-            :disabled="selectedAnswer !== null"
+            :class="[
+                isTrueFalse ? (idx === 0 ? 'color-true' : 'color-false') : 'color-' + idx, 
+                { 'selected': isSelected(idx), 'dimmed': hasSelected && !isSelected(idx) }
+            ]"
+            @click="handleAnswerClick(idx)"
+            :disabled="hasSubmitted"
          >
             <span class="shape-icon">{{ shape }}</span>
             <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? 'TRUE' : 'FALSE' }}</span>
+            <div v-if="isMultiSelect && isSelected(idx)" class="checkmark-badge">✓</div>
          </button>
+      </div>
+      
+      <div v-if="isMultiSelect && !hasSubmitted" class="action-bar">
+          <button class="submit-btn" @click="submitMultiSelect" :disabled="selectedIndices.length === 0">
+              Submit Answer
+          </button>
       </div>
     </div>
 
@@ -118,7 +128,9 @@ const { state, transition, canTransition, questionCache: cache, currentQuestionI
 // Local state
 const nickname = ref('')
 const joined = ref(false)
-const selectedAnswer = ref(null)
+const selectedAnswer = ref(null) // For single choice
+const selectedIndices = ref([])  // For multi select
+const hasSubmitted = ref(false)
 const isCorrect = ref(false)
 const currentPoints = ref(0)
 const rank = ref(0)
@@ -131,6 +143,21 @@ const currentQuestion = computed(() => {
 const isTrueFalse = computed(() => {
     return currentQuestion.value?.type === 'true_false'
 })
+
+const isMultiSelect = computed(() => {
+    return currentQuestion.value?.type === 'multi_select'
+})
+
+const hasSelected = computed(() => {
+    return selectedAnswer.value !== null || selectedIndices.value.length > 0
+})
+
+const isSelected = (idx) => {
+    if (isMultiSelect.value) {
+        return selectedIndices.value.includes(idx)
+    }
+    return selectedAnswer.value === idx
+}
 
 const shapes = computed(() => {
     if (isTrueFalse.value) {
@@ -146,13 +173,35 @@ const joinLobby = () => {
     joined.value = true
 }
 
-const submitAnswer = (idx) => {
-    selectedAnswer.value = idx
+const handleAnswerClick = (idx) => {
+    if (hasSubmitted.value) return
+
+    if (isMultiSelect.value) {
+        // Toggle selection
+        const i = selectedIndices.value.indexOf(idx)
+        if (i > -1) {
+            selectedIndices.value.splice(i, 1)
+        } else {
+            selectedIndices.value.push(idx)
+        }
+    } else {
+        // Submit immediately for single choice
+        submitAnswer(idx)
+    }
+}
+
+const submitMultiSelect = () => {
+    if (selectedIndices.value.length === 0) return
+    submitAnswer(selectedIndices.value)
+}
+
+const submitAnswer = (answerData) => {
+    hasSubmitted.value = true
     clearInterval(timerInterval) // Stop the timer
     transition(States.ANSWERED)
 
     // Validate and score answer locally
-    validateAndScore(idx)
+    validateAndScore(answerData)
 }
 
 const goHome = () => {
@@ -164,16 +213,32 @@ const goHome = () => {
 let timerInterval
 
 // Answer validation and scoring
-const validateAndScore = (answerIndex) => {
+const validateAndScore = (answerData) => {
     // Use questionCache directly instead of the ref from state machine
     const question = questionCache.get(currentQuestionIndex.value)
     if (!question) {
         console.error('Question not found in cache at index:', currentQuestionIndex.value)
-        console.log('Cache contents:', Array.from(questionCache.cache.keys()))
         return
     }
 
-    const isCorrectAnswer = answerIndex === question.correctIndex
+    let isCorrectAnswer = false
+    let answerPayload = {}
+
+    if (question.type === 'multi_select') {
+        // Strict equality check for arrays
+        const userIndices = Array.isArray(answerData) ? answerData : []
+        // Sort for comparison
+        const sortedUser = [...userIndices].sort()
+        const sortedCorrect = [...(question.correctIndices || [])].sort()
+        
+        isCorrectAnswer = JSON.stringify(sortedUser) === JSON.stringify(sortedCorrect)
+        answerPayload = { answerIndices: userIndices }
+    } else {
+        const idx = typeof answerData === 'number' ? answerData : -1
+        isCorrectAnswer = idx === question.correctIndex
+        answerPayload = { answerIndex: idx }
+    }
+    
     isCorrect.value = isCorrectAnswer
 
     // Calculate score based on time remaining and streak
@@ -195,7 +260,7 @@ const validateAndScore = (answerIndex) => {
     // Send signal to server
     const signal = {
         questionIndex: currentQuestionIndex.value,
-        answerIndex: answerIndex,
+        ...answerPayload,
         scoreEarned: currentPoints.value,
         timeSpent: timeSpent * 1000, // Convert to ms
         timestamp: Date.now(),
@@ -235,6 +300,8 @@ onMounted(async () => {
 
             // Reset for new question
             selectedAnswer.value = null
+            selectedIndices.value = []
+            hasSubmitted.value = false
             isCorrect.value = false
             currentPoints.value = 0
         }
@@ -530,5 +597,66 @@ onUnmounted(() => {
     border-radius: 20px;
     cursor: pointer;
     font-weight: bold;
+}
+
+.answer-btn.selected {
+    border: 8px solid white;
+    transform: scale(0.98);
+}
+
+.answer-btn.dimmed {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.checkmark-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    color: #4cd964;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+}
+
+.action-bar {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.submit-btn {
+    background: #FFD700;
+    color: black;
+    font-weight: 900;
+    font-size: 1.5rem;
+    padding: 15px 40px;
+    border-radius: 50px;
+    border: none;
+    box-shadow: 0 4px 0 #b39700;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.submit-btn:active {
+    transform: translateY(4px);
+    box-shadow: none;
+}
+.submit-btn:disabled {
+    background: #ccc;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .answer-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

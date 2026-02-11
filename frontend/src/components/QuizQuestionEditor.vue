@@ -9,6 +9,7 @@
       <label>Question Type</label>
       <select v-model="localQuestion.type" class="select-input" @change="handleTypeChange">
         <option value="multiple_choice">Single Choice</option>
+        <option value="multi_select">Multi Select</option>
         <option value="true_false">True / False</option>
       </select>
     </div>
@@ -51,10 +52,10 @@
           <span class="shape-icon">{{ getShapeIcon(idx) }}</span>
           <label class="correct-toggle">
             <input 
-              type="radio" 
+              :type="localQuestion.type === 'multi_select' ? 'checkbox' : 'radio'"
               :name="`correct-${question.id}`" 
-              :checked="localQuestion.correctIndex === idx"
-              @change="setCorrect(idx)"
+              :checked="isCorrect(idx)"
+              @change="toggleCorrect(idx)"
             />
             <span class="checkmark" title="Mark as correct"></span>
           </label>
@@ -94,7 +95,8 @@ const localQuestion = reactive({
   // Ensure we have 4 answers for MC, but for T/F we might only have 2 effectively used
   answers: props.question.answers && props.question.answers.length >= 2 
     ? [...props.question.answers] 
-    : ['', '', '', '']
+    : ['', '', '', ''],
+  correctIndices: props.question.correctIndices || []
 })
 
 watch(() => props.question, (newVal) => {
@@ -118,13 +120,40 @@ const handleTypeChange = () => {
              localQuestion.answers = ['', '', '', '']
         }
     }
+
+    // Reset correct indices if type changes, or migrate intelligently?
+    // For now, simplicity: if switching to multi_select, init from correctIndex
+    if (localQuestion.type === 'multi_select' && localQuestion.correctIndices.length === 0) {
+        if (typeof localQuestion.correctIndex === 'number') {
+            localQuestion.correctIndices = [localQuestion.correctIndex]
+        }
+    }
     emitUpdate()
 }
 
-const setCorrect = (idx) => {
-  localQuestion.correctIndex = idx
-  emitUpdate()
+const isCorrect = (idx) => {
+    if (localQuestion.type === 'multi_select') {
+        return localQuestion.correctIndices.includes(idx)
+    }
+    return localQuestion.correctIndex === idx
 }
+
+const toggleCorrect = (idx) => {
+    if (localQuestion.type === 'multi_select') {
+        const i = localQuestion.correctIndices.indexOf(idx)
+        if (i > -1) {
+            localQuestion.correctIndices.splice(i, 1)
+        } else {
+            localQuestion.correctIndices.push(idx)
+            localQuestion.correctIndices.sort()
+        }
+    } else {
+        localQuestion.correctIndex = idx
+    }
+    emitUpdate()
+}
+
+/* REMOVED OLD setCorrect in favor of generic toggleCorrect */
 
 const getAnswerColorClass = (idx) => {
   if (localQuestion.type === 'true_false') {
