@@ -295,8 +295,13 @@ onMounted(async () => {
     quizWS.on('sync:minimal', (payload) => {
         // Update answer counts if provided
         if (payload.answerCounts) {
-            // For reactivity, we can create a new object or update properties
-            answerCounts.value = { ...payload.answerCounts }
+            // Convert string keys from JSON to numeric keys for proper reactivity
+            answerCounts.value = {
+                0: payload.answerCounts["0"] || 0,
+                1: payload.answerCounts["1"] || 0,
+                2: payload.answerCounts["2"] || 0,
+                3: payload.answerCounts["3"] || 0,
+            }
         }
     })
 
@@ -307,9 +312,14 @@ onMounted(async () => {
             players.value = Object.values(session.players)
         }
 
-        // Update Answer Counts
+        // Update Answer Counts (convert string keys to numeric keys)
         if (session.answerCounts) {
-            answerCounts.value = session.answerCounts
+            answerCounts.value = {
+                0: session.answerCounts["0"] || 0,
+                1: session.answerCounts["1"] || 0,
+                2: session.answerCounts["2"] || 0,
+                3: session.answerCounts["3"] || 0,
+            }
         }
     })
  })

@@ -400,10 +400,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 					client.ModuleID, questionIndex, status)
 			}
 
-			// Calculate actual answered count for THIS question
+			// Calculate actual answered count for THIS question only
 			answeredCount := 0
-			for _, count := range session.AnswerCounts {
-				answeredCount += count
+			for _, signal := range session.PlayerSignals {
+				if signal.QuestionIndex == questionIndex {
+					answeredCount++
+				}
 			}
 
 			// Send minimal sync message (answer counts for host histogram)
@@ -418,7 +420,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			})
 
 			// Debug log for answered count at end of question
-			log.Printf("Question %d ended - answeredCount: %d / %d", questionIndex, len(session.PlayerSignals), len(session.Players))
+			log.Printf("Question %d ended - answeredCount: %d / %d", questionIndex, answeredCount, len(session.Players))
 		}
 
 	case "player:batch_request":
