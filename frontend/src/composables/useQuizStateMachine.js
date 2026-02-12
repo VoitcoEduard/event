@@ -74,8 +74,8 @@ export function useQuizStateMachine() {
     }
 
     function validateAndScore(data) {
-        // Answer validation and scoring logic to be implemented
-        console.log('Validating answer:', data)
+        // Answer validation is handled by the view component
+        // console.log('State machine: validateAndScore triggered', data)
     }
 
     function requestNextBatch() {

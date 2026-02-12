@@ -281,14 +281,17 @@ const validateAndScore = (answerData) => {
         isCorrectAnswer = JSON.stringify(sortedUser) === JSON.stringify(sortedCorrect)
         answerPayload = { answerIndices: userIndices }
     } else if (question.type === 'slider') {
-        const val = typeof answerData === 'number' ? answerData : 0
+        const val = Number(answerData) || 0
         answerPayload = { answerValue: val }
         
         // Slider Scoring Logic
-        const { correctValue, scoringConfig } = question
-        const maxPoints = scoringConfig?.maxPoints || 1000
-        const tolerance = scoringConfig?.tolerance || 0
-        const mode = scoringConfig?.mode || 'symmetric'
+        const correctValue = Number(question.correctValue !== undefined ? question.correctValue : 0)
+        const scoringConfig = question.scoringConfig || {}
+        const maxPoints = Number(scoringConfig.maxPoints) || 1000
+        const tolerance = Number(scoringConfig.tolerance) || 0
+        const mode = scoringConfig.mode || 'symmetric'
+
+        console.log('[Scoring Debug] Slider:', { val, correctValue, maxPoints, tolerance, mode, question })
         
         const distance = Math.abs(val - correctValue)
         let calculatedScore = 0
@@ -302,10 +305,7 @@ const validateAndScore = (answerData) => {
                  } else if (tolerance > 0 && distance <= tolerance) {
                      // Linear dropoff
                      calculatedScore = Math.round(maxPoints * Math.max(0, 1 - (distance / tolerance)))
-                     if (calculatedScore > 0) isCorrectAnswer = true // Partial credit is "correct" enough? Or strictly false? 
-                     // Usually for trivia "Correct" means exact, but for slider getting points is good.
-                     // Let's say getting points > 0 checks the green box.
-                     isCorrectAnswer = calculatedScore > 0
+                     if (calculatedScore > 0) isCorrectAnswer = true 
                  }
              } else {
                  calculatedScore = 0
@@ -313,14 +313,16 @@ const validateAndScore = (answerData) => {
              }
         } else {
             // Symmetric
-             if (distance === 0) {
-                 calculatedScore = maxPoints
-                 isCorrectAnswer = true
-             } else if (tolerance > 0 && distance <= tolerance) {
-                 calculatedScore = Math.round(maxPoints * Math.max(0, 1 - (distance / tolerance)))
+             if (distance <= tolerance + 0.0001) { // Float safety
+                 if (distance === 0) {
+                     calculatedScore = maxPoints
+                 } else {
+                     calculatedScore = Math.round(maxPoints * Math.max(0, 1 - (distance / tolerance)))
+                 }
                  isCorrectAnswer = calculatedScore > 0
              }
         }
+        console.log('[Scoring Debug] Result:', { distance, calculatedScore, isCorrectAnswer })
         
         // Override the generic time-based scoring for slider, or combine them?
         // Plan says: "score = maxPoints * max(0, 1 - (distance / tolerance))"
@@ -424,7 +426,7 @@ onMounted(async () => {
             // Reset for new question
             selectedAnswer.value = null
             selectedIndices.value = []
-            sliderValue.value = (questionCache.get(currentQuestionIndex.value)?.sliderConfig?.minValue + questionCache.get(currentQuestionIndex.value)?.sliderConfig?.maxValue) / 2 || 50
+            sliderValue.value = questionCache.get(currentQuestionIndex.value)?.sliderConfig?.minValue || 0
             hasSubmitted.value = false
             isCorrect.value = false
             currentPoints.value = 0
@@ -796,6 +798,16 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 100%;
+  padding-bottom: 20px;
+}
+
+.slider-wrapper {
+  width: 100%;
+  height: 300px; /* Force height for vertical slider */
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
 }
 
 .question-text {
