@@ -121,7 +121,14 @@ const fetchTemplates = async () => {
 
 watch(() => [props.visible, props.module], ([visible, mod]) => {
   if (visible && mod?.data?.questions) {
-    questions.value = JSON.parse(JSON.stringify(mod.data.questions))
+    let loadedQuestions = JSON.parse(JSON.stringify(mod.data.questions))
+    questions.value = loadedQuestions.map(q => {
+        if (q.type === 'slider') {
+            if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+            if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+        }
+        return q
+    })
   } else if (visible) {
     questions.value = []
   }
@@ -139,9 +146,19 @@ const loadTemplate = (template) => {
     }
     
     if(template.data?.questions) {
-        questions.value = JSON.parse(JSON.stringify(template.data.questions))
-        // Regenerate IDs to avoid conflicts if needed, but for now simple copy
-        questions.value.forEach(q => q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5))
+        let loadedQuestions = JSON.parse(JSON.stringify(template.data.questions))
+        // Hydrate and regenerate IDs
+        questions.value = loadedQuestions.map(q => {
+            q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+            // Ensure slider config exists
+            if (q.type === 'slider' && !q.sliderConfig) {
+                q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+            }
+            if (q.type === 'slider' && !q.scoringConfig) {
+                q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+            }
+            return q
+        })
         success(`Loaded template: ${template.name}`)
         showLibraryModal.value = false
     }
@@ -240,11 +257,17 @@ const validateQuestions = () => {
   
   for (const q of questions.value) {
     if (!q.text.trim()) return 'All questions must have text.'
-    if (q.type === 'true_false') {
+    
+    if (q.type === 'slider') {
+        const config = q.sliderConfig
+        if (!config) return 'Slider configuration is missing.'
+        if (config.minValue >= config.maxValue) return 'Slider Min value must be less than Max value.'
+        if (config.step <= 0) return 'Slider Step must be greater than 0.'
+    } else if (q.type === 'true_false') {
       // Only check first 2 answers for T/F
       if (q.answers.slice(0, 2).some(a => !a.trim())) return 'True/False questions must have both True and False options.'
     } else {
-      // For standard types, ensure all 4 slots are filled (as per UI design)
+      // For standard types (multiple_choice, multi_select), ensure all 4 slots are filled
       if (q.answers.some(a => !a.trim())) return 'All answer options must be filled for multiple choice questions.'
     }
   }
@@ -285,9 +308,17 @@ const handleFileUpload = (event) => {
                 if(questions.value.length > 0) {
                     if(!confirm('This will replace your current questions. Continue?')) return
                 }
-                questions.value = loadedQuestions
-                // Regenerate IDs
-                questions.value.forEach(q => q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5))
+                questions.value = loadedQuestions.map(q => {
+                    q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+                     // Ensure slider config exists
+                    if (q.type === 'slider' && !q.sliderConfig) {
+                        q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+                    }
+                    if (q.type === 'slider' && !q.scoringConfig) {
+                        q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+                    }
+                    return q
+                })
                 success('Questions loaded from file')
             } else {
                 info('No questions found in file')

@@ -2,19 +2,41 @@ package models
 
 // Question model
 type QuizQuestion struct {
-	ID             string   `json:"id" bson:"id"`
-	Type           string   `json:"type" bson:"type"` // "multiple_choice", "true_false", "multi_select"
-	Text           string   `json:"text" bson:"text"`
-	Answers        []string `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
-	CorrectIndex   int      `json:"correctIndex" bson:"correctIndex"`
-	CorrectIndices []int    `json:"correctIndices" bson:"correctIndices"` // For multi_select
-	TimeLimit      int      `json:"timeLimit" bson:"timeLimit"`           // seconds
+	ID             string        `json:"id" bson:"id"`
+	Type           string        `json:"type" bson:"type"` // "multiple_choice", "true_false", "multi_select"
+	Text           string        `json:"text" bson:"text"`
+	Answers        []string      `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
+	CorrectIndex   int           `json:"correctIndex" bson:"correctIndex"`
+	CorrectIndices []int         `json:"correctIndices" bson:"correctIndices"` // For multi_select
+	CorrectValue   float64       `json:"correctValue" bson:"correctValue"`     // For slider
+	SliderConfig   SliderConfig  `json:"sliderConfig" bson:"sliderConfig"`     // For slider
+	ScoringConfig  ScoringConfig `json:"scoringConfig" bson:"scoringConfig"`   // For slider
+	TimeLimit      int           `json:"timeLimit" bson:"timeLimit"`           // seconds
+}
+
+// SliderConfig stores slider-specific configuration
+type SliderConfig struct {
+	MinValue      float64 `json:"minValue" bson:"minValue"`
+	MaxValue      float64 `json:"maxValue" bson:"maxValue"`
+	Step          float64 `json:"step" bson:"step"`
+	DecimalPlaces int     `json:"decimalPlaces" bson:"decimalPlaces"`
+	Unit          string  `json:"unit" bson:"unit"`
+}
+
+// ScoringConfig stores scoring rules
+type ScoringConfig struct {
+	Mode           string  `json:"mode" bson:"mode"`                     // "symmetric" or "asymmetric"
+	MaxPoints      int     `json:"maxPoints" bson:"maxPoints"`           // Points for exact answer
+	Tolerance      float64 `json:"tolerance" bson:"tolerance"`           // Distance for partial credit
+	PartialPercent float64 `json:"partialPercent" bson:"partialPercent"` // % of max points at tolerance edge
+
 }
 
 const (
 	QuestionTypeMultipleChoice = "multiple_choice"
 	QuestionTypeTrueFalse      = "true_false"
 	QuestionTypeMultiSelect    = "multi_select"
+	QuestionTypeSlider         = "slider"
 )
 
 // Quiz module data - stored in Module.Data
@@ -31,14 +53,15 @@ type Player struct {
 
 // PlayerSignal represents a player's answer signal with metadata
 type PlayerSignal struct {
-	PlayerID      string `json:"playerId" bson:"playerId"`
-	QuestionIndex int    `json:"questionIndex" bson:"questionIndex"`
-	AnswerIndex   int    `json:"answerIndex" bson:"answerIndex"`     // For single choice
-	AnswerIndices []int  `json:"answerIndices" bson:"answerIndices"` // For multi_select
-	ScoreEarned   int    `json:"scoreEarned" bson:"scoreEarned"`
-	TimeSpent     int    `json:"timeSpent" bson:"timeSpent"` // ms
-	Timestamp     int64  `json:"timestamp" bson:"timestamp"`
-	Status        string `json:"status" bson:"status"` // "on_time", "grace_period", "missed"
+	PlayerID      string  `json:"playerId" bson:"playerId"`
+	QuestionIndex int     `json:"questionIndex" bson:"questionIndex"`
+	AnswerIndex   int     `json:"answerIndex" bson:"answerIndex"`     // For single choice
+	AnswerIndices []int   `json:"answerIndices" bson:"answerIndices"` // For multi_select
+	AnswerValue   float64 `json:"answerValue" bson:"answerValue"`     // For slider
+	ScoreEarned   int     `json:"scoreEarned" bson:"scoreEarned"`
+	TimeSpent     int     `json:"timeSpent" bson:"timeSpent"` // ms
+	Timestamp     int64   `json:"timestamp" bson:"timestamp"`
+	Status        string  `json:"status" bson:"status"` // "on_time", "grace_period", "missed"
 }
 
 // QuestionWindow tracks the timing and acceptance window for a question

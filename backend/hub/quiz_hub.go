@@ -388,6 +388,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		scoreEarned := int(scoreEarnedFloat)
 		timeSpent := int(timeSpentFloat)
 
+		// Extract AnswerValue for slider (optional)
+		var answerValue float64
+		if val, ok := data["answerValue"].(float64); ok {
+			answerValue = val
+		}
+
 		session := h.sessions[client.ModuleID]
 		if session != nil {
 			// Check if signal is within acceptance window
@@ -403,6 +409,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				PlayerID:      client.PlayerID,
 				QuestionIndex: questionIndex,
 				AnswerIndices: answerIndices,
+				AnswerValue:   answerValue,
 				ScoreEarned:   scoreEarned,
 				TimeSpent:     timeSpent,
 				Timestamp:     time.Now().Unix(),

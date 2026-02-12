@@ -11,6 +11,7 @@
         <option value="multiple_choice">Single Choice</option>
         <option value="multi_select">Multi Select</option>
         <option value="true_false">True / False</option>
+        <option value="slider">Slider</option>
       </select>
     </div>
 
@@ -40,7 +41,8 @@
       </div>
     </div>
 
-    <div class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
+    <!-- STANDARD ANSWERS (MC/TF/MS) -->
+    <div v-if="localQuestion.type !== 'slider'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
@@ -69,11 +71,96 @@
         ></textarea>
       </div>
     </div>
+
+    <!-- SLIDER CONFIGURATION -->
+    <div v-if="localQuestion.type === 'slider'" class="slider-config-panel">
+      
+      <div class="config-section">
+        <h4 class="section-title">Range & Unit</h4>
+        <div class="config-grid">
+           <div class="input-group">
+              <label>Min Value</label>
+              <input type="number" v-model.number="localQuestion.sliderConfig.minValue" class="config-input" @input="emitUpdate" />
+           </div>
+           <div class="input-group">
+              <label>Max Value</label>
+              <input type="number" v-model.number="localQuestion.sliderConfig.maxValue" class="config-input" @input="emitUpdate" />
+           </div>
+           <div class="input-group">
+              <label>Step</label>
+              <input type="number" v-model.number="localQuestion.sliderConfig.step" class="config-input" min="0" step="any" @input="emitUpdate" />
+           </div>
+           <div class="input-group">
+              <label>Unit</label>
+              <input type="text" v-model="localQuestion.sliderConfig.unit" class="config-input" placeholder="%, kg, years" @input="emitUpdate" />
+           </div>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <h4 class="section-title">Correct Answer & Scoring</h4>
+        <div class="config-grid">
+           <div class="input-group">
+              <label>Correct Value</label>
+              <input type="number" v-model.number="localQuestion.correctValue" class="config-input correct-value-input" @input="emitUpdate" />
+           </div>
+           
+           <div class="input-group">
+              <label>Decimals</label>
+              <select v-model.number="localQuestion.sliderConfig.decimalPlaces" class="select-input small-select" @change="emitUpdate">
+                <option :value="0">0</option>
+                <option :value="1">1</option>
+                <option :value="2">2</option>
+              </select>
+           </div>
+        </div>
+        
+        <div class="config-grid mt-2">
+            <div class="input-group">
+              <label>Scoring Mode</label>
+              <select v-model="localQuestion.scoringConfig.mode" class="select-input small-select" @change="emitUpdate">
+                <option value="symmetric">Symmetric (Both sides)</option>
+                <option value="asymmetric">Asymmetric (No overbid)</option>
+              </select>
+           </div>
+           <div class="input-group">
+              <label>Tolerance (±)</label>
+              <input type="number" v-model.number="localQuestion.scoringConfig.tolerance" class="config-input" @input="emitUpdate" />
+           </div>
+            <div class="input-group">
+              <label>Max Points</label>
+              <input type="number" v-model.number="localQuestion.scoringConfig.maxPoints" class="config-input" @input="emitUpdate" />
+           </div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="slider-preview-container">
+         <label>Preview</label>
+         <div class="preview-box">
+            <SliderComponent
+                :min="localQuestion.sliderConfig.minValue"
+                :max="localQuestion.sliderConfig.maxValue"
+                :step="localQuestion.sliderConfig.step"
+                :unit="localQuestion.sliderConfig.unit"
+                :decimalPlaces="localQuestion.sliderConfig.decimalPlaces"
+                :modelValue="localQuestion.correctValue" 
+                :readonly="true"
+                :showCorrectMarker="true"
+                :correctValue="localQuestion.correctValue"
+            />
+         </div>
+         <p class="preview-note">Preview shows correct answer marker</p>
+      </div>
+
+    </div>
+
   </div>
 </template>
 
 <script setup>
 import { reactive, watch } from 'vue'
+import SliderComponent from './SliderComponent.vue'
 
 const props = defineProps({
   question: {
@@ -92,18 +179,43 @@ const emit = defineEmits(['update', 'delete'])
 const localQuestion = reactive({
   ...props.question,
   type: props.question.type || 'multiple_choice',
-  // Ensure we have 4 answers for MC, but for T/F we might only have 2 effectively used
   answers: props.question.answers && props.question.answers.length >= 2 
     ? [...props.question.answers] 
     : ['', '', '', ''],
-  correctIndices: props.question.correctIndices || []
+  correctIndices: props.question.correctIndices || [],
+  // Initialize slider config if missing
+  sliderConfig: props.question.sliderConfig || {
+      minValue: 0,
+      maxValue: 100,
+      step: 1,
+      unit: '',
+      decimalPlaces: 0
+  },
+  scoringConfig: props.question.scoringConfig || {
+      mode: 'symmetric',
+      maxPoints: 1000,
+      tolerance: 10,
+      partialPercent: 0
+  },
+  correctValue: props.question.correctValue !== undefined ? props.question.correctValue : 0
 })
 
 watch(() => props.question, (newVal) => {
-  Object.assign(localQuestion, {
-      ...newVal,
-      type: newVal.type || 'multiple_choice'
-  })
+  // Deep tracking can be tricky, but we want to update if parent logic changes something 
+  // without overwriting local typing immediately if we are the ones who triggered it.
+  // For simplicity, we sync back basic fields if ID changes or strict updates needed.
+  // Ideally, valid Vue form pattern is :modelValue + @update:modelValue.
+  // Here we just ensure we don't lose the slider/scoring config objects structure.
+  
+  if (newVal.id !== localQuestion.id) {
+       Object.assign(localQuestion, {
+          ...newVal,
+          type: newVal.type || 'multiple_choice',
+          sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
+          scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 },
+          correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0
+      })
+  }
 }, { deep: true })
 
 const emitUpdate = () => {
@@ -114,15 +226,17 @@ const handleTypeChange = () => {
     if (localQuestion.type === 'true_false') {
         localQuestion.answers = ['True', 'False', '', '']
         if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
+    } else if (localQuestion.type === 'slider') {
+        // Ensure defaults are set
+        if (!localQuestion.sliderConfig.maxValue) localQuestion.sliderConfig.maxValue = 100
+        if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 1000
     } else {
-        // Reset to empty if switching back, or keep if existing
+        // Reset to empty if switching back from T/F
         if (localQuestion.answers[0] === 'True' && localQuestion.answers[1] === 'False') {
              localQuestion.answers = ['', '', '', '']
         }
     }
 
-    // Reset correct indices if type changes, or migrate intelligently?
-    // For now, simplicity: if switching to multi_select, init from correctIndex
     if (localQuestion.type === 'multi_select' && localQuestion.correctIndices.length === 0) {
         if (typeof localQuestion.correctIndex === 'number') {
             localQuestion.correctIndices = [localQuestion.correctIndex]
@@ -153,11 +267,9 @@ const toggleCorrect = (idx) => {
     emitUpdate()
 }
 
-/* REMOVED OLD setCorrect in favor of generic toggleCorrect */
-
 const getAnswerColorClass = (idx) => {
   if (localQuestion.type === 'true_false') {
-      return idx === 0 ? 'answer-blue' : 'answer-red' // True=Blue/Green, False=Red commonly
+      return idx === 0 ? 'answer-blue' : 'answer-red'
   }
   const colors = ['red', 'blue', 'yellow', 'green']
   return `answer-${colors[idx]}`
@@ -229,7 +341,7 @@ const isAnswerReadOnly = (idx) => {
   font-weight: 600;
 }
 
-.main-input, .select-input {
+.main-input, .select-input, .config-input {
   background-color: #1C1C1E;
   border: 1px solid #3A3A3C;
   border-radius: 8px;
@@ -272,7 +384,7 @@ const isAnswerReadOnly = (idx) => {
   border: none;
   color: white;
   font-size: 14px;
-  resize: vertical; /* Allow resizing if needed */
+  resize: vertical; 
   min-height: 40px;
 }
 
@@ -282,7 +394,6 @@ const isAnswerReadOnly = (idx) => {
   border-radius: 4px;
 }
 
-/* Custom Radio Button for Correct Answer */
 .correct-toggle {
   position: relative;
   display: inline-block;
@@ -309,7 +420,7 @@ const isAnswerReadOnly = (idx) => {
 }
 
 .correct-toggle input:checked ~ .checkmark {
-  background-color: #32D74B; /* Green */
+  background-color: #32D74B; 
   border-color: #32D74B;
 }
 
@@ -331,6 +442,60 @@ const isAnswerReadOnly = (idx) => {
   border: solid white;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+}
+
+/* SLIDER CONFIG STYLES */
+.slider-config-panel {
+    background: #232325;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px dashed #3A3A3C;
+}
+
+.section-title {
+    font-size: 0.9rem;
+    color: #8E8E93;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.config-section {
+    margin-bottom: 24px;
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.mt-2 { margin-top: 12px; }
+
+.small-select {
+    padding: 10px;
+}
+
+.correct-value-input {
+    border-color: #32D74B;
+    background: rgba(50, 215, 75, 0.1);
+}
+
+.preview-box {
+    background: #1C1C1E;
+    border: 1px solid #3A3A3C;
+    border-radius: 8px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.preview-note {
+    font-size: 11px;
+    color: #8E8E93;
+    text-align: center;
+    margin-top: 6px;
+    font-style: italic;
 }
 
 @media (max-width: 600px) {

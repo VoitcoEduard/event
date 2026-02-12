@@ -36,7 +36,36 @@
       </div>
     </div>
 
-    <!-- QUESTION/ANSWER STATE -->
+    <!-- SLIDER QUESTION STATE -->
+    <div 
+      v-else-if="state === States.QUESTION_ACTIVE && isSlider" 
+      class="state-container slider-container"
+    >
+      <div class="question-info">
+        <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+      </div>
+      
+      <div class="slider-question-content">
+        <h2 class="question-text">{{ currentQuestion?.text }}</h2>
+        
+        <div class="slider-wrapper">
+          <SliderComponent
+            :min="currentQuestion?.sliderConfig?.minValue"
+            :max="currentQuestion?.sliderConfig?.maxValue"
+            :step="currentQuestion?.sliderConfig?.step"
+            :unit="currentQuestion?.sliderConfig?.unit"
+            :decimalPlaces="currentQuestion?.sliderConfig?.decimalPlaces"
+            :orientation="isMobile ? 'vertical' : 'horizontal'"
+            v-model="sliderValue"
+            @drag-end="onSliderDragEnd"
+          />
+        </div>
+        
+        <p class="instruction-text">Drag and release to submit</p>
+      </div>
+    </div>
+
+    <!-- QUESTION/ANSWER STATE (Generic/Multiple Choice) -->
     <div v-else-if="state === States.QUESTION_ACTIVE" class="state-container question-container">
       <div class="question-info">
          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
@@ -114,6 +143,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { useQuizStateMachine } from '../composables/useQuizStateMachine'
+import SliderComponent from '../components/SliderComponent.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 
@@ -130,6 +160,7 @@ const nickname = ref('')
 const joined = ref(false)
 const selectedAnswer = ref(null) // For single choice
 const selectedIndices = ref([])  // For multi select
+const sliderValue = ref(50)      // For slider
 const hasSubmitted = ref(false)
 const isCorrect = ref(false)
 const currentPoints = ref(0)
@@ -146,6 +177,14 @@ const isTrueFalse = computed(() => {
 
 const isMultiSelect = computed(() => {
     return currentQuestion.value?.type === 'multi_select'
+})
+
+const isSlider = computed(() => {
+    return currentQuestion.value?.type === 'slider'
+})
+
+const isMobile = computed(() => {
+    return window.innerWidth < 600
 })
 
 const hasSelected = computed(() => {
@@ -195,6 +234,14 @@ const submitMultiSelect = () => {
     submitAnswer(selectedIndices.value)
 }
 
+const onSliderDragEnd = () => {
+  if (hasSubmitted.value) return 
+  
+  // Submit slider value
+  selectedAnswer.value = sliderValue.value
+  submitAnswer(sliderValue.value)
+}
+
 const submitAnswer = (answerData) => {
     hasSubmitted.value = true
     clearInterval(timerInterval) // Stop the timer
@@ -233,6 +280,81 @@ const validateAndScore = (answerData) => {
         
         isCorrectAnswer = JSON.stringify(sortedUser) === JSON.stringify(sortedCorrect)
         answerPayload = { answerIndices: userIndices }
+    } else if (question.type === 'slider') {
+        const val = typeof answerData === 'number' ? answerData : 0
+        answerPayload = { answerValue: val }
+        
+        // Slider Scoring Logic
+        const { correctValue, scoringConfig } = question
+        const maxPoints = scoringConfig?.maxPoints || 1000
+        const tolerance = scoringConfig?.tolerance || 0
+        const mode = scoringConfig?.mode || 'symmetric'
+        
+        const distance = Math.abs(val - correctValue)
+        let calculatedScore = 0
+        
+        if (mode === 'asymmetric') {
+             // Price is Right style
+             if (val <= correctValue) {
+                 if (distance === 0) {
+                     calculatedScore = maxPoints
+                     isCorrectAnswer = true
+                 } else if (tolerance > 0 && distance <= tolerance) {
+                     // Linear dropoff
+                     calculatedScore = Math.round(maxPoints * Math.max(0, 1 - (distance / tolerance)))
+                     if (calculatedScore > 0) isCorrectAnswer = true // Partial credit is "correct" enough? Or strictly false? 
+                     // Usually for trivia "Correct" means exact, but for slider getting points is good.
+                     // Let's say getting points > 0 checks the green box.
+                     isCorrectAnswer = calculatedScore > 0
+                 }
+             } else {
+                 calculatedScore = 0
+                 isCorrectAnswer = false
+             }
+        } else {
+            // Symmetric
+             if (distance === 0) {
+                 calculatedScore = maxPoints
+                 isCorrectAnswer = true
+             } else if (tolerance > 0 && distance <= tolerance) {
+                 calculatedScore = Math.round(maxPoints * Math.max(0, 1 - (distance / tolerance)))
+                 isCorrectAnswer = calculatedScore > 0
+             }
+        }
+        
+        // Override the generic time-based scoring for slider, or combine them?
+        // Plan says: "score = maxPoints * max(0, 1 - (distance / tolerance))"
+        // This implies distance is the main factor. Time might be secondary or ignored for slider?
+        // Let's assume the calculatedScore IS the score.
+        // But the generic logic below modifies `currentPoints`.
+        // We should signal this is a special case.
+        
+        // Let's set a flag or just return early with the score?
+        // The generic logic below applies time decay to `baseScore`. 
+        // Slider usually allows full time to think. 
+        // Let's assume Slider Score is PURELY based on accuracy, not time.
+        
+        currentPoints.value = calculatedScore
+        score.value += currentPoints.value
+        if (calculatedScore > 0) streak.value++
+        else streak.value = 0
+        
+        isCorrect.value = isCorrectAnswer
+        
+        // Send signal
+        const timeLimit = question.timeLimit || 20
+        const timeSpent = timeLimit - timeRemaining.value 
+        
+        const signal = {
+            questionIndex: currentQuestionIndex.value,
+            ...answerPayload,
+            scoreEarned: currentPoints.value,
+            timeSpent: timeSpent * 1000,
+            timestamp: Date.now(),
+        }
+        signalQueue.enqueue(signal)
+        return // Exit generic flow
+        
     } else {
         const idx = typeof answerData === 'number' ? answerData : -1
         isCorrectAnswer = idx === question.correctIndex
@@ -298,9 +420,11 @@ onMounted(async () => {
                 currentQuestionIndex.value = payload.currentIndex
             }
 
+        
             // Reset for new question
             selectedAnswer.value = null
             selectedIndices.value = []
+            sliderValue.value = (questionCache.get(currentQuestionIndex.value)?.sliderConfig?.minValue + questionCache.get(currentQuestionIndex.value)?.sliderConfig?.maxValue) / 2 || 50
             hasSubmitted.value = false
             isCorrect.value = false
             currentPoints.value = 0
@@ -658,5 +782,39 @@ onUnmounted(() => {
     .answer-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.slider-container {
+  justify-content: center;
+  padding: 20px;
+}
+
+.slider-question-content {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.question-text {
+  font-size: 1.5rem;
+  margin-bottom: 40px;
+}
+
+.slider-wrapper {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.instruction-text {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
 }
 </style>

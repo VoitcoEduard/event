@@ -112,6 +112,32 @@
           </div>
        </div>
 
+       <!-- Slider Histogram Stats -->
+       <div v-if="gameState === 'results' && isSlider" class="answers-stats results-mode slider-stats">
+          <div class="histogram-container">
+             <div class="histogram-track-host">
+                <div 
+                   v-for="(count, idx) in histogramBuckets" 
+                   :key="idx"
+                   class="histogram-bar-host"
+                   :class="{ 'bar-correct': isBucketCorrect(idx) }"
+                   :style="{ height: getHistogramBarHeight(count) + '%' }"
+                >
+                   <span class="bar-count" v-if="count > 0">{{ count }}</span>
+                </div>
+             </div>
+             
+             <!-- Axis / Marker -->
+             <div class="histogram-axis">
+                <span>{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
+                <span class="correct-marker-label" :style="{ left: correctMarkerPercentage + '%' }">
+                   ▲ {{ formatNumber(currentQuestion?.correctValue) }}
+                </span>
+                <span>{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
+             </div>
+          </div>
+       </div>
+
        <div class="leaderboard-list">
           <div v-for="(player, idx) in topPlayers" :key="player.id" class="leaderboard-item">
             <div class="rank">{{ idx + 1 }}</div>
@@ -178,12 +204,22 @@ const questions = ref([])
 const currentQuestionIndex = ref(0)
 const timeRemaining = ref(20)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 }) 
-const totalAnswered = computed(() => Object.values(answerCounts.value).reduce((a, b) => a + b, 0)) 
+const playerSignals = ref([]) // Store signals for slider histogram
+const totalAnswered = computed(() => {
+    if (isSlider.value) return playerSignals.value.length
+    return Object.values(answerCounts.value).reduce((a, b) => a + b, 0)
+})
 
 const totalQuestions = computed(() => questions.value.length)
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
+const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+
+const formatNumber = (num, decimals = 0) => {
+    if (num === undefined || num === null) return ''
+    return Number(num).toFixed(decimals).replace(/\.0+$/, '')
+}
 
 const topPlayers = computed(() => {
     return [...players.value].sort((a, b) => b.score - a.score).slice(0, 5)
@@ -194,6 +230,62 @@ const getBarHeight = (idx) => {
     const max = Math.max(...counts, 1)
     const count = answerCounts.value[idx] || 0
     return (count / max) * 100
+}
+
+const histogramBuckets = computed(() => {
+    if (!isSlider.value) return []
+    const q = currentQuestion.value
+    if (!q || !q.sliderConfig) return []
+
+    const min = q.sliderConfig.minValue
+    const max = q.sliderConfig.maxValue
+    const bucketCount = 20
+    const buckets = new Array(bucketCount).fill(0)
+    const range = max - min
+    if (range === 0) return buckets
+
+    playerSignals.value.forEach(sig => {
+        if (sig.questionIndex !== currentQuestionIndex.value) return
+        // assuming sig has answerValue
+        const val = sig.answerValue !== undefined ? sig.answerValue : (sig.payload?.answerValue || 0)
+        let bucketIdx = Math.floor(((val - min) / range) * bucketCount)
+        if (bucketIdx < 0) bucketIdx = 0
+        if (bucketIdx >= bucketCount) bucketIdx = bucketCount - 1
+        buckets[bucketIdx]++
+    })
+    return buckets
+})
+
+const getHistogramBarHeight = (count) => {
+    const max = Math.max(...histogramBuckets.value, 1)
+    return (count / max) * 100
+}
+
+const correctMarkerPercentage = computed(() => {
+    if (!isSlider.value) return 0
+    const q = currentQuestion.value
+    const min = q?.sliderConfig?.minValue || 0
+    const max = q?.sliderConfig?.maxValue || 100
+    const range = max - min
+    if (range === 0) return 0
+    return ((q.correctValue - min) / range) * 100
+})
+
+const isBucketCorrect = (bucketIdx) => {
+    // Highlight bucket containing correct answer?
+    // Determine which bucket correctValue falls into
+    // Re-use logic or duplicate lightly simple math
+    const q = currentQuestion.value
+    const min = q.sliderConfig.minValue
+    const max = q.sliderConfig.maxValue
+    const bucketCount = 20
+    const range = max - min
+    const val = q.correctValue
+    let correctIdx = Math.floor(((val - min) / range) * bucketCount)
+    if (correctIdx < 0) correctIdx = 0
+    if (correctIdx >= bucketCount) correctIdx = bucketCount - 1
+    
+    return bucketIdx === correctIdx
 }
 
 const getShapeIcon = (idx) => {
@@ -300,8 +392,10 @@ onMounted(async () => {
         } else if (payload.state === 'results') {
             clearInterval(timerInterval)
         
-            // Reset answer counts for new question
-            answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
+            // Reset answer counts for new question (will be refilled by state update if persisted)
+            // But usually signals accumulate.
+            // When moving to NEXT question, we should clear. 
+            // Ideally we clear on 'question-active' start or 'get-ready'
         }
     })
 
@@ -321,21 +415,33 @@ onMounted(async () => {
 
     // Listen for full state updates (legacy support - includes players)
     quizWS.on('state:update', (session) => {
+        console.log('[Host] Received state:update:', session)
+        
         // Update players
         if (session.Players || session.players) {
             const playersMap = session.Players || session.players
+            console.log('[Host] Updating players from map:', playersMap)
             players.value = Object.values(playersMap)
+            console.log('[Host] New players list:', players.value)
+        } else {
+            console.warn('[Host] state:update received but no players field found', session)
+        }
+        
+        // Update Player Signals (for histogram)
+        if (session.PlayerSignals || session.playerSignals) {
+             const signals = session.PlayerSignals || session.playerSignals
+             playerSignals.value = signals.filter(s => s.questionIndex === currentQuestionIndex.value)
         }
 
-        // Update Answer Counts (convert string keys to numeric keys)
+        // Update Answer Counts
         if (session.AnswerCounts || session.answerCounts) {
              const counts = session.AnswerCounts || session.answerCounts
-            answerCounts.value = {
+             answerCounts.value = {
                 0: counts["0"] || 0,
                 1: counts["1"] || 0,
                 2: counts["2"] || 0,
                 3: counts["3"] || 0,
-            }
+             }
         }
     })
  })
@@ -602,6 +708,65 @@ onUnmounted(() => {
 .true-false-grid {
     grid-template-rows: 1fr;
     grid-template-columns: 1fr 1fr;
+}
+
+/* HISTOGRAM */
+.histogram-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.histogram-track-host {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    padding-bottom: 2px;
+}
+
+.histogram-bar-host {
+    flex: 1;
+    background: #0A84FF;
+    min-height: 2px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease-out;
+    position: relative;
+}
+
+.histogram-bar-host.bar-correct {
+    background: #32D74B;
+    box-shadow: 0 0 10px rgba(50, 215, 75, 0.5);
+}
+
+.bar-count {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.histogram-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #8E8E93;
+    position: relative;
+    height: 30px;
+}
+
+.correct-marker-label {
+    position: absolute;
+    color: #32D74B;
+    transform: translateX(-50%);
+    white-space: nowrap;
 }
 
 /* GET READY */
