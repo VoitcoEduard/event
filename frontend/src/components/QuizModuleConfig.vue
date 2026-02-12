@@ -30,6 +30,8 @@
         <div class="content">
           <QuizEditor 
             :questions="questions"
+            :event-id="eventId"
+            :module-id="module?.id || ''"
             @update-question="updateQuestion"
             @remove-question="removeQuestion"
             @add-question="addQuestion"

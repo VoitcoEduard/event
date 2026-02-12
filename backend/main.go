@@ -20,6 +20,7 @@ func main() {
 
 	// Connect to MongoDB
 	db.ConnectDB()
+	db.InitGridFS()
 
 	// Initialize QuizHub
 	quizHub := hub.NewQuizHub()
@@ -181,6 +182,47 @@ func main() {
 		}
 	})
 
+	// Media upload route
+	http.HandleFunc("/media/upload", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method == "POST" {
+			handlers.UploadMedia(w, r)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	// Media routes with ID
+	http.HandleFunc("/media/", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		path := r.URL.Path
+		// Check if it ends with /file
+		if strings.HasSuffix(path, "/file") {
+			if r.Method == "GET" {
+				handlers.ServeMedia(w, r)
+				return
+			}
+		} else {
+			// /media/{id}
+			switch r.Method {
+			case "GET":
+				handlers.GetMedia(w, r)
+				return
+			case "DELETE":
+				handlers.DeleteMedia(w, r)
+				return
+			}
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		DebugLog("Received request: %s %s", r.Method, r.URL.Path)
 		enableCors(w, r)
@@ -208,7 +250,7 @@ func main() {
 func enableCors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
 
 	// Handle preflight OPTIONS request
 	if r.Method == "OPTIONS" {

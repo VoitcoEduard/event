@@ -12,6 +12,8 @@ type QuizQuestion struct {
 	SliderConfig   SliderConfig  `json:"sliderConfig" bson:"sliderConfig"`     // For slider
 	ScoringConfig  ScoringConfig `json:"scoringConfig" bson:"scoringConfig"`   // For slider
 	TimeLimit      int           `json:"timeLimit" bson:"timeLimit"`           // seconds
+	ImageID        *string       `json:"imageId" bson:"imageId"`
+	ImageAlt       string        `json:"imageAlt" bson:"imageAlt"`
 }
 
 // SliderConfig stores slider-specific configuration

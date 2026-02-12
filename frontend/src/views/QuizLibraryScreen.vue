@@ -107,6 +107,8 @@
             <QuizEditor 
                 v-if="currentTemplate.moduleType === 'quiz'"
                 :questions="currentTemplate.questions"
+                event-id=""
+                module-id=""
                 @update-question="handleUpdateQuestion"
                 @remove-question="handleRemoveQuestion"
                 @add-question="handleAddQuestion"

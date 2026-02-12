@@ -13,13 +13,15 @@
               <button @click="emit('move-question', index, 1)" :disabled="index === questions.length - 1" class="move-btn">↓</button>
            </div>
            <div class="question-component-wrapper">
-             <QuizQuestionEditor 
-                :question="question" 
-                :index="index"
-                @update="(updatedQ) => emit('update-question', index, updatedQ)"
-                @delete="emit('remove-question', index)"
-             />
-           </div>
+              <QuizQuestionEditor 
+                 :question="question" 
+                 :index="index"
+                 :event-id="eventId"
+                 :module-id="moduleId"
+                 @update="(updatedQ) => emit('update-question', index, updatedQ)"
+                 @delete="emit('remove-question', index)"
+              />
+            </div>
         </div>
       </div>
       
@@ -39,7 +41,9 @@ import { defineProps, defineEmits } from 'vue'
 import QuizQuestionEditor from './QuizQuestionEditor.vue'
 
 const props = defineProps({
-  questions: { type: Array, default: () => [] }
+  questions: { type: Array, default: () => [] },
+  eventId: { type: String, default: '' },
+  moduleId: { type: String, default: '' }
 })
 
 const emit = defineEmits(['update-question', 'remove-question', 'add-question', 'move-question'])

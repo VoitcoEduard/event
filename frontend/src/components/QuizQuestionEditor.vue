@@ -26,6 +26,16 @@
       />
     </div>
 
+    <div class="input-group">
+      <label>Question Image (Optional)</label>
+      <ImageUploader
+        v-model="localQuestion.imageId"
+        v-model:altText="localQuestion.imageAlt"
+        :event-id="eventId"
+        :module-id="moduleId"
+      />
+    </div>
+
     <div class="settings-row">
       <div class="input-group">
         <label>Time Limit (seconds)</label>
@@ -161,6 +171,7 @@
 <script setup>
 import { reactive, watch } from 'vue'
 import SliderComponent from './SliderComponent.vue'
+import ImageUploader from './ImageUploader.vue'
 
 const props = defineProps({
   question: {
@@ -170,6 +181,14 @@ const props = defineProps({
   index: {
     type: Number,
     required: true
+  },
+  eventId: {
+    type: String,
+    default: ''
+  },
+  moduleId: {
+    type: String,
+    default: ''
   }
 })
 
@@ -197,7 +216,9 @@ const localQuestion = reactive({
       tolerance: 10,
       partialPercent: 0
   },
-  correctValue: props.question.correctValue !== undefined ? props.question.correctValue : 0
+  correctValue: props.question.correctValue !== undefined ? props.question.correctValue : 0,
+  imageId: props.question.imageId || null,
+  imageAlt: props.question.imageAlt || ''
 })
 
 watch(() => props.question, (newVal) => {
@@ -213,7 +234,9 @@ watch(() => props.question, (newVal) => {
           type: newVal.type || 'multiple_choice',
           sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 },
-          correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0
+          correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
+          imageId: newVal.imageId || null,
+          imageAlt: newVal.imageAlt || ''
       })
   }
 }, { deep: true })
