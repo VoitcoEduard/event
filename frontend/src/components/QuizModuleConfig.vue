@@ -152,6 +152,7 @@ const loadTemplate = (template) => {
         // Hydrate and regenerate IDs
         questions.value = loadedQuestions.map(q => {
             q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+            // Keep imageId - library templates share the same database so images still exist
             // Ensure slider config exists
             if (q.type === 'slider' && !q.sliderConfig) {
                 q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
@@ -312,6 +313,12 @@ const handleFileUpload = (event) => {
                 }
                 questions.value = loadedQuestions.map(q => {
                     q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+                    // Clear imageId since images from imported files won't exist in this database
+                    if (q.imageId) {
+                        q.imageId = null
+                        q.imageAlt = ''
+                        info('Note: Images from imported files need to be re-uploaded')
+                    }
                      // Ensure slider config exists
                     if (q.type === 'slider' && !q.sliderConfig) {
                         q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }

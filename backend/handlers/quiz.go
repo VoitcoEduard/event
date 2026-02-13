@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -40,6 +41,13 @@ func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&questions); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// Debug: log questions with images
+	for i, q := range questions {
+		if q.ImageID != nil && *q.ImageID != "" {
+			fmt.Printf("[UpdateQuizQuestions] Question %d has imageId: %s\n", i, *q.ImageID)
+		}
 	}
 
 	collection := db.GetCollection("events")
@@ -116,6 +124,12 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 				var qData models.QuizModuleData
 				json.Unmarshal(dataBytes, &qData)
 				questions = qData.Questions
+				// Debug: log questions with images
+				for i, q := range questions {
+					if q.ImageID != nil && *q.ImageID != "" {
+						fmt.Printf("[StartQuiz] Question %d has imageId: %s\n", i, *q.ImageID)
+					}
+				}
 				break
 			}
 		}

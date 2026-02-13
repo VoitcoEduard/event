@@ -221,6 +221,15 @@ const localQuestion = reactive({
   imageAlt: props.question.imageAlt || ''
 })
 
+// Watch for image changes and emit update
+watch(() => localQuestion.imageId, () => {
+  emitUpdate()
+})
+
+watch(() => localQuestion.imageAlt, () => {
+  emitUpdate()
+})
+
 watch(() => props.question, (newVal) => {
   // Deep tracking can be tricky, but we want to update if parent logic changes something 
   // without overwriting local typing immediately if we are the ones who triggered it.
