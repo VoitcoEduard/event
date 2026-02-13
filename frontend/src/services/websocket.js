@@ -10,16 +10,20 @@ class QuizWebSocket {
         this.moduleId = null
         this.nickname = null
         this.isHost = false
+        this.intentionalDisconnect = false
     }
 
     connect(moduleId, nickname = '', isHost = false) {
+        // Mark as intentional if reconnecting while already connected
         if (this.socket) {
+            this.intentionalDisconnect = true
             this.socket.close()
         }
 
         this.moduleId = moduleId
         this.nickname = nickname
         this.isHost = isHost
+        this.intentionalDisconnect = false
 
         // Determine WS URL from API_BASE_URL (http -> ws, https -> wss)
         const apiUrl = new URL(API_BASE_URL)
@@ -68,8 +72,8 @@ class QuizWebSocket {
             this.isConnected = false
             signalQueue.onDisconnect()
 
-            // Reconnection logic
-            if (this.reconnectAttempts < 5) {
+            // Only reconnect if not an intentional disconnect
+            if (!this.intentionalDisconnect && this.reconnectAttempts < 5) {
                 const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 5000)
                 console.log(`Reconnecting in ${delay}ms... (Attempt ${this.reconnectAttempts + 1})`)
                 setTimeout(() => {
@@ -116,10 +120,16 @@ class QuizWebSocket {
     }
 
     disconnect() {
+        this.intentionalDisconnect = true
+        this.reconnectAttempts = 0
         if (this.socket) {
             this.socket.close()
             this.socket = null
         }
+    }
+
+    clearHandlers() {
+        this.handlers.clear()
     }
 }
 

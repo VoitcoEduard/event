@@ -465,6 +465,7 @@ onMounted(async () => {
 onUnmounted(() => {
     clearInterval(timerInterval)
     quizWS.disconnect()
+    quizWS.clearHandlers()
 })
 </script>
 

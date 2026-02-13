@@ -51,30 +51,37 @@
         <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
       </div>
 
-      <div class="question-content">
-        <div class="question-text-wrapper">
-             <h2 class="question-text">{{ currentQuestion?.text }}</h2>
-        </div>
-        
-        <!-- Answer Options Grid -->
-        <div class="answers-grid" :class="{ 'true-false-grid': isTrueFalse }">
-            <div 
-                v-for="(answer, idx) in currentQuestion?.answers" 
-                :key="idx" 
-                class="answer-card"
-                :class="getAnswerColorClass(idx)"
-                v-show="!isTrueFalse || idx < 2"
-            >
-                <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
-                <div class="answer-text">{{ answer }}</div>
+      <!-- New Two-Column Layout -->
+      <div class="question-main-content">
+        <!-- LEFT COLUMN: Question Card with Optional Image -->
+        <div class="question-column">
+          <div class="question-card">
+            <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
+            <div v-if="questionImageUrl" class="question-image-container">
+              <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
             </div>
+          </div>
         </div>
 
-        <!-- Small Answer Counter in Corner -->
-        <div class="answer-counter-widget">
-            <div class="counter-value">{{ totalAnswered }}</div>
-            <div class="counter-label">Answers</div>
+        <!-- RIGHT COLUMN: Stacked Answer Cards -->
+        <div class="answers-column">
+          <div 
+            v-for="(answer, idx) in currentQuestion?.answers" 
+            :key="idx" 
+            class="answer-card-stacked"
+            :class="getAnswerColorClass(idx)"
+            v-show="!isTrueFalse || idx < 2"
+          >
+            <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
+            <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+          </div>
         </div>
+      </div>
+      
+      <!-- Small Answer Counter in Corner -->
+      <div class="answer-counter-widget">
+          <div class="counter-value">{{ totalAnswered }}</div>
+          <div class="counter-label">Answers</div>
       </div>
       
       <div class="host-controls">
@@ -190,6 +197,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
+import { getImageUrl } from '../services/media'
 
 const route = useRoute()
 const router = useRouter()
@@ -215,6 +223,63 @@ const currentQuestion = computed(() => questions.value[currentQuestionIndex.valu
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+
+const questionImageUrl = computed(() => {
+    const imageId = currentQuestion.value?.imageId
+    return imageId ? getImageUrl(imageId) : null
+})
+
+// Adaptive font size calculation for question text - use all available space
+const questionFontSize = computed(() => {
+    const text = currentQuestion.value?.text || ''
+    const hasImage = !!questionImageUrl.value
+    
+    // Larger base font sizes - maximize use of space
+    let baseSize
+    
+    if (text.length < 30) {
+        // Very short text - maximum font
+        baseSize = hasImage ? 5.0 : 6.0
+    } else if (text.length < 60) {
+        // Short text 
+        baseSize = hasImage ? 4.0 : 5.0
+    } else if (text.length < 100) {
+        // Medium text
+        baseSize = hasImage ? 3.2 : 4.0
+    } else if (text.length < 200) {
+        // Longer text
+        baseSize = hasImage ? 2.5 : 3.2
+    } else {
+        // Very long text
+        baseSize = hasImage ? 2.0 : 2.5
+    }
+    
+    return `${baseSize}vw`
+})
+
+// Calculate individual font size for each answer card
+const getAnswerFontSize = (answerText) => {
+    const text = answerText || ''
+    const length = text.length
+    
+    // Calculate font size for each answer individually based on text length
+    let size
+    if (length < 15) {
+        size = 2.4
+    } else if (length < 25) {
+        size = 2.0
+    } else if (length < 40) {
+        size = 1.6
+    } else if (length < 60) {
+        size = 1.3
+    } else if (length < 100) {
+        size = 1.0
+    } else {
+        size = 0.85
+    }
+    
+    return `${size}vw`
+}
 
 const formatNumber = (num, decimals = 0) => {
     if (num === undefined || num === null) return ''
@@ -370,10 +435,7 @@ onMounted(async () => {
         console.error('Failed to load questions', e)
     }
 
-    // 2. Connect WS
-    quizWS.connect(moduleId, '', true)
-
-    // 3. Listen for updates
+    // 2. Register handlers BEFORE connecting (server sends messages immediately)
     quizWS.on('cmd:state', (payload) => {
         // Handle state transitions from server
         const prevState = gameState.value
@@ -444,11 +506,15 @@ onMounted(async () => {
              }
         }
     })
+
+    // 3. Connect WS (after handlers are registered)
+    quizWS.connect(moduleId, '', true)
  })
 
 onUnmounted(() => {
     clearInterval(timerInterval)
     quizWS.disconnect()
+    quizWS.clearHandlers()
 })
 </script>
 
@@ -574,7 +640,7 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    padding: 2vw; /* Use viewport units for scaling */
+    padding: 2vw;
     box-sizing: border-box;
 }
 
@@ -583,7 +649,7 @@ onUnmounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 10vh; /* Fixed header height */
+    height: 10vh;
 }
 
 .timer {
@@ -607,72 +673,115 @@ onUnmounted(() => {
     100% { transform: scale(1); }
 }
 
-.question-content {
+/* New Two-Column Layout */
+.question-main-content {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* Space between question and answers */
-    width: 100%;
+    gap: 30px;
     margin-top: 20px;
-    position: relative; /* For absolute positioning of counter */
+    min-height: 0;
+    width: 100%;
 }
 
-.question-text-wrapper {
+/* LEFT COLUMN: Question Card - 60% */
+.question-column {
+    flex: 0 0 60%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.question-card {
+    background: linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%);
+    border-radius: 16px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.question-text {
+    text-align: center;
+    font-weight: 800;
+    line-height: 1.3;
+    color: #FFFFFF;
+    margin: 0;
+    flex-shrink: 0;
+    width: 100%;
+    overflow: visible;
+    font-size: inherit;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.question-image-container {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-}
-
-.question-text {
-    font-size: 4vw; /* Huge text responsive to screen width */
-    text-align: center;
-    font-weight: 800;
-    line-height: 1.2;
-    text-shadow: 0 4px 8px rgba(0,0,0,0.5);
-}
-
-/* Answers Grid */
-.answers-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 20px;
-    height: 40vh; /* Take up bottom 40% of screen */
-    width: 100%;
-}
-
-.answer-card {
-    display: flex;
-    align-items: center;
-    padding: 20px;
-    border-radius: 8px;
-    background: white; /* Fallback */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    transition: transform 0.1s;
+    margin-top: 20px;
+    min-height: 200px;
     overflow: hidden;
 }
 
-.answer-icon {
-    font-size: 4rem;
-    margin-right: 20px;
-    opacity: 0.8;
+.question-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
 
-.answer-text {
+/* RIGHT COLUMN: Stacked Answers - 40% */
+.answers-column {
+    flex: 0 0 40%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.answer-card-stacked {
+    display: flex;
+    align-items: center;
+    padding: 20px 25px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex: 1;
+    min-height: 80px;
+}
+
+.answer-card-stacked:hover {
+    transform: translateX(-5px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+.answer-card-stacked .answer-icon {
     font-size: 2.5rem;
+    margin-right: 20px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.answer-card-stacked .answer-text {
+    font-size: inherit;
     font-weight: 700;
     color: white;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    word-break: break-word; /* Wrap long text */
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.2;
 }
 
 /* Answer Count Widget */
 .answer-counter-widget {
     position: absolute;
-    bottom: -10px; /* Slight adjust */
-    right: -10px;
+    bottom: 80px;
+    right: 30px;
     background: #2C2C2E;
     padding: 15px 25px;
     border-radius: 12px;
@@ -705,9 +814,52 @@ onUnmounted(() => {
 .color-true { background-color: #0A84FF; }
 .color-false { background-color: #FF3B30; }
 
-.true-false-grid {
-    grid-template-rows: 1fr;
-    grid-template-columns: 1fr 1fr;
+/* Responsive Design for Smaller Screens */
+@media (max-width: 900px) {
+    .question-main-content {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .question-column {
+        flex: none;
+        width: 100% !important;
+        min-height: 30vh;
+    }
+    
+    .question-card {
+        padding: 20px;
+    }
+    
+    .question-image-container {
+        min-height: 150px;
+    }
+    
+    .answers-column {
+        width: 100% !important;
+        flex: 1;
+    }
+    
+    .answer-card-stacked {
+        min-height: 60px;
+        padding: 15px 20px;
+    }
+    
+    .answer-card-stacked .answer-icon {
+        font-size: 1.8rem;
+        margin-right: 15px;
+    }
+    
+    .answer-counter-widget {
+        bottom: 70px;
+        right: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .answer-card-stacked .answer-icon {
+        font-size: 1.5rem;
+    }
 }
 
 /* HISTOGRAM */
