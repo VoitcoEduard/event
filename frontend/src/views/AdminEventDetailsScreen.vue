@@ -295,19 +295,24 @@ const addModule = async () => {
 }
 
 const toggleModuleStatus = async (module) => {
+  console.log('[DEBUG] toggleModuleStatus: Starting for module:', module.id, 'current isActive:', module.isActive)
+  
   // If stopping a quiz module, reset the quiz session first
   if (module.isActive && module.type === 'quiz') {
     try {
+      console.log('[DEBUG] toggleModuleStatus: Resetting quiz session for module:', module.id)
       await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/quiz/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
+      console.log('[DEBUG] toggleModuleStatus: Quiz session reset complete')
     } catch (err) {
       console.error('Error resetting quiz session:', err)
     }
   }
 
   try {
+    console.log('[DEBUG] toggleModuleStatus: Updating status to:', !module.isActive)
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -315,7 +320,10 @@ const toggleModuleStatus = async (module) => {
     })
 
     if (response.ok) {
-      fetchEventDetails()
+      console.log('[DEBUG] toggleModuleStatus: Status update successful, fetching event details')
+      await fetchEventDetails()
+      console.log('[DEBUG] toggleModuleStatus: Event details fetched, new module isActive:', currentEvent.value.modules.find(m => m.id === module.id)?.isActive)
+      success(`Module ${!module.isActive ? 'started' : 'stopped'}`)
     } else {
       error('Failed to update module status')
     }

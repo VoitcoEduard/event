@@ -414,11 +414,16 @@ const nextState = () => {
     }
 }
 
-const exitQuiz = () => {
+const exitQuiz = async () => {
     // Reset the quiz session before exiting
+    console.log('[DEBUG] exitQuiz: Sending host:reset_quiz for module:', moduleId)
     quizWS.send('host:reset_quiz', { moduleId })
-    quizWS.disconnect()
+    
+    // Wait a bit to ensure message is sent before disconnecting
+    await new Promise(resolve => setTimeout(resolve, 300))
+    console.log('[DEBUG] exitQuiz: Navigating back to admin-event-details')
     router.push({ name: 'admin-event-details', params: { id: eventId } })
+    // Note: disconnect is handled by onUnmounted, don't call it here to avoid double-disconnect
 }
 
 // WebSocket & Data Loading

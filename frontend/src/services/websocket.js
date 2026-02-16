@@ -120,12 +120,14 @@ class QuizWebSocket {
     }
 
     disconnect() {
+        console.log('[DEBUG] disconnect: Called, intentionalDisconnect=true')
         this.intentionalDisconnect = true
         this.reconnectAttempts = 0
         if (this.socket) {
             this.socket.close()
             this.socket = null
         }
+        console.log('[DEBUG] disconnect: Socket closed and nulled')
     }
 
     clearHandlers() {

@@ -5,6 +5,8 @@ WORKDIR /app
 ENV GOCACHE=/root/.cache/go-build
 ENV GOMODCACHE=/root/.cache/go-mod
 
+# Build argument for debug mode (default: true for development)
+ARG DEBUG_MODE=true
 
 COPY go.mod ./
 # Copy go.sum if it exists, otherwise this line is fine or we can skip it if no dependencies yet
@@ -14,8 +16,12 @@ RUN go mod download
 
 COPY . .
 
-# Build with debug tags
-RUN CGO_ENABLED=0 GOOS=linux go build -tags debug -o main .
+# Build with or without debug tags based on DEBUG_MODE argument
+RUN if [ "$DEBUG_MODE" = "true" ]; then \
+    CGO_ENABLED=0 GOOS=linux go build -tags debug -o main .; \
+    else \
+    CGO_ENABLED=0 GOOS=linux go build -o main .; \
+    fi
 
 FROM alpine:latest
 

@@ -217,11 +217,14 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		}
 		moduleID, _ := data["moduleId"].(string)
 
+		DebugLog("host:join received for module: %s", moduleID)
+
 		client.ModuleID = moduleID
 		client.IsHost = true
 
 		// Ensure session exists
 		if _, exists := h.sessions[moduleID]; !exists {
+			DebugLog("host:join: Creating new session for module: %s", moduleID)
 			h.sessions[moduleID] = &models.QuizSession{
 				ModuleID:      moduleID,
 				State:         "lobby",
@@ -229,6 +232,8 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				PlayerSignals: []models.PlayerSignal{},
 				AnswerCounts:  make(map[int]int),
 			}
+		} else {
+			DebugLog("host:join: Session exists for module: %s, state: %s, players: %d", moduleID, h.sessions[moduleID].State, len(h.sessions[moduleID].Players))
 		}
 
 		// Send current state to host via cmd:state (new protocol)
@@ -247,6 +252,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			Payload: h.sessions[moduleID],
 		})
 		client.send <- jsonMsg2
+		DebugLog("host:join: Sent state:update to host for module: %s", moduleID)
 
 	case "host:start_quiz":
 		if !client.IsHost {
@@ -675,9 +681,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 
 	case "host:reset_quiz":
 		if !client.IsHost {
+			DebugLog("host:reset_quiz rejected - not a host")
 			return
 		}
-		h.ResetSession(client.ModuleID)
+		DebugLog("host:reset_quiz received for module: %s", client.ModuleID)
+		h.resetSessionLocked(client.ModuleID)
+		DebugLog("host:reset_quiz completed for module: %s", client.ModuleID)
 	}
 }
 
@@ -739,14 +748,25 @@ func (h *QuizHub) CreateSession(moduleID string, eventID string) {
 }
 
 // ResetSession clears the players and resets the session state for a new quiz
+// This is the public method that acquires the lock - use for REST API calls
 func (h *QuizHub) ResetSession(moduleID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	h.resetSessionLocked(moduleID)
+}
+
+// resetSessionLocked is the internal method that assumes the lock is already held
+// Use this when calling from within ProcessMessage (which already holds the lock)
+func (h *QuizHub) resetSessionLocked(moduleID string) {
+	DebugLog("resetSessionLocked: Starting reset for module: %s", moduleID)
 
 	session, exists := h.sessions[moduleID]
 	if !exists {
+		DebugLog("resetSessionLocked: No session found for module: %s", moduleID)
 		return
 	}
+
+	DebugLog("resetSessionLocked: Session found, current state: %s, players: %d", session.State, len(session.Players))
 
 	// Reset session state
 	session.State = "lobby"
@@ -765,7 +785,7 @@ func (h *QuizHub) ResetSession(moduleID string) {
 		Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
 	})
 
-	log.Println("Session reset for module:", moduleID)
+	DebugLog("resetSessionLocked: Reset complete for module: %s, broadcast sent", moduleID)
 }
 
 func mustMarshal(v interface{}) []byte {
