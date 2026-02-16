@@ -235,6 +235,7 @@ const fetchData = async () => {
       const responses = data.responses || [];
       moduleResponses.value = responses;
       modulePages.value = Math.ceil(responses.length / 50);
+      transformDataForHandsontable(responses);
     }
   } catch (e) {
     error.value = e.message;
@@ -265,7 +266,7 @@ const transformDataForHandsontable = (rawData) => {
   });
 
   const headers = ['_id', 'userId', 'createdAt', ...Array.from(allKeys)].filter(Boolean);
-  const tableData = [headers];
+  const tableData = [];
 
   rawData.forEach(item => {
     const row = [];
