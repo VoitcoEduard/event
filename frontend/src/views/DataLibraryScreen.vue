@@ -548,4 +548,86 @@ watch([selectedEvent, activeTab], () => {
   font-size: 14px;
   color: #888;
 }
+
+/* Handsontable Dark Mode Overrides */
+:deep(.handsontable) {
+  color: #ffffff;
+}
+
+:deep(.handsontable table) {
+  color: #ffffff;
+  background-color: #1E1E1E;
+}
+
+:deep(.handsontable th),
+:deep(.handsontable td) {
+  background-color: #1E1E1E;
+  color: #ffffff !important;
+  border-bottom: 1px solid #333;
+  border-right: 1px solid #333;
+}
+
+/* Row headers (index column) */
+:deep(.handsontable th) {
+  background-color: #252525;
+  color: #cccccc;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+  border-right: 1px solid #333;
+}
+
+/* Specific overrides for row headers in fixed columns */
+:deep(.ht_clone_left th),
+:deep(.ht_clone_top_left_corner th),
+:deep(.ht_clone_bottom_left_corner th) {
+  background-color: #252525 !important;
+  color: #cccccc !important;
+}
+
+/* Ensure ALL th elements get the dark treatment */
+:deep(.handsontable tbody th),
+:deep(.handsontable thead th) {
+  background-color: #252525 !important;
+  color: #cccccc !important;
+  border-color: #333 !important;
+}
+
+:deep(.handsontable tr:first-child th),
+:deep(.handsontable tr:first-child td) {
+  border-top: 1px solid #333;
+}
+
+:deep(.handsontable th:first-child),
+:deep(.handsontable td:first-child) {
+  border-left: 1px solid #333;
+}
+
+:deep(.handsontable .wtBorder) {
+  background-color: #007AFF !important; /* Selection border color */
+}
+
+:deep(.handsontable .area) {
+  background-color: rgba(0, 122, 255, 0.1) !important; /* Selection area background */
+}
+
+/* Fix for white background in empty areas */
+:deep(.wtHider),
+:deep(.wtSpreader),
+:deep(.wtHolder) {
+  background-color: #1E1E1E !important;
+}
+
+/* Background for the corner */
+:deep(.ht_master .wtHolder),
+:deep(.ht_clone_left .wtHolder),
+:deep(.ht_clone_top .wtHolder) {
+   background-color: #1E1E1E !important;
+}
+
+/* Ensure input editors are dark */
+:deep(.handsontableInput) {
+  background-color: #1E1E1E !important;
+  color: #ffffff !important;
+  box-shadow: none !important; 
+}
 </style>
