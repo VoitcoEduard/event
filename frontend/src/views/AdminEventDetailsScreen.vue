@@ -15,7 +15,7 @@
             📚 Библиотека
           </button>
           <button class="nav-button data-btn" @click="goToDataView">
-            📊 Таблицы данных
+            📊 Data
           </button>
           <button class="nav-button back-btn" @click="goBack">
             ← Назад
@@ -392,7 +392,7 @@ const goToLibrary = () => {
 }
 
 const goToDataView = () => {
-  router.push('/data/view')
+  router.push(`/data/library?eventId=${currentEvent.value.id}`)
 }
 </script>
 

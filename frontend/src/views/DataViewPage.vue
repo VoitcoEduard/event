@@ -2,7 +2,7 @@
   <div class="data-view-container">
     <div class="page-header">
       <div class="header-left">
-        <h1>Event Data Tables: {{ moduleId }}</h1>
+        <h1>Event Data Tables: {{ routeModuleId || 'Select Module' }}</h1>
       </div>
       <div class="header-right">
         <button class="export-btn">Export Current Tab</button>
@@ -78,6 +78,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { HotTable } from '@handsontable/vue3';
 import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
@@ -87,17 +88,10 @@ import { API_BASE_URL } from '../utils';
 // Register all Handsontable modules
 registerAllModules();
 
-// Props - receive eventId and moduleId from parent component
-const props = defineProps({
-  eventId: {
-    type: String,
-    required: true
-  },
-  moduleId: {
-    type: String,
-    required: true
-  }
-});
+// Get eventId and moduleId from route query params
+const route = useRoute();
+const routeEventId = computed(() => route.query.eventId);
+const routeModuleId = computed(() => route.query.moduleId);
 
 const responses = ref([]);
 const loading = ref(false);
@@ -134,7 +128,7 @@ const hotSettings = reactive({
 });
 
 const fetchData = async () => {
-  if (!props.eventId || !props.moduleId) {
+  if (!routeEventId.value || !routeModuleId.value) {
     error.value = 'Missing event or module ID';
     return;
   }
@@ -143,7 +137,7 @@ const fetchData = async () => {
   error.value = null;
   
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.moduleId}/responses`);
+    const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${routeModuleId.value}/responses`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -201,8 +195,8 @@ const transformDataForHandsontable = (rawData) => {
 
 onMounted(fetchData);
 
-// Watch for changes in props and refetch data
-watch(() => [props.eventId, props.moduleId], () => {
+// Watch for changes in route query params
+watch(() => [routeEventId.value, routeModuleId.value], () => {
   fetchData();
 });
 </script>
