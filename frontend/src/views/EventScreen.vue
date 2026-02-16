@@ -26,6 +26,7 @@
         <div class="header">
           <p class="status-text">Connected to</p>
           <p class="event-name">{{ currentEvent.name }}</p>
+          <p v-if="userName" class="welcome-text">Welcome, {{ userName }}</p>
         </div>
 
         <div class="list-container">
@@ -68,10 +69,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FormModule from '../components/FormModule.vue'
-import { API_BASE_URL, getUserId } from '../utils'
+import { API_BASE_URL, getUserId, getUserName, setUserName } from '../utils'
 
 const router = useRouter()
 const userId = ref(getUserId())
+const userName = ref(getUserName())
 
 const storedEvent = sessionStorage.getItem('currentEvent')
 const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : null)
@@ -125,7 +127,14 @@ const selectModule = (module) => {
   selectedModule.value = module
 }
 
-const handleModuleComplete = () => {
+const handleModuleComplete = (data) => {
+  if (selectedModule.value?.name === 'Welcome' && data) {
+    const name = data['step_welcome_name']
+    if (name) {
+      setUserName(name)
+      userName.value = name
+    }
+  }
   setTimeout(() => {
     selectedModule.value = null
   }, 2000)
@@ -203,6 +212,14 @@ const goToMain = () => {
   font-size: 32px;
   font-weight: 800;
   text-align: center;
+  margin-bottom: 4px;
+}
+
+.welcome-text {
+  color: var(--primary-color, #30D158);
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 4px;
 }
 
 .list-container {

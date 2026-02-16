@@ -146,6 +146,7 @@ import { useQuizStateMachine } from '../composables/useQuizStateMachine'
 import SliderComponent from '../components/SliderComponent.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
+import { getUserName } from '../utils'
 
 const router = useRouter()
 const route = useRoute()
@@ -156,7 +157,7 @@ const moduleId = route.params.moduleId
 const { state, transition, canTransition, questionCache: cache, currentQuestionIndex, score, streak, States } = useQuizStateMachine()
 
 // Local state
-const nickname = ref('')
+const nickname = ref(getUserName())
 const joined = ref(false)
 const selectedAnswer = ref(null) // For single choice
 const selectedIndices = ref([])  // For multi select
@@ -409,6 +410,11 @@ const startLocalTimer = (timeLimit) => {
 
 // WS & Logic
 onMounted(async () => {
+    // Auto-join if nickname exists
+    if (nickname.value) {
+        joinLobby()
+    }
+
     // Listen for WS updates
     quizWS.on('cmd:state', (payload) => {
         const newState = payload.state

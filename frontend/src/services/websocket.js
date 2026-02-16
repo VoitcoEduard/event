@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getUserId } from '../utils'
 import { signalQueue } from '../utils/signalQueue'
 
 class QuizWebSocket {
@@ -9,6 +9,7 @@ class QuizWebSocket {
         this.reconnectAttempts = 0
         this.moduleId = null
         this.nickname = null
+        this.userId = null // Store userId
         this.isHost = false
         this.intentionalDisconnect = false
     }
@@ -22,6 +23,7 @@ class QuizWebSocket {
 
         this.moduleId = moduleId
         this.nickname = nickname
+        this.userId = getUserId()
         this.isHost = isHost
         this.intentionalDisconnect = false
 
@@ -48,7 +50,10 @@ class QuizWebSocket {
             // Send join message
             const type = isHost ? 'host:join' : 'player:join'
             const payload = { moduleId }
-            if (!isHost) payload.nickname = nickname
+            if (!isHost) {
+                payload.nickname = nickname
+                payload.userId = this.userId
+            }
 
             this.send(type, payload)
         }

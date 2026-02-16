@@ -409,7 +409,7 @@ const handleSubmit = async () => {
 
     if (response.ok) {
       completed.value = true
-      emit('complete')
+      emit('complete', answers.value)
     } else {
       error('Failed to submit response.')
     }

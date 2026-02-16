@@ -164,15 +164,24 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		}
 		moduleID, _ := data["moduleId"].(string)
 		nickname, _ := data["nickname"].(string)
+		userID, _ := data["userId"].(string)
+
+		DebugLog("player:join: ModuleID=%s, Nickname=%s, UserID=%s", moduleID, nickname, userID)
 
 		if moduleID == "" || nickname == "" {
 			return
 		}
 
+		// Determine persistent player ID
+		playerID := nickname
+		if userID != "" {
+			playerID = userID // Use persistent UUID if available
+		}
+
 		// Associate client
 		client.ModuleID = moduleID
 		client.IsHost = false
-		client.PlayerID = nickname // Using nickname as ID for now, or generate GUID
+		client.PlayerID = playerID
 
 		// Get or Create Session (though REST API should have created it, WS might need to get it)
 		session, exists := h.sessions[moduleID]
@@ -191,8 +200,8 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		}
 
 		// Add player
-		session.Players[nickname] = &models.Player{
-			ID:       nickname,
+		session.Players[playerID] = &models.Player{
+			ID:       playerID,
 			Nickname: nickname,
 			Score:    0,
 		}
@@ -394,6 +403,8 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		questionIndex := int(questionIndexFloat)
 		scoreEarned := int(scoreEarnedFloat)
 		timeSpent := int(timeSpentFloat)
+
+		DebugLog("player:signal: User=%s, Q=%d, Score=%d, Time=%d", client.PlayerID, questionIndex, scoreEarned, timeSpent)
 
 		// Extract AnswerValue for slider (optional)
 		var answerValue float64

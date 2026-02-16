@@ -30,7 +30,26 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	event.ID = generateID()
 	event.IsActive = false // Default to inactive
 	event.CreatedAt = time.Now()
-	event.Modules = []models.Module{} // Initialize as empty array to avoid nil in DB
+	event.Modules = []models.Module{
+		{
+			ID:       generateID(),
+			Type:     "form",
+			Name:     "Welcome",
+			IsActive: true,
+			Data: map[string]any{
+				"timeline": []map[string]any{
+					{
+						"id":   "step_welcome_name",
+						"type": "field",
+						"data": map[string]any{
+							"label":     "What is your name?",
+							"fieldType": "text",
+						},
+					},
+				},
+			},
+		},
+	}
 
 	collection := db.GetCollection("events")
 	_, err := collection.InsertOne(context.Background(), event)
@@ -41,6 +60,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	utils.DebugLog("CreateEvent: Created event %s with %d modules", event.ID, len(event.Modules))
 	json.NewEncoder(w).Encode(event)
 }
 
@@ -451,6 +471,7 @@ func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	utils.DebugLog("SubmitModuleResponse: Submitted response for EventID: %s, ModuleID: %s, UserID: %s", eventID, moduleID, response.UserID)
 	json.NewEncoder(w).Encode(response)
 }
 
