@@ -270,19 +270,42 @@ const transformDataForHandsontable = (rawData) => {
   rawData.forEach(item => {
     const row = [];
     headers.forEach(header => {
+      let value;
       if (header === 'createdAt' && item[header]) {
-        row.push(new Date(item[header]).toLocaleString());
+        value = new Date(item[header]).toLocaleString();
       } else if (item.data && item.data[header] !== undefined) {
-        row.push(item.data[header]);
+        value = item.data[header];
       } else {
-        row.push(item[header] !== undefined ? item[header] : '');
+        value = item[header] !== undefined ? item[header] : '';
       }
+      
+      row.push(formatCellValue(header, value));
     });
     tableData.push(row);
   });
 
   hotSettings.data = tableData;
   hotSettings.colHeaders = headers;
+};
+
+const formatCellValue = (header, value) => {
+  if (value === null || value === undefined) return '';
+  
+  // Specific formatting for known complex columns
+  if (header === 'players' && Array.isArray(value)) {
+    return value.map(p => `${p.nickname || 'Unknown'} (${p.score || 0} pts)`).join(', ');
+  }
+  
+  // Generic object handling
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      return String(value);
+    }
+  }
+  
+  return value;
 };
 
 const getModuleTableSettings = () => {
