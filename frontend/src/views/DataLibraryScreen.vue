@@ -279,7 +279,11 @@ const getModuleTableSettings = () => {
 };
 
 const goBack = () => {
-  router.push('/admin');
+  if (selectedEvent.value?.id) {
+    router.push(`/admin/event/${selectedEvent.value.id}`);
+  } else {
+    router.push('/admin');
+  }
 };
 
 onMounted(fetchEvents);
