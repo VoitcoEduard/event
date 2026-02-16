@@ -128,7 +128,8 @@ import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { HotTable } from '@handsontable/vue3';
 import { registerAllModules } from 'handsontable/registry';
-import 'handsontable/dist/handsontable.full.css';
+import 'handsontable/styles/handsontable.min.css';
+import 'handsontable/styles/ht-theme-main.min.css';
 import { API_BASE_URL } from '../utils';
 
 // Register all Handsontable modules
@@ -153,6 +154,7 @@ const hotSettings = reactive({
   rowHeaders: true,
   readOnly: true,
   licenseKey: 'non-commercial-and-evaluation',
+  themeName: 'ht-theme-main',
   height: 'auto',
   stretchH: 'all',
   minRows: 10,
