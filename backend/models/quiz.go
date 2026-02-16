@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Question model
 type QuizQuestion struct {
 	ID             string        `json:"id" bson:"id"`
@@ -102,4 +104,27 @@ type QuizSession struct {
 
 	// Server-side only (not exported to JSON generally)
 	Questions []QuizQuestion `json:"-" bson:"-"`
+}
+
+// QuizResult document (new "quiz_results" collection)
+type QuizResult struct {
+	EventID       string         `json:"eventId" bson:"eventId"`
+	ModuleID      string         `json:"moduleId" bson:"moduleId"`
+	FinishedAt    time.Time      `json:"finishedAt" bson:"finishedAt"`
+	Players       []PlayerResult `json:"players" bson:"players"`
+	PlayerSignals []SignalResult `json:"playerSignals" bson:"playerSignals"`
+}
+
+type PlayerResult struct {
+	ID       string `json:"id" bson:"id"`
+	Nickname string `json:"nickname" bson:"nickname"`
+	Score    int    `json:"score" bson:"score"`
+}
+
+type SignalResult struct {
+	PlayerID      string  `json:"playerId" bson:"playerId"`
+	QuestionIndex int     `json:"questionIndex" bson:"questionIndex"`
+	AnswerValue   float64 `json:"answerValue" bson:"answerValue"` // For slider questions
+	ScoreEarned   int     `json:"scoreEarned" bson:"scoreEarned"`
+	TimeSpent     int     `json:"timeSpent" bson:"timeSpent"` // milliseconds
 }

@@ -186,7 +186,7 @@
               </div>
           </div>
        </div>
-       <button class="control-btn" @click="exitQuiz">Exit</button>
+       <button class="control-btn" @click="exitQuiz">End Quiz</button>
     </div>
 
   </div>

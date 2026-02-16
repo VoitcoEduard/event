@@ -578,7 +578,6 @@ func DeleteModule(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Module deleted"})
 }
 
-
 // GetModuleResponses handles the GET request to retrieve all responses for a specific module within an event.
 // Expected URL format: /events/{eventId}/modules/{moduleId}/responses
 func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
@@ -608,27 +607,71 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 	eventID := parts[1]
 	moduleID := parts[3]
 
-	utils.DebugLog("GetModuleResponses: Fetching responses for EventID: %s, ModuleID: %s", eventID, moduleID)
-
-	collection := db.GetCollection("responses")
-	filter := bson.M{"eventId": eventID, "moduleId": moduleID}
-
-	cursor, err := collection.Find(context.Background(), filter)
+	// Determine module type first
+	eventCollection := db.GetCollection("events")
+	var event models.Event
+	err := eventCollection.FindOne(context.Background(), bson.M{"_id": eventID}).Decode(&event)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		utils.DebugLog("GetModuleResponses: Error finding responses: %v", err)
-		return
-	}
-	defer cursor.Close(context.Background())
-
-	var responses []models.Response
-	if err := cursor.All(context.Background(), &responses); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		utils.DebugLog("GetModuleResponses: Error decoding responses: %v", err)
+		http.Error(w, "Event not found", http.StatusNotFound)
+		utils.DebugLog("GetModuleResponses: Event not found: %v", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string][]models.Response{"responses": responses})
-	utils.DebugLog("GetModuleResponses: Successfully returned %d responses for EventID: %s, ModuleID: %s", len(responses), eventID, moduleID)
+	var moduleType models.ModuleType
+	for _, m := range event.Modules {
+		if m.ID == moduleID {
+			moduleType = m.Type
+			break
+		}
+	}
+
+	utils.DebugLog("GetModuleResponses: Fetching responses for EventID: %s, ModuleID: %s, Type: %s", eventID, moduleID, moduleType)
+
+	if moduleType == "quiz" {
+		collection := db.GetCollection("quiz_results")
+		filter := bson.M{"eventId": eventID, "moduleId": moduleID}
+
+		cursor, err := collection.Find(context.Background(), filter)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.DebugLog("GetModuleResponses: Error finding quiz results: %v", err)
+			return
+		}
+		defer cursor.Close(context.Background())
+
+		var results []models.QuizResult
+		if err := cursor.All(context.Background(), &results); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.DebugLog("GetModuleResponses: Error decoding quiz results: %v", err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"responses": results})
+		utils.DebugLog("GetModuleResponses: Successfully returned %d quiz results", len(results))
+
+	} else {
+		// Default to form responses
+		collection := db.GetCollection("responses")
+		filter := bson.M{"eventId": eventID, "moduleId": moduleID}
+
+		cursor, err := collection.Find(context.Background(), filter)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.DebugLog("GetModuleResponses: Error finding responses: %v", err)
+			return
+		}
+		defer cursor.Close(context.Background())
+
+		var responses []models.Response
+		if err := cursor.All(context.Background(), &responses); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.DebugLog("GetModuleResponses: Error decoding responses: %v", err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string][]models.Response{"responses": responses})
+		utils.DebugLog("GetModuleResponses: Successfully returned %d responses", len(responses))
+	}
 }

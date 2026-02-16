@@ -287,6 +287,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		// Re-fetch session in case it changed while unlocked (unlikely for start_quiz but good practice)
 		session := h.sessions[client.ModuleID]
 		if session != nil {
+			session.EventID = event.ID // Ensure EventID is set
 			session.State = "get-ready"
 			session.CurrentIndex = 0
 			session.PlayerSignals = []models.PlayerSignal{}
@@ -672,6 +673,11 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		}
 		session := h.sessions[client.ModuleID]
 		if session != nil {
+			// Save results to DB
+			if err := h.saveQuizResults(session); err != nil {
+				log.Printf("Error saving quiz results for module %s: %v", client.ModuleID, err)
+			}
+
 			session.State = "finished"
 			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 				Type:    "cmd:state",
@@ -786,6 +792,61 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 	})
 
 	DebugLog("resetSessionLocked: Reset complete for module: %s, broadcast sent", moduleID)
+}
+
+// saveQuizResults persists the current session state to the database
+func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
+	// Robustness: Ensure EventID is present
+	if session.EventID == "" {
+		collection := db.GetCollection("events")
+		var event models.Event
+		err := collection.FindOne(context.TODO(), bson.M{"modules.id": session.ModuleID}).Decode(&event)
+		if err == nil {
+			session.EventID = event.ID
+			log.Printf("[DEBUG] saveQuizResults: Resolved missing EventID %s for module %s", event.ID, session.ModuleID)
+		} else {
+			log.Printf("[ERROR] saveQuizResults: Could not resolve EventID for module %s: %v", session.ModuleID, err)
+		}
+	}
+
+	var playerResults []models.PlayerResult
+	for _, p := range session.Players {
+		playerResults = append(playerResults, models.PlayerResult{
+			ID:       p.ID,
+			Nickname: p.Nickname,
+			Score:    p.Score,
+		})
+	}
+
+	var signalResults []models.SignalResult
+	for _, s := range session.PlayerSignals {
+		signalResults = append(signalResults, models.SignalResult{
+			PlayerID:      s.PlayerID,
+			QuestionIndex: s.QuestionIndex,
+			AnswerValue:   s.AnswerValue,
+			ScoreEarned:   s.ScoreEarned,
+			TimeSpent:     s.TimeSpent,
+		})
+	}
+
+	result := models.QuizResult{
+		EventID:       session.EventID,
+		ModuleID:      session.ModuleID,
+		FinishedAt:    time.Now(),
+		Players:       playerResults,
+		PlayerSignals: signalResults,
+	}
+
+	log.Printf("[DEBUG] saveQuizResults: Saving result for EventID=%s, ModuleID=%s, Players=%d, Signals=%d",
+		result.EventID, result.ModuleID, len(result.Players), len(result.PlayerSignals))
+
+	collection := db.GetCollection("quiz_results")
+	_, err := collection.InsertOne(context.TODO(), result)
+	if err == nil {
+		log.Printf("Successfully saved quiz results for module %s with %d players and %d signals",
+			session.ModuleID, len(playerResults), len(signalResults))
+	}
+	return err
 }
 
 func mustMarshal(v interface{}) []byte {
