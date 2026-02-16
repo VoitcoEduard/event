@@ -2,13 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
+	"strings" // Re-adding strings because it is used for routing
 
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
 	"github.com/user/go-expo-sample/backend/hub"
+	"github.com/user/go-expo-sample/backend/utils" // New import
 )
 
 type Response struct {
@@ -16,7 +16,7 @@ type Response struct {
 }
 
 func main() {
-	DebugLog("Starting server initialization...")
+	utils.DebugLog("Starting server initialization...")
 
 	// Connect to MongoDB
 	db.ConnectDB()
@@ -149,6 +149,12 @@ func main() {
 			}
 		}
 
+		// Get Module Responses
+		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/responses") && r.Method == "GET" {
+			handlers.GetModuleResponses(w, r)
+			return
+		}
+
 		// Delete Module
 		if strings.Contains(r.URL.Path, "/modules/") && r.Method == "DELETE" {
 			handlers.DeleteModule(w, r)
@@ -224,7 +230,7 @@ func main() {
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		DebugLog("Received request: %s %s", r.Method, r.URL.Path)
+		utils.DebugLog("Received request: %s %s", r.Method, r.URL.Path)
 		enableCors(w, r)
 		if r.Method == "OPTIONS" {
 			return
@@ -234,16 +240,16 @@ func main() {
 		response := Response{Message: "Hello from Go Backend!"}
 
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			DebugLog("Error encoding response: %v", err)
+			utils.DebugLog("Error encoding response: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 	})
 
 	port := ":8080"
-	DebugLog("Server listening on %s", port)
+	utils.DebugLog("Server listening on %s", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
-		fmt.Printf("Server failed: %v\n", err)
+		utils.DebugLog("Server failed: %v", err) // Use utils.DebugLog here
 	}
 }
 

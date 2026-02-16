@@ -11,7 +11,9 @@
   "dependencies": {
     "qrcode.vue": "^3.8.0",
     "vue": "^3.4.0",
-    "vue-router": "^4.2.5"
+    "vue-router": "^4.2.5",
+    "@handsontable/vue3": "^16.2.0",
+    "handsontable": "^16.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

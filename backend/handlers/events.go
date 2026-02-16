@@ -10,6 +10,7 @@ import (
 
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/utils" // New import
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -575,4 +576,59 @@ func DeleteModule(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Module deleted"})
+}
+
+
+// GetModuleResponses handles the GET request to retrieve all responses for a specific module within an event.
+// Expected URL format: /events/{eventId}/modules/{moduleId}/responses
+func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := make([]string, 0)
+	current := ""
+	for _, c := range path {
+		if c == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+
+	// Expected: ["events", "123456", "modules", "654321", "responses"]
+	if len(parts) < 5 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		utils.DebugLog("GetModuleResponses: Invalid URL: %s", path)
+		return
+	}
+	eventID := parts[1]
+	moduleID := parts[3]
+
+	utils.DebugLog("GetModuleResponses: Fetching responses for EventID: %s, ModuleID: %s", eventID, moduleID)
+
+	collection := db.GetCollection("responses")
+	filter := bson.M{"eventId": eventID, "moduleId": moduleID}
+
+	cursor, err := collection.Find(context.Background(), filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.DebugLog("GetModuleResponses: Error finding responses: %v", err)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var responses []models.Response
+	if err := cursor.All(context.Background(), &responses); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.DebugLog("GetModuleResponses: Error decoding responses: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]models.Response{"responses": responses})
+	utils.DebugLog("GetModuleResponses: Successfully returned %d responses for EventID: %s, ModuleID: %s", len(responses), eventID, moduleID)
 }

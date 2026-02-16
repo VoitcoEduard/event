@@ -90,32 +90,38 @@
                 {{ module.isActive ? 'ACTIVE' : 'INACTIVE' }}
               </span>
             </div>
-            <div class="module-actions">
-              <button class="module-btn config-btn" @click="configureModule(module)">
-                Configure
-              </button>
-              <button 
-                v-if="module.type === 'quiz'"
-                class="module-btn host-btn" 
-                @click="hostQuiz(module)"
-              >
-                Host
-              </button>
-              <button 
-                class="module-btn"
-                :class="module.isActive ? 'stop-button' : 'start-button'"
-                @click="toggleModuleStatus(module)"
-              >
-                {{ module.isActive ? 'Stop' : 'Start' }}
-              </button>
-              <button 
-                class="module-btn delete-btn"
-                @click="deleteModule(module)"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
+                        <div class="module-actions">
+                          <button class="module-btn config-btn" @click="configureModule(module)">
+                            Configure
+                          </button>
+                          <button
+                            v-if="module.type === 'quiz'"
+                            class="module-btn host-btn"
+                            @click="hostQuiz(module)"
+                          >
+                            Host
+                          </button>
+                          <button
+                            class="module-btn data-btn"
+                            @click="showData(module)"
+                          >
+                            Data
+                          </button>
+                          <button
+                            class="module-btn"
+                            :class="module.isActive ? 'stop-button' : 'start-button'"
+                            @click="toggleModuleStatus(module)"
+                          >
+                            {{ module.isActive ? 'Stop' : 'Start' }}
+                          </button>
+                          <button
+                            class="module-btn delete-btn"
+                            @click="deleteModule(module)"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
         </div>
 
         <div v-else class="empty-modules">
@@ -168,6 +174,21 @@
         </button>
       </div>
     </div>
+
+    <!-- DataView Modal -->
+    <div v-if="showDataViewModal" class="modal-overlay" @click.self="showDataViewModal = false">
+      <div class="data-view-modal-content">
+        <div class="data-view-modal-header">
+          <p class="form-title">Module Data</p>
+          <button @click="showDataViewModal = false" class="close-btn">✕</button>
+        </div>
+        <DataView
+          v-if="selectedDataModule"
+          :event-id="currentEvent?.id"
+          :module-id="selectedDataModule.id"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -176,6 +197,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QuizModuleConfig from '../components/QuizModuleConfig.vue'
+import DataView from '../components/DataView.vue' // New import
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
@@ -189,6 +211,8 @@ const newModuleName = ref('')
 const selectedModuleType = ref('form')
 const showConfigModal = ref(false)
 const selectedModule = ref(null)
+const showDataViewModal = ref(false) // New state
+const selectedDataModule = ref(null) // New state
 
 const { success, error, info } = useToast()
 
@@ -351,6 +375,11 @@ const deleteModule = async (module) => {
     console.error('Error deleting module:', err)
     error('Failed to delete module')
   }
+}
+
+const showData = (module) => {
+  selectedDataModule.value = module
+  showDataViewModal.value = true
 }
 
 const goBack = () => {
@@ -777,5 +806,29 @@ const goToLibrary = () => {
   color: #FFF;
   font-weight: 600;
   font-size: 16px;
+}
+
+.module-btn.data-btn {
+  background-color: #007AFF;
+  color: #FFF;
+}
+
+.data-view-modal-content {
+  background-color: #1E1E1E;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 1200px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden; /* Ensure content within modal respects its bounds */
+}
+
+.data-view-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>

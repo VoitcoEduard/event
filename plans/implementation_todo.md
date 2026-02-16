@@ -1,176 +1,61 @@
-# Client Compute Shift - Implementation Todo
+# DataView Feature Implementation Summary
 
-## Phase 1: Client-Side Answer Validation & Late Response Handling
+This task involved implementing a new "DataView" feature for the Admin Event page, allowing users to view module-generated data in a spreadsheet-like format using Handsontable. The implementation required changes to both the backend Go API and the frontend Vue.js application.
 
-### Backend Changes
-- [ ] Update `QuizSession` model to store signals instead of raw answers
-- [ ] Add `PlayerSignal` struct with `Status` field ("on_time", "grace_period", "missed")
-- [ ] Add `QuestionWindow` struct with grace period tracking
-- [ ] Add `AnswerCounts` map for real-time statistics
-- [ ] Add `PlayerActivity` tracking (last signal time, questions answered/missed)
-- [ ] Modify `ProcessMessage` in `quiz_hub.go` to handle `player:signal` instead of `player:answer`
-- [ ] Implement `CanAcceptSignal()` with 2-second grace period logic
-- [ ] Remove server-side scoring logic (trust client score)
-- [ ] Add `sync:minimal` broadcast (answered count only, not full state)
-- [ ] Update `host:show_results` to not calculate scores
+## Backend Changes
 
-### Frontend Changes
-- [ ] Update `QuizPlayerScreen.vue` to validate answers locally
-- [ ] Calculate score on client (time-based + streak bonus)
-- [ ] Send `player:signal` with `{ questionIndex, answerIndex, scoreEarned, timeSpent }`
-- [ ] Track local score, streak, rank in component state
-- [ ] Remove dependency on server for score updates
-- [ ] Set score to 0 when timer hits 0 (late response)
-- [ ] Still transmit answer choice for statistics even when late
+1.  **API Endpoint**: Added a new `GET /events/{eventId}/modules/{moduleId}/responses` endpoint in `backend/handlers/events.go` to fetch responses for a specific module from the MongoDB `responses` collection.
+2.  **Debug Logging**: Refactored the `DebugLog` functionality by moving `logger.go` and `logger_debug.go` into a new `backend/utils` package (`log.go` and `log_debug.go` respectively). This allowed `DebugLog` to be imported and used consistently across `main.go` and `handlers/events.go`, adhering to Go's build tag conventions.
+3.  **Route Registration**: Registered the new API endpoint in `backend/main.go` within the existing event routing logic.
 
-## Phase 2: Batch-Based Question Distribution
+## Frontend Changes
 
-### Backend Changes
-- [ ] Create `QuestionBatch` struct with batch metadata
-- [ ] Implement `CalculateBatches()` function (~50KB target size)
-- [ ] Add batch storage to `QuizSession`
-- [ ] Add `handleBatchRequest` message handler
-- [ ] Modify `host:start_quiz` to send first batch only
-- [ ] Add `data:batch` message type for sending question chunks
+1.  **Handsontable Integration**: Added `@handsontable/vue3` and `handsontable` dependencies to `frontend/package.json` and installed them.
+2.  **DataView Component**: Created a new `frontend/src/components/DataView.vue` component. This component:
+    *   Accepts `eventId` and `moduleId` as props.
+    *   Fetches responses from the new backend API endpoint.
+    *   Transforms the fetched JSON data into a tabular format suitable for Handsontable.
+    *   Displays the data in a read-only Handsontable spreadsheet.
+3.  **Admin Event Details Page Update**: Modified `frontend/src/views/AdminEventDetailsScreen.vue` to:
+    *   Import and utilize the new `DataView.vue` component.
+    *   Introduce state variables (`showDataViewModal`, `selectedDataModule`) to control the visibility and data of the DataView modal.
+    *   Add a "Data" button to each module in the event's module list.
+    *   Implement a `showData` method to open the DataView modal when the button is clicked, passing the relevant module information.
+    *   Integrate a modal overlay to display the `DataView` component, ensuring `eventId` and `moduleId` are passed correctly.
+    *   Added necessary CSS styling for the new button and modal elements.
 
-### Frontend Changes
-- [ ] Create `QuestionCache` class for client-side storage
-- [ ] Modify `QuizPlayerScreen.vue` to use cached questions
-- [ ] Add batch request logic (request when 2 questions remain)
-- [ ] Handle `data:batch` WebSocket message
-- [ ] Remove initial fetch of all questions via REST API
-- [ ] Add loading states for batch fetching
+## How to Run the Application
 
-## Phase 3: State Machine & Orchestration
+To run the application and test the new DataView feature:
 
-### Backend Changes
-- [ ] Create `cmd:state` message type for state transitions
-- [ ] Refactor state management to send commands not full state
-- [ ] Add state validation (prevent invalid transitions)
-- [ ] Keep minimal session state (current index, state string only)
-- [ ] Remove full session broadcast on every change
+### 1. Start the Backend
 
-### Frontend Changes
-- [ ] Create `useQuizStateMachine` composable
-- [ ] Define all valid state transitions
-- [ ] Implement `canTransition()` and `transition()` methods
-- [ ] Handle `cmd:state` messages from server
-- [ ] Add local state transitions (answered while timer running)
-- [ ] Update UI to react to state changes
+Navigate to the `backend` directory and run the compiled server:
 
-## Phase 4: Reconnection & State Sync
+```bash
+cd backend
+./server
+```
 
-### Backend Changes
-- [ ] Add `player:reconnect` handler for users returning after inactivity
-- [ ] Implement `handleReconnection()` with catch-up logic
-- [ ] Track missed questions per player
-- [ ] Mark missed questions as "skipped" (answerIndex: -1, score: 0)
-- [ ] Implement inactive detection (6+ missed questions = inactive)
-- [ ] Add `sync:catchup` message type
-- [ ] Calculate `batchesNeeded` for reconnected users
+*(Note: Ensure your MongoDB instance is running and accessible to the backend.)*
 
-### Frontend Changes
-- [ ] Detect when user returns after being away
-- [ ] Send `player:reconnect` with `lastKnownQuestionIndex`
-- [ ] Handle `sync:catchup` response
-- [ ] Fetch missed batches via `player:batch_request`
-- [ ] Show "You missed X questions" notification
-- [ ] Continue from current question
+### 2. Start the Frontend
 
-## Phase 5: Signal Queue & Offline Support
+Navigate to the `frontend` directory and start the development server:
 
-### Backend Changes
-- [ ] Add `player:signal_batch` handler for bulk signal processing
-- [ ] Implement signal storage for admin statistics
-- [ ] Add admin endpoint to fetch quiz statistics
-- [ ] Create statistics aggregation (answer distribution, response times)
+```bash
+cd frontend
+npm run dev
+```
 
-### Frontend Changes
-- [ ] Create `SignalQueue` class with timeout awareness
-- [ ] Track `QuestionWindow` (end time + grace period)
-- [ ] Discard signals that exceed grace period
-- [ ] Implement `enqueue()`, `flush()`, `onReconnect()` methods
-- [ ] Add connection state monitoring
-- [ ] Queue signals when offline, flush when reconnected
-- [ ] Add retry logic with exponential backoff
+### 3. Access the Application
 
-## Phase 6: Admin Dashboard Statistics
+Open your web browser and go to `http://localhost:5173/` (or the address shown by `npm run dev`).
 
-### Backend Changes
-- [ ] Create `QuizStatistics` aggregation model
-- [ ] Add endpoint `GET /api/quiz/:moduleId/statistics`
-- [ ] Implement real-time statistics calculation
-- [ ] Add answer distribution tracking per question
-- [ ] Add response time tracking
+**To test the DataView feature:**
 
-### Frontend Changes
-- [ ] Update `AdminEventDetailsScreen.vue` to show quiz stats
-- [ ] Create statistics display components
-- [ ] Add real-time statistics polling or WebSocket updates
-- [ ] Display answer distribution charts
-- [ ] Show player engagement metrics
-
-## Phase 7: Testing & Optimization
-
-### Testing
-- [ ] Test with 150 concurrent users simulation
-- [ ] Measure bandwidth usage per question
-- [ ] Test offline/ reconnection scenarios
-- [ ] Verify state machine transitions
-- [ ] Test batch distribution under load
-
-### Optimization
-- [ ] Optimize batch size calculation
-- [ ] Add compression for question batches
-- [ ] Implement client-side caching with localStorage
-- [ ] Add request deduplication for batch requests
-- [ ] Optimize WebSocket message size
-
-## Files to Modify
-
-### Backend
-- `backend/models/quiz.go` - Add new structs
-- `backend/hub/quiz_hub.go` - Update message handlers
-- `backend/hub/types.go` - Add new message types
-- `backend/handlers/quiz.go` - Add statistics endpoint
-
-### Frontend
-- `frontend/src/views/QuizPlayerScreen.vue` - Main player logic
-- `frontend/src/views/QuizHostScreen.vue` - Host controls
-- `frontend/src/services/websocket.js` - WS message handling
-- `frontend/src/composables/useQuizStateMachine.js` - New composable
-- `frontend/src/utils/questionCache.js` - New cache class
-- `frontend/src/utils/signalQueue.js` - New queue class
-- `frontend/src/views/AdminEventDetailsScreen.vue` - Statistics display
-
-## Key Metrics to Achieve
-
-- [ ] 95% reduction in bandwidth per question (from ~1.25MB to ~20KB)
-- [ ] Support 150 concurrent users on minimal server
-- [ ] Sub-100ms answer validation (client-side)
-- [ ] Seamless batch preloading (no user-visible loading)
-- [ ] Zero data loss on temporary disconnections
-- [ ] Grace period handling (2-second window for late signals)
-- [ ] Reconnection support (users can rejoin after missing up to 5 questions)
-- [ ] Inactive detection (users marked inactive after 6+ missed questions)
-
-## Late Response & Reconnection Summary
-
-### Late Response Rules
-1. **Client stops accepting clicks** when timer hits 0
-2. **Score = 0** for late responses
-3. **Answer still transmitted** for statistics and user feedback
-4. **2-second grace period** on server - signals accepted but not scored
-5. **After grace period** - signals rejected, not included in stats
-
-### Reconnection Flow
-1. User reconnects after being away
-2. Client sends `player:reconnect` with last known question
-3. Server marks missed questions as "skipped" (0 points)
-4. Server sends `sync:catchup` with current state and missed batches
-5. User can continue from current question
-
-### Inactive Detection
-- **1-5 missed questions**: User is still active, can rejoin
-- **6+ missed questions**: User marked as inactive
-- **Inactive users**: Excluded from statistics, final score = 0
+1.  Log in as an administrator (if applicable) or navigate to an event administration page.
+2.  Create a new event and add a module (e.g., a "Form" module).
+3.  Submit some responses to this module (e.g., from an incognito window or another browser tab by connecting to the event's PIN).
+4.  On the Admin Event Details screen, locate the module you added and click the new "Data" button.
+5.  A modal should appear displaying the submitted responses in a Handsontable spreadsheet.
