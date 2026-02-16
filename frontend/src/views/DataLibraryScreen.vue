@@ -56,7 +56,13 @@
           </div>
         </div>
         
-        <div class="data-table-container">
+        <div v-if="totalRecords === 0" class="no-data-state">
+          <div class="empty-icon">📊</div>
+          <p>No data generated yet</p>
+          <p class="hint">Waiting for participants to submit responses...</p>
+        </div>
+
+        <div v-else class="data-table-container">
           <div class="handsontable-wrapper">
             <HotTable :settings="hotSettings" />
           </div>
@@ -93,7 +99,13 @@
           </div>
         </div>
         
-        <div class="data-table-container">
+        <div v-if="moduleResponses.length === 0" class="no-data-state">
+          <div class="empty-icon">Folder Empty</div>
+          <p>No data generated for this module</p>
+          <p class="hint">Waiting for responses...</p>
+        </div>
+
+        <div v-else class="data-table-container">
           <div class="handsontable-wrapper">
             <HotTable :settings="getModuleTableSettings()" />
           </div>
@@ -204,7 +216,9 @@ const fetchData = async () => {
         const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${module.id}/responses`);
         if (response.ok) {
           const data = await response.json();
-          allResponses.push(...data.responses);
+          if (data.responses && Array.isArray(data.responses)) {
+            allResponses.push(...data.responses);
+          }
         }
       }
       moduleResponses.value = allResponses;
@@ -218,8 +232,9 @@ const fetchData = async () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      moduleResponses.value = data.responses;
-      modulePages.value = Math.ceil(data.responses.length / 50);
+      const responses = data.responses || [];
+      moduleResponses.value = responses;
+      modulePages.value = Math.ceil(responses.length / 50);
     }
   } catch (e) {
     error.value = e.message;
@@ -439,6 +454,30 @@ watch([selectedEvent, activeTab], () => {
   text-align: center;
   padding: 60px;
   color: #888;
+}
+
+/* No Data State */
+.no-data-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: #888;
+  background-color: #1E1E1E; /* Match table container bg */
+  border-radius: 8px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.hint {
+  font-size: 14px;
+  color: #666;
+  margin-top: 8px;
 }
 
 /* Data Header */

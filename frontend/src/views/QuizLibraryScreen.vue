@@ -671,6 +671,7 @@ const exportTemplate = (template) => {
 
 .editor-component {
     flex: 1;
+    min-height: 0;
 }
 
 @media (min-width: 800px) {

@@ -24,6 +24,7 @@
           <FormEditor 
             :timeline="timeline"
             @update:timeline="updateTimeline"
+            class="form-editor-instance"
           />
 
           <div class="action-bar">
@@ -283,6 +284,12 @@ const modalStyle = computed(() => ({
   color: #FFF;
   border: none;
   cursor: pointer;
+}
+
+.form-editor-instance {
+  flex: 1;
+  min-height: 0;
+  height: auto; /* Allow flex to control height */
 }
 
 .content {
