@@ -297,14 +297,14 @@ watch([selectedEvent, activeTab], () => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f5f5f5;
-  color: #333;
+  background-color: #121212;
+  color: #ffffff;
 }
 
 .page-header {
-  background-color: white;
-  border-bottom: 1px solid #ddd;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: #1E1E1E;
+  border-bottom: 1px solid #333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   padding: 20px 24px;
 }
 
@@ -334,14 +334,14 @@ watch([selectedEvent, activeTab], () => {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  color: #222;
+  color: #ffffff;
 }
 
 /* Horizontal Tabs Styles */
 .horizontal-tabs {
   display: flex;
-  background-color: white;
-  border-bottom: 1px solid #ddd;
+  background-color: #1E1E1E;
+  border-bottom: 1px solid #333;
   overflow-x: auto;
   flex-wrap: wrap;
 }
@@ -351,7 +351,7 @@ watch([selectedEvent, activeTab], () => {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #666;
+  color: #888;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
@@ -360,8 +360,8 @@ watch([selectedEvent, activeTab], () => {
 }
 
 .tab-btn:hover {
-  background-color: #f8f8f8;
-  color: #333;
+  background-color: #252525;
+  color: #fff;
 }
 
 .tab-btn.active {
@@ -373,7 +373,7 @@ watch([selectedEvent, activeTab], () => {
 .tab-content {
   flex: 1;
   padding: 24px;
-  background-color: #f5f5f5;
+  background-color: #121212;
 }
 
 /* Loading State */
@@ -389,7 +389,7 @@ watch([selectedEvent, activeTab], () => {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #ddd;
+  border: 3px solid #333;
   border-top-color: #007AFF;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -407,7 +407,7 @@ watch([selectedEvent, activeTab], () => {
   align-items: center;
   justify-content: center;
   height: 300px;
-  color: #ff6b6b;
+  color: #FF6B6B;
 }
 
 .error-icon {
@@ -417,7 +417,7 @@ watch([selectedEvent, activeTab], () => {
 
 .retry-btn {
   margin-top: 16px;
-  background-color: #ff6b6b;
+  background-color: #FF6B6B;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -464,7 +464,7 @@ watch([selectedEvent, activeTab], () => {
 }
 
 .refresh-btn {
-  background-color: #4CAF50;
+  background-color: #30D158;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -475,19 +475,19 @@ watch([selectedEvent, activeTab], () => {
 }
 
 .refresh-btn:hover {
-  background-color: #45a049;
+  background-color: #28a745;
 }
 
 .record-count {
   font-size: 14px;
-  color: #666;
+  color: #888;
 }
 
 /* Data Table Container */
 .data-table-container {
-  background-color: white;
+  background-color: #1E1E1E;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   overflow: hidden;
 }
 
@@ -501,8 +501,8 @@ watch([selectedEvent, activeTab], () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background-color: white;
-  border-top: 1px solid #eee;
+  background-color: #1E1E1E;
+  border-top: 1px solid #333;
 }
 
 .pagination-left,
@@ -514,31 +514,34 @@ watch([selectedEvent, activeTab], () => {
 
 .page-size-select {
   padding: 4px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid #333;
   border-radius: 4px;
   font-size: 14px;
+  background-color: #252525;
+  color: #fff;
 }
 
 .page-btn {
-  background-color: white;
-  border: 1px solid #ddd;
+  background-color: #252525;
+  border: 1px solid #333;
   border-radius: 4px;
   padding: 4px 8px;
   cursor: pointer;
   font-size: 14px;
+  color: #fff;
 }
 
 .page-btn:hover {
-  background-color: #f5f5f5;
+  background-color: #333;
 }
 
 .page-number {
   font-size: 14px;
-  color: #333;
+  color: #fff;
 }
 
 .page-info {
   font-size: 14px;
-  color: #666;
+  color: #888;
 }
 </style>

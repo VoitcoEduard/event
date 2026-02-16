@@ -108,7 +108,7 @@ const goToAdmin = () => {
 <style scoped>
 .main-screen {
   min-height: 100vh;
-  background-color: #FAFAFA;
+  background-color: #121212;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -125,14 +125,14 @@ const goToAdmin = () => {
 .title {
   font-size: 32px;
   font-weight: 800;
-  color: #1A1A1A;
+  color: #ffffff;
   margin-bottom: 8px;
   letter-spacing: -0.5;
 }
 
 .subtitle {
   font-size: 16px;
-  color: #666666;
+  color: #888888;
   margin-bottom: 40px;
   font-weight: 500;
   letter-spacing: 0.5;
@@ -140,13 +140,13 @@ const goToAdmin = () => {
 }
 
 .card {
-  background-color: #FFFFFF;
+  background-color: #1E1E1E;
   padding: 32px;
   border-radius: 24px;
   width: 100%;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   margin-bottom: 32px;
-  border: 1px solid #F0F0F0;
+  border: 1px solid #333333;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -155,20 +155,20 @@ const goToAdmin = () => {
 .card-title {
   font-size: 20px;
   font-weight: 700;
-  color: #1A1A1A;
+  color: #ffffff;
   margin-bottom: 8px;
 }
 
 .card-text {
   font-size: 15px;
-  color: #666;
+  color: #888888;
   text-align: center;
   margin-bottom: 24px;
   line-height: 22px;
 }
 
 .input {
-  background-color: #F5F5F7;
+  background-color: #252525;
   border-radius: 12px;
   padding: 16px;
   font-size: 24px;
@@ -176,7 +176,12 @@ const goToAdmin = () => {
   text-align: center;
   letter-spacing: 8px;
   margin-bottom: 24px;
-  color: #1A1A1A;
+  color: #ffffff;
+  border: 1px solid #333333;
+}
+
+.input::placeholder {
+  color: #666666;
 }
 
 .connect-button {
@@ -192,16 +197,24 @@ const goToAdmin = () => {
   justify-content: center;
 }
 
+.connect-button:hover {
+  background-color: #0056b3;
+}
+
 .admin-link {
   padding: 16px;
   background: none;
-  color: #666;
+  color: #888888;
   font-size: 14px;
   font-weight: 500;
 }
 
+.admin-link:hover {
+  color: #ffffff;
+}
+
 .error-text {
-  color: #FF3B30;
+  color: #FF6B6B;
   font-size: 14px;
   margin-bottom: 16px;
   text-align: center;

@@ -1,16 +1,27 @@
 <template>
   <div class="admin-details-screen">
     <div class="header">
-      <div class="header-top">
-        <button class="back-link" @click="goBack">
-          <span>← Back</span>
-        </button>
-        <p class="header-title">Event Dashboard</p>
+      <div class="header-content">
+        <div class="header-left">
+          <div class="event-info">
+            <h1 class="event-title">{{ currentEvent?.name }}</h1>
+            <span class="event-status" :class="currentEvent?.isActive ? 'active' : 'inactive'">
+              {{ currentEvent?.isActive ? 'АКТИВНО' : 'НЕАКТИВНО' }}
+            </span>
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="nav-button library-btn" @click="goToLibrary">
+            📚 Библиотека
+          </button>
+          <button class="nav-button data-btn" @click="goToDataView">
+            📊 Таблицы данных
+          </button>
+          <button class="nav-button back-btn" @click="goBack">
+            ← Назад
+          </button>
+        </div>
       </div>
-      <div>
-        <button class="library-btn" @click="goToLibrary">📚 Library</button>
-      </div>
-      <p class="header-subtitle">{{ currentEvent?.name }}</p>
     </div>
 
     <div class="scroll-content">
@@ -379,6 +390,10 @@ const goBack = () => {
 const goToLibrary = () => {
   router.push('/quiz/library')
 }
+
+const goToDataView = () => {
+  router.push('/data/view')
+}
 </script>
 
 <style scoped>
@@ -388,51 +403,110 @@ const goToLibrary = () => {
 }
 
 .header {
-  padding: 20px 24px;
+  padding: 20px 40px;
   background-color: #1E1E1E;
-  border-bottom: 1px solid #2C2C2C;
+  border-bottom: 1px solid #333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.header-top {
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.event-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.event-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.event-status {
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.event-status.active {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.event-status.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.header-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.nav-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
 }
 
 .library-btn {
-  background-color: #333;
-  border: 1px solid #555;
+  background-color: #4CAF50;
   color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-.library-btn:hover { background-color: #444; }
-
-.back-link {
-  color: #007AFF;
-  font-size: 14px;
-  background: none;
-  border: none;
-  cursor: pointer;
 }
 
-.header-title {
-  font-size: 12px;
-  color: #666;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 1px;
+.library-btn:hover {
+  background-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
-.header-subtitle {
-  font-size: 20px;
-  font-weight: 700;
-  color: #FFF;
+.data-btn {
+  background-color: #9C27B0;
+  color: white;
+}
+
+.data-btn:hover {
+  background-color: #8e24aa;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
+.back-btn {
+  background-color: #607D8B;
+  color: white;
+}
+
+.back-btn:hover {
+  background-color: #546e7a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(96, 125, 139, 0.3);
 }
 
 .scroll-content {
@@ -455,7 +529,8 @@ const goToLibrary = () => {
   background-color: #1E1E1E;
   border-radius: 16px;
   padding: 24px;
-  border: 1px solid #2C2C2C;
+  border: 1px solid #333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .event-sidebar {
@@ -474,13 +549,13 @@ const goToLibrary = () => {
 .card-title {
   font-size: 18px;
   font-weight: 700;
-  color: #FFF;
+  color: #ffffff;
   margin-bottom: 4px;
 }
 
 .card-description {
   font-size: 13px;
-  color: #AAA;
+  color: #666;
 }
 
 .sidebar-content {
