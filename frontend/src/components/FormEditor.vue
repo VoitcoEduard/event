@@ -162,6 +162,7 @@
 
 <script setup>
 import { ref, watch, defineProps, defineEmits } from 'vue'
+import { extractLabel } from '../utils/labelExtractor'
 
 const props = defineProps({
   timeline: { type: Array, default: () => [] }
@@ -180,20 +181,47 @@ watch(localTimeline, (newVal) => {
 }, { deep: true })
 
 const addStep = (type) => {
+  // For fields, generate a default label based on type
+  const defaultLabels = {
+    text: 'What is your answer?',
+    number: 'Enter a number:',
+    date: 'Select a date:',
+    radio: 'Choose an option:',
+    checkbox: 'Select all that apply:',
+    dropdown: 'Choose from list:'
+  }
+  const defaultQuestion = defaultLabels.text
+  
   const newStep = {
     id: Date.now().toString(),
     type,
     data: type === 'field'
-      ? { label: 'New Question', fieldType: 'text' }
+      ? { label: defaultQuestion, fieldType: 'text' }
       : { content: 'Welcome to the form!' }
   }
+  
+  // Auto-generate compact label for the field
+  if (type === 'field') {
+    newStep.data.compactLabel = extractLabel(defaultQuestion)
+  }
+  
   localTimeline.value = [...localTimeline.value, newStep]
 }
 
 const updateStep = (id, key, value) => {
-  localTimeline.value = localTimeline.value.map(step =>
-    step.id === id ? { ...step, data: { ...step.data, [key]: value } } : step
-  )
+  localTimeline.value = localTimeline.value.map(step => {
+    if (step.id === id) {
+      const updates = { [key]: value }
+      
+      // Auto-generate compact label when question/label changes
+      if (key === 'label' && value) {
+        updates.compactLabel = extractLabel(value)
+      }
+      
+      return { ...step, data: { ...step.data, ...updates } }
+    }
+    return step
+  })
 }
 
 const addAnswer = (stepId) => {
