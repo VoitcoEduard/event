@@ -175,20 +175,7 @@
       </div>
     </div>
 
-    <!-- DataView Modal -->
-    <div v-if="showDataViewModal" class="modal-overlay" @click.self="showDataViewModal = false">
-      <div class="data-view-modal-content">
-        <div class="data-view-modal-header">
-          <p class="form-title">Module Data</p>
-          <button @click="showDataViewModal = false" class="close-btn">✕</button>
-        </div>
-        <DataView
-          v-if="selectedDataModule"
-          :event-id="currentEvent?.id"
-          :module-id="selectedDataModule.id"
-        />
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -197,7 +184,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QuizModuleConfig from '../components/QuizModuleConfig.vue'
-import DataView from '../components/DataView.vue' // New import
+
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
@@ -211,8 +198,6 @@ const newModuleName = ref('')
 const selectedModuleType = ref('form')
 const showConfigModal = ref(false)
 const selectedModule = ref(null)
-const showDataViewModal = ref(false) // New state
-const selectedDataModule = ref(null) // New state
 
 const { success, error, info } = useToast()
 
@@ -378,8 +363,13 @@ const deleteModule = async (module) => {
 }
 
 const showData = (module) => {
-  selectedDataModule.value = module
-  showDataViewModal.value = true
+  router.push({
+    name: 'data-library',
+    query: {
+      eventId: currentEvent.value.id,
+      moduleId: module.id
+    }
+  })
 }
 
 const goBack = () => {
