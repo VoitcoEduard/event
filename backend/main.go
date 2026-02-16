@@ -168,6 +168,18 @@ func main() {
 			}
 		}
 
+		// Update Module Response
+		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/responses/") && r.Method == "PUT" {
+			handlers.UpdateModuleResponse(w, r)
+			return
+		}
+
+		// Update Quiz Score
+		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/quiz-scores/") && r.Method == "PUT" {
+			handlers.UpdateQuizScore(w, r)
+			return
+		}
+
 		// Check for /status suffix
 		if len(r.URL.Path) > 7 && r.URL.Path[len(r.URL.Path)-7:] == "/status" {
 			if r.Method == "PUT" {

@@ -50,9 +50,8 @@
         <div class="data-header">
           <div class="header-actions">
             <button class="export-btn">Export Current Tab</button>
-            <button class="export-btn">Export Selected Modules</button>
-            <button class="refresh-btn">Refresh</button>
-            <span class="record-count">{{ totalRecords }} records</span>
+            <button class="refresh-btn" @click="fetchData">Refresh</button>
+            <span class="record-count">{{ totalRecords }} users</span>
           </div>
         </div>
         
@@ -64,27 +63,7 @@
 
         <div v-else class="data-table-container">
           <div class="handsontable-wrapper">
-            <HotTable :settings="hotSettings" />
-          </div>
-          
-          <div class="pagination">
-            <div class="pagination-left">
-              <label>Page Size:</label>
-              <select class="page-size-select">
-                <option>50</option>
-                <option>100</option>
-                <option>200</option>
-                <option>500</option>
-              </select>
-            </div>
-            <div class="pagination-right">
-              <span class="page-info">1 to 50 of {{ totalRecords }}</span>
-              <button class="page-btn">«</button>
-              <button class="page-btn">‹</button>
-              <span class="page-number">Page 1 of {{ totalPages }}</span>
-              <button class="page-btn">›</button>
-              <button class="page-btn">»</button>
-            </div>
+            <HotTable ref="hotTableComponent" :settings="hotSettings" />
           </div>
         </div>
       </div>
@@ -93,8 +72,7 @@
         <div class="data-header">
           <div class="header-actions">
             <button class="export-btn">Export Current Tab</button>
-            <button class="export-btn">Export Selected Modules</button>
-            <button class="refresh-btn">Refresh</button>
+            <button class="refresh-btn" @click="fetchData">Refresh</button>
             <span class="record-count">{{ moduleResponses.length }} records</span>
           </div>
         </div>
@@ -107,27 +85,7 @@
 
         <div v-else class="data-table-container">
           <div class="handsontable-wrapper">
-            <HotTable :settings="getModuleTableSettings()" />
-          </div>
-          
-          <div class="pagination">
-            <div class="pagination-left">
-              <label>Page Size:</label>
-              <select class="page-size-select">
-                <option>50</option>
-                <option>100</option>
-                <option>200</option>
-                <option>500</option>
-              </select>
-            </div>
-            <div class="pagination-right">
-              <span class="page-info">1 to 50 of {{ moduleResponses.length }}</span>
-              <button class="page-btn">«</button>
-              <button class="page-btn">‹</button>
-              <span class="page-number">Page 1 of {{ modulePages }}</span>
-              <button class="page-btn">›</button>
-              <button class="page-btn">»</button>
-            </div>
+            <HotTable ref="hotTableComponent" :settings="hotSettings" />
           </div>
         </div>
       </div>
@@ -157,14 +115,108 @@ const loading = ref(true);
 const error = ref(null);
 const moduleResponses = ref([]);
 const totalRecords = ref(0);
-const totalPages = ref(0);
-const modulePages = ref(0);
+const hotTableComponent = ref(null);
+
+// -----------------------------------------------------------------------------
+// Helper Functions (Editing Logic)
+// -----------------------------------------------------------------------------
+
+const updateResponse = async (moduleId, responseId, data) => {
+  if (!responseId) {
+    console.warn("Cannot update response: No Response ID found");
+    return;
+  }
+  try {
+    console.log(`[UnifiedView] Updating response ${responseId} in module ${moduleId}`, data);
+    const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${moduleId}/responses/${responseId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data })
+    });
+    if (!response.ok) throw new Error('Failed to update response');
+    console.log("[UnifiedView] Response updated successfully");
+  } catch (e) {
+    console.error("[UnifiedView] Error updating response:", e);
+  }
+};
+
+const updateScore = async (moduleId, userId, score) => {
+  try {
+    console.log(`[UnifiedView] Updating score for user ${userId} in module ${moduleId}: ${score}`);
+    const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${moduleId}/quiz-scores/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score })
+    });
+    if (!response.ok) throw new Error('Failed to update score');
+    console.log("[UnifiedView] Score updated successfully");
+  } catch (e) {
+    console.error("[UnifiedView] Error updating score:", e);
+  }
+};
+
+const handleTableChange = (changes, source) => {
+  if (!changes || source === 'loadData') return;
+  console.log("[UnifiedView] Table changed:", source, changes);
+
+  changes.forEach(([row, prop, oldValue, newValue]) => {
+    if (oldValue === newValue) return;
+
+    // Access raw data. Because we bind hotSettings.data to a reactive ref or array, we can check it.
+    // However, Handsontable manages its visual index.
+    // Ideally we rely on the row index mapping to our source data.
+    // Assuming no sorting/filtering for now.
+    
+    // We need to access the source data item corresponding to this row.
+    const rowData = hotSettings.data[row]; 
+    if (!rowData) {
+        console.warn("[UnifiedView] Row data not found for row", row);
+        return;
+    }
+
+    const userId = rowData.userId;
+    console.log(`[UnifiedView] Change detected for user ${userId}, prop ${prop}: ${oldValue} -> ${newValue}`);
+
+    if (activeTab.value === 'unified') {
+        if (prop === 'name') {
+            if (rowData.nameSourceModuleId && rowData.nameSourceKey) {
+                const moduleId = rowData.nameSourceModuleId;
+                const responseId = rowData.responseIds[moduleId];
+                const key = rowData.nameSourceKey;
+                
+                const currentModuleData = rowData.formData[moduleId] || {};
+                const updatedModuleData = { ...currentModuleData, [key]: newValue };
+                
+                updateResponse(moduleId, responseId, updatedModuleData);
+            }
+        } else if (prop.startsWith('scores.')) {
+            const moduleId = prop.split('.')[1];
+            updateScore(moduleId, userId, Number(newValue));
+        } else if (prop.startsWith('formData.')) {
+            const parts = prop.split('.');
+            const moduleId = parts[1];
+            const key = parts.slice(2).join('.');
+            
+            const responseId = rowData.responseIds[moduleId];
+            const currentModuleData = rowData.formData[moduleId] || {};
+            const updatedModuleData = { ...currentModuleData, [key]: newValue };
+            
+            updateResponse(moduleId, responseId, updatedModuleData);
+        }
+    } else {
+        // Single Module Editing (TODO: Implement logic for specific single module updates if needed)
+        // For now, Unified View is the priority for editing.
+        console.log("[UnifiedView] Editing in Single Module View not fully implemented yet.");
+    }
+  });
+};
 
 const hotSettings = reactive({
   data: [],
-  colHeaders: true,
+  colHeaders: [],
+  columns: [],
   rowHeaders: true,
-  readOnly: true,
+  readOnly: false, 
   licenseKey: 'non-commercial-and-evaluation',
   themeName: 'ht-theme-main',
   height: 'auto',
@@ -175,7 +227,12 @@ const hotSettings = reactive({
   autoWrapRow: true,
   manualColumnResize: true,
   manualRowResize: true,
+  afterChange: handleTableChange
 });
+
+// -----------------------------------------------------------------------------
+// Data Fetching
+// -----------------------------------------------------------------------------
 
 const fetchEvents = async () => {
   loading.value = true;
@@ -188,7 +245,6 @@ const fetchEvents = async () => {
     }
     events.value = await response.json();
     
-    // Pre-select event based on route or first available
     if (route.query.eventId) {
       selectedEvent.value = events.value.find(e => e.id === route.query.eventId);
     } else if (events.value.length > 0) {
@@ -202,40 +258,34 @@ const fetchEvents = async () => {
   }
 };
 
+const initializeUser = (map, userId) => {
+  map.set(userId, {
+    userId,
+    name: '',
+    scores: {},
+    formData: {},
+    responseIds: {}
+  });
+};
+
 const fetchData = async () => {
   if (!selectedEvent.value) return;
   
   loading.value = true;
   error.value = null;
+  // Clear table first
+  if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
+      hotTableComponent.value.hotInstance.loadData([]);
+  }
+  hotSettings.data = [];
+  hotSettings.colHeaders = [];
+  hotSettings.columns = [];
   
   try {
     if (activeTab.value === 'unified') {
-      // Fetch all module responses for the selected event
-      const allResponses = [];
-      for (const module of selectedEvent.value.modules) {
-        const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${module.id}/responses`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.responses && Array.isArray(data.responses)) {
-            allResponses.push(...data.responses);
-          }
-        }
-      }
-      moduleResponses.value = allResponses;
-      totalRecords.value = allResponses.length;
-      totalPages.value = Math.ceil(allResponses.length / 50);
-      transformDataForHandsontable(allResponses);
+      await fetchUnifiedData();
     } else {
-      // Fetch responses for specific module
-      const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${activeTab.value}/responses`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      const responses = data.responses || [];
-      moduleResponses.value = responses;
-      modulePages.value = Math.ceil(responses.length / 50);
-      transformDataForHandsontable(responses);
+      await fetchModuleData();
     }
   } catch (e) {
     error.value = e.message;
@@ -245,84 +295,175 @@ const fetchData = async () => {
   }
 };
 
+const fetchUnifiedData = async () => {
+  console.log("[UnifiedView] Starting Unified Data Fetch");
+  const promises = selectedEvent.value.modules.map(m => 
+    fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${m.id}/responses`)
+      .then(res => res.json())
+      .then(data => ({ moduleId: m.id, type: m.type, name: m.name, responses: data.responses || [] }))
+  );
+
+  const results = await Promise.all(promises);
+  
+  const userMap = new Map();
+
+  results.forEach(({ moduleId, type, responses }) => {
+    responses.forEach(res => {
+      // Determine User ID
+      if (type === 'quiz') {
+        const quizResult = res;
+        if (quizResult.players) {
+           quizResult.players.forEach(p => {
+             const userId = p.id;
+             if (!userMap.has(userId)) initializeUser(userMap, userId);
+             const userEntry = userMap.get(userId);
+             userEntry.scores[moduleId] = (userEntry.scores[moduleId] || 0) + p.score;
+             if (!userEntry.name && p.nickname) userEntry.name = p.nickname;
+           });
+        }
+      } else {
+        const userId = res.userId;
+        if (!userId) return; // Skip responses without userId
+        if (!userMap.has(userId)) initializeUser(userMap, userId);
+        const userEntry = userMap.get(userId);
+
+        userEntry.responseIds[moduleId] = res.id || res._id;
+
+        if (!userEntry.formData[moduleId]) userEntry.formData[moduleId] = {};
+        Object.assign(userEntry.formData[moduleId], res.data);
+
+        // Name logic
+        if (res.data && res.data['step_welcome_name']) {
+           userEntry.name = res.data['step_welcome_name'];
+           userEntry.nameSourceKey = 'step_welcome_name';
+           userEntry.nameSourceModuleId = moduleId;
+        }
+      }
+    });
+  });
+
+  // Construct Columns
+  const headers = ['User ID', 'Name', 'Total Score'];
+  const columns = [
+    { data: 'userId', readOnly: true },
+    { data: 'name', readOnly: false },
+    { data: 'totalScore', type: 'numeric', readOnly: true }
+  ];
+
+  selectedEvent.value.modules.forEach(m => {
+    if (m.type === 'quiz') {
+      headers.push(`${m.name} (Score)`);
+      columns.push({ 
+        data: `scores.${m.id}`, 
+        type: 'numeric',
+        readOnly: false 
+      });
+    } else {
+      const allKeys = new Set();
+      userMap.forEach(u => {
+        if (u.formData[m.id]) {
+          Object.keys(u.formData[m.id]).forEach(k => allKeys.add(k));
+        }
+      });
+      Array.from(allKeys).forEach(key => {
+        headers.push(`${m.name}: ${key}`);
+        columns.push({ 
+          data: `formData.${m.id}.${key}`,
+          readOnly: false 
+        });
+      });
+    }
+  });
+
+  const flattenedData = Array.from(userMap.values()).map(u => {
+    const totalScore = Object.values(u.scores).reduce((a, b) => a + b, 0);
+    return { ...u, totalScore };
+  });
+
+  console.log("[UnifiedView] Aggregation complete. Records:", flattenedData.length);
+  
+  hotSettings.colHeaders = headers;
+  hotSettings.columns = columns;
+  hotSettings.data = flattenedData;
+  hotSettings.readOnly = false; // Enable for Unified View
+
+  totalRecords.value = flattenedData.length;
+  
+  if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
+      hotTableComponent.value.hotInstance.updateSettings({
+          colHeaders: headers,
+          columns: columns,
+          data: flattenedData,
+          readOnly: false
+      });
+  }
+};
+
+const fetchModuleData = async () => {
+    const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${activeTab.value}/responses`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    const responses = data.responses || [];
+    moduleResponses.value = responses;
+    
+    // Use legacy transform for single module
+    const { headers, columns, data: rows } = transformDataForHandsontable(responses);
+    
+    hotSettings.colHeaders = headers;
+    hotSettings.columns = columns;
+    hotSettings.data = rows;
+    hotSettings.readOnly = true; 
+
+    if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
+      hotTableComponent.value.hotInstance.updateSettings({
+          colHeaders: headers,
+          columns: columns,
+          data: rows,
+          readOnly: true
+      });
+  }
+};
+
+// Legacy transform for Single Module View (updated to return settings)
 const transformDataForHandsontable = (rawData) => {
   if (rawData.length === 0) {
-    hotSettings.data = [];
-    return;
+    return { headers: [], columns: [], data: [] };
   }
 
-  // Collect all unique keys from 'data' objects and other top-level fields
   const allKeys = new Set();
   rawData.forEach(item => {
     for (const key in item) {
-      if (key === 'data' && typeof item[key] === 'object' && item[key] !== null) {
+       if (key === 'data' && typeof item[key] === 'object' && item[key] !== null) {
         for (const dataKey in item[key]) {
           allKeys.add(dataKey);
         }
-      } else if (
-        key !== '_id' && 
-        key !== 'id' && 
-        key !== 'userId' && 
-        key !== 'createdAt' && 
-        key !== 'eventId' && 
-        key !== 'moduleId' && 
-        key !== '__v'
-      ) {
-        allKeys.add(key);
+      } else if (['userId', 'createdAt', 'eventId', 'moduleId', '_id', 'id', '__v'].includes(key) === false) {
+         allKeys.add(key); 
       }
     }
   });
 
-  const headers = ['userId', 'createdAt', ...Array.from(allKeys)].filter(Boolean);
-  const tableData = [];
-
-  rawData.forEach(item => {
-    const row = [];
-    headers.forEach(header => {
-      let value;
-      if (header === 'createdAt' && item[header]) {
-        value = new Date(item[header]).toLocaleString();
-      } else if (item.data && item.data[header] !== undefined) {
-        value = item.data[header];
-      } else {
-        value = item[header] !== undefined ? item[header] : '';
-      }
-      
-      row.push(formatCellValue(header, value));
-    });
-    tableData.push(row);
+  const headers = ['userId', 'createdAt', ...Array.from(allKeys)];
+  const columns = headers.map(h => ({ data: h })); 
+  
+  const tableData = rawData.map(item => {
+      const row = { userId: item.userId, createdAt: item.createdAt ? new Date(item.createdAt).toLocaleString() : '' };
+      if (item.data) Object.assign(row, item.data);
+      Object.keys(item).forEach(k => {
+          if (!['userId', 'createdAt', 'data'].includes(k)) {
+              if (k === 'players' && Array.isArray(item[k])) {
+                  row[k] = item[k].map(p => `${p.nickname} (${p.score})`).join(', ');
+              } else {
+                  row[k] = item[k];
+              }
+          }
+      });
+      return row;
   });
 
-  hotSettings.data = tableData;
-  hotSettings.colHeaders = headers;
-};
-
-const formatCellValue = (header, value) => {
-  if (value === null || value === undefined) return '';
-  
-  // Specific formatting for known complex columns
-  if (header === 'players' && Array.isArray(value)) {
-    return value.map(p => `${p.nickname || 'Unknown'} (${p.score || 0} pts)`).join(', ');
-  }
-  
-  // Generic object handling
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch (e) {
-      return String(value);
-    }
-  }
-  
-  return value;
-};
-
-const getModuleTableSettings = () => {
-  const module = selectedEvent.value?.modules.find(m => m.id === activeTab.value);
-  if (!module) return {};
-  
-  // Simple implementation - reuse hotSettings for now
-  return hotSettings;
+  return { headers, columns, data: tableData };
 };
 
 const goBack = () => {
@@ -335,7 +476,6 @@ const goBack = () => {
 
 onMounted(fetchEvents);
 
-// Watch for changes in selected event and active tab
 watch([selectedEvent, activeTab], () => {
   if (selectedEvent.value) {
     fetchData();
@@ -570,55 +710,7 @@ watch([selectedEvent, activeTab], () => {
   min-height: 400px;
 }
 
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background-color: #1E1E1E;
-  border-top: 1px solid #333;
-}
-
-.pagination-left,
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-size-select {
-  padding: 4px 8px;
-  border: 1px solid #333;
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: #252525;
-  color: #fff;
-}
-
-.page-btn {
-  background-color: #252525;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #fff;
-}
-
-.page-btn:hover {
-  background-color: #333;
-}
-
-.page-number {
-  font-size: 14px;
-  color: #fff;
-}
-
-.page-info {
-  font-size: 14px;
-  color: #888;
-}
+/* PAGINATION REMOVED FOR UNIFIED VIEW - KEEP BASIC FOR NOW */
 
 /* Handsontable Dark Mode Overrides */
 :deep(.handsontable) {

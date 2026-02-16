@@ -2,13 +2,13 @@
   <div class="data-view-container">
     <div class="page-header">
       <div class="header-left">
-        <h1>Event Data Tables: {{ routeModuleId || 'Select Module' }}</h1>
+        <h1>Event Data: {{ eventName || 'Loading...' }}</h1>
       </div>
       <div class="header-right">
         <button class="export-btn">Export Current Tab</button>
         <button class="export-btn">Export Selected Modules</button>
-        <button class="refresh-btn">Refresh</button>
-        <span class="record-count">{{ responses.length }} records</span>
+        <button class="refresh-btn" @click="fetchData">Refresh</button>
+        <span class="record-count">{{ recordCount }} records</span>
       </div>
     </div>
 
@@ -19,7 +19,7 @@
         :key="tab.id" 
         class="tab-btn"
         :class="{ active: activeTab === tab.id }"
-        @click="activeTab = tab.id"
+        @click="setActiveTab(tab.id)"
       >
         {{ tab.label }}
       </button>
@@ -40,37 +40,19 @@
         <button class="retry-btn" @click="fetchData">Retry</button>
       </div>
 
-      <!-- No Data State -->
-      <div v-else-if="responses.length === 0" class="no-data-state">
+      <!-- No Data State (only if not loading and no error and no records) -->
+      <div v-else-if="!loading && !error && recordCount === 0" class="no-data-state">
         <div class="empty-icon">📊</div>
-        <p>No data available for this module.</p>
+        <p>No data available.</p>
         <p class="hint">Submit some responses to see data here.</p>
       </div>
 
       <!-- Data Table View -->
-      <div v-else-if="activeTab === 'table'" class="data-table-view">
+      <div v-else class="data-table-view">
         <div class="handsontable-container">
-          <HotTable :settings="hotSettings" />
+          <HotTable ref="hotTableComponent" :settings="hotSettings" />
         </div>
-        <div class="pagination">
-          <div class="pagination-left">
-            <label>Page Size:</label>
-            <select class="page-size-select">
-              <option>50</option>
-              <option>100</option>
-              <option>200</option>
-              <option>500</option>
-            </select>
-          </div>
-          <div class="pagination-right">
-            <span class="page-info">{{ responses.length > 0 ? '1 to 50 of ' + responses.length : '0' }}</span>
-            <button class="page-btn">«</button>
-            <button class="page-btn">‹</button>
-            <span class="page-number">Page 1 of 28</span>
-            <button class="page-btn">›</button>
-            <button class="page-btn">»</button>
-          </div>
-        </div>
+        <!-- Pagination reserved for future use -->
       </div>
     </div>
   </div>
@@ -78,7 +60,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { HotTable } from '@handsontable/vue3';
 import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
@@ -88,33 +70,119 @@ import { API_BASE_URL } from '../utils';
 // Register all Handsontable modules
 registerAllModules();
 
-// Get eventId and moduleId from route query params
 const route = useRoute();
+const router = useRouter();
 const routeEventId = computed(() => route.query.eventId);
 const routeModuleId = computed(() => route.query.moduleId);
 
-const responses = ref([]);
+const eventName = ref('');
+const tabs = ref([]);
+const activeTab = ref('unified'); // Default to unified view
 const loading = ref(false);
 const error = ref(null);
-const activeTab = ref('table');
 
-// Tab definitions
-const tabs = [
-  { id: 'table', label: 'Unified View' },
-  { id: 'quiz', label: 'Quiz: Quiz Session' },
-  { id: 'form1', label: 'Form: Welcome' },
-  { id: 'form2', label: 'Form: Нужна информация' },
-  { id: 'form3', label: 'Form: послепрод' },
-  { id: 'teams', label: 'Teams: Teams' },
-  { id: 'lottery', label: 'Lottery: Lottery' },
-  { id: 'task', label: 'Task: Task' }
-];
+// Data for Handsontable
+const tableData = ref([]);
+const tableHeaders = ref([]);
+const tableColumns = ref([]); // Column definitions for Handsontable
+
+const hotTableComponent = ref(null);
+const eventModules = ref([]); 
+
+// -----------------------------------------------------------------------------
+// Helper functions defined BEFORE usage in hotSettings to avoid hoisting issues
+// -----------------------------------------------------------------------------
+
+const updateResponse = async (moduleId, responseId, data) => {
+  if (!responseId) {
+    console.warn("Cannot update response: No Response ID found");
+    return;
+  }
+  try {
+    console.log(`[UnifiedView] Updating response ${responseId} in module ${moduleId}`, data);
+    const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/responses/${responseId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data })
+    });
+    if (!response.ok) throw new Error('Failed to update response');
+    console.log("[UnifiedView] Response updated successfully");
+  } catch (e) {
+    console.error("[UnifiedView] Error updating response:", e);
+  }
+};
+
+const updateScore = async (moduleId, userId, score) => {
+  try {
+    console.log(`[UnifiedView] Updating score for user ${userId} in module ${moduleId}: ${score}`);
+    const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/quiz-scores/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score })
+    });
+    if (!response.ok) throw new Error('Failed to update score');
+    console.log("[UnifiedView] Score updated successfully");
+  } catch (e) {
+    console.error("[UnifiedView] Error updating score:", e);
+  }
+};
+
+const handleTableChange = (changes, source) => {
+  if (!changes || source === 'loadData') return;
+  console.log("[UnifiedView] Table changed:", source, changes);
+
+  changes.forEach(([row, prop, oldValue, newValue]) => {
+    if (oldValue === newValue) return; // No change
+
+    const rowData = tableData.value[row];
+    if (!rowData) {
+        console.warn("[UnifiedView] Row data not found for row", row);
+        return;
+    }
+    const userId = rowData.userId;
+    console.log(`[UnifiedView] Change detected for user ${userId}, prop ${prop}: ${oldValue} -> ${newValue}`);
+
+    // Determine what changed
+    if (prop === 'name') {
+      if (rowData.nameSourceModuleId && rowData.nameSourceKey) {
+        const moduleId = rowData.nameSourceModuleId;
+        const responseId = rowData.responseIds[moduleId];
+        const key = rowData.nameSourceKey;
+        
+        const currentModuleData = rowData.formData[moduleId] || {};
+        const updatedModuleData = { ...currentModuleData, [key]: newValue };
+        
+        updateResponse(moduleId, responseId, updatedModuleData);
+      } else {
+        console.warn("[UnifiedView] Cannot update name: No source module tracked.");
+      }
+    } else if (prop.startsWith('scores.')) {
+      const moduleId = prop.split('.')[1];
+      updateScore(moduleId, userId, Number(newValue));
+    } else if (prop.startsWith('formData.')) {
+      const parts = prop.split('.');
+      const moduleId = parts[1];
+      const key = parts.slice(2).join('.');
+      
+      const responseId = rowData.responseIds[moduleId];
+      const currentModuleData = rowData.formData[moduleId] || {};
+      const updatedModuleData = { ...currentModuleData, [key]: newValue };
+      
+      updateResponse(moduleId, responseId, updatedModuleData);
+    }
+  });
+};
+
+// -----------------------------------------------------------------------------
+// HotSettings Initialization
+// -----------------------------------------------------------------------------
 
 const hotSettings = reactive({
-  data: [],
-  colHeaders: true,
+  data: tableData,
+  colHeaders: tableHeaders,
+  columns: tableColumns,
   rowHeaders: true,
-  readOnly: true,
+  readOnly: false, 
   licenseKey: 'non-commercial-and-evaluation',
   themeName: 'ht-theme-main',
   height: 'auto',
@@ -125,78 +193,269 @@ const hotSettings = reactive({
   autoWrapRow: true,
   manualColumnResize: true,
   manualRowResize: true,
+  afterChange: handleTableChange
 });
 
-const fetchData = async () => {
-  if (!routeEventId.value || !routeModuleId.value) {
-    error.value = 'Missing event or module ID';
-    return;
-  }
+const recordCount = computed(() => tableData.value.length);
 
+const initializeUser = (map, userId) => {
+  map.set(userId, {
+    userId,
+    name: '',
+    scores: {},
+    formData: {},
+    responseIds: {}
+  });
+};
+
+// -----------------------------------------------------------------------------
+// Data Fetching Logic
+// -----------------------------------------------------------------------------
+
+const fetchEventDetails = async () => {
+  if (!routeEventId.value) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}`);
+    if (!response.ok) throw new Error('Failed to fetch event details');
+    const event = await response.json();
+    eventName.value = event.name;
+    eventModules.value = event.modules || [];
+    console.log("[UnifiedView] Event Details Loaded:", eventName.value, eventModules.value);
+
+    // Build Tabs
+    const newTabs = [{ id: 'unified', label: 'Unified View' }];
+    event.modules.forEach(m => {
+      newTabs.push({
+        id: m.id,
+        label: `${m.type === 'form' ? 'Form' : 'Quiz'}: ${m.name}`
+      });
+    });
+    tabs.value = newTabs;
+    
+    // Sync active tab with route or default
+    if (routeModuleId.value) {
+      if (event.modules.find(m => m.id === routeModuleId.value)) {
+        activeTab.value = routeModuleId.value;
+      } else {
+         activeTab.value = 'unified';
+      }
+    } else {
+      activeTab.value = 'unified';
+    }
+    console.log("[UnifiedView] Active Tab set to:", activeTab.value);
+
+  } catch (e) {
+    console.error("[UnifiedView] Error fetching event:", e);
+    error.value = "Failed to load event details.";
+  }
+};
+
+const setActiveTab = (tabId) => {
+  console.log("[UnifiedView] Switching tab to:", tabId);
+  activeTab.value = tabId;
+  const query = { ...route.query };
+  if (tabId === 'unified') {
+    delete query.moduleId;
+  } else {
+    query.moduleId = tabId;
+  }
+  router.replace({ query });
+};
+
+const fetchData = async () => {
+  if (!routeEventId.value) return;
+  console.log("[UnifiedView] Fetching data for tab:", activeTab.value);
   loading.value = true;
   error.value = null;
   
+  // Clear data first
+  tableData.value = [];
+  tableHeaders.value = [];
+  tableColumns.value = [];
+
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${routeModuleId.value}/responses`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (activeTab.value === 'unified') {
+      await fetchUnifiedData();
+    } else {
+      await fetchModuleData(activeTab.value);
     }
-    const result = await response.json();
-    responses.value = result.responses || [];
-    transformDataForHandsontable(responses.value);
   } catch (e) {
     error.value = e.message;
-    console.error("Failed to fetch module responses:", e);
+    console.error("[UnifiedView] Error fetching data:", e);
   } finally {
     loading.value = false;
   }
 };
 
-const transformDataForHandsontable = (rawData) => {
-  if (rawData.length === 0) {
-    hotSettings.data = [];
-    return;
-  }
+const fetchUnifiedData = async () => {
+  console.log("[UnifiedView] Starting Unified Data Fetch...");
+  const promises = eventModules.value.map(m => 
+    fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${m.id}/responses`)
+      .then(res => res.json())
+      .then(data => ({ moduleId: m.id, type: m.type, responses: data.responses || [] }))
+  );
 
-  // Collect all unique keys from 'data' objects and other top-level fields
-  const allKeys = new Set();
-  rawData.forEach(item => {
-    for (const key in item) {
-      if (key === 'data' && typeof item[key] === 'object' && item[key] !== null) {
-        for (const dataKey in item[key]) {
-          allKeys.add(dataKey);
+  const results = await Promise.all(promises);
+  console.log("[UnifiedView] Fetched raw results from modules:", results);
+  
+  const userMap = new Map(); 
+
+  results.forEach(({ moduleId, type, responses }) => {
+    responses.forEach(res => {
+      if (type === 'quiz') {
+        const quizResult = res; 
+        if (quizResult.players) {
+           quizResult.players.forEach(p => {
+             const userId = p.id;
+             if (!userMap.has(userId)) initializeUser(userMap, userId);
+             const userEntry = userMap.get(userId);
+             userEntry.scores[moduleId] = (userEntry.scores[moduleId] || 0) + p.score;
+             if (!userEntry.name && p.nickname) userEntry.name = p.nickname;
+           });
         }
-      } else if (key !== '_id' && key !== 'eventId' && key !== 'moduleId' && key !== '__v') {
-        allKeys.add(key);
+      } else {
+        const userId = res.userId;
+        if (!userId) return;
+        if (!userMap.has(userId)) initializeUser(userMap, userId);
+        const userEntry = userMap.get(userId);
+
+        userEntry.responseIds[moduleId] = res.id || res._id;
+
+        if (!userEntry.formData[moduleId]) userEntry.formData[moduleId] = {};
+        Object.assign(userEntry.formData[moduleId], res.data);
+
+        if (res.data && res.data['step_welcome_name']) {
+           userEntry.name = res.data['step_welcome_name'];
+           userEntry.nameSourceKey = 'step_welcome_name';
+           userEntry.nameSourceModuleId = moduleId;
+        }
       }
+    });
+  });
+
+  console.log("[UnifiedView] Aggregated User Map size:", userMap.size);
+
+  const headers = ['User ID', 'Name', 'Total Score'];
+  const columns = [
+    { data: 'userId', readOnly: true },
+    { data: 'name', readOnly: false }, 
+    { data: 'totalScore', type: 'numeric', readOnly: true }
+  ];
+
+  eventModules.value.forEach(m => {
+    if (m.type === 'quiz') {
+      headers.push(`${m.name} (Score)`);
+      columns.push({ 
+        data: `scores.${m.id}`, 
+        type: 'numeric',
+        readOnly: false 
+      });
+    } else {
+      const allKeys = new Set();
+      userMap.forEach(u => {
+        if (u.formData[m.id]) {
+          Object.keys(u.formData[m.id]).forEach(k => allKeys.add(k));
+        }
+      });
+      
+      Array.from(allKeys).forEach(key => {
+        headers.push(`${m.name}: ${key}`);
+        columns.push({ 
+          data: `formData.${m.id}.${key}`,
+          readOnly: false 
+        });
+      });
     }
   });
 
-  const headers = ['_id', 'userId', 'createdAt', ...Array.from(allKeys)].filter(Boolean);
-  const tableData = [headers];
-
-  rawData.forEach(item => {
-    const row = [];
-    headers.forEach(header => {
-      if (header === 'createdAt' && item[header]) {
-        row.push(new Date(item[header]).toLocaleString());
-      } else if (item.data && item.data[header] !== undefined) {
-        row.push(item.data[header]);
-      } else {
-        row.push(item[header] !== undefined ? item[header] : '');
-      }
-    });
-    tableData.push(row);
+  const flattenedData = Array.from(userMap.values()).map(u => {
+    const totalScore = Object.values(u.scores).reduce((a, b) => a + b, 0);
+    return { ...u, totalScore };
   });
 
-  hotSettings.data = tableData;
-  hotSettings.colHeaders = headers;
+  console.log("[UnifiedView] Constructed Headers:", headers);
+  console.log("[UnifiedView] Constructed Columns:", columns);
+  console.log("[UnifiedView] Flattened Data Sample:", flattenedData.slice(0, 2));
+
+  tableHeaders.value = headers;
+  tableColumns.value = columns;
+  tableData.value = flattenedData;
+  
+  // Force update settings to be safe
+  if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
+    console.log("[UnifiedView] Updating HotTable Settings with new data/columns...");
+    hotTableComponent.value.hotInstance.updateSettings({
+      colHeaders: headers,
+      columns: columns,
+      data: flattenedData,
+      readOnly: false 
+    });
+  }
 };
 
-onMounted(fetchData);
+const fetchModuleData = async (moduleId) => {
+  console.log(`[UnifiedView] Fetching Single Module Data: ${moduleId}`);
+  const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/responses`);
+  if (!response.ok) throw new Error('Failed to fetch responses');
+  const result = await response.json();
+  const rawData = result.responses || [];
 
-// Watch for changes in route query params
-watch(() => [routeEventId.value, routeModuleId.value], () => {
+  if (rawData.length === 0) {
+    tableData.value = [];
+    tableHeaders.value = [];
+    tableColumns.value = [];
+    return;
+  }
+
+  const allKeys = new Set();
+  rawData.forEach(item => {
+    if (item.data) {
+       Object.keys(item.data).forEach(k => allKeys.add(k));
+    }
+    Object.keys(item).forEach(k => {
+      if (k !== 'data' && k !== '_id' && k !== 'eventId' && k !== 'moduleId' && k !== '__v') {
+        allKeys.add(k);
+      }
+    });
+  });
+
+  const headers = ['ID', ...Array.from(allKeys)];
+  const columns = headers.map(h => ({ data: h })); 
+  
+  const rows = rawData.map(item => {
+    const row = { ID: item._id || item.id };
+    if (item.data) Object.assign(row, item.data);
+    Object.keys(item).forEach(k => {
+       if (k !== 'data') row[k] = item[k];
+    });
+    return row;
+  });
+
+  console.log("[UnifiedView] Single Module Headers:", headers);
+  console.log("[UnifiedView] Single Module Data Sample:", rows.slice(0, 2));
+
+  tableHeaders.value = headers;
+  tableColumns.value = columns;
+  
+   if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
+    hotTableComponent.value.hotInstance.updateSettings({
+      colHeaders: headers,
+      columns: columns,
+      data: rows,
+      readOnly: true 
+    });
+  } else {
+    tableData.value = rows;
+  }
+};
+
+onMounted(() => {
+  fetchEventDetails().then(() => {
+    fetchData(); 
+  });
+});
+
+watch(activeTab, () => {
   fetchData();
 });
 </script>
@@ -233,34 +492,22 @@ watch(() => [routeEventId.value, routeModuleId.value], () => {
   gap: 12px;
 }
 
-.export-btn {
-  background-color: #007AFF;
-  color: white;
+.export-btn, .refresh-btn, .retry-btn {
   border: none;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.export-btn:hover {
-  background-color: #0056b3;
-}
-
-.refresh-btn {
-  background-color: #30D158;
   color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
+  transition: opacity 0.2s;
 }
 
-.refresh-btn:hover {
-  background-color: #28a745;
+.export-btn { background-color: #007AFF; }
+.refresh-btn { background-color: #30D158; }
+.retry-btn { background-color: #FF6B6B; }
+
+.export-btn:hover, .refresh-btn:hover, .retry-btn:hover {
+  opacity: 0.9;
 }
 
 .record-count {
@@ -307,7 +554,7 @@ watch(() => [routeEventId.value, routeModuleId.value], () => {
 }
 
 /* Loading State */
-.loading-state {
+.loading-state, .error-state, .no-data-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -330,50 +577,8 @@ watch(() => [routeEventId.value, routeModuleId.value], () => {
   to { transform: rotate(360deg); }
 }
 
-/* Error State */
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  color: #FF6B6B;
-}
-
-.error-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.retry-btn {
-  margin-top: 16px;
-  background-color: #FF6B6B;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.retry-btn:hover {
-  background-color: #ff5252;
-}
-
-/* No Data State */
-.no-data-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  color: #888;
-}
-
-.empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
+.error-icon { font-size: 48px; margin-bottom: 16px; color: #FF6B6B;}
+.empty-icon { font-size: 64px; margin-bottom: 16px; }
 
 .hint {
   font-size: 14px;
@@ -394,57 +599,6 @@ watch(() => [routeEventId.value, routeModuleId.value], () => {
   background-color: #1E1E1E;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background-color: #1E1E1E;
-  border-top: 1px solid #333;
-  border-radius: 0 0 8px 8px;
-  margin-top: -1px;
-}
-
-.pagination-left,
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-size-select {
-  padding: 4px 8px;
-  border: 1px solid #333;
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: #252525;
-  color: #fff;
-}
-
-.page-btn {
-  background-color: #252525;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #fff;
-}
-
-.page-btn:hover {
-  background-color: #333;
-}
-
-.page-number {
-  font-size: 14px;
-  color: #fff;
-}
-
-.page-info {
-  font-size: 14px;
-  color: #888;
+  overflow: hidden; /* Ensure table stays within round corners */
 }
 </style>

@@ -696,3 +696,132 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 		utils.DebugLog("GetModuleResponses: Successfully returned %d responses", len(responses))
 	}
 }
+
+// UpdateModuleResponse handles updating a generic response document
+// URL: /events/{id}/modules/{moduleId}/responses/{responseId}
+func UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := make([]string, 0)
+	current := ""
+	for _, c := range path {
+		if c == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+
+	// Expected: ["events", "123456", "modules", "654321", "responses", "respId"]
+	if len(parts) < 6 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	responseID := parts[5]
+
+	var input struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("responses")
+
+	// We might need to handle ObjectID vs String ID depending on how it was inserted.
+	// `SubmitModuleResponse` uses `bson:"_id,omitempty"` with String ID struct field,
+	// but often Mongo driver generates ObjectID if empty.
+	// Looking at `SubmitModuleResponse`, `response.ID` is coming from payload? No, standard struct.
+	// If ID is not set, Mongo creates ObjectID.
+	// Let's assume ID is passed as string in URL and we try direct string match first,
+	// typically safer to stick to how it was read.
+
+	filter := bson.M{"_id": responseID}
+	update := bson.M{"$set": bson.M{"data": input.Data}}
+
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		// Try ObjectID if string failed? Or assume user passed correct ID.
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.DebugLog("[UnifiedViewUpdate] Error updating response %s: %v", responseID, err)
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		http.Error(w, "Response not found", http.StatusNotFound)
+		utils.DebugLog("[UnifiedViewUpdate] Response %s not found for update", responseID)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Response updated"})
+	utils.DebugLog("[UnifiedViewUpdate] Successfully updated response %s. Payload: %+v", responseID, input.Data)
+}
+
+// UpdateQuizScore handles updating a player's score in a quiz module
+// URL: /events/{id}/modules/{moduleId}/quiz-scores/{userId}
+func UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := make([]string, 0)
+	current := ""
+	for _, c := range path {
+		if c == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+
+	// Expected: ["events", "123456", "modules", "654321", "quiz-scores", "userId"]
+	if len(parts) < 6 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	eventID := parts[1]
+	moduleID := parts[3]
+	userID := parts[5]
+
+	var input struct {
+		Score int `json:"score"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("quiz_results")
+	// Find the result document for this module
+	filter := bson.M{"eventId": eventID, "moduleId": moduleID, "players.id": userID}
+
+	// We need to update the specific player's score in the players array
+	update := bson.M{"$set": bson.M{"players.$.score": input.Score}}
+
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.DebugLog("[UnifiedViewUpdate] Error updating quiz score for user %s: %v", userID, err)
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		http.Error(w, "Quiz Result or Player not found", http.StatusNotFound)
+		utils.DebugLog("[UnifiedViewUpdate] Quiz Result not found for user %s in module %s", userID, moduleID)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Score updated"})
+	utils.DebugLog("[UnifiedViewUpdate] Updated score for user %s in module %s. New Score: %d", userID, moduleID, input.Score)
+}
