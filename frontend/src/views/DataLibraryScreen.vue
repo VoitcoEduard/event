@@ -259,13 +259,21 @@ const transformDataForHandsontable = (rawData) => {
         for (const dataKey in item[key]) {
           allKeys.add(dataKey);
         }
-      } else if (key !== '_id' && key !== 'eventId' && key !== 'moduleId' && key !== '__v') {
+      } else if (
+        key !== '_id' && 
+        key !== 'id' && 
+        key !== 'userId' && 
+        key !== 'createdAt' && 
+        key !== 'eventId' && 
+        key !== 'moduleId' && 
+        key !== '__v'
+      ) {
         allKeys.add(key);
       }
     }
   });
 
-  const headers = ['_id', 'userId', 'createdAt', ...Array.from(allKeys)].filter(Boolean);
+  const headers = ['userId', 'createdAt', ...Array.from(allKeys)].filter(Boolean);
   const tableData = [];
 
   rawData.forEach(item => {
