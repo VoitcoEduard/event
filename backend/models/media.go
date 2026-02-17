@@ -35,3 +35,22 @@ type MediaResponse struct {
 	Height       int    `json:"height"`
 	URL          string `json:"url"`
 }
+
+// Screensaver represents a screensaver image stored in the global library
+type Screensaver struct {
+	ID           primitive.ObjectID `json:"id" bson:"_id"`
+	Name         string             `json:"name" bson:"name"`
+	MediaID      primitive.ObjectID `json:"mediaId" bson:"mediaId"`
+	ThumbnailURL string             `json:"thumbnailUrl" bson:"thumbnailUrl"`
+	CreatedAt    time.Time          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt    time.Time          `json:"updatedAt" bson:"updatedAt"`
+}
+
+// ScreensaverResponse is the API response for screensaver items
+type ScreensaverResponse struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	MediaID      string `json:"mediaId"`
+	ThumbnailURL string `json:"thumbnailUrl"`
+	CreatedAt    string `json:"createdAt"`
+}

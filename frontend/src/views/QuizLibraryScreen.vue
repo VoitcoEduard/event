@@ -9,10 +9,13 @@
       </div>
       <div class="header-actions">
         <p class="header-subtitle">Manage Templates</p>
-        <button class="create-btn" @click="createNewTemplate">
+        <button v-if="activeTab !== 'screensaver'" class="create-btn" @click="createNewTemplate">
           + New {{ activeTab === 'form' ? 'Form' : 'Quiz' }} Template
         </button>
-        <button class="import-btn" @click="triggerFileInput">
+        <button v-if="activeTab === 'screensaver'" class="create-btn" @click="triggerScreensaverUpload">
+          + Upload Screensaver
+        </button>
+        <button v-if="activeTab !== 'screensaver'" class="import-btn" @click="triggerFileInput">
             📂 Import
         </button>
         <input 
@@ -21,6 +24,13 @@
             style="display: none" 
             accept=".json"
             @change="handleFileUpload"
+        />
+        <input 
+            type="file" 
+            ref="screensaverInput" 
+            style="display: none" 
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            @change="handleScreensaverUpload"
         />
       </div>
     </div>
@@ -44,12 +54,44 @@
                 <span class="tab-icon">🎮</span>
                 Quizzes
             </button>
+            <button 
+                class="tab-btn" 
+                :class="{ active: activeTab === 'screensaver' }"
+                @click="activeTab = 'screensaver'"
+            >
+                <span class="tab-icon">🖼️</span>
+                Screensavers
+            </button>
         </div>
 
         <!-- Main Content Area -->
         <div class="main-content">
             <div v-if="loading" class="loading-state">
                 <p>Loading templates...</p>
+            </div>
+
+            <!-- Screensavers Tab Content -->
+            <div v-else-if="activeTab === 'screensaver'" class="screensaver-view">
+                <div v-if="screensavers.length === 0" class="empty-state">
+                    <p class="empty-icon">🖼️</p>
+                    <p class="empty-text">No screensavers found.</p>
+                    <p class="empty-hint">Upload images to use as screensavers during quiz sessions.</p>
+                </div>
+
+                <div v-else class="screensavers-grid">
+                    <div v-for="screensaver in screensavers" :key="screensaver.id" class="screensaver-card">
+                        <div class="screensaver-image-container">
+                            <img :src="screensaver.thumbnailUrl" :alt="screensaver.name" class="screensaver-thumbnail" />
+                        </div>
+                        <div class="screensaver-info">
+                            <h3 class="screensaver-name">{{ screensaver.name }}</h3>
+                            <p class="screensaver-date">Added: {{ formatDate(screensaver.createdAt) }}</p>
+                        </div>
+                        <div class="screensaver-actions">
+                            <button class="icon-btn delete-btn" @click="handleDeleteScreensaver(screensaver)" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div v-else-if="filteredTemplates.length === 0" class="empty-state">
@@ -135,16 +177,19 @@ import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from '../components/QuizEditor.vue'
 import FormEditor from '../components/FormEditor.vue'
+import { getScreensavers, uploadScreensaver, deleteScreensaver, getImageUrl } from '../services/media'
 
 const router = useRouter()
 const { success, error, info } = useToast()
 
 const activeTab = ref('form')
 const templates = ref([])
+const screensavers = ref([])
 const loading = ref(true)
 const showEditor = ref(false)
 const saving = ref(false)
 const fileInput = ref(null)
+const screensaverInput = ref(null)
 const currentTemplate = ref({
   id: null,
   name: '',
@@ -180,8 +225,61 @@ const fetchTemplates = async () => {
   }
 }
 
+const fetchScreensavers = async () => {
+  loading.value = true
+  try {
+    const data = await getScreensavers()
+    screensavers.value = data
+  } catch (err) {
+    console.error(err)
+    error('Error loading screensavers')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleScreensaverUpload = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    try {
+        const name = prompt('Enter a name for this screensaver:', file.name)
+        if (!name) return
+        
+        await uploadScreensaver(file, name)
+        success('Screensaver uploaded successfully')
+        fetchScreensavers()
+    } catch (err) {
+        console.error(err)
+        error('Failed to upload screensaver')
+    } finally {
+        event.target.value = ''
+    }
+}
+
+const handleDeleteScreensaver = async (screensaver) => {
+    if (!confirm(`Delete screensaver "${screensaver.name}"?`)) return
+    
+    try {
+        await deleteScreensaver(screensaver.id)
+        success('Screensaver deleted')
+        fetchScreensavers()
+    } catch (err) {
+        console.error(err)
+        error('Failed to delete screensaver')
+    }
+}
+
 onMounted(() => {
   fetchTemplates()
+})
+
+// Watch for tab changes
+import { watch } from 'vue'
+watch(activeTab, (newTab) => {
+    if (newTab === 'screensaver') {
+        fetchScreensavers()
+    }
 })
 
 const goBack = () => {
@@ -340,6 +438,10 @@ const formatDate = (dateString) => {
 }
 const triggerFileInput = () => {
     fileInput.value.click()
+}
+
+const triggerScreensaverUpload = () => {
+    screensaverInput.value.click()
 }
 
 const handleFileUpload = (event) => {
@@ -554,6 +656,68 @@ const exportTemplate = (template) => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+}
+
+/* Screensavers Grid */
+.screensaver-view {
+  padding: 20px;
+}
+
+.screensavers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.screensaver-card {
+  background-color: #1E1E1E;
+  border: 1px solid #333;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.screensaver-card:hover { border-color: #555; }
+
+.screensaver-image-container {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.screensaver-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.screensaver-info {
+  padding: 16px;
+}
+
+.screensaver-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #fff;
+}
+
+.screensaver-date {
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+}
+
+.screensaver-actions {
+  padding: 0 16px 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.empty-hint {
+  font-size: 14px;
+  color: #666;
+  margin-top: 8px;
 }
 
 .template-card {

@@ -212,6 +212,34 @@ func main() {
 		}
 	})
 
+	// Screensavers library routes
+	http.HandleFunc("/screensavers", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		switch r.Method {
+		case "GET":
+			handlers.GetScreensavers(w, r)
+		case "POST":
+			handlers.CreateScreensaver(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/screensavers/", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method == "DELETE" {
+			handlers.DeleteScreensaver(w, r)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	// Media upload route
 	http.HandleFunc("/media/upload", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w, r)

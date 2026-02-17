@@ -255,3 +255,214 @@ func DeleteMedia(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Media deleted successfully"})
 }
+
+// GetScreensavers returns all screensavers from the global library
+// URL: /screensavers
+func GetScreensavers(w http.ResponseWriter, r *http.Request) {
+	collection := db.GetCollection("screensavers")
+	var screensavers []models.Screensaver
+
+	cursor, err := collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		http.Error(w, "Failed to fetch screensavers", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	if err := cursor.All(context.Background(), &screensavers); err != nil {
+		http.Error(w, "Failed to decode screensavers", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to response format
+	responses := make([]models.ScreensaverResponse, len(screensavers))
+	for i, s := range screensavers {
+		responses[i] = models.ScreensaverResponse{
+			ID:           s.ID.Hex(),
+			Name:         s.Name,
+			MediaID:      s.MediaID.Hex(),
+			ThumbnailURL: s.ThumbnailURL,
+			CreatedAt:    s.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(responses)
+}
+
+// CreateScreensaver creates a new screensaver in the global library
+// URL: /screensavers
+func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
+	// Parse multipart form
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		http.Error(w, "Failed to parse multipart form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get the file
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Failed to get file from form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Get name from form, fallback to original filename
+	name := r.FormValue("name")
+	if name == "" {
+		name = header.Filename
+	}
+
+	// Read file data
+	data, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Validate image
+	_, err = utils.ValidateImage(data)
+	if err != nil {
+		http.Error(w, "Invalid image: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Process image (resize, optimize)
+	processedData, width, height, mimeType, err := utils.ProcessImage(data)
+	if err != nil {
+		http.Error(w, "Failed to process image: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ext := mimeToExtension(mimeType)
+	fileUUID := uuid.New().String()
+	filename := fileUUID + ext
+
+	// Upload to GridFS
+	bucket := db.GetGridFSBucket()
+	if bucket == nil {
+		http.Error(w, "GridFS not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	uploadStream, err := bucket.OpenUploadStream(filename)
+	if err != nil {
+		http.Error(w, "Failed to open upload stream: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer uploadStream.Close()
+
+	_, err = uploadStream.Write(processedData)
+	if err != nil {
+		http.Error(w, "Failed to write file to GridFS: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	gridfsID, ok := uploadStream.FileID.(primitive.ObjectID)
+	if !ok {
+		http.Error(w, "Failed to get GridFS file ID", http.StatusInternalServerError)
+		return
+	}
+
+	// Save media file metadata
+	mediaFile := models.MediaFile{
+		ID:           primitive.NewObjectID(),
+		GridFSID:     gridfsID,
+		Filename:     filename,
+		OriginalName: header.Filename,
+		MimeType:     mimeType,
+		Size:         int64(len(processedData)),
+		Width:        width,
+		Height:       height,
+		CreatedAt:    time.Now(),
+	}
+
+	mediaCollection := db.GetCollection("media")
+	_, err = mediaCollection.InsertOne(context.Background(), mediaFile)
+	if err != nil {
+		http.Error(w, "Failed to save media metadata: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Create screensaver entry
+	now := time.Now()
+	screensaver := models.Screensaver{
+		ID:           primitive.NewObjectID(),
+		Name:         name,
+		MediaID:      mediaFile.ID,
+		ThumbnailURL: "/media/" + mediaFile.ID.Hex() + "/file",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	screensaverCollection := db.GetCollection("screensavers")
+	_, err = screensaverCollection.InsertOne(context.Background(), screensaver)
+	if err != nil {
+		http.Error(w, "Failed to save screensaver: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := models.ScreensaverResponse{
+		ID:           screensaver.ID.Hex(),
+		Name:         screensaver.Name,
+		MediaID:      screensaver.MediaID.Hex(),
+		ThumbnailURL: screensaver.ThumbnailURL,
+		CreatedAt:    screensaver.CreatedAt.Format(time.RFC3339),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+}
+
+// DeleteScreensaver deletes a screensaver from the global library
+// URL: /screensavers/{id}
+func DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path
+	prefix := "/screensavers/"
+	if len(id) <= len(prefix) {
+		http.Error(w, "ID required", http.StatusBadRequest)
+		return
+	}
+	id = id[len(prefix):]
+
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Find screensaver first
+	screensaverCollection := db.GetCollection("screensavers")
+	var screensaver models.Screensaver
+	err = screensaverCollection.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&screensaver)
+	if err != nil {
+		http.Error(w, "Screensaver not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete the associated media file
+	mediaCollection := db.GetCollection("media")
+	var mediaFile models.MediaFile
+	err = mediaCollection.FindOne(context.Background(), bson.M{"_id": screensaver.MediaID}).Decode(&mediaFile)
+	if err == nil {
+		// Delete from GridFS
+		bucket := db.GetGridFSBucket()
+		if bucket != nil {
+			bucket.Delete(mediaFile.GridFSID)
+		}
+		// Delete media metadata
+		mediaCollection.DeleteOne(context.Background(), bson.M{"_id": screensaver.MediaID})
+	}
+
+	// Delete screensaver
+	_, err = screensaverCollection.DeleteOne(context.Background(), bson.M{"_id": objectID})
+	if err != nil {
+		http.Error(w, "Failed to delete screensaver: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Screensaver deleted successfully"})
+}

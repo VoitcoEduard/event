@@ -226,6 +226,7 @@ import { useRoute } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
+import { getScreensavers } from '../services/media'
 
 const route = useRoute()
 const eventId = route.params.eventId
@@ -388,15 +389,33 @@ const startLocalTimer = (duration) => {
 // Load screensaver config
 const loadScreensaverConfig = async () => {
   try {
+    // First try to load event-specific screensaver
     const res = await fetch(`${API_BASE_URL}/events/${eventId}/screensaver`)
     if (res.ok) {
       const data = await res.json()
       if (data.imageId) {
         screensaverImageUrl.value = getImageUrl(data.imageId)
+        return
       }
+    }
+    
+    // Fallback: Load from global screensaver library
+    const screensavers = await getScreensavers()
+    if (screensavers.length > 0) {
+      // Use the first screensaver from the library as default
+      screensaverImageUrl.value = screensavers[0].thumbnailUrl
     }
   } catch (e) {
     console.error('Failed to load screensaver config', e)
+    // Try to load from library as last resort
+    try {
+      const screensavers = await getScreensavers()
+      if (screensavers.length > 0) {
+        screensaverImageUrl.value = screensavers[0].thumbnailUrl
+      }
+    } catch (err) {
+      console.error('Failed to load screensaver from library', err)
+    }
   }
 }
 
@@ -487,10 +506,14 @@ onMounted(async () => {
   // Show screensaver first (before connecting to WebSocket)
   displayMode.value = 'screensaver'
   
-  // Connect to WebSocket after a brief delay to allow screensaver to render
-  setTimeout(() => {
-    connect()
-  }, 500)
+  // Only connect to WebSocket if we have a moduleId (quiz mode)
+  if (moduleId) {
+    // Connect to WebSocket after a brief delay to allow screensaver to render
+    setTimeout(() => {
+      connect()
+    }, 500)
+  }
+  // If no moduleId, just show screensaver (static display mode)
 })
 
 onUnmounted(() => {

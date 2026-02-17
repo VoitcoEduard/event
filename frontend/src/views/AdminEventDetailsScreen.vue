@@ -87,16 +87,13 @@
             </div>
             
             <div class="screensaver-upload">
-              <input 
-                type="file" 
-                accept="image/*" 
-                @change="handleScreensaverUpload" 
-                id="screensaver-input"
-                class="file-input"
-              />
-              <label for="screensaver-input" class="file-label">
-                {{ screensaverLoading ? 'Uploading...' : 'Choose Image' }}
-              </label>
+              <button 
+                class="action-button"
+                @click="handleScreensaverUpload"
+                :disabled="screensaverLoading"
+              >
+                {{ screensaverLoading ? 'Loading...' : 'Select from Library' }}
+              </button>
             </div>
             
             <button 
@@ -106,6 +103,33 @@
             >
               Remove Image
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Library Selector Modal -->
+      <div v-if="showLibrarySelector" class="modal-overlay" @click.self="showLibrarySelector = false">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Select Screensaver</h3>
+            <button class="close-btn" @click="showLibrarySelector = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <div v-if="screensavers.length === 0" class="empty-state">
+              <p>No screensavers in library.</p>
+              <p class="hint">Go to Library → Screensavers to upload images.</p>
+            </div>
+            <div v-else class="screensavers-grid">
+              <div 
+                v-for="screensaver in screensavers" 
+                :key="screensaver.id" 
+                class="screensaver-option"
+                @click="selectScreensaver(screensaver)"
+              >
+                <img :src="screensaver.thumbnailUrl" :alt="screensaver.name" />
+                <p class="screensaver-name">{{ screensaver.name }}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -240,6 +264,7 @@ import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
 import { getImageUrl } from '../services/media'
+import { getScreensavers } from '../services/media'
 
 const router = useRouter()
 const route = useRoute()
@@ -254,6 +279,8 @@ const selectedModule = ref(null)
 // Screensaver state
 const screensaverPreview = ref('')
 const screensaverLoading = ref(false)
+const screensavers = ref([])
+const showLibrarySelector = ref(false)
 
 const { success, error, info } = useToast()
 
@@ -304,47 +331,41 @@ const fetchScreensaverConfig = async () => {
   }
 }
 
-const handleScreensaverUpload = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-  
+const handleScreensaverUpload = async () => {
   screensaverLoading.value = true
   
   try {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('eventId', currentEvent.value.id)
-    
-    const uploadResponse = await fetch(`${API_BASE_URL}/media/upload`, {
-      method: 'POST',
-      body: formData
-    })
-    
-    if (uploadResponse.ok) {
-      const mediaData = await uploadResponse.json()
-      
-      // Save screensaver config
-      const configResponse = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageId: mediaData.id })
-      })
-      
-      if (configResponse.ok) {
-        currentEvent.value.screensaverConfig = await configResponse.json()
-        screensaverPreview.value = getImageUrl(mediaData.id)
-        success('Screensaver image updated')
-      } else {
-        error('Failed to save screensaver config')
-      }
-    } else {
-      error('Failed to upload image')
-    }
+    // Load screensavers from library
+    screensavers.value = await getScreensavers()
+    showLibrarySelector.value = true
   } catch (err) {
-    console.error('Error uploading screensaver:', err)
-    error('Failed to upload screensaver image')
+    console.error('Error loading screensavers:', err)
+    error('Failed to load screensavers from library')
   } finally {
     screensaverLoading.value = false
+  }
+}
+
+const selectScreensaver = async (screensaver) => {
+  try {
+    // Save screensaver config using the library screensaver's mediaId
+    const configResponse = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageId: screensaver.mediaId })
+    })
+
+    if (configResponse.ok) {
+      currentEvent.value.screensaverConfig = await configResponse.json()
+      screensaverPreview.value = screensaver.thumbnailUrl
+      showLibrarySelector.value = false
+      success('Screensaver image updated')
+    } else {
+      error('Failed to save screensaver config')
+    }
+  } catch (err) {
+    console.error('Error selecting screensaver:', err)
+    error('Failed to select screensaver')
   }
 }
 
@@ -531,13 +552,15 @@ const goToDataView = () => {
 }
 
 const openBigScreenFromHeader = () => {
-  // Find the first quiz module
+  // Find the first quiz module (optional - bigscreen can work without quiz)
   const quizModule = currentEvent.value?.modules?.find(m => m.type === 'quiz')
   if (quizModule) {
     const url = `/bigscreen/${currentEvent.value.id}/${quizModule.id}`
     window.open(url, '_blank', 'width=1200,height=800')
   } else {
-    info('No quiz module found in this event')
+    // Open bigscreen without quiz module - will show screensaver only
+    const url = `/bigscreen/${currentEvent.value.id}`
+    window.open(url, '_blank', 'width=1200,height=800')
   }
 }
 </script>
@@ -866,6 +889,109 @@ const openBigScreenFromHeader = () => {
 
 .delete-screensaver-btn {
   background-color: #ff3b30 !important;
+  margin-top: 8px;
+}
+
+/* Library Selector Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #1C1C1E;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 18px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: white;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.screensavers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.screensaver-option {
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.screensaver-option:hover {
+  border-color: #0A84FF;
+}
+
+.screensaver-option img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.screensaver-name {
+  padding: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: white;
+  background: #2C2C2E;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #888;
+}
+
+.empty-state .hint {
+  font-size: 14px;
   margin-top: 8px;
 }
 

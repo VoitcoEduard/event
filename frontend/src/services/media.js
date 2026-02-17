@@ -68,3 +68,60 @@ export async function getMediaInfo(imageId) {
 
   return response.json()
 }
+
+/**
+ * Get all screensavers from the library
+ * @returns {Promise<Array>} - Array of screensaver objects
+ */
+export async function getScreensavers() {
+  const response = await fetch(`${API_BASE_URL}/screensavers`)
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || 'Failed to fetch screensavers')
+  }
+
+  return response.json()
+}
+
+/**
+ * Upload a new screensaver to the library
+ * @param {File} file - The image file to upload
+ * @param {string} name - The name for the screensaver
+ * @returns {Promise<Object>} - The created screensaver object
+ */
+export async function uploadScreensaver(file, name) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('name', name || file.name)
+
+  const response = await fetch(`${API_BASE_URL}/screensavers`, {
+    method: 'POST',
+    body: formData
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || 'Failed to upload screensaver')
+  }
+
+  return response.json()
+}
+
+/**
+ * Delete a screensaver from the library
+ * @param {string} screensaverId - The screensaver ID
+ * @returns {Promise<Object>} - The response
+ */
+export async function deleteScreensaver(screensaverId) {
+  const response = await fetch(`${API_BASE_URL}/screensavers/${screensaverId}`, {
+    method: 'DELETE'
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || 'Failed to delete screensaver')
+  }
+
+  return response.json()
+}
