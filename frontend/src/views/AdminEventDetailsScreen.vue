@@ -11,6 +11,9 @@
           </div>
         </div>
         <div class="header-right">
+          <button class="nav-button bigscreen-header-btn" @click="openBigScreenFromHeader">
+            🖥️ Big Screen
+          </button>
           <button class="nav-button library-btn" @click="goToLibrary">
             📚 Библиотека
           </button>
@@ -74,6 +77,36 @@
                 : 'Event is stopped.' }}
             </p>
           </div>
+
+          <div class="control-group">
+            <p class="section-label">Big Screen Screensaver</p>
+            <p class="control-hint">Set the image to display when no quiz is active</p>
+            
+            <div v-if="screensaverPreview" class="screensaver-preview">
+              <img :src="screensaverPreview" alt="Screensaver preview" />
+            </div>
+            
+            <div class="screensaver-upload">
+              <input 
+                type="file" 
+                accept="image/*" 
+                @change="handleScreensaverUpload" 
+                id="screensaver-input"
+                class="file-input"
+              />
+              <label for="screensaver-input" class="file-label">
+                {{ screensaverLoading ? 'Uploading...' : 'Choose Image' }}
+              </label>
+            </div>
+            
+            <button 
+              v-if="currentEvent?.screensaverConfig?.imageId"
+              class="action-button delete-screensaver-btn"
+              @click="removeScreensaver"
+            >
+              Remove Image
+            </button>
+          </div>
         </div>
       </div>
 
@@ -111,6 +144,13 @@
                             @click="hostQuiz(module)"
                           >
                             Host
+                          </button>
+                          <button
+                            v-if="module.type === 'quiz'"
+                            class="module-btn bigscreen-btn"
+                            @click="launchBigScreen(module)"
+                          >
+                            Big Screen
                           </button>
                           <button
                             class="module-btn data-btn"
@@ -199,6 +239,7 @@ import QuizModuleConfig from '../components/QuizModuleConfig.vue'
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
+import { getImageUrl } from '../services/media'
 
 const router = useRouter()
 const route = useRoute()
@@ -209,6 +250,10 @@ const newModuleName = ref('')
 const selectedModuleType = ref('form')
 const showConfigModal = ref(false)
 const selectedModule = ref(null)
+
+// Screensaver state
+const screensaverPreview = ref('')
+const screensaverLoading = ref(false)
 
 const { success, error, info } = useToast()
 
@@ -238,7 +283,91 @@ const fetchEventDetails = async () => {
 
 onMounted(() => {
   fetchEventDetails()
+  fetchScreensaverConfig()
 })
+
+// Screensaver functions
+const fetchScreensaverConfig = async () => {
+  if (!currentEvent.value?.id) return
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`)
+    if (response.ok) {
+      const data = await response.json()
+      if (data.imageId) {
+        currentEvent.value.screensaverConfig = data
+        screensaverPreview.value = getImageUrl(data.imageId)
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching screensaver config:', err)
+  }
+}
+
+const handleScreensaverUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  screensaverLoading.value = true
+  
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('eventId', currentEvent.value.id)
+    
+    const uploadResponse = await fetch(`${API_BASE_URL}/media/upload`, {
+      method: 'POST',
+      body: formData
+    })
+    
+    if (uploadResponse.ok) {
+      const mediaData = await uploadResponse.json()
+      
+      // Save screensaver config
+      const configResponse = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId: mediaData.id })
+      })
+      
+      if (configResponse.ok) {
+        currentEvent.value.screensaverConfig = await configResponse.json()
+        screensaverPreview.value = getImageUrl(mediaData.id)
+        success('Screensaver image updated')
+      } else {
+        error('Failed to save screensaver config')
+      }
+    } else {
+      error('Failed to upload image')
+    }
+  } catch (err) {
+    console.error('Error uploading screensaver:', err)
+    error('Failed to upload screensaver image')
+  } finally {
+    screensaverLoading.value = false
+  }
+}
+
+const removeScreensaver = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageId: '', imageUrl: '' })
+    })
+    
+    if (response.ok) {
+      currentEvent.value.screensaverConfig = null
+      screensaverPreview.value = ''
+      success('Screensaver image removed')
+    } else {
+      error('Failed to remove screensaver')
+    }
+  } catch (err) {
+    console.error('Error removing screensaver:', err)
+    error('Failed to remove screensaver image')
+  }
+}
 
 const toggleStatus = async () => {
   try {
@@ -281,6 +410,12 @@ const closeConfigModal = () => {
 
 const hostQuiz = (module) => {
   router.push(`/quiz/${currentEvent.value.id}/${module.id}/host`)
+}
+
+const launchBigScreen = (module) => {
+  // Open big screen in a new window
+  const url = `/bigscreen/${currentEvent.value.id}/${module.id}`
+  window.open(url, '_blank', 'width=1200,height=800')
 }
 
 const addModule = async () => {
@@ -394,6 +529,17 @@ const goToLibrary = () => {
 const goToDataView = () => {
   router.push(`/data/library?eventId=${currentEvent.value.id}`)
 }
+
+const openBigScreenFromHeader = () => {
+  // Find the first quiz module
+  const quizModule = currentEvent.value?.modules?.find(m => m.type === 'quiz')
+  if (quizModule) {
+    const url = `/bigscreen/${currentEvent.value.id}/${quizModule.id}`
+    window.open(url, '_blank', 'width=1200,height=800')
+  } else {
+    info('No quiz module found in this event')
+  }
+}
 </script>
 
 <style scoped>
@@ -485,6 +631,17 @@ const goToDataView = () => {
   background-color: #45a049;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.bigscreen-header-btn {
+  background-color: #FF9500;
+  color: white;
+}
+
+.bigscreen-header-btn:hover {
+  background-color: #FFA830;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
 }
 
 .data-btn {
@@ -665,6 +822,53 @@ const goToDataView = () => {
   text-align: center;
 }
 
+.screensaver-preview {
+  width: 100%;
+  height: 120px;
+  background: #1e1e1e;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screensaver-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.screensaver-upload {
+  margin-bottom: 12px;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-label {
+  display: block;
+  padding: 12px;
+  background: #333;
+  color: white;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.file-label:hover {
+  background: #444;
+}
+
+.delete-screensaver-btn {
+  background-color: #ff3b30 !important;
+  margin-top: 8px;
+}
+
 .modules-card {
   min-height: 400px;
 }
@@ -840,6 +1044,15 @@ const goToDataView = () => {
 .module-btn.host-btn {
   background-color: #5E5CE6;
   color: #FFF;
+}
+
+.module-btn.bigscreen-btn {
+  background-color: #FF9500;
+  color: #FFF;
+}
+
+.module-btn.bigscreen-btn:hover {
+  background-color: #FFA830;
 }
 
 .dropdown-select {

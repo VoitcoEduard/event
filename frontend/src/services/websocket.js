@@ -11,10 +11,11 @@ class QuizWebSocket {
         this.nickname = null
         this.userId = null // Store userId
         this.isHost = false
+        this.isBigScreen = false
         this.intentionalDisconnect = false
     }
 
-    connect(moduleId, nickname = '', isHost = false) {
+    connect(moduleId, nickname = '', isHost = false, isBigScreen = false) {
         // Mark as intentional if reconnecting while already connected
         if (this.socket) {
             this.intentionalDisconnect = true
@@ -25,6 +26,7 @@ class QuizWebSocket {
         this.nickname = nickname
         this.userId = getUserId()
         this.isHost = isHost
+        this.isBigScreen = isBigScreen
         this.intentionalDisconnect = false
 
         // Determine WS URL from API_BASE_URL (http -> ws, https -> wss)
@@ -47,10 +49,18 @@ class QuizWebSocket {
             })
             signalQueue.onReconnect()
 
-            // Send join message
-            const type = isHost ? 'host:join' : 'player:join'
+            // Send join message based on client type
+            let type
+            if (isBigScreen) {
+                type = 'bigscreen:join'
+            } else if (isHost) {
+                type = 'host:join'
+            } else {
+                type = 'player:join'
+            }
+
             const payload = { moduleId }
-            if (!isHost) {
+            if (!isHost && !isBigScreen) {
                 payload.nickname = nickname
                 payload.userId = this.userId
             }
@@ -83,7 +93,7 @@ class QuizWebSocket {
                 console.log(`Reconnecting in ${delay}ms... (Attempt ${this.reconnectAttempts + 1})`)
                 setTimeout(() => {
                     this.reconnectAttempts++
-                    this.connect(this.moduleId, this.nickname, this.isHost)
+                    this.connect(this.moduleId, this.nickname, this.isHost, this.isBigScreen)
                 }, delay)
             }
         }

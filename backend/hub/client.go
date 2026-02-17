@@ -41,9 +41,10 @@ type Client struct {
 	send chan []byte
 
 	// Session tracking
-	ModuleID string // The quiz/module ID this client is connected to
-	PlayerID string // The player ID (if player)
-	IsHost   bool   // True if this client is the host
+	ModuleID    string // The quiz/module ID this client is connected to
+	PlayerID    string // The player ID (if player)
+	IsHost      bool   // True if this client is the host
+	IsBigScreen bool   // True if this client is a big screen display
 }
 
 // readPump pumps messages from the websocket connection to the hub.

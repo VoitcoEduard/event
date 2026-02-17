@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/user/go-expo-sample/backend/db"
@@ -825,4 +826,59 @@ func UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Score updated"})
 	utils.DebugLog("[UnifiedViewUpdate] Updated score for user %s in module %s. New Score: %d", userID, moduleID, input.Score)
+}
+
+// GetScreensaverConfig returns the screensaver configuration for an event
+// URL: /events/{id}/screensaver
+func GetScreensaverConfig(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path[len("/events/"):]
+	// Remove /screensaver suffix if present
+	if strings.HasSuffix(id, "/screensaver") {
+		id = id[:len(id)-len("/screensaver")]
+	}
+
+	collection := db.GetCollection("events")
+	var event models.Event
+	err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&event)
+	if err != nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	// Return screensaver config or empty config if not set
+	if event.ScreensaverConfig != nil {
+		json.NewEncoder(w).Encode(event.ScreensaverConfig)
+	} else {
+		json.NewEncoder(w).Encode(models.ScreensaverConfig{})
+	}
+}
+
+// UpdateScreensaverConfig updates the screensaver configuration for an event
+// URL: /events/{id}/screensaver
+func UpdateScreensaverConfig(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path[len("/events/"):]
+	// Remove /screensaver suffix if present
+	if strings.HasSuffix(id, "/screensaver") {
+		id = id[:len(id)-len("/screensaver")]
+	}
+
+	var input models.ScreensaverConfig
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("events")
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": bson.M{"screensaverConfig": input}}
+
+	_, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(input)
 }

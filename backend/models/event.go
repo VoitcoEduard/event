@@ -30,11 +30,17 @@ type Template struct {
 	CreatedAt   time.Time      `json:"createdAt" bson:"createdAt"`
 }
 
+type ScreensaverConfig struct {
+	ImageID  string `json:"imageId" bson:"imageId"`
+	ImageURL string `json:"imageUrl" bson:"imageUrl"` // Computed field for display
+}
+
 type Event struct {
-	ID          string    `json:"id" bson:"_id"`
-	Name        string    `json:"name" bson:"name"`
-	Description string    `json:"description" bson:"description"`
-	IsActive    bool      `json:"isActive" bson:"isActive"`
-	CreatedAt   time.Time `json:"createdAt" bson:"createdAt"`
-	Modules     []Module  `json:"modules" bson:"modules"`
+	ID                string             `json:"id" bson:"_id"`
+	Name              string             `json:"name" bson:"name"`
+	Description       string             `json:"description" bson:"description"`
+	IsActive          bool               `json:"isActive" bson:"isActive"`
+	CreatedAt         time.Time          `json:"createdAt" bson:"createdAt"`
+	Modules           []Module           `json:"modules" bson:"modules"`
+	ScreensaverConfig *ScreensaverConfig `json:"screensaverConfig" bson:"screensaverConfig"`
 }

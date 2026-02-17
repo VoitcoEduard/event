@@ -7,6 +7,7 @@ import DataLibraryScreen from '../views/DataLibraryScreen.vue'
 
 import QuizHostScreen from '../views/QuizHostScreen.vue'
 import QuizPlayerScreen from '../views/QuizPlayerScreen.vue'
+import BigScreen from '../views/BigScreen.vue'
 
 const routes = [
   { path: '/', name: 'main', component: MainScreen },
@@ -16,7 +17,8 @@ const routes = [
   { path: '/data/library', name: 'data-library', component: DataLibraryScreen },
   { path: '/quiz/library', name: 'quiz-library', component: () => import('../views/QuizLibraryScreen.vue') },
   { path: '/quiz/:eventId/:moduleId/host', name: 'quiz-host', component: QuizHostScreen },
-  { path: '/quiz/:eventId/:moduleId/player', name: 'quiz-player', component: QuizPlayerScreen }
+  { path: '/quiz/:eventId/:moduleId/player', name: 'quiz-player', component: QuizPlayerScreen },
+  { path: '/bigscreen/:eventId/:moduleId', name: 'bigscreen', component: BigScreen }
 ]
 
 const router = createRouter({

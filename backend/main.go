@@ -188,6 +188,18 @@ func main() {
 			}
 		}
 
+		// Screensaver config routes
+		if strings.HasSuffix(r.URL.Path, "/screensaver") {
+			if r.Method == "GET" {
+				handlers.GetScreensaverConfig(w, r)
+				return
+			}
+			if r.Method == "PUT" {
+				handlers.UpdateScreensaverConfig(w, r)
+				return
+			}
+		}
+
 		switch r.Method {
 		case "GET":
 			handlers.GetEvent(w, r)
