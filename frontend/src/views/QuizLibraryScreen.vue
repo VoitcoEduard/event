@@ -206,7 +206,17 @@ const editTemplate = (template) => {
     name: template.name,
     description: template.description,
     moduleType: template.moduleType,
-    questions: JSON.parse(JSON.stringify(template.data?.questions || [])),
+    questions: JSON.parse(JSON.stringify(template.data?.questions || [])).map(q => {
+        if (q.type === 'slider') {
+            if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+            if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+        }
+        if (q.type === 'true_false') {
+             q.answers = ['True', 'False', '', '']
+            if (q.correctIndex > 1) q.correctIndex = 0
+        }
+        return q
+    }),
     timeline: JSON.parse(JSON.stringify(template.data?.timeline || []))
   }
   showEditor.value = true
@@ -356,6 +366,20 @@ const handleFileUpload = (event) => {
                 description: content.description || '',
                 moduleType: content.moduleType,
                 data: content.data || {}
+            }
+            // Sanitize questions if quiz
+            if (payload.moduleType === 'quiz' && payload.data.questions) {
+                 payload.data.questions = payload.data.questions.map(q => {
+                    if (q.type === 'slider') {
+                        if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+                        if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+                    }
+                    if (q.type === 'true_false') {
+                        q.answers = ['True', 'False', '', '']
+                        if (q.correctIndex > 1) q.correctIndex = 0
+                    }
+                    return q
+                 })
             }
 
             const res = await fetch(`${API_BASE_URL}/templates`, {

@@ -129,6 +129,10 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
             if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
             if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
         }
+        if (q.type === 'true_false') {
+             q.answers = ['True', 'False', '', '']
+             if (q.correctIndex > 1) q.correctIndex = 0
+        }
         return q
     })
   } else if (visible) {
@@ -159,6 +163,10 @@ const loadTemplate = (template) => {
             }
             if (q.type === 'slider' && !q.scoringConfig) {
                 q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+            }
+            if (q.type === 'true_false') {
+                 q.answers = ['True', 'False', '', '']
+                 if (q.correctIndex > 1) q.correctIndex = 0
             }
             return q
         })
@@ -325,6 +333,10 @@ const handleFileUpload = (event) => {
                     }
                     if (q.type === 'slider' && !q.scoringConfig) {
                         q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+                    }
+                    if (q.type === 'true_false') {
+                         q.answers = ['True', 'False', '', '']
+                         if (q.correctIndex > 1) q.correctIndex = 0
                     }
                     return q
                 })
