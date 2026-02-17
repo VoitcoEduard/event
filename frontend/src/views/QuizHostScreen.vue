@@ -110,7 +110,7 @@
     <div v-else-if="gameState === 'results' || gameState === 'leaderboard'" class="state-container results-container">
        <h2 class="results-title">{{ gameState === 'results' ? 'Question Results' : 'Leaderboard' }}</h2>
        
-       <div v-if="gameState === 'results'" class="correct-answer-reveal">
+       <div v-if="gameState === 'results' && !isSlider" class="correct-answer-reveal">
           <p>Correct Answer:</p>
           <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
              {{ getShapeIcon(currentQuestion?.correctIndex) }} 
@@ -119,7 +119,7 @@
        </div>
 
        <!-- Show Stats in Results -->
-       <div v-if="gameState === 'results'" class="answers-stats results-mode">
+       <div v-if="gameState === 'results' && !isSlider" class="answers-stats results-mode">
           <div class="stats-grid">
              <div v-for="(count, idx) in (isTrueFalse ? 2 : 4)" :key="idx" class="stat-column">
                 <div class="stat-bar-container">
@@ -135,31 +135,52 @@
           </div>
        </div>
 
-       <!-- Slider Histogram Stats -->
-       <div v-if="gameState === 'results' && isSlider" class="answers-stats results-mode slider-stats">
-          <div class="histogram-container">
-             <div class="histogram-track-host">
-                <div 
-                   v-for="(count, idx) in histogramBuckets" 
-                   :key="idx"
-                   class="histogram-bar-host"
-                   :class="{ 'bar-correct': isBucketCorrect(idx) }"
-                   :style="{ height: getHistogramBarHeight(count) + '%' }"
-                >
-                   <span class="bar-count" v-if="count > 0">{{ count }}</span>
-                </div>
-             </div>
-             
-             <!-- Axis / Marker -->
-             <div class="histogram-axis">
-                <span>{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
-                <span class="correct-marker-label" :style="{ left: correctMarkerPercentage + '%' }">
-                   ▲ {{ formatNumber(currentQuestion?.correctValue) }}
-                </span>
-                <span>{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
-             </div>
-          </div>
-       </div>
+        <!-- Slider Histogram Stats (New Minimal Design) -->
+        <div v-if="gameState === 'results' && isSlider" class="answers-stats results-mode slider-results-view">
+           <div class="slider-result-container">
+              
+              <!-- The Track -->
+              <div class="slider-result-track"></div>
+
+              <!-- Distribution Bars -->
+              <div class="slider-distribution-overlay">
+                  <div 
+                    v-for="(count, idx) in histogramBuckets" 
+                    :key="idx"
+                    class="distribution-bar-wrapper"
+                    :style="{ left: (idx / histogramBuckets.length * 100) + '%', width: (100 / histogramBuckets.length) + '%' }"
+                  >
+                      <div 
+                        class="distribution-bar"
+                        :style="{ height: getHistogramBarHeight(count) + '%' }"
+                        :class="{ 'has-votes': count > 0 }"
+                      >
+                        <span class="bar-tooltip" v-if="count > 0">{{ count }}</span>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Correct Answer Marker -->
+              <div 
+                class="correct-answer-marker" 
+                :class="{ 'reveal-marker': revealCorrect }"
+                :style="{ left: correctMarkerPercentage + '%' }"
+              >
+                  <div class="marker-line"></div>
+                  <div class="marker-label">
+                      <span class="marker-title">Correct</span>
+                      <span class="marker-value">{{ formatNumber(currentQuestion?.correctValue) }}</span>
+                  </div>
+              </div>
+
+              <!-- Min/Max Labels -->
+              <div class="slider-labels">
+                  <span class="label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
+                  <span class="label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
+              </div>
+
+           </div>
+        </div>
 
        <div class="leaderboard-list">
           <div v-for="(player, idx) in topPlayers" :key="player.id" class="leaderboard-item">
@@ -239,6 +260,20 @@ const currentQuestion = computed(() => questions.value[currentQuestionIndex.valu
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+const revealCorrect = ref(false)
+
+// Watch gameState to trigger animation
+import { watch } from 'vue'
+watch(gameState, (newVal) => {
+    if (newVal === 'results' && isSlider.value) {
+        revealCorrect.value = false
+        setTimeout(() => {
+            revealCorrect.value = true
+        }, 1500) // 1.5s delay before revealing correct answer
+    } else {
+        revealCorrect.value = false
+    }
+})
 
 const questionImageUrl = computed(() => {
     const imageId = currentQuestion.value?.imageId
@@ -829,6 +864,157 @@ onUnmounted(() => {
     50% { left: 100%; opacity: 1; }
     90% { opacity: 1; }
     100% { left: 100%; opacity: 0; }
+}
+
+/* Slider Results - New Design */
+.slider-results-view {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slider-result-container {
+    width: 90%;
+    height: 300px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 50px; /* Space for labels below */
+}
+
+/* Track Line */
+.slider-result-track {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* Distribution Bars */
+.slider-distribution-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 4px; /* Sit on track */
+    display: flex;
+    align-items: flex-end;
+}
+
+.distribution-bar-wrapper {
+    position: absolute;
+    bottom: 0;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    /* padding: 0 2px; gap between bars */ 
+}
+
+.distribution-bar {
+    width: 80%;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px 4px 0 0;
+    transition: height 1s ease-out;
+    position: relative;
+    min-height: 0; /* Allow 0 height */
+}
+
+.distribution-bar.has-votes {
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+.bar-tooltip {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: white;
+}
+
+/* Correct Marker */
+.correct-answer-marker {
+    position: absolute;
+    bottom: 0;
+    height: 120%; /* Go taller than bars */
+    width: 0; /* Just a line position */
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    opacity: 0; /* Hidden initially */
+    transform: translateY(20px);
+    transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.correct-answer-marker.reveal-marker {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.marker-line {
+    width: 4px;
+    height: 100%;
+    background: #32D74B; /* Neon Green */
+    box-shadow: 0 0 15px #32D74B;
+    border-radius: 4px;
+}
+
+.marker-label {
+    position: absolute;
+    top: -60px; /* Float above everything */
+    background: #32D74B;
+    color: black;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    white-space: nowrap;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1s backwards; /* Delay appearance */
+}
+
+.marker-label::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0;
+    border-style: solid;
+    border-color: #32D74B transparent transparent transparent;
+}
+
+.marker-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
+.marker-value {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+/* Labels */
+.slider-labels {
+    position: absolute;
+    bottom: -40px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.2rem;
+    color: rgba(255,255,255,0.6);
+    font-weight: 600;
 }
 
 .question-text {
