@@ -73,16 +73,24 @@
 
         <!-- RIGHT COLUMN: Stacked Answer Cards -->
         <div class="answers-column">
-          <div 
-            v-for="(answer, idx) in currentQuestion?.answers" 
-            :key="idx" 
-            class="answer-card-stacked"
-            :class="getAnswerColorClass(idx)"
-            v-show="!isTrueFalse || idx < 2"
-          >
-            <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
-            <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+          <div v-if="isSlider" class="slider-instruction-view">
+             <h2 class="slider-instruction-text">Slide to answer</h2>
+             <div class="slider-demo-track">
+                <div class="slider-demo-thumb"></div>
+             </div>
           </div>
+          <template v-else>
+            <div 
+                v-for="(answer, idx) in currentQuestion?.answers" 
+                :key="idx" 
+                class="answer-card-stacked"
+                :class="getAnswerColorClass(idx)"
+                v-show="!isTrueFalse || idx < 2"
+            >
+                <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
+                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+            </div>
+          </template>
         </div>
       </div>
       
@@ -769,7 +777,58 @@ onUnmounted(() => {
     height: 100%;
     align-items: center;
     justify-content: center;
-    padding: 40px; /* More padding for centered text */
+    padding: 20px;
+}
+
+/* Slider Instruction */
+.slider-instruction-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.slider-instruction-text {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 40px;
+    text-align: center;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.slider-demo-track {
+    width: 80%;
+    height: 10px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 5px;
+    position: relative;
+    overflow: visible;
+}
+
+.slider-demo-thumb {
+    width: 40px;
+    height: 40px;
+    background: #0A84FF;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform:translate(-50%, -50%);
+    box-shadow: 0 0 15px rgba(10, 132, 255, 0.6);
+    animation: slide-demo 2s infinite ease-in-out;
+}
+
+@keyframes slide-demo {
+    0% { left: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    50% { left: 100%; opacity: 1; }
+    90% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
 }
 
 .question-text {
