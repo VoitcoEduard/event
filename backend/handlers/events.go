@@ -42,8 +42,9 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 						"id":   "step_welcome_name",
 						"type": "field",
 						"data": map[string]any{
-							"label":     "What is your name?",
-							"fieldType": "text",
+							"label":        "What is your name?",
+							"fieldType":    "text",
+							"compactLabel": "name",
 						},
 					},
 				},

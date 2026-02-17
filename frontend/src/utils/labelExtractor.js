@@ -117,39 +117,25 @@ export function extractLabel(question) {
         return question.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase().slice(0, 20) || 'field'
     }
 
-    // Strategy: Find the last 1-2 words that are NOT in the skip list
-    // This works because most questions end with the key noun
-    let labelWords = []
+    // Strategy: Find all non-skip words and select 1-2 meaningful ones
+    const meaningfulWords = []
 
-    // Go from the end and collect non-skip words
-    for (let i = words.length - 1; i >= 0; i--) {
+    for (let i = 0; i < words.length; i++) {
         const word = words[i].toLowerCase()
 
-        // Skip if in skip list
-        if (SKIP_WORDS.has(word)) {
-            continue
-        }
-
-        // Apply word mapping if exists (e.g., 'old' -> 'age')
-        const mappedWord = WORD_MAPPINGS[word] || word
-        labelWords.push(mappedWord)
-
-        // Stop if we have 2 good words
-        if (labelWords.length >= 2) {
-            break
-        }
-
-        // Also stop if we've gone too far back (more than 2 words from end)
-        if (words.length - i > 3) {
-            break
+        if (!SKIP_WORDS.has(word)) {
+            const mappedWord = WORD_MAPPINGS[word] || word
+            meaningfulWords.push(mappedWord)
         }
     }
 
-    // If we have no words, use the last word of the question
-    if (labelWords.length === 0) {
-        return words[words.length - 1].toLowerCase()
+    // If no meaningful words found, use entire question (cleaned)
+    if (meaningfulWords.length === 0) {
+        return question.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase().slice(0, 20) || 'field'
     }
 
-    // Reverse to get back to normal order and join with underscore
-    return labelWords.reverse().join('_')
+    // Return 1-2 meaningful words
+    const resultWords = meaningfulWords.slice(-2)
+
+    return resultWords.join('_')
 }

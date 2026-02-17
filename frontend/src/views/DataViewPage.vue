@@ -66,6 +66,7 @@ import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
 import 'handsontable/styles/ht-theme-main.min.css';
 import { API_BASE_URL } from '../utils';
+import { extractLabel } from '../utils/labelExtractor';
 
 // Register all Handsontable modules
 registerAllModules();
@@ -110,6 +111,26 @@ const updateResponse = async (moduleId, responseId, data) => {
   } catch (e) {
     console.error("[UnifiedView] Error updating response:", e);
   }
+};
+
+const getModuleFieldMapping = (moduleDef) => {
+  const mapping = {};
+  console.log('[UnifiedView] Generating mapping for module:', moduleDef ? moduleDef.name : 'undefined');
+  if (moduleDef && moduleDef.type === 'form' && moduleDef.data && moduleDef.data.timeline) {
+    console.log('[UnifiedView] Timeline found with steps:', moduleDef.data.timeline.length);
+    moduleDef.data.timeline.forEach(step => {
+       if(step.type === 'field') {
+          // Always generate label from question text to ensure consistency
+          const label = step.data.label ? extractLabel(step.data.label) : 'Question';
+          mapping[step.id] = label;
+          console.log(`[UnifiedView] Mapped field ${step.id} -> ${label}`);
+       }
+    });
+  } else {
+    console.log('[UnifiedView] No timeline found or module is not a form');
+    if (moduleDef) console.log('Module type:', moduleDef.type, 'Data:', moduleDef.data);
+  }
+  return mapping;
 };
 
 const updateScore = async (moduleId, userId, score) => {
@@ -274,6 +295,9 @@ const fetchData = async () => {
   tableColumns.value = [];
 
   try {
+    // RELOAD SCHEMA: Fetch event details to ensure we have the latest form definitions (labels/IDs)
+    await fetchEventDetails();
+
     if (activeTab.value === 'unified') {
       await fetchUnifiedData();
     } else {
@@ -358,8 +382,11 @@ const fetchUnifiedData = async () => {
         }
       });
       
+      const fieldLabels = getModuleFieldMapping(m);
+
       Array.from(allKeys).forEach(key => {
-        headers.push(`${m.name}: ${key}`);
+        const label = fieldLabels[key] || key;
+        headers.push(`${m.name}: ${label}`);
         columns.push({ 
           data: `formData.${m.id}.${key}`,
           readOnly: false 
@@ -419,9 +446,31 @@ const fetchModuleData = async (moduleId) => {
     });
   });
 
-  const headers = ['ID', ...Array.from(allKeys)];
-  const columns = headers.map(h => ({ data: h })); 
+  const moduleDef = eventModules.value.find(m => m.id === moduleId);
+  const fieldLabels = getModuleFieldMapping(moduleDef);
+
+  const headers = ['ID', ...Array.from(allKeys).map(k => fieldLabels[k] || k)];
+  const columns = headers.map((h, index) => {
+      // First column is ID
+      if (index === 0) return { data: 'ID' };
+      // Other columns, find the key that maps to this header or use the header itself (if it was a key)
+      // Actually we need to map data keys to columns, but since we flatmapped keys, we can just use the key for data access?
+      // Wait, Handsontable needs 'data' property to look up in the row object.
+      // If we change the header, the data property in the row object (which is the key) doesn't change.
+      // So we need to separate 'data' accessor from 'title' (header).
+      
+      // But here headers array is determining the visual order AND the accessor if we use simple array of objects.
+      // In the Unified view we did: headers.push(label) AND columns.push({ data: key }).
+      
+      // Here in fetchModuleData we construct 'columns' based on 'headers'.
+      return { data: Array.from(allKeys)[index - 1] }; // -1 because index 0 is ID
+  }); 
   
+  // Re-write this part to be clearer and correct
+  const sortedKeys = Array.from(allKeys);
+  const displayHeaders = ['ID', ...sortedKeys.map(k => fieldLabels[k] || k)];
+  const displayColumns = [{ data: 'ID' }, ...sortedKeys.map(k => ({ data: k }))];
+
   const rows = rawData.map(item => {
     const row = { ID: item._id || item.id };
     if (item.data) Object.assign(row, item.data);
@@ -431,16 +480,16 @@ const fetchModuleData = async (moduleId) => {
     return row;
   });
 
-  console.log("[UnifiedView] Single Module Headers:", headers);
+  console.log("[UnifiedView] Single Module Headers:", displayHeaders);
   console.log("[UnifiedView] Single Module Data Sample:", rows.slice(0, 2));
 
-  tableHeaders.value = headers;
-  tableColumns.value = columns;
+  tableHeaders.value = displayHeaders;
+  tableColumns.value = displayColumns;
   
    if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
     hotTableComponent.value.hotInstance.updateSettings({
-      colHeaders: headers,
-      columns: columns,
+      colHeaders: displayHeaders,
+      columns: displayColumns,
       data: rows,
       readOnly: true 
     });
