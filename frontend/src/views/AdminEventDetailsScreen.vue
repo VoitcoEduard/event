@@ -11,8 +11,12 @@
           </div>
         </div>
         <div class="header-right">
-          <button class="nav-button bigscreen-header-btn" @click="openBigScreenFromHeader">
-            🖥️ Big Screen
+          <button 
+            class="nav-button bigscreen-header-btn" 
+            :class="{ 'close-btn': isBigScreenOpen }"
+            @click="isBigScreenOpen ? closeBigScreen() : openBigScreenFromHeader()"
+          >
+            {{ isBigScreenOpen ? '❌ Close Big Screen' : '🖥️ Big Screen' }}
           </button>
           <button class="nav-button library-btn" @click="goToLibrary">
             📚 Библиотека
@@ -282,6 +286,10 @@ const screensaverLoading = ref(false)
 const screensavers = ref([])
 const showLibrarySelector = ref(false)
 
+// BigScreen window reference
+const bigscreenWindow = ref(null)
+const isBigScreenOpen = computed(() => bigscreenWindow.value && !bigscreenWindow.value.closed)
+
 const { success, error, info } = useToast()
 
 const storedEvent = sessionStorage.getItem('currentEvent')
@@ -436,7 +444,7 @@ const hostQuiz = (module) => {
 const launchBigScreen = (module) => {
   // Open big screen in a new window
   const url = `/bigscreen/${currentEvent.value.id}/${module.id}`
-  window.open(url, '_blank', 'width=1200,height=800')
+  bigscreenWindow.value = window.open(url, 'bigscreen', 'width=1200,height=800')
 }
 
 const addModule = async () => {
@@ -552,15 +560,27 @@ const goToDataView = () => {
 }
 
 const openBigScreenFromHeader = () => {
+  // If already open, focus it
+  if (bigscreenWindow.value && !bigscreenWindow.value.closed) {
+    bigscreenWindow.value.focus()
+    return
+  }
   // Find the first quiz module (optional - bigscreen can work without quiz)
   const quizModule = currentEvent.value?.modules?.find(m => m.type === 'quiz')
   if (quizModule) {
     const url = `/bigscreen/${currentEvent.value.id}/${quizModule.id}`
-    window.open(url, '_blank', 'width=1200,height=800')
+    bigscreenWindow.value = window.open(url, 'bigscreen', 'width=1200,height=800')
   } else {
     // Open bigscreen without quiz module - will show screensaver only
     const url = `/bigscreen/${currentEvent.value.id}`
-    window.open(url, '_blank', 'width=1200,height=800')
+    bigscreenWindow.value = window.open(url, 'bigscreen', 'width=1200,height=800')
+  }
+}
+
+const closeBigScreen = () => {
+  if (bigscreenWindow.value && !bigscreenWindow.value.closed) {
+    bigscreenWindow.value.close()
+    bigscreenWindow.value = null
   }
 }
 </script>
@@ -665,6 +685,14 @@ const openBigScreenFromHeader = () => {
   background-color: #FFA830;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+}
+
+.bigscreen-header-btn.close-btn {
+  background-color: #FF3B30;
+}
+
+.bigscreen-header-btn.close-btn:hover {
+  background-color: #FF5C54;
 }
 
 .data-btn {
