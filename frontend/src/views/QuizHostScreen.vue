@@ -55,11 +55,19 @@
       <div class="question-main-content">
         <!-- LEFT COLUMN: Question Card with Optional Image -->
         <div class="question-column">
-          <div class="question-card">
-            <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
+          <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+            
+            <!-- Image Background (if exists) -->
             <div v-if="questionImageUrl" class="question-image-container">
-              <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+               <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+               <div class="image-overlay-gradient"></div>
             </div>
+
+            <!-- Question Text Overlay -->
+            <div class="question-text-overlay">
+               <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
+            </div>
+
           </div>
         </div>
 
@@ -235,26 +243,32 @@ const questionFontSize = computed(() => {
     const hasImage = !!questionImageUrl.value
     
     // Larger base font sizes - maximize use of space
-    let baseSize
+    let baseSize;
     
-    if (text.length < 30) {
-        // Very short text - maximum font
-        baseSize = hasImage ? 5.0 : 6.0
-    } else if (text.length < 60) {
-        // Short text 
-        baseSize = hasImage ? 4.0 : 5.0
-    } else if (text.length < 100) {
-        // Medium text
-        baseSize = hasImage ? 3.2 : 4.0
-    } else if (text.length < 200) {
-        // Longer text
-        baseSize = hasImage ? 2.5 : 3.2
+    if (!hasImage) {
+        // No image - massive text centered
+        if (text.length < 30) {
+            baseSize = 10.0;
+        } else if (text.length < 60) {
+            baseSize = 7.0;
+        } else if (text.length < 100) {
+            baseSize = 5.0;
+        } else {
+            baseSize = 3.5;
+        }
     } else {
-        // Very long text
-        baseSize = hasImage ? 2.0 : 2.5
+        // With image - text at bottom
+        if (text.length < 30) {
+            baseSize = 8.0; 
+        } else if (text.length < 60) {
+            baseSize = 5.0; 
+        } else if (text.length < 100) {
+            baseSize = 3.5; 
+        } else {
+            baseSize = 2.5;
+        }
     }
-    
-    return `${baseSize}vw`
+    return `${baseSize}vw`;
 })
 
 // Calculate individual font size for each answer card
@@ -699,45 +713,74 @@ onUnmounted(() => {
 .question-card {
     background: linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%);
     border-radius: 16px;
-    padding: 30px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     height: 100%;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden; /* Ensures image and overlay stay inside */
 }
 
-.question-text {
-    text-align: center;
-    font-weight: 800;
-    line-height: 1.3;
-    color: #FFFFFF;
-    margin: 0;
-    flex-shrink: 0;
-    width: 100%;
-    overflow: visible;
-    font-size: inherit;
-    word-wrap: break-word;
-    white-space: pre-wrap;
-}
-
-.question-image-container {
-    flex: 1;
-    display: flex;
-    align-items: center;
+/* If no image, center text vertically */
+.question-card:not(.has-image) {
     justify-content: center;
-    margin-top: 20px;
-    min-height: 200px;
-    overflow: hidden;
+    align-items: center;
+    padding: 30px;
+}
+
+/* IMAGE CONTAINER (Background) */
+.question-image-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1;
 }
 
 .question-image {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Smart cropping */
+}
+
+/* Gradient Overlay for text readability */
+.image-overlay-gradient {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 75%; /* Increased from 60% */
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,0.95) 100%);
+    z-index: 2;
+}
+
+/* TEXT OVERLAY AREA */
+.question-text-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 30px 40px;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end; /* Text sits at bottom */
+    text-align: center;
+    background: transparent;
+}
+
+/* Center text when no image */
+.question-card:not(.has-image) .question-text-overlay {
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 40px; /* More padding for centered text */
+}
+
+.question-text {
+    font-weight: 900;
+    line-height: 1.25;
+    color: #FFFFFF;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    width: 100%;
 }
 
 /* RIGHT COLUMN: Stacked Answers - 40% */
