@@ -520,9 +520,9 @@ onUnmounted(() => {
 }
 
 .screensaver-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   animation: fadeIn 1s ease-in;
 }
 
