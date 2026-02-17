@@ -165,6 +165,7 @@
             </div>
             <div 
               class="correct-answer-marker" 
+              :class="{ 'reveal-marker': revealCorrect }"
               :style="{ left: correctMarkerPercentage + '%' }"
             >
               <div class="marker-line"></div>
@@ -221,7 +222,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
@@ -257,6 +258,19 @@ const currentQuestion = computed(() => questions.value[currentQuestionIndex.valu
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+const revealCorrect = ref(false)
+
+// Watch gameState to trigger animation
+watch(gameState, (newVal) => {
+    if (newVal === 'results' && isSlider.value) {
+        revealCorrect.value = false
+        setTimeout(() => {
+            revealCorrect.value = true
+        }, 1500) // 1.5s delay before revealing correct answer
+    } else {
+        revealCorrect.value = false
+    }
+})
 
 const questionImageUrl = computed(() => {
   const imageId = currentQuestion.value?.imageId
@@ -851,39 +865,53 @@ onUnmounted(() => {
   justify-content: center;
   height: 100%;
   padding: 2vw;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .slider-instruction-text {
   font-size: 3vw;
-  color: #888;
+  font-weight: 800;
+  color: #fff;
   margin-bottom: 2vh;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .slider-demo-track {
   width: 80%;
   height: 4vh;
-  background: #333;
+  background: rgba(255,255,255,0.2);
   border-radius: 2vh;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .slider-demo-thumb {
   position: absolute;
   top: 50%;
-  left: 50%;
+  left: 0;
   transform: translate(-50%, -50%);
   width: 5vh;
   height: 5vh;
   background: #FF9500;
   border-radius: 50%;
   box-shadow: 0 0 20px rgba(255, 149, 0, 0.5);
-  animation: pulse-thumb 2s infinite;
+  animation: slide-demo 2s infinite ease-in-out;
 }
 
-@keyframes pulse-thumb {
-  0%, 100% { box-shadow: 0 0 20px rgba(255, 149, 0, 0.5); }
-  50% { box-shadow: 0 0 40px rgba(255, 149, 0, 0.8); }
+@keyframes slide-demo {
+  0% { left: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  50% { left: 100%; opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
 }
 
 /* Slider Results View */
@@ -955,6 +983,12 @@ onUnmounted(() => {
   top: 5%;
   transform: translateX(-50%);
   z-index: 10;
+  opacity: 0;
+  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.correct-answer-marker.reveal-marker {
+  opacity: 1;
 }
 
 .marker-line {
