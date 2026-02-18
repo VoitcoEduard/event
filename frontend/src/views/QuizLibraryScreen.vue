@@ -9,13 +9,16 @@
       </div>
       <div class="header-actions">
         <p class="header-subtitle">Manage Templates</p>
-        <button v-if="activeTab !== 'screensaver'" class="create-btn" @click="createNewTemplate">
+        <button v-if="activeTab !== 'screensaver' && activeTab !== 'music'" class="create-btn" @click="createNewTemplate">
           + New {{ activeTab === 'form' ? 'Form' : 'Quiz' }} Template
         </button>
         <button v-if="activeTab === 'screensaver'" class="create-btn" @click="triggerScreensaverUpload">
           + Upload Screensaver
         </button>
-        <button v-if="activeTab !== 'screensaver'" class="import-btn" @click="triggerFileInput">
+        <button v-if="activeTab === 'music'" class="create-btn" @click="triggerTrackUpload">
+          + Upload Music
+        </button>
+        <button v-if="activeTab !== 'screensaver' && activeTab !== 'music'" class="import-btn" @click="triggerFileInput">
             📂 Import
         </button>
         <input 
@@ -31,6 +34,13 @@
             style="display: none" 
             accept="image/jpeg,image/png,image/gif,image/webp"
             @change="handleScreensaverUpload"
+        />
+        <input 
+            type="file" 
+            ref="trackInput" 
+            style="display: none" 
+            accept="audio/mpeg,audio/wav,audio/ogg"
+            @change="handleTrackUpload"
         />
       </div>
     </div>
@@ -62,12 +72,20 @@
                 <span class="tab-icon">🖼️</span>
                 Screensavers
             </button>
+            <button 
+                class="tab-btn" 
+                :class="{ active: activeTab === 'music' }"
+                @click="activeTab = 'music'"
+            >
+                <span class="tab-icon">🎵</span>
+                Music
+            </button>
         </div>
 
         <!-- Main Content Area -->
         <div class="main-content">
             <div v-if="loading" class="loading-state">
-                <p>Loading templates...</p>
+                <p>Loading...</p>
             </div>
 
             <!-- Screensavers Tab Content -->
@@ -89,6 +107,31 @@
                         </div>
                         <div class="screensaver-actions">
                             <button class="icon-btn delete-btn" @click="handleDeleteScreensaver(screensaver)" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Music Tab Content -->
+            <div v-else-if="activeTab === 'music'" class="music-view">
+                <div v-if="tracks.length === 0" class="empty-state">
+                    <p class="empty-icon">🎵</p>
+                    <p class="empty-text">No music tracks found.</p>
+                    <p class="empty-hint">Upload audio files to play during quiz sessions.</p>
+                </div>
+
+                <div v-else class="tracks-list">
+                    <div v-for="track in tracks" :key="track.id" class="track-card">
+                        <div class="track-icon">🎵</div>
+                        <div class="track-info">
+                            <h3 class="track-name">{{ track.name }}</h3>
+                            <p class="track-date">Added: {{ formatDate(track.createdAt) }}</p>
+                        </div>
+                        <div class="track-preview">
+                            <audio controls :src="`${API_BASE_URL}${track.url}`" class="audio-player"></audio>
+                        </div>
+                        <div class="track-actions">
+                            <button class="icon-btn delete-btn" @click="handleDeleteTrack(track)" title="Delete">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -171,13 +214,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from '../components/QuizEditor.vue'
 import FormEditor from '../components/FormEditor.vue'
-import { getScreensavers, uploadScreensaver, deleteScreensaver, getImageUrl } from '../services/media'
+import { getScreensavers, uploadScreensaver, deleteScreensaver, getTracks, uploadTrack, deleteTrack, getImageUrl } from '../services/media'
 
 const router = useRouter()
 const { success, error, info } = useToast()
@@ -185,11 +228,13 @@ const { success, error, info } = useToast()
 const activeTab = ref('form')
 const templates = ref([])
 const screensavers = ref([])
+const tracks = ref([])
 const loading = ref(true)
 const showEditor = ref(false)
 const saving = ref(false)
 const fileInput = ref(null)
 const screensaverInput = ref(null)
+const trackInput = ref(null)
 const currentTemplate = ref({
   id: null,
   name: '',
@@ -238,6 +283,19 @@ const fetchScreensavers = async () => {
   }
 }
 
+const fetchTracks = async () => {
+  loading.value = true
+  try {
+    const data = await getTracks()
+    tracks.value = data
+  } catch (err) {
+    console.error(err)
+    error('Error loading tracks')
+  } finally {
+    loading.value = false
+  }
+}
+
 const handleScreensaverUpload = async (event) => {
     const file = event.target.files[0]
     if (!file) return
@@ -270,15 +328,48 @@ const handleDeleteScreensaver = async (screensaver) => {
     }
 }
 
+const handleTrackUpload = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    try {
+        const name = prompt('Enter a name for this track:', file.name)
+        if (!name) return
+        
+        await uploadTrack(file, name)
+        success('Track uploaded successfully')
+        fetchTracks()
+    } catch (err) {
+        console.error(err)
+        error('Failed to upload track')
+    } finally {
+        event.target.value = ''
+    }
+}
+
+const handleDeleteTrack = async (track) => {
+    if (!confirm(`Delete track "${track.name}"?`)) return
+    
+    try {
+        await deleteTrack(track.id)
+        success('Track deleted')
+        fetchTracks()
+    } catch (err) {
+        console.error(err)
+        error('Failed to delete track')
+    }
+}
+
 onMounted(() => {
   fetchTemplates()
 })
 
 // Watch for tab changes
-import { watch } from 'vue'
 watch(activeTab, (newTab) => {
     if (newTab === 'screensaver') {
         fetchScreensavers()
+    } else if (newTab === 'music') {
+        fetchTracks()
     }
 })
 
@@ -445,6 +536,10 @@ const triggerScreensaverUpload = () => {
     screensaverInput.value.click()
 }
 
+const triggerTrackUpload = () => {
+    trackInput.value.click()
+}
+
 const handleFileUpload = (event) => {
     const file = event.target.files[0]
     if (!file) return
@@ -599,6 +694,71 @@ const exportTemplate = (template) => {
     display: flex;
     flex: 1;
     overflow: hidden;
+}
+
+/* Music View Styles */
+.music-view {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.tracks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.track-card {
+    background-color: #1E1E1E;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.track-icon {
+    font-size: 24px;
+    background-color: #2C2C2E;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.track-info {
+    flex: 1;
+}
+
+.track-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: #fff;
+}
+
+.track-date {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+}
+
+.track-preview {
+    display: flex;
+    align-items: center;
+}
+
+.audio-player {
+    height: 32px;
+}
+
+.track-actions {
+    display: flex;
+    align-items: center;
 }
 
 .sidebar {

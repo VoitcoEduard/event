@@ -129,3 +129,62 @@ export async function deleteScreensaver(screensaverId) {
 
   return response.json()
 }
+
+/**
+ * Get all audio tracks from the library
+ * @returns {Promise<Array>} - Array of track objects
+ */
+export async function getTracks() {
+  const response = await fetch(`${API_BASE_URL}/tracks`)
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || 'Failed to fetch tracks')
+  }
+
+  return response.json()
+}
+
+/**
+ * Upload a new audio track to the library
+ * @param {File} file - The audio file to upload
+ * @param {string} name - The name for the track
+ * @returns {Promise<Object>} - The created track object
+ */
+export async function uploadTrack(file, name) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('name', name || file.name)
+
+  const response = await fetch(`${API_BASE_URL}/tracks`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders() },
+    body: formData
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || 'Failed to upload track')
+  }
+
+  return response.json()
+}
+
+/**
+ * Delete a track from the library
+ * @param {string} trackId - The track ID
+ * @returns {Promise<Object>} - The response
+ */
+export async function deleteTrack(trackId) {
+  const response = await fetch(`${API_BASE_URL}/tracks/${trackId}`, {
+    method: 'DELETE',
+    headers: { ...getAuthHeaders() }
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || 'Failed to delete track')
+  }
+
+  return response.json()
+}

@@ -45,7 +45,10 @@ const (
 
 // Quiz module data - stored in Module.Data
 type QuizModuleData struct {
-	Questions []QuizQuestion `json:"questions" bson:"questions"`
+	Questions          []QuizQuestion `json:"questions" bson:"questions"`
+	BackgroundMusicURL string         `json:"backgroundMusicUrl" bson:"backgroundMusicUrl"`
+	BackgroundMusicID  string         `json:"backgroundMusicId" bson:"backgroundMusicId"`
+	AudioOutput        string         `json:"audioOutput" bson:"audioOutput"` // "admin", "bigscreen", "both"
 }
 
 // Player in quiz

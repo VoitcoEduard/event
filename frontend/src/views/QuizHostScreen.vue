@@ -226,6 +226,15 @@
        <button class="control-btn" @click="exitQuiz">End Quiz</button>
     </div>
 
+    <!-- Audio Player -->
+    <audio ref="bgMusicPlayer" :src="fullMusicUrl" loop id="bg-music-player"></audio>
+    
+    <div v-if="showUnmuteButton" class="unmute-overlay">
+        <button @click="enableAudio" class="unmute-btn">
+            🔊 Enable Sound
+        </button>
+    </div>
+
   </div>
 </template>
 
@@ -483,15 +492,77 @@ const exitQuiz = async () => {
     // Note: disconnect is handled by onUnmounted, don't call it here to avoid double-disconnect
 }
 
+// Audio State
+const bgMusicPlayer = ref(null)
+const backgroundMusicUrl = ref('')
+const audioOutput = ref('bigscreen')
+const showUnmuteButton = ref(false)
+const isMusicPlaying = ref(false)
+
+const fullMusicUrl = computed(() => {
+    if (!backgroundMusicUrl.value) return ''
+    return `${API_BASE_URL}${backgroundMusicUrl.value}`
+})
+
+// Manage Audio
+const manageAudioPlayback = async () => {
+    // Only play if output includes 'admin'
+    const shouldPlay = 
+        backgroundMusicUrl.value && 
+        (audioOutput.value === 'admin' || audioOutput.value === 'both') &&
+        (gameState.value !== 'finished') 
+
+    const player = bgMusicPlayer.value
+    if (!player) return
+
+    if (shouldPlay) {
+        if (player.paused) {
+            try {
+                await player.play()
+                isMusicPlaying.value = true
+                showUnmuteButton.value = false
+            } catch (err) {
+                console.warn("Autoplay prevented:", err)
+                showUnmuteButton.value = true
+            }
+        }
+    } else {
+        if (!player.paused) {
+            player.pause()
+            isMusicPlaying.value = false
+        }
+    }
+}
+
+const enableAudio = () => {
+    const player = bgMusicPlayer.value
+    if (player) {
+        player.play().then(() => {
+            isMusicPlaying.value = true
+            showUnmuteButton.value = false
+        }).catch(err => console.error("Still cannot play:", err))
+    }
+}
+
+watch(gameState, () => {
+    manageAudioPlayback()
+})
+
 // WebSocket & Data Loading
 onMounted(async () => {
-    // 1. Fetch Questions
+    // 1. Fetch Questions & Module Config
     try {
         const res = await fetch(`${API_BASE_URL}/events/${eventId}`)
         const data = await res.json()
         const mod = data.modules?.find(m => m.id === moduleId)
-        if (mod && mod.data && mod.data.questions) {
-            questions.value = mod.data.questions
+        if (mod && mod.data) {
+            if (mod.data.questions) {
+                questions.value = mod.data.questions
+            }
+            // Music Config
+            backgroundMusicUrl.value = mod.data.backgroundMusicUrl || ''
+            audioOutput.value = mod.data.audioOutput || 'bigscreen'
+            manageAudioPlayback()
         }
     } catch (e) {
         console.error('Failed to load questions', e)
@@ -515,12 +586,9 @@ onMounted(async () => {
             }
         } else if (payload.state === 'results') {
             clearInterval(timerInterval)
-        
-            // Reset answer counts for new question (will be refilled by state update if persisted)
-            // But usually signals accumulate.
-            // When moving to NEXT question, we should clear. 
-            // Ideally we clear on 'question-active' start or 'get-ready'
         }
+        
+        manageAudioPlayback()
     })
 
     // Listen for minimal sync updates (answer counts, player info)
@@ -539,16 +607,10 @@ onMounted(async () => {
 
     // Listen for full state updates (legacy support - includes players)
     quizWS.on('state:update', (session) => {
-        console.log('[Host] Received state:update:', session)
-        
         // Update players
         if (session.Players || session.players) {
             const playersMap = session.Players || session.players
-            console.log('[Host] Updating players from map:', playersMap)
             players.value = Object.values(playersMap)
-            console.log('[Host] New players list:', players.value)
-        } else {
-            console.warn('[Host] state:update received but no players field found', session)
         }
         
         // Update Player Signals (for histogram)
@@ -591,6 +653,30 @@ onUnmounted(() => {
     overflow: hidden;
     position: relative;
     font-family: 'Inter', sans-serif;
+}
+
+/* Audio Controls */
+.unmute-overlay {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.unmute-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s;
+}
+
+.unmute-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Dynamic background */

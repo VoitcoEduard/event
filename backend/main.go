@@ -225,7 +225,7 @@ func main() {
 		}
 	})
 
-	// Screensavers library routes
+	// Screensavers library
 	http.HandleFunc("/screensavers", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w, r)
 		if r.Method == "OPTIONS" {
@@ -251,6 +251,33 @@ func main() {
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	// Tracks
+	http.HandleFunc("/tracks", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method == "GET" {
+			handlers.GetTracks(w, r)
+		} else if r.Method == "POST" {
+			handlers.VerifyAuth(handlers.CreateTrack)(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/tracks/", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method == "DELETE" {
+			handlers.VerifyAuth(handlers.DeleteTrack)(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	})
 
 	// Media upload route

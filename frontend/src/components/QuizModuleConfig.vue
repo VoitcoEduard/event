@@ -38,6 +38,26 @@
             @move-question="moveQuestion"
           />
 
+          <div class="settings-bar">
+            <div class="setting-item">
+                <label>Background Music</label>
+                <select v-model="selectedMusicId" @change="handleMusicChange" class="setting-select">
+                    <option value="">None</option>
+                    <option v-for="track in tracks" :key="track.id" :value="track.id">
+                        {{ track.name }}
+                    </option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>Audio Output</label>
+                <select v-model="audioOutput" class="setting-select">
+                    <option value="bigscreen">Big Screen Only</option>
+                    <option value="admin">Admin Only</option>
+                    <option value="both">Both</option>
+                </select>
+            </div>
+          </div>
+
           <div class="action-bar">
             <div class="status-text">
               {{ questions.length }} Questions
@@ -85,9 +105,10 @@
 
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from './QuizEditor.vue'
+import { getTracks } from '../services/media'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -105,7 +126,11 @@ const templates = ref([])
 const loadingTemplates = ref(false)
 const fileInput = ref(null)
 
-// Load existing questions when module opens
+const tracks = ref([])
+const selectedMusicId = ref('')
+const audioOutput = ref('bigscreen')
+
+// Load existing data when module opens
 const fetchTemplates = async () => {
     loadingTemplates.value = true
     try {
@@ -121,30 +146,53 @@ const fetchTemplates = async () => {
     }
 }
 
+const fetchTracks = async () => {
+    try {
+        const data = await getTracks()
+        tracks.value = data
+    } catch (e) {
+        console.error("Failed to load tracks", e)
+    }
+}
+
 watch(() => [props.visible, props.module], ([visible, mod]) => {
-  if (visible && mod?.data?.questions) {
-    let loadedQuestions = JSON.parse(JSON.stringify(mod.data.questions))
-    questions.value = loadedQuestions.map(q => {
-        if (q.type === 'slider') {
-            if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
-            if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
-        }
-        if (q.type === 'true_false') {
-             q.answers = ['True', 'False', '', '']
-             if (q.correctIndex > 1) q.correctIndex = 0
-        }
-        return q
-    })
+  if (visible && mod?.data) {
+     if (mod.data.questions) {
+        let loadedQuestions = JSON.parse(JSON.stringify(mod.data.questions))
+        questions.value = loadedQuestions.map(q => {
+            if (q.type === 'slider') {
+                if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+            }
+            if (q.type === 'true_false') {
+                 q.answers = ['True', 'False', '', '']
+                 if (q.correctIndex > 1) q.correctIndex = 0
+            }
+            return q
+        })
+     } else {
+         questions.value = []
+     }
+     
+     // Load music settings
+     selectedMusicId.value = mod.data.backgroundMusicId || ''
+     audioOutput.value = mod.data.audioOutput || 'bigscreen'
+
   } else if (visible) {
     questions.value = []
+    selectedMusicId.value = ''
+    audioOutput.value = 'bigscreen'
   }
   
   if (visible) {
       fetchTemplates()
+      fetchTracks()
   }
 }, { immediate: true })
 
-
+const handleMusicChange = () => {
+    // Logic if needed when music changes
+}
 
 const loadTemplate = (template) => {
     if(questions.value.length > 0) {
@@ -189,7 +237,7 @@ const saveAsTemplate = async () => {
         
         const res = await fetch(`${API_BASE_URL}/templates`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', ...getAuthHeaders()},
             body: JSON.stringify(payload)
         })
         
@@ -242,19 +290,45 @@ const handleSave = async () => {
 
   loading.value = true
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}/quiz/questions`, {
+    // 1. Save Questions
+    const questionsResponse = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}/quiz/questions`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(questions.value)
     })
+    
+    if (!questionsResponse.ok) throw new Error('Failed to save questions')
 
-    if (response.ok) {
-      success('Quiz saved successfully!')
-      emit('update')
-      handleClose()
-    } else {
-      error('Failed to save quiz.')
+    // 2. Save Music Config
+    
+    // Find URL from selected ID
+    let musicUrl = ''
+    if (selectedMusicId.value) {
+        const track = tracks.value.find(t => t.id === selectedMusicId.value)
+        if (track) musicUrl = track.url
     }
+
+    const configUpdate = {
+        data: {
+            questions: questions.value,
+            backgroundMusicId: selectedMusicId.value,
+            backgroundMusicUrl: musicUrl,
+            audioOutput: audioOutput.value
+        }
+    }
+
+    const moduleResponse = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify(configUpdate)
+    })
+
+    if (!moduleResponse.ok) throw new Error('Failed to save module config')
+
+    success('Quiz saved successfully!')
+    emit('update')
+    handleClose()
+
   } catch (err) {
     console.error('Error saving quiz:', err)
     error('Failed to save quiz.')
@@ -464,6 +538,35 @@ const modalStyle = computed(() => ({
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.settings-bar {
+    background-color: #1C1C1E;
+    border-top: 1px solid #2C2C2E;
+    padding: 16px 20px;
+    display: flex;
+    gap: 20px;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.setting-item label {
+    font-size: 12px;
+    color: #8E8E93;
+}
+
+.setting-select {
+    background-color: #2C2C2E;
+    border: 1px solid #3A3A3C;
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 14px;
 }
 
 .status-text { color: #8E8E93; }

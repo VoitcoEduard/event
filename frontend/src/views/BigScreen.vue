@@ -218,6 +218,14 @@
         </div>
       </div>
     </template>
+    <!-- Audio Player -->
+    <audio ref="bgMusicPlayer" :src="fullMusicUrl" loop id="bg-music-player"></audio>
+    
+    <div v-if="showUnmuteButton" class="unmute-overlay">
+        <button @click="enableAudio" class="unmute-btn">
+            🔊 Click to Enable Sound
+        </button>
+    </div>
   </div>
 </template>
 
@@ -237,6 +245,18 @@ const moduleId = route.params.moduleId
 const displayMode = ref('connecting')
 const errorMessage = ref('')
 const screensaverImageUrl = ref('')
+
+// Audio State
+const bgMusicPlayer = ref(null)
+const backgroundMusicUrl = ref('')
+const audioOutput = ref('bigscreen')
+const showUnmuteButton = ref(false)
+const isMusicPlaying = ref(false)
+
+const fullMusicUrl = computed(() => {
+    if (!backgroundMusicUrl.value) return ''
+    return `${API_BASE_URL}${backgroundMusicUrl.value}`
+})
 
 // Quiz state
 const gameState = ref('lobby') 
@@ -270,6 +290,9 @@ watch(gameState, (newVal) => {
     } else {
         revealCorrect.value = false
     }
+    
+    // Manage Audio Playback based on state
+    manageAudioPlayback()
 })
 
 const questionImageUrl = computed(() => {
@@ -433,6 +456,64 @@ const loadScreensaverConfig = async () => {
   }
 }
 
+// Load Module Config (for music)
+const loadModuleConfig = async () => {
+    if (!moduleId) return
+    try {
+        const res = await fetch(`${API_BASE_URL}/events/${eventId}/modules/${moduleId}`)
+        if (res.ok) {
+            const mod = await res.json()
+            if (mod.data) {
+                backgroundMusicUrl.value = mod.data.backgroundMusicUrl || ''
+                audioOutput.value = mod.data.audioOutput || 'bigscreen'
+                manageAudioPlayback()
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load module config for audio", e)
+    }
+}
+
+const manageAudioPlayback = async () => {
+    // Determine if we should play
+    const shouldPlay = 
+        backgroundMusicUrl.value && 
+        (audioOutput.value === 'bigscreen' || audioOutput.value === 'both') &&
+        (displayMode.value === 'quiz' || (displayMode.value === 'screensaver' && gameState.value === 'lobby'))
+        // Note: We might want music in lobby screensaver mode too
+
+    const player = bgMusicPlayer.value
+    if (!player) return
+
+    if (shouldPlay) {
+        if (player.paused) {
+            try {
+                await player.play()
+                isMusicPlaying.value = true
+                showUnmuteButton.value = false
+            } catch (err) {
+                console.warn("Autoplay prevented:", err)
+                showUnmuteButton.value = true
+            }
+        }
+    } else {
+        if (!player.paused) {
+            player.pause()
+            isMusicPlaying.value = false
+        }
+    }
+}
+
+const enableAudio = () => {
+    const player = bgMusicPlayer.value
+    if (player) {
+        player.play().then(() => {
+            isMusicPlaying.value = true
+            showUnmuteButton.value = false
+        }).catch(err => console.error("Still cannot play:", err))
+    }
+}
+
 // Connect to WebSocket
 const connect = () => {
   displayMode.value = 'connecting'
@@ -465,6 +546,8 @@ const connect = () => {
     } else if (payload.state === 'leaderboard') {
       displayMode.value = 'quiz'
     }
+    
+    manageAudioPlayback()
   })
 
   quizWS.on('sync:minimal', (payload) => {
@@ -499,6 +582,7 @@ const connect = () => {
   // Handle disconnection - show screensaver
   quizWS.on('disconnect', () => {
     displayMode.value = 'screensaver'
+    manageAudioPlayback()
   })
 
   // Connect as bigscreen
@@ -516,9 +600,11 @@ const onImageLoad = () => {
 onMounted(async () => {
   // Load screensaver config first
   await loadScreensaverConfig()
+  await loadModuleConfig()
   
   // Show screensaver first (before connecting to WebSocket)
   displayMode.value = 'screensaver'
+  manageAudioPlayback()
   
   // Only connect to WebSocket if we have a moduleId (quiz mode)
   if (moduleId) {
@@ -1245,4 +1331,29 @@ onUnmounted(() => {
 .podium-place.second .podium-bar { height: 80%; }
 .podium-place.third { height: 20vh; }
 .podium-place.third .podium-bar { height: 60%; }
+
+/* Audio Controls */
+.unmute-overlay {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.unmute-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1rem;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s;
+}
+
+.unmute-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
 </style>
