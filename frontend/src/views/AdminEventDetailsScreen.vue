@@ -18,6 +18,9 @@
           >
             {{ isBigScreenOpen ? '❌ Close Big Screen' : '🖥️ Big Screen' }}
           </button>
+          <button class="nav-button copy-link-btn" @click="copyBigScreenLink" title="Copy Big Screen Link for Projector">
+             🔗
+          </button>
           <button class="nav-button library-btn" @click="goToLibrary">
             📚 Библиотека
           </button>
@@ -578,6 +581,22 @@ const closeBigScreen = () => {
     bigscreenWindow.value = null
   }
 }
+
+const copyBigScreenLink = () => {
+  let urlPart = ''
+  // Find the first quiz module (optional - bigscreen can work without quiz)
+  const quizModule = currentEvent.value?.modules?.find(m => m.type === 'quiz')
+  if (quizModule) {
+    urlPart = `/bigscreen/${currentEvent.value.id}/${quizModule.id}`
+  } else {
+    // Open bigscreen without quiz module - will show screensaver only
+    urlPart = `/bigscreen/${currentEvent.value.id}`
+  }
+  
+  const fullUrl = `${window.location.origin}${urlPart}`
+  navigator.clipboard.writeText(fullUrl)
+  success('Big Screen link copied to clipboard!')
+}
 </script>
 
 <style scoped>
@@ -688,6 +707,19 @@ const closeBigScreen = () => {
 
 .bigscreen-header-btn.close-btn:hover {
   background-color: #FF5C54;
+}
+
+.copy-link-btn {
+  background-color: #2196F3;
+  color: white;
+  min-width: 50px;
+  justify-content: center;
+}
+
+.copy-link-btn:hover {
+  background-color: #1e88e5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
 }
 
 .data-btn {

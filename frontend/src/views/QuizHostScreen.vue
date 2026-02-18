@@ -11,8 +11,12 @@
           <span class="pin-code">{{ pinCode }}</span>
         </div>
         <div class="qr-container">
-           <!-- Placeholder for QR code if needed -->
            <div class="qr-placeholder">QR Code</div>
+        </div>
+        <div class="lobby-actions">
+            <button class="copy-link-btn" @click="copyBigScreenLink">
+                🔗 Copy Big Screen Link
+            </button>
         </div>
       </div>
       
@@ -244,6 +248,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
+import { useToast } from '../composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
@@ -544,6 +549,14 @@ const enableAudio = () => {
     }
 }
 
+const { success } = useToast()
+
+const copyBigScreenLink = () => {
+    const url = `${window.location.origin}/bigscreen/${eventId}/${moduleId}`
+    navigator.clipboard.writeText(url)
+    success('Big Screen link copied to clipboard!')
+}
+
 watch(gameState, () => {
     manageAudioPlayback()
 })
@@ -725,10 +738,32 @@ onUnmounted(() => {
     background: white;
     margin-left: auto;
     margin-right: auto;
+    color: black;
+}
+
+.lobby-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.copy-link-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: black;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.copy-link-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
 }
 
 .players-area {
