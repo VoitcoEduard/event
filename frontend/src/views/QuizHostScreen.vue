@@ -110,26 +110,28 @@
       </div>
     </div>
 
-    <!-- RESULTS/LEADERBOARD STATE -->
-    <div v-else-if="gameState === 'results' || gameState === 'leaderboard'" class="state-container results-container">
-       <h2 class="results-title">{{ gameState === 'results' ? 'Question Results' : 'Leaderboard' }}</h2>
-       
-       <div v-if="gameState === 'results' && !isSlider" class="correct-answer-reveal">
-          <p>Correct Answer:</p>
+    <!-- RESULTS STATE (no leaderboard) -->
+    <div v-else-if="gameState === 'results'" class="state-container results-container">
+       <div class="results-header">
+         <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
+       </div>
+
+       <div v-if="!isSlider" class="correct-answer-reveal">
+          <p class="correct-label">Correct Answer</p>
           <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
-             {{ getShapeIcon(currentQuestion?.correctIndex) }} 
-             {{ currentQuestion?.answers[currentQuestion?.correctIndex] }}
+             <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
+             <span class="correct-text">{{ currentQuestion?.answers[currentQuestion?.correctIndex] }}</span>
           </div>
        </div>
 
        <!-- Show Stats in Results -->
-       <div v-if="gameState === 'results' && !isSlider" class="answers-stats results-mode">
+       <div v-if="!isSlider" class="answers-stats results-mode">
           <div class="stats-grid">
              <div v-for="(count, idx) in (isTrueFalse ? 2 : 4)" :key="idx" class="stat-column">
                 <div class="stat-bar-container">
                   <div 
                     class="stat-bar" 
-                    :class="getAnswerColorClass(idx)"
+                    :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : '']"
                     :style="{ height: getBarHeight(idx) + '%' }"
                   ></div>
                 </div>
@@ -139,14 +141,10 @@
           </div>
        </div>
 
-        <!-- Slider Histogram Stats (New Minimal Design) -->
-        <div v-if="gameState === 'results' && isSlider" class="answers-stats results-mode slider-results-view">
+        <!-- Slider Histogram Stats -->
+        <div v-if="isSlider" class="answers-stats results-mode slider-results-view">
            <div class="slider-result-container">
-              
-              <!-- The Track -->
               <div class="slider-result-track"></div>
-
-              <!-- Distribution Bars -->
               <div class="slider-distribution-overlay">
                   <div 
                     v-for="(count, idx) in histogramBuckets" 
@@ -163,8 +161,6 @@
                       </div>
                   </div>
               </div>
-
-              <!-- Correct Answer Marker -->
               <div 
                 class="correct-answer-marker" 
                 :class="{ 'reveal-marker': revealCorrect }"
@@ -176,58 +172,113 @@
                       <span class="marker-value">{{ formatNumber(currentQuestion?.correctValue) }}</span>
                   </div>
               </div>
-
-              <!-- Min/Max Labels -->
               <div class="slider-labels">
                   <span class="label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
                   <span class="label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
               </div>
-
            </div>
         </div>
 
-       <div class="leaderboard-list">
-          <div v-for="(player, idx) in topPlayers" :key="player.id" class="leaderboard-item">
-            <div class="rank">{{ idx + 1 }}</div>
-            <div class="name">{{ player.nickname }}</div>
-            <div class="score">{{ player.score }} pts</div>
-          </div>
-       </div>
-
        <div class="host-controls">
          <button class="control-btn primary" @click="nextState">
-           {{ gameState === 'results' ? 'Show Leaderboard' : (isLastQuestion ? 'End Quiz' : 'Next Question') }}
+           Show Leaderboard
          </button>
        </div>
     </div>
+
+    <!-- LEADERBOARD STATE (beautiful animated) -->
+    <div v-else-if="gameState === 'leaderboard'" class="state-container leaderboard-container" :key="leaderboardAnimKey">
+      <div class="lb-bg-glow"></div>
+      <div class="lb-header">
+        <div class="lb-trophy">🏆</div>
+        <h2 class="lb-title">Leaderboard</h2>
+        <div class="lb-subtitle">Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}</div>
+      </div>
+      <div class="lb-list">
+        <div 
+          v-for="(player, idx) in topPlayers" 
+          :key="player.id" 
+          class="lb-row"
+          :class="['lb-rank-' + (idx + 1)]"
+          :style="{ animationDelay: ((topPlayers.length - 1 - idx) * 0.12) + 's' }"
+        >
+          <div class="lb-rank-badge" :class="'lb-badge-' + (idx + 1)">
+            <span v-if="idx === 0">🥇</span>
+            <span v-else-if="idx === 1">🥈</span>
+            <span v-else-if="idx === 2">🥉</span>
+            <span v-else>{{ idx + 1 }}</span>
+          </div>
+          <div class="lb-player-name">{{ player.nickname }}</div>
+          <div class="lb-score-area">
+            <div class="lb-score-bar-wrap">
+              <div 
+                class="lb-score-bar" 
+                :class="'lb-bar-' + (idx + 1)"
+                :style="{ width: getScoreBarWidth(player.score) + '%' }"
+              ></div>
+            </div>
+            <div class="lb-score-value">{{ player.score.toLocaleString() }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="host-controls">
+        <button class="control-btn primary" @click="nextState">
+          {{ isLastQuestion ? 'End Quiz' : 'Next Question' }}
+        </button>
+      </div>
+    </div>
     
-    <!-- FINISHED STATE -->
-    <div v-else-if="gameState === 'finished'" class="state-container finished-container">
-       <h1>Quiz Finished!</h1>
-       <div class="podium">
-          <div class="podium-place second" v-if="topPlayers[1]">
-              <div class="podium-bar">
-                 <span class="podium-rank">2</span>
-                 <span class="podium-name">{{ topPlayers[1].nickname }}</span>
-                 <span class="podium-score">{{ topPlayers[1].score }}</span>
-              </div>
+    <!-- FINISHED STATE (final leaderboard with confetti) -->
+    <div v-else-if="gameState === 'finished'" class="state-container final-container" :key="finalAnimKey">
+       <!-- Confetti particles -->
+       <div class="confetti-wrap">
+         <div v-for="i in 20" :key="i" class="confetti-particle" :style="getConfettiStyle(i)"></div>
+       </div>
+
+       <div class="final-header">
+         <div class="final-trophy">🏆</div>
+         <h1 class="final-title">Quiz Complete!</h1>
+         <p class="final-subtitle">Final Standings</p>
+       </div>
+
+       <!-- Top 3 Podium -->
+       <div class="final-podium">
+          <div class="final-podium-place fp-second" v-if="topPlayers[1]">
+            <div class="fp-avatar">🥈</div>
+            <div class="fp-name">{{ topPlayers[1].nickname }}</div>
+            <div class="fp-score">{{ topPlayers[1].score.toLocaleString() }}</div>
+            <div class="fp-block fp-block-2"><span>2</span></div>
           </div>
-          <div class="podium-place first" v-if="topPlayers[0]">
-              <div class="podium-bar">
-                 <span class="podium-rank">1</span>
-                 <span class="podium-name">{{ topPlayers[0].nickname }}</span>
-                 <span class="podium-score">{{ topPlayers[0].score }}</span>
-              </div>
+          <div class="final-podium-place fp-first" v-if="topPlayers[0]">
+            <div class="fp-crown">👑</div>
+            <div class="fp-avatar">🥇</div>
+            <div class="fp-name">{{ topPlayers[0].nickname }}</div>
+            <div class="fp-score">{{ topPlayers[0].score.toLocaleString() }}</div>
+            <div class="fp-block fp-block-1"><span>1</span></div>
           </div>
-          <div class="podium-place third" v-if="topPlayers[2]">
-               <div class="podium-bar">
-                 <span class="podium-rank">3</span>
-                 <span class="podium-name">{{ topPlayers[2].nickname }}</span>
-                 <span class="podium-score">{{ topPlayers[2].score }}</span>
-              </div>
+          <div class="final-podium-place fp-third" v-if="topPlayers[2]">
+            <div class="fp-avatar">🥉</div>
+            <div class="fp-name">{{ topPlayers[2].nickname }}</div>
+            <div class="fp-score">{{ topPlayers[2].score.toLocaleString() }}</div>
+            <div class="fp-block fp-block-3"><span>3</span></div>
           </div>
        </div>
-       <button class="control-btn" @click="exitQuiz">End Quiz</button>
+
+       <!-- Ranks 4-6 -->
+       <div class="final-rest" v-if="topPlayers.length > 3">
+         <div 
+           v-for="(player, idx) in topPlayers.slice(3)" 
+           :key="player.id" 
+           class="final-rest-row"
+           :style="{ animationDelay: (0.8 + idx * 0.15) + 's' }"
+         >
+           <span class="final-rest-rank">{{ idx + 4 }}</span>
+           <span class="final-rest-name">{{ player.nickname }}</span>
+           <span class="final-rest-score">{{ player.score.toLocaleString() }}</span>
+         </div>
+       </div>
+
+       <button class="control-btn" @click="exitQuiz" style="margin-top: 20px; z-index: 1;">End Quiz</button>
     </div>
 
     <!-- Audio Player -->
@@ -283,9 +334,15 @@ watch(gameState, (newVal) => {
         revealCorrect.value = false
         setTimeout(() => {
             revealCorrect.value = true
-        }, 1500) // 1.5s delay before revealing correct answer
+        }, 1500)
     } else {
         revealCorrect.value = false
+    }
+    if (newVal === 'leaderboard') {
+        leaderboardAnimKey.value++
+    }
+    if (newVal === 'finished') {
+        finalAnimKey.value++
     }
 })
 
@@ -358,8 +415,30 @@ const formatNumber = (num, decimals = 0) => {
 }
 
 const topPlayers = computed(() => {
-    return [...players.value].sort((a, b) => b.score - a.score).slice(0, 5)
+    return [...players.value].sort((a, b) => b.score - a.score).slice(0, 6)
 })
+
+const leaderboardAnimKey = ref(0)
+const finalAnimKey = ref(0)
+
+const getScoreBarWidth = (score) => {
+    const max = topPlayers.value[0]?.score || 1
+    return Math.max(5, (score / max) * 100)
+}
+
+const getConfettiStyle = (i) => {
+    const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8']
+    const color = colors[i % colors.length]
+    return {
+        left: ((i * 37) % 100) + '%',
+        animationDelay: ((i * 0.13) % 3) + 's',
+        animationDuration: (2.5 + (i % 3) * 0.5) + 's',
+        background: color,
+        width: (8 + (i % 4) * 4) + 'px',
+        height: (8 + (i % 4) * 4) + 'px',
+        borderRadius: i % 3 === 0 ? '50%' : '2px',
+    }
+}
 
 const getBarHeight = (idx) => {
     const counts = Object.values(answerCounts.value)
@@ -1354,43 +1433,415 @@ onUnmounted(() => {
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* RESULTS/LEADERBOARD */
+/* RESULTS */
 .results-container {
-    padding-top: 60px;
+    padding-top: 40px;
+    background: radial-gradient(ellipse at top, #1a1a2e 0%, #0d0d0d 70%);
+}
+
+.results-header {
+    margin-bottom: 20px;
+}
+
+.results-label {
+    font-size: 1rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+}
+
+.correct-label {
+    font-size: 0.9rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
 }
 
 .correct-answer-reveal {
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     text-align: center;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .correct-answer-display {
-    font-size: 2rem;
+    font-size: 1.8rem;
     padding: 10px 20px;
-    border-radius: 8px;
-    margin-top: 10px;
-    color: white; 
+    border-radius: 10px;
+    margin-top: 8px;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
 }
 
-.leaderboard-list {
+.correct-icon { font-size: 1.6rem; }
+.correct-text { font-weight: 700; }
+
+.stat-bar-correct {
+    box-shadow: 0 0 15px rgba(255,255,255,0.3);
+}
+
+/* LEADERBOARD */
+.leaderboard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 30px 40px;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 0%, #1a0a3e 0%, #0a0a0a 70%);
+}
+
+.lb-bg-glow {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 300px;
+    background: radial-gradient(ellipse, rgba(138, 43, 226, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.lb-header {
+    text-align: center;
+    margin-bottom: 20px;
+    animation: fadeSlideDown 0.6s ease-out;
+}
+
+.lb-trophy {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6));
+    animation: trophyPulse 2s ease-in-out infinite;
+}
+
+@keyframes trophyPulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.9)); }
+}
+
+.lb-title {
+    font-size: 2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    letter-spacing: 0.05em;
+}
+
+.lb-subtitle {
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.lb-list {
     width: 100%;
-    max-width: 800px;
-    margin-bottom: 40px;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
 }
 
-.leaderboard-item {
+.lb-row {
     display: flex;
     align-items: center;
-    background: #2C2C2E;
-    margin-bottom: 10px;
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 1.2rem;
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px 16px;
+    animation: slideInFromBottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    backdrop-filter: blur(10px);
 }
 
-.rank { width: 40px; font-weight: bold; color: #FFD60A; }
-.name { flex: 1; font-weight: 600; }
-.score { font-weight: bold; }
+.lb-rank-1 { border-color: rgba(255, 215, 0, 0.4); background: rgba(255, 215, 0, 0.08); }
+.lb-rank-2 { border-color: rgba(192, 192, 192, 0.3); background: rgba(192, 192, 192, 0.05); }
+.lb-rank-3 { border-color: rgba(205, 127, 50, 0.3); background: rgba(205, 127, 50, 0.05); }
+
+@keyframes slideInFromBottom {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.lb-rank-badge {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    font-weight: 900;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.1);
+    color: #ccc;
+}
+
+.lb-badge-1 { background: rgba(255, 215, 0, 0.2); font-size: 1.4rem; }
+.lb-badge-2 { background: rgba(192, 192, 192, 0.2); font-size: 1.4rem; }
+.lb-badge-3 { background: rgba(205, 127, 50, 0.2); font-size: 1.4rem; }
+
+.lb-player-name {
+    flex: 1;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lb-score-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 35%;
+}
+
+.lb-score-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.lb-score-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: linear-gradient(90deg, #8B5CF6, #A78BFA);
+}
+
+.lb-bar-1 { background: linear-gradient(90deg, #FFD700, #FFA500); }
+.lb-bar-2 { background: linear-gradient(90deg, #C0C0C0, #E8E8E8); }
+.lb-bar-3 { background: linear-gradient(90deg, #CD7F32, #E8A87C); }
+
+.lb-score-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #FFD700;
+    min-width: 70px;
+    text-align: right;
+}
+
+/* FINAL LEADERBOARD */
+.final-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 30px;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 0%, #1a0a3e 0%, #0a0a0a 70%);
+}
+
+.confetti-wrap {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.confetti-particle {
+    position: absolute;
+    top: -20px;
+    animation: confettiFall linear infinite;
+    opacity: 0.85;
+}
+
+@keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+.final-header {
+    text-align: center;
+    margin-bottom: 16px;
+    animation: fadeSlideDown 0.7s ease-out;
+    z-index: 1;
+}
+
+.final-trophy {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+    animation: trophyPulse 2s ease-in-out infinite;
+}
+
+.final-title {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #FFD700, #FF6B6B, #4ECDC4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 4px 0;
+}
+
+.final-subtitle {
+    font-size: 0.9rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin: 0;
+}
+
+.final-podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    z-index: 1;
+}
+
+.final-podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: podiumRise 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.fp-first { animation-delay: 0.5s; }
+.fp-second { animation-delay: 0.2s; }
+.fp-third { animation-delay: 0.35s; }
+
+@keyframes podiumRise {
+    from { opacity: 0; transform: translateY(40px) scale(0.8); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fp-crown {
+    font-size: 1.8rem;
+    animation: crownFloat 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes crownFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.fp-avatar { font-size: 2rem; margin-bottom: 4px; }
+
+.fp-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 2px;
+}
+
+.fp-score {
+    font-size: 0.9rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.fp-first .fp-score { color: #FFD700; }
+.fp-second .fp-score { color: #C0C0C0; }
+.fp-third .fp-score { color: #CD7F32; }
+
+.fp-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px 6px 0 0;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: rgba(0,0,0,0.5);
+}
+
+.fp-block-1 {
+    width: 90px;
+    height: 60px;
+    background: linear-gradient(180deg, #FFD700, #B8860B);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.fp-block-2 {
+    width: 80px;
+    height: 45px;
+    background: linear-gradient(180deg, #C0C0C0, #808080);
+    box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
+}
+
+.fp-block-3 {
+    width: 80px;
+    height: 35px;
+    background: linear-gradient(180deg, #CD7F32, #8B4513);
+    box-shadow: 0 0 15px rgba(205, 127, 50, 0.3);
+}
+
+.final-rest {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: 500px;
+    z-index: 1;
+}
+
+.final-rest-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 16px;
+    animation: slideInFromBottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.final-rest-rank {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #888;
+    width: 24px;
+    text-align: center;
+}
+
+.final-rest-name {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ddd;
+}
+
+.final-rest-score {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #aaa;
+}
+
+/* Shared animations */
+@keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.7); }
+    70% { transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+}
 
 .control-btn {
     padding: 12px 24px;
@@ -1405,7 +1856,7 @@ onUnmounted(() => {
 
 /* ANSWERS STATS (Results Mode) */
 .answers-stats {
-    height: 300px;
+    height: 260px;
     width: 100%;
 }
 
@@ -1432,56 +1883,25 @@ onUnmounted(() => {
     display: flex;
     align-items: flex-end;
     justify-content: center;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    overflow: hidden;
 }
 
 .stat-bar {
     width: 60%;
     min-height: 10px;
-    transition: height 0.5s ease-out;
+    transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .stat-count {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: bold;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .stat-icon {
-    font-size: 1.5rem;
-    margin-top: 5px;
+    font-size: 1.4rem;
+    margin-top: 4px;
 }
-
-/* PODIUM */
-.podium {
-    display: flex;
-    align-items: flex-end;
-    height: 400px;
-    gap: 20px;
-    margin-top: 40px;
-    margin-bottom: 40px;
-}
-
-.podium-place {
-    width: 120px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.podium-bar {
-    width: 100%;
-    background: #3A3A3C;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    padding-bottom: 20px;
-}
-
-.second .podium-bar { height: 200px; background: #C0C0C0; color: black; }
-.first .podium-bar { height: 300px; background: #FFD700; color: black; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
-.third .podium-bar { height: 150px; background: #CD7F32; color: black; }
-
-.podium-rank { font-size: 2rem; font-weight: 900; margin-bottom: 10px; }
-.podium-name { font-weight: bold; margin-bottom: 5px; }
 </style>

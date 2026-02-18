@@ -115,25 +115,27 @@
         </div>
       </div>
 
-      <!-- RESULTS/LEADERBOARD STATE -->
-      <div v-else-if="gameState === 'results' || gameState === 'leaderboard'" class="state-container results-container">
-        <h2 class="results-title">{{ gameState === 'results' ? 'Question Results' : 'Leaderboard' }}</h2>
-        
-        <div v-if="gameState === 'results' && !isSlider" class="correct-answer-reveal">
-          <p>Correct Answer:</p>
+      <!-- RESULTS STATE (no leaderboard here) -->
+      <div v-else-if="gameState === 'results'" class="state-container results-container">
+        <div class="results-header">
+          <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
+        </div>
+
+        <div v-if="!isSlider" class="correct-answer-reveal">
+          <p class="correct-label">Correct Answer</p>
           <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
-            {{ getShapeIcon(currentQuestion?.correctIndex) }} 
-            {{ currentQuestion?.answers[currentQuestion?.correctIndex] }}
+            <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
+            <span class="correct-text">{{ currentQuestion?.answers[currentQuestion?.correctIndex] }}</span>
           </div>
         </div>
 
-        <div v-if="gameState === 'results' && !isSlider" class="answers-stats results-mode">
+        <div v-if="!isSlider" class="answers-stats results-mode">
           <div class="stats-grid">
             <div v-for="(count, idx) in (isTrueFalse ? 2 : 4)" :key="idx" class="stat-column">
               <div class="stat-bar-container">
                 <div 
                   class="stat-bar" 
-                  :class="getAnswerColorClass(idx)"
+                  :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : '']"
                   :style="{ height: getBarHeight(idx) + '%' }"
                 ></div>
               </div>
@@ -143,8 +145,8 @@
           </div>
         </div>
 
-        <!-- Slider Histogram Results (New Minimal Design) -->
-        <div v-if="gameState === 'results' && isSlider" class="answers-stats results-mode slider-results-view">
+        <!-- Slider Histogram Results -->
+        <div v-if="isSlider" class="answers-stats results-mode slider-results-view">
           <div class="slider-result-container">
             <div class="slider-result-track"></div>
             <div class="slider-distribution-overlay">
@@ -180,40 +182,92 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="leaderboard-list">
-          <div v-for="(player, idx) in topPlayers" :key="player.id" class="leaderboard-item">
-            <div class="rank">{{ idx + 1 }}</div>
-            <div class="name">{{ player.nickname }}</div>
-            <div class="score">{{ player.score }} pts</div>
+      <!-- LEADERBOARD STATE (beautiful animated) -->
+      <div v-else-if="gameState === 'leaderboard'" class="state-container leaderboard-container" :key="leaderboardAnimKey">
+        <div class="lb-bg-glow"></div>
+        <div class="lb-header">
+          <div class="lb-trophy">🏆</div>
+          <h2 class="lb-title">Leaderboard</h2>
+          <div class="lb-subtitle">Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}</div>
+        </div>
+        <div class="lb-list">
+          <div 
+            v-for="(player, idx) in topPlayers" 
+            :key="player.id" 
+            class="lb-row"
+            :class="['lb-rank-' + (idx + 1)]"
+            :style="{ animationDelay: ((topPlayers.length - 1 - idx) * 0.12) + 's' }"
+          >
+            <div class="lb-rank-badge" :class="'lb-badge-' + (idx + 1)">
+              <span v-if="idx === 0">🥇</span>
+              <span v-else-if="idx === 1">🥈</span>
+              <span v-else-if="idx === 2">🥉</span>
+              <span v-else>{{ idx + 1 }}</span>
+            </div>
+            <div class="lb-player-name">{{ player.nickname }}</div>
+            <div class="lb-score-area">
+              <div class="lb-score-bar-wrap">
+                <div 
+                  class="lb-score-bar" 
+                  :class="'lb-bar-' + (idx + 1)"
+                  :style="{ width: getScoreBarWidth(player.score) + '%' }"
+                ></div>
+              </div>
+              <div class="lb-score-value">{{ player.score.toLocaleString() }}</div>
+            </div>
           </div>
         </div>
       </div>
       
-      <!-- FINISHED STATE -->
-      <div v-else-if="gameState === 'finished'" class="state-container finished-container">
-        <h1>Quiz Finished!</h1>
-        <div class="podium">
-          <div class="podium-place second" v-if="topPlayers[1]">
-            <div class="podium-bar">
-              <span class="podium-rank">2</span>
-              <span class="podium-name">{{ topPlayers[1].nickname }}</span>
-              <span class="podium-score">{{ topPlayers[1].score }}</span>
-            </div>
+      <!-- FINISHED STATE (final leaderboard with confetti) -->
+      <div v-else-if="gameState === 'finished'" class="state-container final-container" :key="finalAnimKey">
+        <!-- Confetti particles -->
+        <div class="confetti-wrap">
+          <div v-for="i in 30" :key="i" class="confetti-particle" :style="getConfettiStyle(i)"></div>
+        </div>
+
+        <div class="final-header">
+          <div class="final-trophy">🏆</div>
+          <h1 class="final-title">Quiz Complete!</h1>
+          <p class="final-subtitle">Final Standings</p>
+        </div>
+
+        <!-- Top 3 Podium -->
+        <div class="final-podium">
+          <div class="final-podium-place fp-second" v-if="topPlayers[1]">
+            <div class="fp-avatar">🥈</div>
+            <div class="fp-name">{{ topPlayers[1].nickname }}</div>
+            <div class="fp-score">{{ topPlayers[1].score.toLocaleString() }}</div>
+            <div class="fp-block fp-block-2"><span>2</span></div>
           </div>
-          <div class="podium-place first" v-if="topPlayers[0]">
-            <div class="podium-bar">
-              <span class="podium-rank">1</span>
-              <span class="podium-name">{{ topPlayers[0].nickname }}</span>
-              <span class="podium-score">{{ topPlayers[0].score }}</span>
-            </div>
+          <div class="final-podium-place fp-first" v-if="topPlayers[0]">
+            <div class="fp-crown">👑</div>
+            <div class="fp-avatar">🥇</div>
+            <div class="fp-name">{{ topPlayers[0].nickname }}</div>
+            <div class="fp-score">{{ topPlayers[0].score.toLocaleString() }}</div>
+            <div class="fp-block fp-block-1"><span>1</span></div>
           </div>
-          <div class="podium-place third" v-if="topPlayers[2]">
-            <div class="podium-bar">
-              <span class="podium-rank">3</span>
-              <span class="podium-name">{{ topPlayers[2].nickname }}</span>
-              <span class="podium-score">{{ topPlayers[2].score }}</span>
-            </div>
+          <div class="final-podium-place fp-third" v-if="topPlayers[2]">
+            <div class="fp-avatar">🥉</div>
+            <div class="fp-name">{{ topPlayers[2].nickname }}</div>
+            <div class="fp-score">{{ topPlayers[2].score.toLocaleString() }}</div>
+            <div class="fp-block fp-block-3"><span>3</span></div>
+          </div>
+        </div>
+
+        <!-- Ranks 4-6 -->
+        <div class="final-rest" v-if="topPlayers.length > 3">
+          <div 
+            v-for="(player, idx) in topPlayers.slice(3)" 
+            :key="player.id" 
+            class="final-rest-row"
+            :style="{ animationDelay: (0.8 + idx * 0.15) + 's' }"
+          >
+            <span class="final-rest-rank">{{ idx + 4 }}</span>
+            <span class="final-rest-name">{{ player.nickname }}</span>
+            <span class="final-rest-score">{{ player.score.toLocaleString() }}</span>
           </div>
         </div>
       </div>
@@ -230,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
@@ -286,9 +340,17 @@ watch(gameState, (newVal) => {
         revealCorrect.value = false
         setTimeout(() => {
             revealCorrect.value = true
-        }, 1500) // 1.5s delay before revealing correct answer
+        }, 1500)
     } else {
         revealCorrect.value = false
+    }
+
+    // Re-trigger leaderboard animation each time we enter leaderboard state
+    if (newVal === 'leaderboard') {
+        leaderboardAnimKey.value++
+    }
+    if (newVal === 'finished') {
+        finalAnimKey.value++
     }
     
     // Manage Audio Playback based on state
@@ -334,8 +396,34 @@ const formatNumber = (num, decimals = 0) => {
 }
 
 const topPlayers = computed(() => {
-  return [...players.value].sort((a, b) => b.score - a.score).slice(0, 5)
+  return [...players.value].sort((a, b) => b.score - a.score).slice(0, 6)
 })
+
+const leaderboardAnimKey = ref(0)
+const finalAnimKey = ref(0)
+
+const getScoreBarWidth = (score) => {
+  const max = topPlayers.value[0]?.score || 1
+  return Math.max(5, (score / max) * 100)
+}
+
+const getConfettiStyle = (i) => {
+  const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8']
+  const color = colors[i % colors.length]
+  const left = ((i * 37) % 100)
+  const delay = ((i * 0.13) % 3)
+  const duration = 2.5 + (i % 3) * 0.5
+  const size = 8 + (i % 4) * 4
+  return {
+    left: left + '%',
+    animationDelay: delay + 's',
+    animationDuration: duration + 's',
+    background: color,
+    width: size + 'px',
+    height: size + 'px',
+    borderRadius: i % 3 === 0 ? '50%' : '2px',
+  }
+}
 
 const getBarHeight = (idx) => {
   const counts = Object.values(answerCounts.value)
@@ -1132,40 +1220,63 @@ onUnmounted(() => {
   color: #888;
 }
 
-/* Results */
+/* ===== RESULTS STATE ===== */
 .results-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 2vw;
+  background: radial-gradient(ellipse at top, #1a1a2e 0%, #0d0d0d 70%);
 }
 
-.results-title {
-  font-size: 4vw;
+.results-header {
   margin-bottom: 2vh;
+}
+
+.results-label {
+  font-size: 1.8vw;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+}
+
+.correct-label {
+  font-size: 1.5vw;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1vh;
 }
 
 .correct-answer-reveal {
   text-align: center;
-  margin-bottom: 2vh;
+  margin-bottom: 2.5vh;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .correct-answer-display {
-  font-size: 3vw;
-  padding: 1vw 2vw;
-  border-radius: 1vw;
-  display: inline-block;
+  font-size: 2.8vw;
+  padding: 1.2vw 3vw;
+  border-radius: 1.5vw;
+  display: inline-flex;
+  align-items: center;
+  gap: 1vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
+
+.correct-icon { font-size: 2.5vw; }
+.correct-text { font-weight: 700; }
 
 .answers-stats {
   width: 80%;
-  margin: 2vh 0;
+  margin: 1vh 0;
 }
 
 .stats-grid {
   display: flex;
   gap: 2vw;
-  height: 30vh;
+  height: 32vh;
 }
 
 .stat-column {
@@ -1178,26 +1289,397 @@ onUnmounted(() => {
 .stat-bar-container {
   flex: 1;
   width: 100%;
-  background: #1e1e1e;
+  background: rgba(255,255,255,0.05);
   border-radius: 1vw;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .stat-bar {
   width: 100%;
   border-radius: 1vw;
-  transition: height 0.3s;
+  transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stat-bar-correct {
+  box-shadow: 0 0 20px rgba(255,255,255,0.3);
+  position: relative;
 }
 
 .stat-count {
   font-size: 2vw;
   margin: 1vh 0;
+  font-weight: 700;
 }
 
 .stat-icon {
   font-size: 2vw;
+}
+
+/* ===== LEADERBOARD STATE ===== */
+.leaderboard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2vw 4vw;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 0%, #1a0a3e 0%, #0a0a0a 70%);
+}
+
+.lb-bg-glow {
+  position: absolute;
+  top: -10vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60vw;
+  height: 40vh;
+  background: radial-gradient(ellipse, rgba(138, 43, 226, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.lb-header {
+  text-align: center;
+  margin-bottom: 3vh;
+  animation: fadeSlideDown 0.6s ease-out;
+}
+
+.lb-trophy {
+  font-size: 4vw;
+  margin-bottom: 0.5vh;
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
+  animation: trophyPulse 2s ease-in-out infinite;
+}
+
+@keyframes trophyPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.9)); }
+}
+
+.lb-title {
+  font-size: 3.5vw;
+  font-weight: 900;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.lb-subtitle {
+  font-size: 1.4vw;
+  color: #888;
+  margin-top: 0.5vh;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.lb-list {
+  width: 100%;
+  max-width: 70vw;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vh;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.2vw;
+  padding: 1.2vh 2vw;
+  animation: slideInFromBottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s;
+}
+
+.lb-rank-1 { border-color: rgba(255, 215, 0, 0.4); background: rgba(255, 215, 0, 0.08); }
+.lb-rank-2 { border-color: rgba(192, 192, 192, 0.3); background: rgba(192, 192, 192, 0.05); }
+.lb-rank-3 { border-color: rgba(205, 127, 50, 0.3); background: rgba(205, 127, 50, 0.05); }
+
+@keyframes slideInFromBottom {
+  from { opacity: 0; transform: translateY(4vh) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.lb-rank-badge {
+  width: 4vw;
+  height: 4vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 2.2vw;
+  font-weight: 900;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.1);
+  color: #ccc;
+}
+
+.lb-badge-1 { background: rgba(255, 215, 0, 0.2); font-size: 2.5vw; }
+.lb-badge-2 { background: rgba(192, 192, 192, 0.2); font-size: 2.5vw; }
+.lb-badge-3 { background: rgba(205, 127, 50, 0.2); font-size: 2.5vw; }
+
+.lb-player-name {
+  flex: 1;
+  font-size: 2.2vw;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-score-area {
+  display: flex;
+  align-items: center;
+  gap: 1.5vw;
+  min-width: 30%;
+}
+
+.lb-score-bar-wrap {
+  flex: 1;
+  height: 0.8vh;
+  background: rgba(255,255,255,0.1);
+  border-radius: 1vw;
+  overflow: hidden;
+}
+
+.lb-score-bar {
+  height: 100%;
+  border-radius: 1vw;
+  transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: linear-gradient(90deg, #8B5CF6, #A78BFA);
+}
+
+.lb-bar-1 { background: linear-gradient(90deg, #FFD700, #FFA500); }
+.lb-bar-2 { background: linear-gradient(90deg, #C0C0C0, #E8E8E8); }
+.lb-bar-3 { background: linear-gradient(90deg, #CD7F32, #E8A87C); }
+
+.lb-score-value {
+  font-size: 2vw;
+  font-weight: 800;
+  color: #FFD700;
+  min-width: 8vw;
+  text-align: right;
+}
+
+/* ===== FINAL LEADERBOARD (FINISHED) ===== */
+.final-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5vw 3vw;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 0%, #1a0a3e 0%, #0a0a0a 70%);
+}
+
+/* Confetti */
+.confetti-wrap {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-particle {
+  position: absolute;
+  top: -20px;
+  animation: confettiFall linear infinite;
+  opacity: 0.85;
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+.final-header {
+  text-align: center;
+  margin-bottom: 2vh;
+  animation: fadeSlideDown 0.7s ease-out;
+  z-index: 1;
+}
+
+.final-trophy {
+  font-size: 4vw;
+  filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+  animation: trophyPulse 2s ease-in-out infinite;
+}
+
+.final-title {
+  font-size: 4vw;
+  font-weight: 900;
+  background: linear-gradient(135deg, #FFD700, #FF6B6B, #4ECDC4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0.5vh 0;
+  letter-spacing: 0.05em;
+}
+
+.final-subtitle {
+  font-size: 1.5vw;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin: 0;
+}
+
+/* Final Podium */
+.final-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2vw;
+  margin-bottom: 2vh;
+  z-index: 1;
+}
+
+.final-podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: podiumRise 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.fp-first { animation-delay: 0.5s; }
+.fp-second { animation-delay: 0.2s; }
+.fp-third { animation-delay: 0.35s; }
+
+@keyframes podiumRise {
+  from { opacity: 0; transform: translateY(5vh) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fp-crown {
+  font-size: 3vw;
+  animation: crownFloat 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes crownFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.5vh); }
+}
+
+.fp-avatar {
+  font-size: 3.5vw;
+  margin-bottom: 0.5vh;
+}
+
+.fp-name {
+  font-size: 1.8vw;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  max-width: 15vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0.3vh;
+}
+
+.fp-score {
+  font-size: 1.5vw;
+  font-weight: 800;
+  margin-bottom: 0.5vh;
+}
+
+.fp-first .fp-score { color: #FFD700; }
+.fp-second .fp-score { color: #C0C0C0; }
+.fp-third .fp-score { color: #CD7F32; }
+
+.fp-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.8vw 0.8vw 0 0;
+  font-size: 2.5vw;
+  font-weight: 900;
+  color: rgba(0,0,0,0.5);
+}
+
+.fp-block-1 {
+  width: 14vw;
+  height: 9vh;
+  background: linear-gradient(180deg, #FFD700, #B8860B);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+
+.fp-block-2 {
+  width: 12vw;
+  height: 6vh;
+  background: linear-gradient(180deg, #C0C0C0, #808080);
+  box-shadow: 0 0 20px rgba(192, 192, 192, 0.3);
+}
+
+.fp-block-3 {
+  width: 12vw;
+  height: 4.5vh;
+  background: linear-gradient(180deg, #CD7F32, #8B4513);
+  box-shadow: 0 0 20px rgba(205, 127, 50, 0.3);
+}
+
+/* Ranks 4-6 */
+.final-rest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
+  width: 50vw;
+  z-index: 1;
+}
+
+.final-rest-row {
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 1vw;
+  padding: 0.8vh 2vw;
+  animation: slideInFromBottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.final-rest-rank {
+  font-size: 1.8vw;
+  font-weight: 900;
+  color: #888;
+  width: 3vw;
+  text-align: center;
+}
+
+.final-rest-name {
+  flex: 1;
+  font-size: 1.8vw;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.final-rest-score {
+  font-size: 1.8vw;
+  font-weight: 700;
+  color: #aaa;
+}
+
+/* Shared animations */
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-2vh); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.7); }
+  70% { transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* Slider Histogram */
@@ -1251,97 +1733,6 @@ onUnmounted(() => {
   color: #4caf50;
   font-weight: bold;
 }
-
-.leaderboard-list {
-  width: 60%;
-}
-
-.leaderboard-item {
-  display: flex;
-  align-items: center;
-  background: #1e1e1e;
-  padding: 1vw 2vw;
-  border-radius: 1vw;
-  margin-bottom: 1vh;
-}
-
-.rank {
-  font-size: 3vw;
-  font-weight: bold;
-  width: 10%;
-  color: #4CAF50;
-}
-
-.name {
-  flex: 1;
-  font-size: 2vw;
-}
-
-.score {
-  font-size: 2vw;
-  color: #ff9800;
-}
-
-/* Finished */
-.finished-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.finished-container h1 {
-  font-size: 5vw;
-  margin-bottom: 3vh;
-}
-
-.podium {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 2vw;
-}
-
-.podium-place {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.podium-bar {
-  background: #1e1e1e;
-  padding: 2vw;
-  border-radius: 1vw;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-}
-
-.podium-rank {
-  font-size: 4vw;
-  font-weight: bold;
-}
-
-.podium-place.first .podium-rank { color: #ffd700; }
-.podium-place.second .podium-rank { color: #c0c0c0; }
-.podium-place.third .podium-rank { color: #cd7f32; }
-
-.podium-name {
-  font-size: 2vw;
-  margin: 1vh 0;
-}
-
-.podium-score {
-  font-size: 1.5vw;
-  color: #ff9800;
-}
-
-.podium-place.first { height: 30vh; }
-.podium-place.first .podium-bar { height: 100%; }
-.podium-place.second { height: 25vh; }
-.podium-place.second .podium-bar { height: 80%; }
-.podium-place.third { height: 20vh; }
-.podium-place.third .podium-bar { height: 60%; }
 
 /* Audio Controls */
 .unmute-overlay {
