@@ -174,6 +174,18 @@ func main() {
 			return
 		}
 
+		// Update Module (including background music settings)
+		if strings.Contains(r.URL.Path, "/modules/") && r.Method == "PUT" {
+			handlers.VerifyAuth(handlers.UpdateModule)(w, r)
+			return
+		}
+
+		// Get Module (for BigScreen to load music settings)
+		if strings.Contains(r.URL.Path, "/modules/") && r.Method == "GET" {
+			handlers.GetModule(w, r)
+			return
+		}
+
 		if strings.HasSuffix(r.URL.Path, "/modules") {
 			if r.Method == "POST" {
 				handlers.VerifyAuth(handlers.AddModule)(w, r)
@@ -348,7 +360,7 @@ func main() {
 func enableCors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization")
 
 	// Handle preflight OPTIONS request
 	if r.Method == "OPTIONS" {

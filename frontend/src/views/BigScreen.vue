@@ -476,11 +476,11 @@ const loadModuleConfig = async () => {
 
 const manageAudioPlayback = async () => {
     // Determine if we should play
+    // Only play music during quiz (not in screensaver mode after quiz ends)
     const shouldPlay = 
         backgroundMusicUrl.value && 
         (audioOutput.value === 'bigscreen' || audioOutput.value === 'both') &&
-        (displayMode.value === 'quiz' || (displayMode.value === 'screensaver' && gameState.value === 'lobby'))
-        // Note: We might want music in lobby screensaver mode too
+        displayMode.value === 'quiz'
 
     const player = bgMusicPlayer.value
     if (!player) return
@@ -522,16 +522,29 @@ const connect = () => {
   quizWS.on('cmd:state', (payload) => {
     const prevState = gameState.value
     gameState.value = payload.state
-    
+
     if (payload.currentIndex !== undefined) {
       currentQuestionIndex.value = payload.currentIndex
     }
-    
-    if (payload.state === 'question-active') {
-      if (prevState !== 'question-active' || payload.currentIndex !== currentQuestionIndex.value) {
+
+    // Try to autoplay music when quiz starts (get-ready or question-active)
+    if (payload.state === 'get-ready' || payload.state === 'question-active') {
+      displayMode.value = 'quiz'
+      // Try to autoplay when quiz starts - reload audio first
+      const player = bgMusicPlayer.value
+      if (player && backgroundMusicUrl.value && (audioOutput.value === 'bigscreen' || audioOutput.value === 'both')) {
+        player.load()
+        player.play().then(() => {
+          isMusicPlaying.value = true
+          showUnmuteButton.value = false
+        }).catch(() => {
+          // Silently fail - don't show button on big screen
+          showUnmuteButton.value = false
+        })
+      }
+      if (payload.state === 'question-active' && (prevState !== 'question-active' || payload.currentIndex !== currentQuestionIndex.value)) {
         startLocalTimer(currentQuestion.value?.timeLimit || 20)
       }
-      displayMode.value = 'quiz'
     } else if (payload.state === 'results') {
       clearInterval(timerInterval)
       displayMode.value = 'quiz'
@@ -541,12 +554,10 @@ const connect = () => {
     } else if (payload.state === 'lobby') {
       // Show screensaver when quiz is in lobby (not started)
       displayMode.value = 'screensaver'
-    } else if (payload.state === 'get-ready') {
-      displayMode.value = 'quiz'
     } else if (payload.state === 'leaderboard') {
       displayMode.value = 'quiz'
     }
-    
+
     manageAudioPlayback()
   })
 

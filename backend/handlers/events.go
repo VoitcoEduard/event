@@ -601,6 +601,113 @@ func DeleteModule(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Module deleted"})
 }
 
+// UpdateModule handles PUT /events/{eventId}/modules/{moduleId}
+// Updates the module's data (e.g., background music settings)
+func UpdateModule(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := make([]string, 0)
+	current := ""
+	for _, c := range path {
+		if c == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+
+	if len(parts) < 4 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	eventID := parts[1]
+	moduleID := parts[3]
+
+	// Parse the input - expecting { data: { ... } }
+	var input struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("events")
+	filter := bson.M{"_id": eventID, "modules.id": moduleID}
+
+	// Build the update dynamically based on what's in the data
+	if input.Data != nil {
+		updateSet := make(map[string]any)
+		for key, value := range input.Data {
+			updateSet["modules.$.data."+key] = value
+		}
+
+		update := bson.M{"$set": updateSet}
+		_, err := collection.UpdateOne(context.Background(), filter, update)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Module updated"})
+}
+
+// GetModule handles GET /events/{eventId}/modules/{moduleId}
+// Returns the module data (e.g., for BigScreen to load music settings)
+func GetModule(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := make([]string, 0)
+	current := ""
+	for _, c := range path {
+		if c == '/' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+
+	if len(parts) < 4 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	eventID := parts[1]
+	moduleID := parts[3]
+
+	collection := db.GetCollection("events")
+	var event models.Event
+	err := collection.FindOne(context.Background(), bson.M{"_id": eventID}).Decode(&event)
+	if err != nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
+
+	// Find the module
+	for _, mod := range event.Modules {
+		if mod.ID == moduleID {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mod)
+			return
+		}
+	}
+
+	http.Error(w, "Module not found", http.StatusNotFound)
+}
+
 // GetModuleResponses handles the GET request to retrieve all responses for a specific module within an event.
 // Expected URL format: /events/{eventId}/modules/{moduleId}/responses
 func GetModuleResponses(w http.ResponseWriter, r *http.Request) {

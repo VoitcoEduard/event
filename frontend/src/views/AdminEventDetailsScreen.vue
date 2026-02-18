@@ -173,13 +173,7 @@
                           >
                             Host
                           </button>
-                          <button
-                            v-if="module.type === 'quiz'"
-                            class="module-btn bigscreen-btn"
-                            @click="launchBigScreen(module)"
-                          >
-                            Big Screen
-                          </button>
+                          
                           <button
                             class="module-btn data-btn"
                             @click="showData(module)"
