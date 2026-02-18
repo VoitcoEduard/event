@@ -265,7 +265,7 @@ import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QuizModuleConfig from '../components/QuizModuleConfig.vue'
 
 import QRCodeVue from 'qrcode.vue'
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import { getImageUrl } from '../services/media'
 import { getScreensavers } from '../services/media'
@@ -359,7 +359,7 @@ const selectScreensaver = async (screensaver) => {
     // Save screensaver config using the library screensaver's mediaId
     const configResponse = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ imageId: screensaver.mediaId })
     })
 
@@ -381,7 +381,7 @@ const removeScreensaver = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ imageId: '', imageUrl: '' })
     })
     
@@ -402,7 +402,7 @@ const toggleStatus = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ isActive: !currentEvent.value.isActive })
     })
 
@@ -456,7 +456,7 @@ const addModule = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         type: selectedModuleType.value,
         name: newModuleName.value,
@@ -487,7 +487,7 @@ const toggleModuleStatus = async (module) => {
       console.log('[DEBUG] toggleModuleStatus: Resetting quiz session for module:', module.id)
       await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/quiz/reset`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }
       })
       console.log('[DEBUG] toggleModuleStatus: Quiz session reset complete')
     } catch (err) {
@@ -499,7 +499,7 @@ const toggleModuleStatus = async (module) => {
     console.log('[DEBUG] toggleModuleStatus: Updating status to:', !module.isActive)
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ isActive: !module.isActive })
     })
 
@@ -522,7 +522,8 @@ const deleteModule = async (module) => {
 
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() }
     })
 
     if (response.ok) {

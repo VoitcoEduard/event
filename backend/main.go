@@ -34,6 +34,19 @@ func main() {
 		hub.ServeWs(quizHub, w, r)
 	})
 
+	// Auth endpoint (public)
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method == "POST" {
+			handlers.Login(w, r)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	// Register Handlers
 	http.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w, r)
@@ -45,7 +58,7 @@ func main() {
 		case "GET":
 			handlers.GetEvents(w, r)
 		case "POST":
-			handlers.CreateEvent(w, r)
+			handlers.VerifyAuth(handlers.CreateEvent)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -72,7 +85,7 @@ func main() {
 		case "GET":
 			handlers.GetTemplates(w, r)
 		case "POST":
-			handlers.SaveTemplate(w, r)
+			handlers.VerifyAuth(handlers.SaveTemplate)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -84,13 +97,13 @@ func main() {
 			return
 		}
 		if r.Method == "PUT" {
-			handlers.UpdateTemplate(w, r)
+			handlers.VerifyAuth(handlers.UpdateTemplate)(w, r)
 			return
 		}
 		if r.Method == "DELETE" {
-			handlers.DeleteTemplate(w, r)
+			handlers.VerifyAuth(handlers.DeleteTemplate)(w, r)
 			return
-		} // Handle other methods if needed
+		}
 	})
 
 	http.HandleFunc("/events/", func(w http.ResponseWriter, r *http.Request) {
@@ -109,14 +122,14 @@ func main() {
 
 		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/status") {
 			if r.Method == "PUT" {
-				handlers.UpdateModuleStatus(w, r)
+				handlers.VerifyAuth(handlers.UpdateModuleStatus)(w, r)
 				return
 			}
 		}
 
 		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/publish") {
 			if r.Method == "PUT" {
-				handlers.PublishModule(w, r)
+				handlers.VerifyAuth(handlers.PublishModule)(w, r)
 				return
 			}
 		}
@@ -124,7 +137,7 @@ func main() {
 		// Quiz routes
 		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/quiz/") {
 			if strings.HasSuffix(r.URL.Path, "/questions") && r.Method == "PUT" {
-				handlers.UpdateQuizQuestions(w, r)
+				handlers.VerifyAuth(handlers.UpdateQuizQuestions)(w, r)
 				return
 			}
 			if strings.HasSuffix(r.URL.Path, "/state") && r.Method == "GET" {
@@ -132,11 +145,11 @@ func main() {
 				return
 			}
 			if strings.HasSuffix(r.URL.Path, "/start") && r.Method == "POST" {
-				handlers.StartQuiz(w, r)
+				handlers.VerifyAuth(handlers.StartQuiz)(w, r)
 				return
 			}
 			if strings.HasSuffix(r.URL.Path, "/next") && r.Method == "POST" {
-				handlers.NextQuestion(w, r)
+				handlers.VerifyAuth(handlers.NextQuestion)(w, r)
 				return
 			}
 			if strings.HasSuffix(r.URL.Path, "/results") && r.Method == "GET" {
@@ -144,46 +157,46 @@ func main() {
 				return
 			}
 			if strings.HasSuffix(r.URL.Path, "/reset") && r.Method == "POST" {
-				handlers.ResetQuiz(w, r)
+				handlers.VerifyAuth(handlers.ResetQuiz)(w, r)
 				return
 			}
 		}
 
 		// Get Module Responses
 		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/responses") && r.Method == "GET" {
-			handlers.GetModuleResponses(w, r)
+			handlers.VerifyAuth(handlers.GetModuleResponses)(w, r)
 			return
 		}
 
 		// Delete Module
 		if strings.Contains(r.URL.Path, "/modules/") && r.Method == "DELETE" {
-			handlers.DeleteModule(w, r)
+			handlers.VerifyAuth(handlers.DeleteModule)(w, r)
 			return
 		}
 
 		if strings.HasSuffix(r.URL.Path, "/modules") {
 			if r.Method == "POST" {
-				handlers.AddModule(w, r)
+				handlers.VerifyAuth(handlers.AddModule)(w, r)
 				return
 			}
 		}
 
 		// Update Module Response
 		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/responses/") && r.Method == "PUT" {
-			handlers.UpdateModuleResponse(w, r)
+			handlers.VerifyAuth(handlers.UpdateModuleResponse)(w, r)
 			return
 		}
 
 		// Update Quiz Score
 		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/quiz-scores/") && r.Method == "PUT" {
-			handlers.UpdateQuizScore(w, r)
+			handlers.VerifyAuth(handlers.UpdateQuizScore)(w, r)
 			return
 		}
 
-		// Check for /status suffix
+		// Check for /status suffix (event status)
 		if len(r.URL.Path) > 7 && r.URL.Path[len(r.URL.Path)-7:] == "/status" {
 			if r.Method == "PUT" {
-				handlers.UpdateEventStatus(w, r)
+				handlers.VerifyAuth(handlers.UpdateEventStatus)(w, r)
 				return
 			}
 		}
@@ -195,7 +208,7 @@ func main() {
 				return
 			}
 			if r.Method == "PUT" {
-				handlers.UpdateScreensaverConfig(w, r)
+				handlers.VerifyAuth(handlers.UpdateScreensaverConfig)(w, r)
 				return
 			}
 		}
@@ -204,9 +217,9 @@ func main() {
 		case "GET":
 			handlers.GetEvent(w, r)
 		case "PUT":
-			handlers.UpdateEvent(w, r)
+			handlers.VerifyAuth(handlers.UpdateEvent)(w, r)
 		case "DELETE":
-			handlers.DeleteEvent(w, r)
+			handlers.VerifyAuth(handlers.DeleteEvent)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -222,7 +235,7 @@ func main() {
 		case "GET":
 			handlers.GetScreensavers(w, r)
 		case "POST":
-			handlers.CreateScreensaver(w, r)
+			handlers.VerifyAuth(handlers.CreateScreensaver)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -234,7 +247,7 @@ func main() {
 			return
 		}
 		if r.Method == "DELETE" {
-			handlers.DeleteScreensaver(w, r)
+			handlers.VerifyAuth(handlers.DeleteScreensaver)(w, r)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -247,7 +260,7 @@ func main() {
 			return
 		}
 		if r.Method == "POST" {
-			handlers.UploadMedia(w, r)
+			handlers.VerifyAuth(handlers.UploadMedia)(w, r)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -274,7 +287,7 @@ func main() {
 				handlers.GetMedia(w, r)
 				return
 			case "DELETE":
-				handlers.DeleteMedia(w, r)
+				handlers.VerifyAuth(handlers.DeleteMedia)(w, r)
 				return
 			}
 		}

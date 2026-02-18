@@ -100,7 +100,7 @@ import { HotTable } from '@handsontable/vue3';
 import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
 import 'handsontable/styles/ht-theme-main.min.css';
-import { API_BASE_URL } from '../utils';
+import { API_BASE_URL, getAuthHeaders } from '../utils';
 
 // Register all Handsontable modules
 registerAllModules();
@@ -130,7 +130,7 @@ const updateResponse = async (moduleId, responseId, data) => {
     console.log(`[UnifiedView] Updating response ${responseId} in module ${moduleId}`, data);
     const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${moduleId}/responses/${responseId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ data })
     });
     if (!response.ok) throw new Error('Failed to update response');
@@ -145,7 +145,7 @@ const updateScore = async (moduleId, userId, score) => {
     console.log(`[UnifiedView] Updating score for user ${userId} in module ${moduleId}: ${score}`);
     const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${moduleId}/quiz-scores/${userId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ score })
     });
     if (!response.ok) throw new Error('Failed to update score');

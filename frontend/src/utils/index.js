@@ -16,3 +16,19 @@ export const getUserName = () => {
 export const setUserName = (name) => {
   localStorage.setItem('userName', name)
 }
+
+// --- Auth helpers ---
+
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem('adminToken')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+export const isAuthenticated = () => {
+  return !!localStorage.getItem('adminToken')
+}
+
+export const logout = (router) => {
+  localStorage.removeItem('adminToken')
+  if (router) router.push('/login')
+}

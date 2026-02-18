@@ -90,7 +90,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 
 const router = useRouter()
@@ -137,7 +137,7 @@ const handleSubmit = async () => {
 
     const response = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ name: name.value, description: description.value })
     })
 
@@ -160,7 +160,7 @@ const deleteEvent = async (id) => {
   if (!confirm('Are you sure you want to delete this event?')) return
   
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${id}`, { method: 'DELETE' })
+    const response = await fetch(`${API_BASE_URL}/events/${id}`, { method: 'DELETE', headers: { ...getAuthHeaders() } })
     if (response.ok) {
       fetchEvents()
     } else {

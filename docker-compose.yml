@@ -25,9 +25,11 @@ services:
     environment:
       - PORT=8080
       - MONGO_URI=mongodb://mongo:27017
+      - ADMIN_PASSWORD=admin123
     depends_on:
       mongo:
         condition: service_healthy
+
 
   frontend:
     build:

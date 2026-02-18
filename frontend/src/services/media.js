@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../utils/index'
+import { API_BASE_URL, getAuthHeaders } from '../utils/index'
 
 /**
  * Upload an image file to the server
@@ -15,6 +15,7 @@ export async function uploadImage(file, eventId, moduleId) {
 
   const response = await fetch(`${API_BASE_URL}/media/upload`, {
     method: 'POST',
+    headers: { ...getAuthHeaders() },
     body: formData
   })
 
@@ -43,7 +44,8 @@ export function getImageUrl(imageId) {
  */
 export async function deleteImage(imageId) {
   const response = await fetch(`${API_BASE_URL}/media/${imageId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: { ...getAuthHeaders() }
   })
 
   if (!response.ok) {
@@ -97,6 +99,7 @@ export async function uploadScreensaver(file, name) {
 
   const response = await fetch(`${API_BASE_URL}/screensavers`, {
     method: 'POST',
+    headers: { ...getAuthHeaders() },
     body: formData
   })
 
@@ -115,7 +118,8 @@ export async function uploadScreensaver(file, name) {
  */
 export async function deleteScreensaver(screensaverId) {
   const response = await fetch(`${API_BASE_URL}/screensavers/${screensaverId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: { ...getAuthHeaders() }
   })
 
   if (!response.ok) {

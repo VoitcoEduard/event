@@ -173,7 +173,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from '../components/QuizEditor.vue'
 import FormEditor from '../components/FormEditor.vue'
@@ -325,7 +325,8 @@ const deleteTemplate = async (template) => {
 
   try {
     const response = await fetch(`${API_BASE_URL}/templates/${template.id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() }
     })
 
     if (response.ok) {
@@ -373,7 +374,7 @@ const saveTemplate = async () => {
 
     const response = await fetch(url, {
       method: method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload)
     })
 
@@ -486,7 +487,7 @@ const handleFileUpload = (event) => {
 
             const res = await fetch(`${API_BASE_URL}/templates`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                 body: JSON.stringify(payload)
             })
 
