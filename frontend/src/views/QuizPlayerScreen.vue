@@ -188,6 +188,7 @@ import HorizontalCarousel from '../components/HorizontalCarousel.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
+import { getImageUrl } from '../services/media'
 
 const router = useRouter()
 const route = useRoute()
@@ -256,11 +257,6 @@ const isCorrectPicture = computed(() => {
 
 const imageOptionUrls = computed(() => {
     if (!currentQuestion.value?.imageOptions) return []
-    // Assuming we have a helper or base URL for images. 
-    // If not, we might need value.imageId. 
-    // Let's assume absolute URLs or we need a helper.
-    // Checking how images are usually handled. 
-    // In BigScreen/Host, getImageUrl is used.
     return currentQuestion.value.imageOptions.map(opt => ({
         url: getImageUrl(opt.imageId),
         alt: opt.label,
@@ -268,11 +264,7 @@ const imageOptionUrls = computed(() => {
     }))
 }) 
 
-// Helper for image URL
-const getImageUrl = (imageId) => {
-  if (!imageId) return ''
-  return `/api/media/${imageId}`
-}
+
 
 
 const hasSelected = computed(() => {

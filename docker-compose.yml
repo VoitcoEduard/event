@@ -4,7 +4,7 @@ services:
   mongo:
     image: mongo:latest
     ports:
-      - "27017:27017"
+      - "0.0.0.0:27017:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -21,7 +21,7 @@ services:
       args:
         DEBUG_MODE: "true"
     ports:
-      - "8080:8080"
+      - "0.0.0.0:8080:8080"
     environment:
       - PORT=8080
       - MONGO_URI=mongodb://mongo:27017
@@ -30,18 +30,17 @@ services:
       mongo:
         condition: service_healthy
 
-
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "0.0.0.0:8081:8081"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8080
+      - VITE_API_URL=http://192.168.100.58:8080
     depends_on:
       - backend
 

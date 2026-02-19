@@ -1,6 +1,66 @@
 import { API_BASE_URL, getAuthHeaders } from '../utils/index'
 
 /**
+ * Convert an image File to WebP format using the Canvas API.
+ * Proportionally downscales to maxWidth if the image is wider.
+ * Falls back to the original file if WebP encoding is unsupported.
+ * @param {File} file - The source image file
+ * @param {number} maxWidth - Maximum output width in pixels (default: 1200)
+ * @param {number} quality - WebP quality 0–1 (default: 0.85)
+ * @returns {Promise<File>} - A new File in WebP format (or original if fallback)
+ */
+export async function convertToWebP(file, maxWidth = 1200, quality = 0.85) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+
+      // Calculate output dimensions
+      let { width, height } = img
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width)
+        width = maxWidth
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            // WebP not supported — return original
+            resolve(file)
+            return
+          }
+          const webpFile = new File(
+            [blob],
+            file.name.replace(/\.[^.]+$/, '') + '.webp',
+            { type: 'image/webp' }
+          )
+          resolve(webpFile)
+        },
+        'image/webp',
+        quality
+      )
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      // If image fails to load, return original
+      resolve(file)
+    }
+
+    img.src = objectUrl
+  })
+}
+
+/**
  * Upload an image file to the server
  * @param {File} file - The image file to upload
  * @param {string} eventId - The event ID
@@ -8,8 +68,11 @@ import { API_BASE_URL, getAuthHeaders } from '../utils/index'
  * @returns {Promise<Object>} - The media response with id, url, etc.
  */
 export async function uploadImage(file, eventId, moduleId) {
+  // Convert to WebP before uploading for smaller file sizes
+  const processedFile = await convertToWebP(file)
+
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('file', processedFile)
   formData.append('eventId', eventId || '')
   formData.append('moduleId', moduleId || '')
 

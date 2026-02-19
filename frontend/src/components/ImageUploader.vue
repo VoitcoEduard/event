@@ -33,7 +33,7 @@
       <div v-if="!isUploading" class="upload-content">
         <span class="upload-icon">📷</span>
         <span class="upload-text">Click or drag image here</span>
-        <span class="upload-hint">JPEG, PNG, GIF, WebP</span>
+        <span class="upload-hint">JPEG, PNG, GIF, WebP · Auto-compressed to WebP</span>
       </div>
       <div v-else class="uploading-content">
         <div class="spinner"></div>
