@@ -4,9 +4,16 @@
       <div class="header-content">
         <div class="header-left">
           <div class="event-info">
+            <div class="language-switcher">
+              <select v-model="$i18n.locale" @change="changeLanguage">
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+                <option value="ro">Română</option>
+              </select>
+            </div>
             <h1 class="event-title">{{ currentEvent?.name }}</h1>
             <span class="event-status" :class="currentEvent?.isActive ? 'active' : 'inactive'">
-              {{ currentEvent?.isActive ? 'АКТИВНО' : 'НЕАКТИВНО' }}
+              {{ currentEvent?.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
             </span>
           </div>
         </div>
@@ -16,19 +23,19 @@
             :class="{ 'close-btn': isBigScreenOpen }"
             @click="isBigScreenOpen ? closeBigScreen() : openBigScreenFromHeader()"
           >
-            {{ isBigScreenOpen ? '❌ Close Big Screen' : '🖥️ Big Screen' }}
+            {{ isBigScreenOpen ? $t('admin.details.close_big_screen') : $t('admin.details.big_screen') }}
           </button>
-          <button class="nav-button copy-link-btn" @click="copyBigScreenLink" title="Copy Big Screen Link for Projector">
+          <button class="nav-button copy-link-btn" @click="copyBigScreenLink" :title="$t('quiz.host.copy_link')">
              🔗
           </button>
           <button class="nav-button library-btn" @click="goToLibrary">
-            📚 Библиотека
+            {{ $t('admin.details.library_btn') }}
           </button>
           <button class="nav-button data-btn" @click="goToDataView">
-            📊 Data
+            {{ $t('common.data_btn') }}
           </button>
           <button class="nav-button back-btn" @click="goBack">
-            ← Назад
+            {{ $t('admin.details.back_btn') }}
           </button>
         </div>
       </div>
@@ -38,56 +45,56 @@
       <div class="card event-sidebar">
         <div class="card-header">
           <div>
-            <p class="card-title">Event Overview</p>
-            <p class="card-description">Manage details & sharing.</p>
+            <p class="card-title">{{ $t('admin.details.overview') }}</p>
+            <p class="card-description">{{ $t('admin.details.overview_desc') }}</p>
           </div>
           <span class="status-badge" :class="currentEvent?.isActive ? 'active' : 'inactive'">
-            {{ currentEvent?.isActive ? 'ACTIVE' : 'STOPPED' }}
+            {{ currentEvent?.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
           </span>
         </div>
 
         <div class="sidebar-content">
           <div class="info-group">
-            <p class="label">Description</p>
+            <p class="label">{{ $t('admin.details.description') }}</p>
             <p class="value">{{ currentEvent?.description }}</p>
           </div>
 
           <div class="info-group">
-            <p class="label">PIN Code</p>
+            <p class="label">{{ $t('admin.details.pin_code') }}</p>
             <div class="pin-display">
               <span class="pin-text">{{ currentEvent?.id }}</span>
             </div>
           </div>
 
           <div class="info-group">
-            <p class="label">Share Access</p>
+            <p class="label">{{ $t('admin.details.share_access') }}</p>
             <div class="qr-wrapper">
               <QRCodeVue :value="qrCodeValue" :size="120" level="H" />
             </div>
             <button class="copy-btn" @click="copyLink">
-              Copy Link
+              {{ $t('admin.details.copy_link') }}
             </button>
           </div>
 
           <div class="control-group">
-            <p class="section-label">Event Controls</p>
+            <p class="section-label">{{ $t('admin.details.controls') }}</p>
             <button 
               class="action-button"
               :class="currentEvent?.isActive ? 'stop-button' : 'start-button'"
               @click="toggleStatus"
             >
-              {{ currentEvent?.isActive ? 'STOP EVENT' : 'START EVENT' }}
+              {{ currentEvent?.isActive ? $t('admin.details.stop_event') : $t('admin.details.start_event') }}
             </button>
             <p class="control-hint">
               {{ currentEvent?.isActive 
-                ? 'Event is live.' 
-                : 'Event is stopped.' }}
+                ? $t('admin.details.live_hint') 
+                : $t('admin.details.stopped_hint') }}
             </p>
           </div>
 
           <div class="control-group">
-            <p class="section-label">Big Screen Screensaver</p>
-            <p class="control-hint">Set the image to display when no quiz is active</p>
+            <p class="section-label">{{ $t('admin.details.screensaver') }}</p>
+            <p class="control-hint">{{ $t('admin.details.screensaver_desc') }}</p>
             
             <div v-if="screensaverPreview" class="screensaver-preview">
               <img :src="screensaverPreview" alt="Screensaver preview" />
@@ -99,7 +106,7 @@
                 @click="handleScreensaverUpload"
                 :disabled="screensaverLoading"
               >
-                {{ screensaverLoading ? 'Loading...' : 'Select from Library' }}
+                {{ screensaverLoading ? $t('common.loading') : $t('admin.details.select_library') }}
               </button>
             </div>
             
@@ -108,7 +115,7 @@
               class="action-button delete-screensaver-btn"
               @click="removeScreensaver"
             >
-              Remove Image
+              {{ $t('admin.details.remove_image') }}
             </button>
           </div>
         </div>
@@ -118,13 +125,13 @@
       <div v-if="showLibrarySelector" class="modal-overlay" @click.self="showLibrarySelector = false">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>Select Screensaver</h3>
+            <h3>{{ $t('admin.details.select_title') }}</h3>
             <button class="close-btn" @click="showLibrarySelector = false">✕</button>
           </div>
           <div class="modal-body">
             <div v-if="screensavers.length === 0" class="empty-state">
-              <p>No screensavers in library.</p>
-              <p class="hint">Go to Library → Screensavers to upload images.</p>
+              <p>{{ $t('admin.details.no_screensavers') }}</p>
+              <p class="hint">{{ $t('admin.details.screensaver_library_hint') }}</p>
             </div>
             <div v-else class="screensavers-grid">
               <div 
@@ -143,12 +150,12 @@
 
       <div class="card modules-card">
         <div class="card-header">
-          <p class="card-title">Event Modules</p>
+          <p class="card-title">{{ $t('admin.details.modules') }}</p>
           <button class="add-button" @click="showModuleModal = true">
-            + Add Module
+            {{ $t('admin.details.add_module') }}
           </button>
         </div>
-        <p class="card-description">Manage interactive modules for this event.</p>
+        <p class="card-description">{{ $t('admin.details.modules_desc') }}</p>
 
         <div v-if="currentEvent?.modules && currentEvent.modules.length > 0" class="modules-list">
           <div v-for="(module, index) in currentEvent.modules" :key="index" class="module-item">
@@ -162,46 +169,46 @@
                   'status-inactive': !module.isActive
                 }"
               >
-                {{ module.isActive ? 'ACTIVE' : 'INACTIVE' }}
+                {{ module.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
               </span>
             </div>
                         <div class="module-actions">
                           <button class="module-btn config-btn" @click="configureModule(module)">
-                            Configure
+                            {{ $t('admin.details.configure') }}
                           </button>
                           <button
                             v-if="module.type === 'quiz'"
                             class="module-btn host-btn"
                             @click="hostQuiz(module)"
                           >
-                            Host
+                            {{ $t('admin.details.host') }}
                           </button>
                           
                           <button
                             class="module-btn data-btn"
                             @click="showData(module)"
                           >
-                            Data
+                            {{ $t('admin.details.data') }}
                           </button>
                           <button
                             class="module-btn"
                             :class="module.isActive ? 'stop-button' : 'start-button'"
                             @click="toggleModuleStatus(module)"
                           >
-                            {{ module.isActive ? 'Stop' : 'Start' }}
+                            {{ module.isActive ? $t('admin.details.stop') : $t('admin.details.start') }}
                           </button>
                           <button
                             class="module-btn delete-btn"
                             @click="deleteModule(module)"
                           >
-                            Delete
+                            {{ $t('admin.details.delete') }}
                           </button>
                         </div>
                       </div>
         </div>
 
         <div v-else class="empty-modules">
-          <p class="empty-modules-text">No modules added yet.</p>
+          <p class="empty-modules-text">{{ $t('admin.details.no_modules') }}</p>
         </div>
       </div>
     </div>
@@ -227,26 +234,26 @@
     <div v-if="showModuleModal" class="modal-overlay" @click.self="showModuleModal = false">
       <div class="add-module-container">
         <div class="add-module-header">
-          <p class="form-title">Add Module</p>
+          <p class="form-title">{{ $t('admin.details.add_modal_title') }}</p>
           <button @click="showModuleModal = false" class="close-btn">✕</button>
         </div>
 
-        <p class="input-label">Module Name</p>
+        <p class="input-label">{{ $t('admin.details.module_name_label') }}</p>
         <input
           v-model="newModuleName"
           type="text"
-          placeholder="e.g. Feedback Form"
+          :placeholder="$t('admin.details.module_name_placeholder')"
           class="module-input"
         />
 
-        <p class="input-label">Module Type</p>
+        <p class="input-label">{{ $t('admin.details.module_type_label') }}</p>
         <select v-model="selectedModuleType" class="dropdown-select">
-          <option value="form">📝 Form</option>
-          <option value="quiz">🎮 Quiz</option>
+          <option value="form">{{ $t('admin.details.form_option') }}</option>
+          <option value="quiz">{{ $t('admin.details.quiz_option') }}</option>
         </select>
 
         <button class="add-module-button" @click="addModule">
-          Add Module
+          {{ $t('admin.details.add_modal_title') }}
         </button>
       </div>
     </div>
@@ -258,6 +265,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QuizModuleConfig from '../components/QuizModuleConfig.vue'
 
@@ -267,6 +275,7 @@ import { useToast } from '../composables/useToast'
 import { getImageUrl } from '../services/media'
 import { getScreensavers } from '../services/media'
 
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
@@ -288,6 +297,10 @@ const bigscreenWindow = ref(null)
 const isBigScreenOpen = computed(() => bigscreenWindow.value && !bigscreenWindow.value.closed)
 
 const { success, error, info } = useToast()
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 const storedEvent = sessionStorage.getItem('currentEvent')
 currentEvent.value = storedEvent ? JSON.parse(storedEvent) : null
@@ -364,7 +377,7 @@ const selectScreensaver = async (screensaver) => {
       currentEvent.value.screensaverConfig = await configResponse.json()
       screensaverPreview.value = screensaver.thumbnailUrl
       showLibrarySelector.value = false
-      success('Screensaver image updated')
+      success(t('admin.details.toast.screensaver_updated'))
     } else {
       error('Failed to save screensaver config')
     }
@@ -385,7 +398,7 @@ const removeScreensaver = async () => {
     if (response.ok) {
       currentEvent.value.screensaverConfig = null
       screensaverPreview.value = ''
-      success('Screensaver image removed')
+      success(t('admin.details.toast.screensaver_removed'))
     } else {
       error('Failed to remove screensaver')
     }
@@ -405,7 +418,7 @@ const toggleStatus = async () => {
 
     if (response.ok) {
       currentEvent.value.isActive = !currentEvent.value.isActive
-      success(`Event ${currentEvent.value.isActive ? 'started' : 'stopped'}`)
+      success(t(`admin.status_${currentEvent.value.isActive ? 'active' : 'inactive'}`))
     } else {
       error('Failed to update status')
     }
@@ -421,7 +434,7 @@ const getShareLink = () => {
 
 const copyLink = () => {
   navigator.clipboard.writeText(getShareLink())
-  success('Event link copied to clipboard!')
+  success(t('admin.details.toast.event_link_copied'))
 }
 
 const configureModule = (module) => {
@@ -446,7 +459,7 @@ const launchBigScreen = (module) => {
 
 const addModule = async () => {
   if (!newModuleName.value.trim()) {
-    info('Please enter a module name')
+    info(t('admin.details.messages.fill_fields'))
     return
   }
 
@@ -465,7 +478,7 @@ const addModule = async () => {
       fetchEventDetails()
       showModuleModal.value = false
       newModuleName.value = ''
-      success('Module added. Now please configure it.')
+      success(t('admin.details.toast.module_added'))
     } else {
       error('Failed to add module')
     }
@@ -515,7 +528,7 @@ const toggleModuleStatus = async (module) => {
 }
 
 const deleteModule = async (module) => {
-  if (!confirm('Are you sure you want to delete this module?')) return
+  if (!confirm(t('admin.confirm_delete'))) return
 
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}`, {
@@ -595,7 +608,7 @@ const copyBigScreenLink = () => {
   
   const fullUrl = `${window.location.origin}${urlPart}`
   navigator.clipboard.writeText(fullUrl)
-  success('Big Screen link copied to clipboard!')
+  success(t('quiz.host.toast.link_copied'))
 }
 </script>
 
@@ -603,6 +616,20 @@ const copyBigScreenLink = () => {
 .admin-details-screen {
   min-height: 100vh;
   background-color: #121212;
+}
+
+.language-switcher {
+  margin-right: 20px;
+}
+
+.language-switcher select {
+  background-color: #252525;
+  color: white;
+  border: 1px solid #333333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
 }
 
 .header {

@@ -4,18 +4,18 @@
       <img :src="imageUrl" :alt="altText" class="image-preview" />
       <div class="image-actions">
         <button type="button" class="remove-btn" @click="removeImage" :disabled="disabled">
-          ✕ Remove
+          {{ $t('image_uploader.remove') }}
         </button>
       </div>
     </div>
     
     <div v-if="modelValue" class="alt-text-input">
-      <label>Alt Text (for accessibility)</label>
+      <label>{{ $t('image_uploader.alt_label') }}</label>
       <input 
         type="text" 
         :value="altText" 
         @input="updateAltText($event.target.value)"
-        placeholder="Describe the image..."
+        :placeholder="$t('image_uploader.alt_placeholder')"
         class="alt-input"
         :disabled="disabled"
       />
@@ -32,12 +32,12 @@
     >
       <div v-if="!isUploading" class="upload-content">
         <span class="upload-icon">📷</span>
-        <span class="upload-text">Click or drag image here</span>
-        <span class="upload-hint">JPEG, PNG, GIF, WebP · Auto-compressed to WebP</span>
+        <span class="upload-text">{{ $t('image_uploader.click_drag') }}</span>
+        <span class="upload-hint">{{ $t('image_uploader.hint') }}</span>
       </div>
       <div v-else class="uploading-content">
         <div class="spinner"></div>
-        <span>Uploading...</span>
+        <span>{{ $t('image_uploader.uploading') }}</span>
       </div>
     </div>
 
@@ -54,8 +54,10 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { uploadImage, getImageUrl, deleteImage } from '../services/media'
 
+const { t } = useI18n()
 const props = defineProps({
   modelValue: {
     type: String,
@@ -118,7 +120,7 @@ async function uploadFile(file) {
     emit('update:modelValue', result.id)
   } catch (error) {
     console.error('Upload failed:', error)
-    alert('Failed to upload image: ' + error.message)
+    alert(t('image_uploader.error_upload', { error: error.message }))
   } finally {
     isUploading.value = false
   }

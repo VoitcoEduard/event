@@ -15,14 +15,14 @@
         </div>
         <div class="lobby-actions">
             <button class="copy-link-btn" @click="copyBigScreenLink">
-                🔗 Copy Big Screen Link
+                {{ $t('quiz.host.copy_link') }}
             </button>
         </div>
       </div>
       
       <div class="players-area">
         <div class="players-count">
-          <span>👥 {{ players.length }}</span> Players
+          <span>👥 {{ players.length }}</span> {{ $t('quiz.host.players') }}
         </div>
         <div class="players-grid">
           <div v-for="player in players" :key="player.id" class="player-chip">
@@ -674,7 +674,7 @@ const { success } = useToast()
 const copyBigScreenLink = () => {
     const url = `${window.location.origin}/bigscreen/${eventId}/${moduleId}`
     navigator.clipboard.writeText(url)
-    success('Big Screen link copied to clipboard!')
+    success(t('quiz.host.toast.link_copied'))
 }
 
 watch(gameState, () => {
@@ -788,6 +788,24 @@ onUnmounted(() => {
     font-family: 'Inter', sans-serif;
 }
 
+.language-switcher-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+}
+
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+}
+
 /* Audio Controls */
 .unmute-overlay {
     position: fixed;
@@ -818,6 +836,24 @@ onUnmounted(() => {
     top: 0; left: 0; right: 0; bottom: 0;
     background: radial-gradient(circle at center, #2c2c2e 0%, #000 100%);
     z-index: 0;
+}
+
+.language-switcher-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+}
+
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
 }
 
 .state-container {

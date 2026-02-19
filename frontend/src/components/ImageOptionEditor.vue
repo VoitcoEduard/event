@@ -1,13 +1,13 @@
 <template>
   <div class="image-options-editor">
     <div class="options-header">
-      <label>Select the correct image (2-4 options)</label>
+      <label>{{ $t('image_options_editor.label') }}</label>
       <button 
         v-if="imageOptions.length < 4" 
         @click="addOption"
         class="add-option-btn"
       >
-        + Add Image
+        {{ $t('image_options_editor.add_image') }}
       </button>
     </div>
     
@@ -27,7 +27,7 @@
               :checked="correctIndex === idx"
               @change="updateCorrectIndex(idx)"
             />
-            <span class="radio-label">Correct</span>
+            <span class="radio-label">{{ $t('image_options_editor.correct') }}</span>
           </label>
           <button 
             v-if="imageOptions.length > 2" 
@@ -51,8 +51,10 @@
 
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ImageUploader from './ImageUploader.vue'
 
+const { t } = useI18n()
 const props = defineProps({
   modelValue: {
     type: Array,

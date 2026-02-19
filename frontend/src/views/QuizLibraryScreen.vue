@@ -2,24 +2,31 @@
   <div class="library-screen">
     <div class="header">
       <div class="header-top">
+        <div class="language-switcher">
+          <select v-model="$i18n.locale" @change="changeLanguage">
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="ro">Română</option>
+          </select>
+        </div>
         <button class="back-link" @click="goBack">
-          <span>← Back</span>
+          <span>{{ $t('library.actions.discard_confirm') === 'Discard changes?' ? '← Back' : $t('admin.details.back_btn') }}</span>
         </button>
-        <p class="header-title">Library</p>
+        <p class="header-title">{{ $t('library.title') }}</p>
       </div>
       <div class="header-actions">
-        <p class="header-subtitle">Manage Templates</p>
+        <p class="header-subtitle">{{ $t('library.manage_templates') }}</p>
         <button v-if="activeTab !== 'screensaver' && activeTab !== 'music'" class="create-btn" @click="createNewTemplate">
-          + New {{ activeTab === 'form' ? 'Form' : 'Quiz' }} Template
+          {{ activeTab === 'form' ? $t('library.new_form') : $t('library.new_quiz') }}
         </button>
         <button v-if="activeTab === 'screensaver'" class="create-btn" @click="triggerScreensaverUpload">
-          + Upload Screensaver
+          {{ $t('library.upload_screensaver') }}
         </button>
         <button v-if="activeTab === 'music'" class="create-btn" @click="triggerTrackUpload">
-          + Upload Music
+          {{ $t('library.upload_music') }}
         </button>
         <button v-if="activeTab !== 'screensaver' && activeTab !== 'music'" class="import-btn" @click="triggerFileInput">
-            📂 Import
+            {{ $t('library.import') }}
         </button>
         <input 
             type="file" 
@@ -54,7 +61,7 @@
                 @click="activeTab = 'form'"
             >
                 <span class="tab-icon">📝</span>
-                Forms
+                {{ $t('library.tabs.forms') }}
             </button>
             <button 
                 class="tab-btn" 
@@ -62,7 +69,7 @@
                 @click="activeTab = 'quiz'"
             >
                 <span class="tab-icon">🎮</span>
-                Quizzes
+                {{ $t('library.tabs.quizzes') }}
             </button>
             <button 
                 class="tab-btn" 
@@ -70,7 +77,7 @@
                 @click="activeTab = 'screensaver'"
             >
                 <span class="tab-icon">🖼️</span>
-                Screensavers
+                {{ $t('library.tabs.screensavers') }}
             </button>
             <button 
                 class="tab-btn" 
@@ -78,22 +85,22 @@
                 @click="activeTab = 'music'"
             >
                 <span class="tab-icon">🎵</span>
-                Music
+                {{ $t('library.tabs.music') }}
             </button>
         </div>
 
         <!-- Main Content Area -->
         <div class="main-content">
             <div v-if="loading" class="loading-state">
-                <p>Loading...</p>
+                <p>{{ $t('common.loading') }}</p>
             </div>
 
             <!-- Screensavers Tab Content -->
             <div v-else-if="activeTab === 'screensaver'" class="screensaver-view">
                 <div v-if="screensavers.length === 0" class="empty-state">
                     <p class="empty-icon">🖼️</p>
-                    <p class="empty-text">No screensavers found.</p>
-                    <p class="empty-hint">Upload images to use as screensavers during quiz sessions.</p>
+                    <p class="empty-text">{{ $t('library.empty.no_screensavers') }}</p>
+                    <p class="empty-hint">{{ $t('library.empty.screensaver_hint') }}</p>
                 </div>
 
                 <div v-else class="screensavers-grid">
@@ -103,7 +110,7 @@
                         </div>
                         <div class="screensaver-info">
                             <h3 class="screensaver-name">{{ screensaver.name }}</h3>
-                            <p class="screensaver-date">Added: {{ formatDate(screensaver.createdAt) }}</p>
+                            <p class="screensaver-date">{{ $t('library.meta.added') }}: {{ formatDate(screensaver.createdAt) }}</p>
                         </div>
                         <div class="screensaver-actions">
                             <button class="icon-btn delete-btn" @click="handleDeleteScreensaver(screensaver)" title="Delete">🗑️</button>
@@ -116,8 +123,8 @@
             <div v-else-if="activeTab === 'music'" class="music-view">
                 <div v-if="tracks.length === 0" class="empty-state">
                     <p class="empty-icon">🎵</p>
-                    <p class="empty-text">No music tracks found.</p>
-                    <p class="empty-hint">Upload audio files to play during quiz sessions.</p>
+                    <p class="empty-text">{{ $t('library.empty.no_music') }}</p>
+                    <p class="empty-hint">{{ $t('library.empty.music_hint') }}</p>
                 </div>
 
                 <div v-else class="tracks-list">
@@ -125,7 +132,7 @@
                         <div class="track-icon">🎵</div>
                         <div class="track-info">
                             <h3 class="track-name">{{ track.name }}</h3>
-                            <p class="track-date">Added: {{ formatDate(track.createdAt) }}</p>
+                            <p class="track-date">{{ $t('library.meta.added') }}: {{ formatDate(track.createdAt) }}</p>
                         </div>
                         <div class="track-preview">
                             <audio controls :src="`${API_BASE_URL}${track.url}`" class="audio-player"></audio>
@@ -139,7 +146,7 @@
 
             <div v-else-if="filteredTemplates.length === 0" class="empty-state">
                 <p class="empty-icon">{{ activeTab === 'form' ? '📝' : '🎮' }}</p>
-                <p class="empty-text">No {{ activeTab }} templates found.</p>
+                <p class="empty-text">{{ $t('library.empty.no_templates', { type: activeTab }) }}</p>
             </div>
 
             <div v-else class="templates-grid">
@@ -152,10 +159,10 @@
                         <button class="icon-btn delete-btn" @click="deleteTemplate(template)" title="Delete">🗑</button>
                     </div>
                 </div>
-                <p class="template-desc">{{ template.description || 'No description' }}</p>
+                <p class="template-desc">{{ template.description || $t('library.meta.no_desc') }}</p>
                 <div class="template-meta">
-                    <span v-if="activeTab === 'quiz'" class="question-count">{{ (template.data?.questions || []).length }} Questions</span>
-                    <span v-else class="question-count">{{ (template.data?.timeline || []).length }} Steps</span>
+                    <span v-if="activeTab === 'quiz'" class="question-count">{{ $t('library.meta.questions', { count: (template.data?.questions || []).length }) }}</span>
+                    <span v-else class="question-count">{{ $t('library.meta.steps', { count: (template.data?.timeline || []).length }) }}</span>
                     <span class="created-at">{{ formatDate(template.createdAt) }}</span>
                 </div>
                 </div>
@@ -170,11 +177,11 @@
           <input 
             v-model="currentTemplate.name" 
             class="template-name-input" 
-            placeholder="Template Name"
+            :placeholder="$t('library.actions.template_name_placeholder')"
           />
           <div class="header-buttons">
             <button class="save-btn" @click="saveTemplate" :disabled="saving">
-              {{ saving ? 'Saving...' : 'Save Template' }}
+              {{ saving ? $t('library.actions.saving_btn') : $t('library.actions.save_btn') }}
             </button>
             <button class="close-btn" @click="closeEditor">✕</button>
           </div>
@@ -184,7 +191,7 @@
             <textarea 
                 v-model="currentTemplate.description" 
                 class="template-desc-input" 
-                placeholder="Description (optional)"
+                :placeholder="$t('library.actions.desc_placeholder')"
                 rows="2"
             ></textarea>
             
@@ -216,14 +223,20 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from '../components/QuizEditor.vue'
 import FormEditor from '../components/FormEditor.vue'
 import { getScreensavers, uploadScreensaver, deleteScreensaver, getTracks, uploadTrack, deleteTrack, getImageUrl } from '../services/media'
 
+const { t, locale } = useI18n()
 const router = useRouter()
 const { success, error, info } = useToast()
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 const activeTab = ref('form')
 const templates = ref([])
@@ -301,11 +314,11 @@ const handleScreensaverUpload = async (event) => {
     if (!file) return
 
     try {
-        const name = prompt('Enter a name for this screensaver:', file.name)
+        const name = prompt(t('library.actions.template_name_placeholder'), file.name)
         if (!name) return
         
         await uploadScreensaver(file, name)
-        success('Screensaver uploaded successfully')
+        success(t('admin.details.toast.screensaver_updated'))
         fetchScreensavers()
     } catch (err) {
         console.error(err)
@@ -316,11 +329,11 @@ const handleScreensaverUpload = async (event) => {
 }
 
 const handleDeleteScreensaver = async (screensaver) => {
-    if (!confirm(`Delete screensaver "${screensaver.name}"?`)) return
+    if (!confirm(t('library.actions.delete_confirm', { name: screensaver.name }))) return
     
     try {
         await deleteScreensaver(screensaver.id)
-        success('Screensaver deleted')
+        success(t('admin.details.toast.screensaver_removed'))
         fetchScreensavers()
     } catch (err) {
         console.error(err)
@@ -333,7 +346,7 @@ const handleTrackUpload = async (event) => {
     if (!file) return
 
     try {
-        const name = prompt('Enter a name for this track:', file.name)
+        const name = prompt(t('library.actions.template_name_placeholder'), file.name)
         if (!name) return
         
         await uploadTrack(file, name)
@@ -348,7 +361,7 @@ const handleTrackUpload = async (event) => {
 }
 
 const handleDeleteTrack = async (track) => {
-    if (!confirm(`Delete track "${track.name}"?`)) return
+    if (!confirm(t('library.actions.delete_confirm', { name: track.name }))) return
     
     try {
         await deleteTrack(track.id)
@@ -412,7 +425,7 @@ const editTemplate = (template) => {
 }
 
 const deleteTemplate = async (template) => {
-  if (!confirm(`Delete template "${template.name}"?`)) return
+  if (!confirm(t('library.actions.delete_confirm', { name: template.name }))) return
 
   try {
     const response = await fetch(`${API_BASE_URL}/templates/${template.id}`, {
@@ -434,14 +447,14 @@ const deleteTemplate = async (template) => {
 
 const saveTemplate = async () => {
   if (!currentTemplate.value.name.trim()) {
-    info('Please enter a template name')
+    info(t('admin.details.messages.fill_fields'))
     return
   }
   
   const isQuiz = currentTemplate.value.moduleType === 'quiz'
   
   if (isQuiz && currentTemplate.value.questions.length === 0) {
-       if(!confirm("Save quiz template with no questions?")) return
+       if(!confirm(t('library.actions.discard_confirm'))) return
    }
 
    saving.value = true
@@ -485,7 +498,7 @@ const saveTemplate = async () => {
 }
 
 const closeEditor = () => {
-    if(confirm('Discard changes?')) {
+    if(confirm(t('library.actions.discard_confirm'))) {
         showEditor.value = false
     }
 }
@@ -496,7 +509,7 @@ const handleUpdateQuestion = (index, updatedQ) => {
 }
 
 const handleRemoveQuestion = (index) => {
-    if (!confirm('Delete this question?')) return
+    if (!confirm(t('library.actions.delete_confirm', { name: 'this question' }))) return
     currentTemplate.value.questions.splice(index, 1)
 }
 
@@ -637,6 +650,20 @@ const exportTemplate = (template) => {
   align-items: center;
   margin-bottom: 12px;
   gap: 16px;
+}
+
+.language-switcher {
+  margin-right: 10px;
+}
+
+.language-switcher select {
+  background-color: #252525;
+  color: white;
+  border: 1px solid #333333;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
 }
 
 .back-link {

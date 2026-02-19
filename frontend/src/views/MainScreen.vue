@@ -1,17 +1,24 @@
 <template>
   <div class="main-screen">
+    <div class="language-switcher">
+      <select v-model="$i18n.locale" @change="changeLanguage">
+        <option value="en">English</option>
+        <option value="ru">Русский</option>
+        <option value="ro">Română</option>
+      </select>
+    </div>
     <div class="content">
-      <h1 class="title">Hello from Expo</h1>
-      <p class="subtitle">Minimalist Design</p>
+      <h1 class="title">{{ $t('main.title') }}</h1>
+      <p class="subtitle">{{ $t('main.subtitle') }}</p>
 
       <div class="card">
-        <h2 class="card-title">Connect to Event</h2>
-        <p class="card-text">Enter the 6-digit PIN code to join the live event.</p>
+        <h2 class="card-title">{{ $t('main.connect_title') }}</h2>
+        <p class="card-text">{{ $t('main.connect_desc') }}</p>
         
         <input
           v-model="pin"
           type="text"
-          placeholder="000000"
+          :placeholder="$t('main.pin_placeholder')"
           maxlength="6"
           class="input"
           @input="handlePinInput"
@@ -25,12 +32,12 @@
           :disabled="loading"
         >
           <span v-if="loading" class="loading-spinner"></span>
-          <span v-else>Connect</span>
+          <span v-else>{{ $t('main.connect_btn') }}</span>
         </button>
       </div>
 
       <button class="admin-link" @click="goToAdmin">
-        Go to Admin Dashboard
+        {{ $t('main.admin_link') }}
       </button>
     </div>
   </div>
@@ -39,7 +46,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+const { t, locale } = useI18n()
 const router = useRouter()
 const pin = ref('')
 const loading = ref(false)
@@ -64,10 +73,14 @@ const handlePinInput = (e) => {
   error.value = ''
 }
 
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
+
 const handleConnect = async () => {
   error.value = ''
   if (!pin.value || pin.value.length !== 6) {
-    error.value = 'Please enter a valid 6-digit PIN'
+    error.value = t('main.errors.invalid_pin')
     return
   }
 
@@ -85,16 +98,16 @@ const handleConnect = async () => {
       router.push('/event')
     } else {
       if (response.status === 404) {
-        error.value = 'Event not found. Check your PIN.'
+        error.value = t('main.errors.not_found')
       } else if (response.status === 403) {
-        error.value = 'This event is not active currently.'
+        error.value = t('main.errors.not_active')
       } else {
-        error.value = 'Failed to connect to event.'
+        error.value = t('main.errors.failed')
       }
     }
   } catch (err) {
     console.error('Connection error:', err)
-    error.value = 'Network error. Please try again.'
+    error.value = t('main.errors.network')
   } finally {
     loading.value = false
   }
@@ -110,8 +123,26 @@ const goToAdmin = () => {
   min-height: 100vh;
   background-color: #121212;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.language-switcher {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.language-switcher select {
+  background-color: #252525;
+  color: white;
+  border: 1px solid #333333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
 }
 
 .content {

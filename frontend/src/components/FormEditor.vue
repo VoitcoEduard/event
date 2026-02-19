@@ -3,15 +3,15 @@
     <div class="scroll-content">
       <div v-if="localTimeline.length === 0" class="empty-state">
         <p class="empty-icon">✏️</p>
-        <p class="empty-text">Start by adding a question or message</p>
+        <p class="empty-text">{{ $t('form_editor.empty_text') }}</p>
       </div>
       <div v-else>
         <div v-for="(step, index) in localTimeline" :key="step.id" class="step-card">
           <div class="step-header" :class="{ 'field-step': step.type === 'field', 'message-step': step.type === 'message' }">
             <div class="step-title-container">
               <span class="step-icon">{{ step.type === 'field' ? '❓' : '💬' }}</span>
-              <span class="step-index">Step {{ index + 1 }}</span>
-              <span class="step-type-label">{{ step.type === 'field' ? 'Question' : 'Message' }}</span>
+              <span class="step-index">{{ $t('form_module.step_counter', { current: index + 1, total: localTimeline.length }) }}</span>
+              <span class="step-type-label">{{ step.type === 'field' ? $t('form_editor.question') : $t('form_editor.message') }}</span>
             </div>
             <div class="step-actions">
               <button 
@@ -36,15 +36,15 @@
 
           <div class="step-body">
             <template v-if="step.type === 'field'">
-              <p class="label">Question / Label</p>
+              <p class="label">{{ $t('form_editor.question_label') }}</p>
               <input
                 :value="step.data.label"
                 @input="updateStep(step.id, 'label', $event.target.value)"
-                placeholder="e.g. What is your name?"
+                :placeholder="$t('form_editor.question_placeholder')"
                 class="input"
               />
 
-              <p class="label">Response Type</p>
+              <p class="label">{{ $t('form_editor.response_type') }}</p>
               <div class="type-selector">
                 <button 
                   v-for="type in ['text', 'number', 'date', 'radio', 'checkbox', 'dropdown']" 
@@ -53,14 +53,14 @@
                   :class="{ active: step.data.fieldType === type }"
                   @click="updateStep(step.id, 'fieldType', type)"
                 >
-                  {{ type.charAt(0).toUpperCase() + type.slice(1) }}
+                  {{ $t(`form_editor.types.${type}`) }}
                 </button>
               </div>
 
               <!-- Predefined Answers Section for Selection Types -->
               <template v-if="['radio', 'checkbox', 'dropdown'].includes(step.data.fieldType)">
                 <div class="predefined-answers-section">
-                  <p class="label">Predefined Answers</p>
+                  <p class="label">{{ $t('form_editor.predefined_answers') }}</p>
                   
                   <div class="answers-list">
                     <div 
@@ -71,19 +71,19 @@
                       <input
                         :value="answer.text"
                         @input="updateAnswer(step.id, answerIndex, 'text', $event.target.value)"
-                        placeholder="Display text"
+                        :placeholder="$t('form_editor.display_text')"
                         class="input answer-input"
                       />
                       <input
                         :value="answer.value"
                         @input="updateAnswer(step.id, answerIndex, 'value', $event.target.value)"
-                        placeholder="Value"
+                        :placeholder="$t('form_editor.value')"
                         class="input answer-value-input"
                       />
                       <button 
                         class="remove-answer-btn" 
                         @click="removeAnswer(step.id, answerIndex)"
-                        title="Remove answer"
+                        :title="$t('form_editor.delete_question')"
                       >
                         ✕
                       </button>
@@ -91,7 +91,7 @@
                   </div>
                   
                   <button class="add-answer-btn" @click="addAnswer(step.id)">
-                    + Add Answer
+                    {{ $t('form_editor.add_answer') }}
                   </button>
 
                   <!-- Allow Multiple Selections (Checkbox only) -->
@@ -102,7 +102,7 @@
                         :checked="step.data.allowMultiple"
                         @change="updateStep(step.id, 'allowMultiple', $event.target.checked)"
                       />
-                      <span>Allow multiple selections</span>
+                      <span>{{ $t('form_editor.allow_multiple') }}</span>
                     </label>
                   </div>
 
@@ -114,17 +114,17 @@
                         :checked="step.data.allowOther"
                         @change="updateStep(step.id, 'allowOther', $event.target.checked)"
                       />
-                      <span>Allow 'Other' option</span>
+                      <span>{{ $t('form_editor.allow_other') }}</span>
                     </label>
                   </div>
 
                   <!-- Other Option Placeholder -->
                   <div v-if="step.data.allowOther" class="other-option-section">
-                    <p class="label">Other option placeholder</p>
+                    <p class="label">{{ $t('form_editor.other_placeholder_label') }}</p>
                     <input
-                      :value="step.data.otherPlaceholder || 'Please specify...'"
+                      :value="step.data.otherPlaceholder || $t('form_module.other_placeholder')"
                       @input="updateStep(step.id, 'otherPlaceholder', $event.target.value)"
-                      placeholder="e.g., Please specify..."
+                      :placeholder="$t('form_module.other_placeholder')"
                       class="input"
                     />
                   </div>
@@ -133,11 +133,11 @@
             </template>
 
             <template v-else>
-              <p class="label">Message Content</p>
+              <p class="label">{{ $t('form_editor.message_content') }}</p>
               <textarea
                 :value="step.data.content"
                 @input="updateStep(step.id, 'content', $event.target.value)"
-                placeholder="Enter your message here..."
+                :placeholder="$t('form_editor.message_placeholder')"
                 class="input text-area"
               ></textarea>
             </template>
@@ -150,10 +150,10 @@
     <div class="action-bar">
       <div class="add-buttons">
         <button class="add-btn add-question" @click="addStep('field')">
-          + Question
+          {{ $t('form_editor.add_question_btn') }}
         </button>
         <button class="add-btn add-message" @click="addStep('message')">
-          + Message
+          {{ $t('form_editor.add_message_btn') }}
         </button>
       </div>
     </div>
@@ -162,8 +162,10 @@
 
 <script setup>
 import { ref, watch, defineProps, defineEmits } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { extractLabel } from '../utils/labelExtractor'
 
+const { t } = useI18n()
 const props = defineProps({
   timeline: { type: Array, default: () => [] }
 })
@@ -183,12 +185,12 @@ watch(localTimeline, (newVal) => {
 const addStep = (type) => {
   // For fields, generate a default label based on type
   const defaultLabels = {
-    text: 'What is your answer?',
-    number: 'Enter a number:',
-    date: 'Select a date:',
-    radio: 'Choose an option:',
-    checkbox: 'Select all that apply:',
-    dropdown: 'Choose from list:'
+    text: t('form_module.type_answer'),
+    number: t('form_module.type_number'),
+    date: t('form_editor.date_label'),
+    radio: t('form_editor.radio_label'),
+    checkbox: t('form_editor.checkbox_label'),
+    dropdown: t('form_module.select_option')
   }
   const defaultQuestion = defaultLabels.text
   
@@ -197,7 +199,7 @@ const addStep = (type) => {
     type,
     data: type === 'field'
       ? { label: defaultQuestion, fieldType: 'text' }
-      : { content: 'Welcome to the form!' }
+      : { content: t('form_editor.welcome_msg') }
   }
   
   // Auto-generate compact label for the field
@@ -266,7 +268,7 @@ const removeAnswer = (stepId, answerIndex) => {
 }
 
 const removeStep = (id) => {
-  if (!confirm('Are you sure you want to remove this step?')) return
+  if (!confirm(t('library.actions.discard_confirm'))) return
   localTimeline.value = localTimeline.value.filter(step => step.id !== id)
 }
 

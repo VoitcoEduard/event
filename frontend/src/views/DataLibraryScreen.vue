@@ -2,10 +2,17 @@
   <div class="data-library-screen">
     <div class="page-header">
       <div class="header-left">
+        <div class="language-switcher">
+          <select v-model="$i18n.locale" @change="changeLanguage">
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="ro">Română</option>
+          </select>
+        </div>
         <button class="back-link" @click="goBack">
-          <span>← Back to event</span>
+          <span>{{ $t('data_library.back_to_event') }}</span>
         </button>
-        <h1>Event Data Tables: {{ selectedEvent?.name }}</h1>
+        <h1>{{ $t('data_library.title', { name: selectedEvent?.name }) }}</h1>
       </div>
     </div>
 
@@ -16,7 +23,7 @@
         :class="{ active: activeTab === 'unified' }"
         @click="activeTab = 'unified'"
       >
-        Unified View
+        {{ $t('data_library.unified_view') }}
       </button>
       <button 
         v-for="module in selectedEvent?.modules || []" 
@@ -33,32 +40,32 @@
     <div class="tab-content">
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
-        <p>Loading data...</p>
+        <p>{{ $t('data_library.loading') }}</p>
       </div>
 
       <div v-else-if="error" class="error-state">
         <div class="error-icon">⚠️</div>
-        <p>Error: {{ error }}</p>
-        <button class="retry-btn" @click="fetchData">Retry</button>
+        <p>{{ $t('data_library.error', { error: error }) }}</p>
+        <button class="retry-btn" @click="fetchData">{{ $t('data_library.retry') }}</button>
       </div>
 
       <div v-else-if="!selectedEvent" class="no-event-state">
-        <p>Please select an event to view data tables</p>
+        <p>{{ $t('data_library.no_event') }}</p>
       </div>
 
       <div v-else-if="activeTab === 'unified'" class="unified-view">
         <div class="data-header">
           <div class="header-actions">
-            <button class="export-btn">Export Current Tab</button>
-            <button class="refresh-btn" @click="fetchData">Refresh</button>
-            <span class="record-count">{{ totalRecords }} users</span>
+            <button class="export-btn">{{ $t('data_library.export_btn') }}</button>
+            <button class="refresh-btn" @click="fetchData">{{ $t('data_library.refresh_btn') }}</button>
+            <span class="record-count">{{ $t('data_library.users_count', { count: totalRecords }) }}</span>
           </div>
         </div>
         
         <div v-if="totalRecords === 0" class="no-data-state">
           <div class="empty-icon">📊</div>
-          <p>No data generated yet</p>
-          <p class="hint">Waiting for participants to submit responses...</p>
+          <p>{{ $t('data_library.no_data') }}</p>
+          <p class="hint">{{ $t('data_library.hint_waiting') }}</p>
         </div>
 
         <div v-else class="data-table-container">
@@ -71,16 +78,16 @@
       <div v-else class="module-view">
         <div class="data-header">
           <div class="header-actions">
-            <button class="export-btn">Export Current Tab</button>
-            <button class="refresh-btn" @click="fetchData">Refresh</button>
-            <span class="record-count">{{ moduleResponses.length }} records</span>
+            <button class="export-btn">{{ $t('data_library.export_btn') }}</button>
+            <button class="refresh-btn" @click="fetchData">{{ $t('data_library.refresh_btn') }}</button>
+            <span class="record-count">{{ $t('data_library.records_count', { count: moduleResponses.length }) }}</span>
           </div>
         </div>
         
         <div v-if="moduleResponses.length === 0" class="no-data-state">
           <div class="empty-icon">Folder Empty</div>
-          <p>No data generated for this module</p>
-          <p class="hint">Waiting for responses...</p>
+          <p>{{ $t('data_library.no_data_module') }}</p>
+          <p class="hint">{{ $t('data_library.hint_responses') }}</p>
         </div>
 
         <div v-else class="data-table-container">
@@ -96,17 +103,23 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { HotTable } from '@handsontable/vue3';
 import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
 import 'handsontable/styles/ht-theme-main.min.css';
 import { API_BASE_URL, getAuthHeaders } from '../utils';
 
+const { t, locale } = useI18n();
 // Register all Handsontable modules
 registerAllModules();
 
 const router = useRouter();
 const route = useRoute();
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 const events = ref([]);
 const selectedEvent = ref(null);
@@ -299,7 +312,10 @@ const fetchUnifiedData = async () => {
   console.log("[UnifiedView] Starting Unified Data Fetch");
   const promises = selectedEvent.value.modules.map(m => 
     fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${m.id}/responses`)
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) throw new Error(`Failed to fetch ${m.name} responses: ${res.statusText}`);
+        return res.json();
+      })
       .then(data => ({ moduleId: m.id, type: m.type, name: m.name, responses: data.responses || [] }))
   );
 
@@ -343,7 +359,7 @@ const fetchUnifiedData = async () => {
   });
 
   // Construct Columns
-  const headers = ['User ID', 'Name', 'Total Score'];
+  const headers = [t('data_library.headers.user_id'), t('data_library.headers.name'), t('data_library.headers.total_score')];
   const columns = [
     { data: 'userId', readOnly: true },
     { data: 'name', readOnly: false },
@@ -402,7 +418,7 @@ const fetchUnifiedData = async () => {
 const fetchModuleData = async () => {
     const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${activeTab.value}/responses`);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
     const responses = data.responses || [];
@@ -503,6 +519,20 @@ watch([selectedEvent, activeTab], () => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.language-switcher {
+  margin-right: 10px;
+}
+
+.language-switcher select {
+  background-color: #252525;
+  color: white;
+  border: 1px solid #333333;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
 }
 
 .back-link {

@@ -4,15 +4,15 @@
       <div class="modal-container" :style="modalStyle">
         <div class="header">
           <div>
-            <p class="title">Form Editor</p>
-            <p class="subtitle">{{ module?.name || 'Untitled Form' }}</p>
+            <p class="title">{{ $t('form_module.config.title') }}</p>
+            <p class="subtitle">{{ module?.name || $t('form_module.config.untitled') }}</p>
           </div>
           <div class="header-buttons">
-            <button class="icon-button" @click="openTemplateModal" title="Load Template">
+            <button class="icon-button" @click="openTemplateModal" :title="$t('quiz_config.load_library')">
               📥
             </button>
             <button class="library-btn" @click="openSaveTemplateModal">
-               💾 Save as Template
+               💾 {{ $t('quiz_config.save_template') }}
             </button>
             <button class="close-button" @click="handleClose">
               ✕
@@ -29,10 +29,10 @@
 
           <div class="action-bar">
             <div class="status-text">
-                {{ timeline.length }} Steps
+                {{ $t('form_module.config.steps_count', { count: timeline.length }) }}
             </div>
             <button class="publish-btn" @click="handlePublish" :disabled="loading">
-              {{ loading ? 'Saving...' : 'Save Changes' }}
+              {{ loading ? $t('quiz_config.saving') : $t('admin.details.update_btn') }}
             </button>
           </div>
         </div>
@@ -41,10 +41,10 @@
       <!-- Load Template Modal -->
       <div v-if="showTemplateModal" class="modal-overlay" @click.self="showTemplateModal = false">
         <div class="dialog">
-          <h3 class="dialog-title">Start from Template</h3>
+          <h3 class="dialog-title">{{ $t('quiz_config.load_library') }}</h3>
           <div class="template-list">
-            <div v-if="loadingTemplates">Loading...</div>
-            <div v-else-if="templates.length === 0">No templates found.</div>
+            <div v-if="loadingTemplates">{{ $t('common.loading') }}</div>
+            <div v-else-if="templates.length === 0">{{ $t('quiz_config.no_templates') }}</div>
             <div v-else v-for="template in templates" :key="template.id" class="template-item-wrapper">
               <div class="template-item" @click="loadTemplate(template)">
                 <p class="template-item-name">{{ template.name }}</p>
@@ -53,7 +53,7 @@
             </div>
           </div>
           <button class="dialog-close-btn" @click="showTemplateModal = false">
-            Cancel
+            {{ $t('admin.details.cancel_btn') }}
           </button>
         </div>
       </div>
@@ -61,18 +61,18 @@
       <!-- Save Template Modal -->
       <div v-if="showSaveTemplateModal" class="modal-overlay" @click.self="showSaveTemplateModal = false">
         <div class="dialog">
-          <h3 class="dialog-title">Save as Template</h3>
+          <h3 class="dialog-title">{{ $t('quiz_config.save_template') }}</h3>
           <input
             v-model="templateName"
-            placeholder="Template Name"
+            :placeholder="$t('library.actions.template_name_placeholder')"
             class="dialog-input"
           />
           <div class="dialog-buttons">
             <button class="dialog-btn cancel" @click="showSaveTemplateModal = false">
-              Cancel
+              {{ $t('admin.details.cancel_btn') }}
             </button>
             <button class="dialog-btn save" @click="saveAsTemplate">
-              Save
+              {{ $t('admin.details.add_modal_title') }}
             </button>
           </div>
         </div>
@@ -83,10 +83,12 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
 import FormEditor from './FormEditor.vue'
 
+const { t } = useI18n()
 const props = defineProps({
   visible: { type: Boolean, default: false },
   module: { type: Object, default: null },

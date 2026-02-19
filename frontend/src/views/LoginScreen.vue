@@ -1,5 +1,12 @@
 <template>
   <div class="login-page">
+    <div class="language-switcher">
+      <select v-model="$i18n.locale" @change="changeLanguage">
+        <option value="en">English</option>
+        <option value="ru">Русский</option>
+        <option value="ro">Română</option>
+      </select>
+    </div>
     <div class="login-card">
       <div class="login-logo">
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -14,17 +21,17 @@
           </defs>
         </svg>
       </div>
-      <h1 class="login-title">Admin Access</h1>
-      <p class="login-subtitle">Enter your password to continue</p>
+      <h1 class="login-title">{{ $t('login.title') }}</h1>
+      <p class="login-subtitle">{{ $t('login.subtitle') }}</p>
 
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="input-group">
-          <label for="password">Password</label>
+          <label for="password">{{ $t('login.password_label') }}</label>
           <input
             id="password"
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="Enter admin password"
+            :placeholder="$t('login.password_placeholder')"
             autocomplete="current-password"
             :disabled="loading"
           />
@@ -37,7 +44,7 @@
 
         <button type="submit" class="login-btn" :disabled="loading || !password">
           <span v-if="loading" class="spinner"></span>
-          <span v-else>Sign In</span>
+          <span v-else>{{ $t('login.signin_btn') }}</span>
         </button>
       </form>
     </div>
@@ -47,13 +54,19 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { API_BASE_URL } from '../utils/index.js'
 
+const { t, locale } = useI18n()
 const router = useRouter()
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 async function handleLogin() {
   error.value = ''
@@ -65,14 +78,14 @@ async function handleLogin() {
       body: JSON.stringify({ password: password.value })
     })
     if (!res.ok) {
-      error.value = 'Incorrect password. Please try again.'
+      error.value = t('login.errors.incorrect')
       return
     }
     const data = await res.json()
     localStorage.setItem('adminToken', data.token)
     router.push('/admin')
   } catch (e) {
-    error.value = 'Could not connect to server. Please try again.'
+    error.value = t('login.errors.failed')
   } finally {
     loading.value = false
   }
@@ -83,12 +96,30 @@ async function handleLogin() {
 .login-page {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #0f0f13;
   background-image: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
                     radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
   font-family: 'Inter', system-ui, sans-serif;
+  position: relative;
+}
+
+.language-switcher {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.language-switcher select {
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
 }
 
 .login-card {

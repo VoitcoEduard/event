@@ -1,5 +1,13 @@
 <template>
   <div class="big-screen">
+    <div class="language-switcher-container">
+      <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
+        <option value="en">English</option>
+        <option value="ru">Русский</option>
+        <option value="ro">Română</option>
+      </select>
+    </div>
+
     <!-- Screensaver Mode -->
     <div v-if="displayMode === 'screensaver'" class="screensaver-container">
       <img 
@@ -10,24 +18,24 @@
         @load="onImageLoad"
       />
       <div v-else class="screensaver-placeholder">
-        <p>No screensaver configured</p>
-        <p class="hint">Ask admin to set up a screensaver image</p>
+        <p>{{ $t('big_screen.no_screensaver') }}</p>
+        <p class="hint">{{ $t('big_screen.screensaver_hint') }}</p>
       </div>
     </div>
 
     <!-- Connecting State -->
     <div v-else-if="displayMode === 'connecting'" class="connecting-container">
       <div class="loading-content">
-        <h1>Connecting...</h1>
+        <h1>{{ $t('big_screen.connecting') }}</h1>
         <div class="loader"></div>
       </div>
     </div>
 
     <!-- Error State -->
     <div v-else-if="displayMode === 'error'" class="error-container">
-      <h1>Connection Error</h1>
+      <h1>{{ $t('big_screen.conn_error') }}</h1>
       <p>{{ errorMessage }}</p>
-      <button @click="retryConnection" class="retry-btn">Retry</button>
+      <button @click="retryConnection" class="retry-btn">{{ $t('big_screen.retry') }}</button>
     </div>
 
     <!-- Quiz Display States -->
@@ -35,19 +43,19 @@
       <!-- LOBBY STATE -->
       <div v-if="gameState === 'lobby'" class="state-container lobby-container">
         <div class="lobby-header">
-          <h1 class="game-title">Join the Quiz!</h1>
+          <h1 class="game-title">{{ $t('quiz.host.join_title') }}</h1>
           <div class="pin-display">
-            <span class="pin-label">Game PIN:</span>
+            <span class="pin-label">{{ $t('quiz.host.game_pin') }}</span>
             <span class="pin-code">{{ pinCode }}</span>
           </div>
           <div class="qr-container">
-            <div class="qr-placeholder">QR Code</div>
+            <div class="qr-placeholder">{{ $t('quiz.host.qr_placeholder') }}</div>
           </div>
         </div>
         
         <div class="players-area">
           <div class="players-count">
-            <span>👥 {{ players.length }}</span> Players
+            <span>👥 {{ players.length }}</span> {{ $t('quiz.host.players') }}
           </div>
           <div class="players-grid">
             <div v-for="player in players" :key="player.id" class="player-chip">
@@ -60,7 +68,7 @@
       <!-- GET READY STATE -->
       <div v-else-if="gameState === 'get-ready'" class="state-container get-ready-container">
         <div class="loading-content">
-          <h1>Get Ready!</h1>
+          <h1>{{ $t('quiz.player.get_ready') }}</h1>
           <div class="loader"></div>
         </div>
       </div>
@@ -106,7 +114,7 @@
 
           <div class="answers-column">
             <div v-if="isSlider" class="slider-instruction-view">
-              <h2 class="slider-instruction-text">Slide to answer</h2>
+              <h2 class="slider-instruction-text">{{ $t('quiz.host.slide_to_answer') }}</h2>
               <div class="slider-demo-track">
                 <div class="slider-demo-thumb"></div>
               </div>
@@ -128,14 +136,14 @@
         
         <div class="answer-counter-widget">
           <div class="counter-value">{{ totalAnswered }}</div>
-          <div class="counter-label">Answers</div>
+          <div class="counter-label">{{ $t('quiz.host.answers_label') }}</div>
         </div>
       </div>
 
       <!-- RESULTS STATE (no leaderboard here) -->
       <div v-else-if="gameState === 'results'" class="state-container results-container">
         <div class="results-header">
-          <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
+          <span class="results-label">{{ $t('quiz.host.results_title', { num: currentQuestionIndex + 1 }) }}</span>
         </div>
 
         <!-- CORRECT PICTURE RESULTS -->
@@ -167,7 +175,7 @@
         </div>
 
         <div v-else-if="!isSlider" class="correct-answer-reveal">
-          <p class="correct-label">Correct Answer</p>
+          <p class="correct-label">{{ $t('quiz.host.correct_answer') }}</p>
           <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
             <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
             <span class="correct-text">{{ currentQuestion?.answers[currentQuestion?.correctIndex] }}</span>
@@ -217,7 +225,7 @@
             >
               <div class="marker-line"></div>
               <div class="marker-label">
-                <span class="marker-title">Correct</span>
+                <span class="marker-title">{{ $t('quiz.host.correct_label') }}</span>
                 <span class="marker-value">{{ formatNumber(currentQuestion?.correctValue) }}</span>
               </div>
             </div>
@@ -234,8 +242,8 @@
         <div class="lb-bg-glow"></div>
         <div class="lb-header">
           <div class="lb-trophy">🏆</div>
-          <h2 class="lb-title">Leaderboard</h2>
-          <div class="lb-subtitle">Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}</div>
+          <h2 class="lb-title">{{ $t('quiz.host.leaderboard_title') }}</h2>
+          <div class="lb-subtitle">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
         <div class="lb-list">
           <div 
@@ -275,8 +283,8 @@
 
         <div class="final-header">
           <div class="final-trophy">🏆</div>
-          <h1 class="final-title">Quiz Complete!</h1>
-          <p class="final-subtitle">Final Standings</p>
+          <h1 class="final-title">{{ $t('quiz.host.quiz_complete') }}</h1>
+          <p class="final-subtitle">{{ $t('quiz.host.final_standings') }}</p>
         </div>
 
         <!-- Top 3 Podium -->
@@ -322,7 +330,7 @@
     
     <div v-if="showUnmuteButton" class="unmute-overlay">
         <button @click="enableAudio" class="unmute-btn">
-            🔊 Click to Enable Sound
+            {{ $t('big_screen.enable_sound') }}
         </button>
     </div>
   </div>
@@ -331,14 +339,20 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
 import { getScreensavers } from '../services/media'
 
+const { locale } = useI18n()
 const route = useRoute()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 // Display mode: 'connecting', 'screensaver', 'quiz', 'error'
 const displayMode = ref('connecting')
@@ -775,6 +789,26 @@ onUnmounted(() => {
   overflow: hidden;
   background-color: #121212;
   color: white;
+  position: relative;
+}
+
+.language-switcher-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    backdrop-filter: blur(10px);
 }
 
 /* Screensaver Styles */

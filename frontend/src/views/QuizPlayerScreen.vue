@@ -2,18 +2,26 @@
   <div class="quiz-player-screen">
     <div class="bg-layer"></div>
 
+    <div class="language-switcher-container">
+      <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
+        <option value="en">English</option>
+        <option value="ru">Русский</option>
+        <option value="ro">Română</option>
+      </select>
+    </div>
+
     <!-- NICKNAME ENTRY (Pre-Lobby) -->
     <div v-if="state === States.LOBBY && !joined" class="state-container name-entry-container">
-      <h1 class="logo">QuizTime!</h1>
+      <h1 class="logo">{{ $t('quiz.player.logo') }}</h1>
       <div class="card">
         <input
           v-model="nickname"
-          placeholder="Enter Nickname"
+          :placeholder="$t('quiz.player.nickname_placeholder')"
           class="nickname-input"
           @keyup.enter="joinLobby"
         />
         <button class="join-btn" @click="joinLobby" :disabled="!nickname.trim()">
-          OK, Go!
+          {{ $t('quiz.player.join_btn') }}
         </button>
       </div>
     </div>
@@ -21,9 +29,9 @@
     <!-- LOBBY STATE -->
     <div v-else-if="state === States.LOBBY && joined" class="state-container lobby-container">
       <div class="lobby-content">
-        <h2 class="waiting-text">You're in!</h2>
+        <h2 class="waiting-text">{{ $t('quiz.player.you_are_in') }}</h2>
         <div class="nickname-display">{{ nickname }}</div>
-        <p class="status-msg">See your name on screen?</p>
+        <p class="status-msg">{{ $t('quiz.player.see_name') }}</p>
         <div class="loader"></div>
       </div>
     </div>
@@ -31,7 +39,7 @@
     <!-- GET READY STATE -->
     <div v-else-if="state === States.GET_READY" class="state-container get-ready-container">
       <div class="ready-content">
-        <h1>Get Ready!</h1>
+        <h1>{{ $t('quiz.player.get_ready') }}</h1>
         <div class="loader"></div>
       </div>
     </div>
@@ -66,12 +74,12 @@
           :disabled="!hasPreselection || hasSubmitted"
           @click="confirmSelection"
         >
-          <span v-if="!hasPreselection">Swipe to view options</span>
+          <span v-if="!hasPreselection">{{ $t('quiz.player.swipe_to_view') }}</span>
           <span v-else-if="isSubmitting">
             <span class="spinner-small"></span>
-            Submitting...
+            {{ $t('quiz.player.submitting') }}
           </span>
-          <span v-else>Select This Item</span>
+          <span v-else>{{ $t('quiz.player.select_item') }}</span>
         </button>
       </div>
     </div>
@@ -101,7 +109,7 @@
           />
         </div>
         
-        <p class="instruction-text">Drag and release to submit</p>
+        <p class="instruction-text">{{ $t('quiz.player.slider_instruction') }}</p>
       </div>
     </div>
 
@@ -124,14 +132,14 @@
             :disabled="hasSubmitted"
          >
             <span class="shape-icon">{{ shape }}</span>
-            <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? 'TRUE' : 'FALSE' }}</span>
+            <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false') }}</span>
             <div v-if="isMultiSelect && isSelected(idx)" class="checkmark-badge">✓</div>
          </button>
       </div>
       
       <div v-if="isMultiSelect && !hasSubmitted" class="action-bar">
           <button class="submit-btn" @click="submitMultiSelect" :disabled="selectedIndices.length === 0">
-              Submit Answer
+              {{ $t('quiz.player.submit_btn') }}
           </button>
       </div>
     </div>
@@ -140,8 +148,8 @@
     <div v-else-if="state === States.ANSWERED" class="state-container answered-container">
        <div class="answered-content">
           <div class="spinner"></div>
-          <h2>Answer Submitted!</h2>
-          <p>Waiting for others...</p>
+          <h2>{{ $t('quiz.player.submitted') }}</h2>
+          <p>{{ $t('quiz.player.waiting_others') }}</p>
        </div>
     </div>
 
@@ -149,30 +157,30 @@
     <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
        <div class="result-content">
           <div class="result-icon">{{ isCorrect ? '✅' : '❌' }}</div>
-          <h1 class="result-title">{{ isCorrect ? 'Correct' : 'Incorrect' }}</h1>
+          <h1 class="result-title">{{ isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}</h1>
 
           <div class="score-summary">
              <div class="score-delta" v-if="isCorrect">+ {{ currentPoints }}</div>
-             <div class="streak-msg" v-if="streak > 2">🔥 Streak: {{ streak }}</div>
-             <div class="rank-msg">You are in {{ rank }} place</div>
+             <div class="streak-msg" v-if="streak > 2">{{ $t('quiz.player.streak', { streak: streak }) }}</div>
+             <div class="rank-msg">{{ $t('quiz.player.rank_msg', { rank: rank }) }}</div>
           </div>
        </div>
        <div class="footer-score">
-          Total Score: {{ score }}
+          {{ $t('quiz.player.total_score', { score: score }) }}
        </div>
     </div>
 
     <!-- FINISHED STATE -->
     <div v-else-if="state === States.FINISHED" class="state-container finished-container">
        <div class="finished-content">
-          <h1>Quiz Over</h1>
+          <h1>{{ $t('quiz.player.quiz_over') }}</h1>
           <div class="final-rank-badge">
              <span class="rank-num">{{ rank }}</span>
-             <span class="rank-label">place</span>
+             <span class="rank-label">{{ $t('quiz.player.place') }}</span>
           </div>
-          <p class="final-score">Final Score: {{ score }}</p>
+          <p class="final-score">{{ $t('quiz.player.final_score', { score: score }) }}</p>
        </div>
-       <button class="exit-btn" @click="goHome">Exit</button>
+       <button class="exit-btn" @click="goHome">{{ $t('quiz.player.exit_btn') }}</button>
     </div>
 
   </div>
@@ -181,6 +189,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { quizWS } from '../services/websocket'
 import { useQuizStateMachine } from '../composables/useQuizStateMachine'
 import SliderComponent from '../components/SliderComponent.vue'
@@ -190,10 +199,15 @@ import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
 import { getImageUrl } from '../services/media'
 
+const { locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 // State machine
 const { state, transition, canTransition, questionCache: cache, currentQuestionIndex, score, streak, States } = useQuizStateMachine()
@@ -577,6 +591,24 @@ onUnmounted(() => {
     top: 0; left: 0; right: 0; bottom: 0;
     background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 100%);
     z-index: 0;
+}
+
+.language-switcher-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+}
+
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
 }
 
 .state-container {

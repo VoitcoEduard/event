@@ -1,16 +1,23 @@
 <template>
   <div class="event-screen">
     <div class="responsive-wrapper">
+      <div class="language-switcher-container">
+        <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+          <option value="ro">Română</option>
+        </select>
+      </div>
       <div v-if="!currentEvent" class="error-container">
-        <p class="error-text">No event data found.</p>
-        <button class="back-button" @click="goToMain">Go Back</button>
+        <p class="error-text">{{ $t('event.no_data') }}</p>
+        <button class="back-button" @click="goToMain">{{ $t('event.go_back') }}</button>
       </div>
 
       <div v-else-if="selectedModule" class="module-view">
         <div class="module-header">
           <button class="back-link" @click="selectedModule = null">
             <span class="back-arrow">←</span>
-            <span>Back to Event</span>
+            <span>{{ $t('event.back_to_event') }}</span>
           </button>
         </div>
         <FormModule
@@ -24,14 +31,14 @@
 
       <div v-else class="content">
         <div class="header">
-          <p class="status-text">Connected to</p>
+          <p class="status-text">{{ $t('event.connected_to') }}</p>
           <p class="event-name">{{ currentEvent.name }}</p>
-          <p v-if="userName" class="welcome-text">Welcome, {{ userName }}</p>
+          <p v-if="userName" class="welcome-text">{{ $t('event.welcome', { name: userName }) }}</p>
         </div>
 
         <div class="list-container">
           <template v-if="activeModules.length > 0">
-            <p class="section-title">Active Activities</p>
+            <p class="section-title">{{ $t('event.active_activities') }}</p>
             <div
               v-for="module in activeModules"
               :key="module.id"
@@ -43,7 +50,7 @@
               </div>
               <div class="module-info">
                 <p class="module-title">{{ module.name }}</p>
-                <p class="module-subtitle">Tap to start</p>
+                <p class="module-subtitle">{{ $t('event.tap_to_start') }}</p>
               </div>
               <span class="chevron">›</span>
             </div>
@@ -51,14 +58,14 @@
           <template v-else>
             <div class="waiting-card">
               <div class="loader"></div>
-              <p class="message">Waiting for host to start the next activity...</p>
-              <p class="sub-message">Sit tight and get ready!</p>
+              <p class="message">{{ $t('event.waiting_msg') }}</p>
+              <p class="sub-message">{{ $t('event.waiting_submsg') }}</p>
             </div>
           </template>
         </div>
 
         <button class="leave-button" @click="goToMain">
-          Leave Event
+          {{ $t('event.leave_btn') }}
         </button>
       </div>
     </div>
@@ -68,12 +75,18 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import FormModule from '../components/FormModule.vue'
 import { API_BASE_URL, getUserId, getUserName, setUserName } from '../utils'
 
+const { locale } = useI18n()
 const router = useRouter()
 const userId = ref(getUserId())
 const userName = ref(getUserName())
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 const storedEvent = sessionStorage.getItem('currentEvent')
 const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : null)
@@ -164,6 +177,24 @@ const goToMain = () => {
   flex-direction: column;
   background-color: var(--background-color, #121212);
   position: relative;
+}
+
+.language-switcher-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+}
+
+.lang-select {
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
 }
 
 @media (min-width: 500px) {

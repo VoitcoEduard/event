@@ -3,7 +3,7 @@
     <div class="scroll-content">
       <div v-if="questions.length === 0" class="empty-state">
         <p class="empty-icon">🎮</p>
-        <p class="empty-text">Start by adding a question to your quiz!</p>
+        <p class="empty-text">{{ $t('quiz_editor.empty_text') }}</p>
       </div>
       
       <div v-else class="questions-list">
@@ -27,7 +27,7 @@
       
       <div class="add-section">
         <button class="add-btn" @click="emit('add-question')">
-          + Add Question
+          {{ $t('quiz_editor.add_question') }}
         </button>
       </div>
 

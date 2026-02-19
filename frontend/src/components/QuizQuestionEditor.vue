@@ -1,34 +1,34 @@
 <template>
   <div class="question-editor">
     <div class="editor-header">
-      <span class="question-number">Question {{ index + 1 }}</span>
+      <span class="question-number">{{ $t('quiz_config.question_editor.question_number', { number: index + 1 }) }}</span>
       <button class="delete-btn" @click="$emit('delete')">🗑</button>
     </div>
 
     <div class="input-group">
-      <label>Question Type</label>
+      <label>{{ $t('quiz_config.question_editor.type_label') }}</label>
       <select v-model="localQuestion.type" class="select-input" @change="handleTypeChange">
-        <option value="multiple_choice">Single Choice</option>
-        <option value="multi_select">Multi Select</option>
-        <option value="true_false">True / False</option>
-        <option value="slider">Slider</option>
-        <option value="correct_picture">Correct Picture</option>
+        <option value="multiple_choice">{{ $t('quiz_config.question_editor.types.multiple_choice') }}</option>
+        <option value="multi_select">{{ $t('quiz_config.question_editor.types.multi_select') }}</option>
+        <option value="true_false">{{ $t('quiz_config.question_editor.types.true_false') }}</option>
+        <option value="slider">{{ $t('quiz_config.question_editor.types.slider') }}</option>
+        <option value="correct_picture">{{ $t('quiz_config.question_editor.types.correct_picture') }}</option>
       </select>
     </div>
 
     <div class="input-group">
-      <label>Question Text</label>
+      <label>{{ $t('quiz_config.question_editor.text_label') }}</label>
       <input 
         type="text" 
         v-model="localQuestion.text" 
         class="main-input"
-        placeholder="e.g., What is the capital of France?"
+        :placeholder="$t('quiz_config.question_editor.text_placeholder')"
         @input="emitUpdate"
       />
     </div>
 
     <div class="input-group">
-      <label>Question Image (Optional)</label>
+      <label>{{ $t('quiz_config.question_editor.image_label') }}</label>
       <ImageUploader
         v-model="localQuestion.imageId"
         v-model:altText="localQuestion.imageAlt"
@@ -39,7 +39,7 @@
 
     <div class="settings-row">
       <div class="input-group">
-        <label>Time Limit (seconds)</label>
+        <label>{{ $t('quiz_config.question_editor.time_limit') }}</label>
         <select v-model.number="localQuestion.timeLimit" class="select-input" @change="emitUpdate">
           <option :value="5">5s</option>
           <option :value="10">10s</option>
@@ -75,7 +75,7 @@
         </div>
         <textarea 
           v-model="localQuestion.answers[idx]" 
-          placeholder="Type answer option"
+          :placeholder="$t('quiz_config.question_editor.answer_placeholder')"
           class="answer-input"
           :readonly="isAnswerReadOnly(idx)"
           @input="emitUpdate"
@@ -87,37 +87,37 @@
     <div v-if="localQuestion.type === 'slider'" class="slider-config-panel">
       
       <div class="config-section">
-        <h4 class="section-title">Range & Unit</h4>
+        <h4 class="section-title">{{ $t('quiz_config.question_editor.slider.range_unit') }}</h4>
         <div class="config-grid">
            <div class="input-group">
-              <label>Min Value</label>
+              <label>{{ $t('quiz_config.question_editor.slider.min_value') }}</label>
               <input type="number" v-model.number="localQuestion.sliderConfig.minValue" class="config-input" @input="emitUpdate" />
            </div>
            <div class="input-group">
-              <label>Max Value</label>
+              <label>{{ $t('quiz_config.question_editor.slider.max_value') }}</label>
               <input type="number" v-model.number="localQuestion.sliderConfig.maxValue" class="config-input" @input="emitUpdate" />
            </div>
            <div class="input-group">
-              <label>Step</label>
+              <label>{{ $t('quiz_config.question_editor.slider.step') }}</label>
               <input type="number" v-model.number="localQuestion.sliderConfig.step" class="config-input" min="0" step="any" @input="emitUpdate" />
            </div>
            <div class="input-group">
-              <label>Unit</label>
-              <input type="text" v-model="localQuestion.sliderConfig.unit" class="config-input" placeholder="%, kg, years" @input="emitUpdate" />
+              <label>{{ $t('quiz_config.question_editor.slider.unit') }}</label>
+              <input type="text" v-model="localQuestion.sliderConfig.unit" class="config-input" :placeholder="$t('quiz_config.question_editor.slider.unit_placeholder')" @input="emitUpdate" />
            </div>
         </div>
       </div>
 
       <div class="config-section">
-        <h4 class="section-title">Correct Answer & Scoring</h4>
+        <h4 class="section-title">{{ $t('quiz_config.question_editor.slider.correct_scoring') }}</h4>
         <div class="config-grid">
            <div class="input-group">
-              <label>Correct Value</label>
+              <label>{{ $t('quiz_config.question_editor.slider.correct_value') }}</label>
               <input type="number" v-model.number="localQuestion.correctValue" class="config-input correct-value-input" @input="emitUpdate" />
            </div>
            
            <div class="input-group">
-              <label>Decimals</label>
+              <label>{{ $t('quiz_config.question_editor.slider.decimals') }}</label>
               <select v-model.number="localQuestion.sliderConfig.decimalPlaces" class="select-input small-select" @change="emitUpdate">
                 <option :value="0">0</option>
                 <option :value="1">1</option>
@@ -128,18 +128,18 @@
         
         <div class="config-grid mt-2">
             <div class="input-group">
-              <label>Scoring Mode</label>
+              <label>{{ $t('quiz_config.question_editor.slider.scoring_mode') }}</label>
               <select v-model="localQuestion.scoringConfig.mode" class="select-input small-select" @change="emitUpdate">
-                <option value="symmetric">Symmetric (Both sides)</option>
-                <option value="asymmetric">Asymmetric (No overbid)</option>
+                <option value="symmetric">{{ $t('quiz_config.question_editor.slider.symmetric') }}</option>
+                <option value="asymmetric">{{ $t('quiz_config.question_editor.slider.asymmetric') }}</option>
               </select>
            </div>
            <div class="input-group">
-              <label>Tolerance (±)</label>
+              <label>{{ $t('quiz_config.question_editor.slider.tolerance') }}</label>
               <input type="number" v-model.number="localQuestion.scoringConfig.tolerance" class="config-input" @input="emitUpdate" />
            </div>
             <div class="input-group">
-              <label>Max Points</label>
+              <label>{{ $t('quiz_config.question_editor.slider.max_points') }}</label>
               <input type="number" v-model.number="localQuestion.scoringConfig.maxPoints" class="config-input" @input="emitUpdate" />
            </div>
         </div>
@@ -147,7 +147,7 @@
 
       <!-- Preview -->
       <div class="slider-preview-container">
-         <label>Preview</label>
+         <label>{{ $t('quiz_config.question_editor.slider.preview') }}</label>
          <div class="preview-box">
             <SliderComponent
                 :min="localQuestion.sliderConfig.minValue"
@@ -161,7 +161,7 @@
                 :correctValue="localQuestion.correctValue"
             />
          </div>
-         <p class="preview-note">Preview shows correct answer marker</p>
+         <p class="preview-note">{{ $t('quiz_config.question_editor.slider.preview_note') }}</p>
       </div>
 
     </div>
@@ -183,10 +183,12 @@
 
 <script setup>
 import { reactive, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import SliderComponent from './SliderComponent.vue'
 import ImageUploader from './ImageUploader.vue'
 import ImageOptionEditor from './ImageOptionEditor.vue'
 
+const { t } = useI18n()
 const props = defineProps({
   question: {
     type: Object,
@@ -262,7 +264,6 @@ watch(() => props.question, (newVal) => {
           sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 },
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
-          correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',
           imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }]
@@ -276,7 +277,7 @@ const emitUpdate = () => {
 
 const handleTypeChange = () => {
     if (localQuestion.type === 'true_false') {
-        localQuestion.answers = ['True', 'False', '', '']
+        localQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
         if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
     } else if (localQuestion.type === 'slider') {
         // Ensure defaults are set

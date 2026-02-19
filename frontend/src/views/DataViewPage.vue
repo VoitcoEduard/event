@@ -2,13 +2,19 @@
   <div class="data-view-container">
     <div class="page-header">
       <div class="header-left">
-        <h1>Event Data: {{ eventName || 'Loading...' }}</h1>
+        <div class="language-switcher">
+          <select v-model="$i18n.locale" @change="changeLanguage">
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="ro">Română</option>
+          </select>
+        </div>
+        <h1>{{ $t('data_library.title', { name: eventName || $t('common.loading') }) }}</h1>
       </div>
       <div class="header-right">
-        <button class="export-btn">Export Current Tab</button>
-        <button class="export-btn">Export Selected Modules</button>
-        <button class="refresh-btn" @click="fetchData">Refresh</button>
-        <span class="record-count">{{ recordCount }} records</span>
+        <button class="export-btn">{{ $t('data_library.export_btn') }}</button>
+        <button class="refresh-btn" @click="fetchData">{{ $t('data_library.refresh_btn') }}</button>
+        <span class="record-count">{{ $t('data_library.records_count', { count: recordCount }) }}</span>
       </div>
     </div>
 
@@ -21,7 +27,7 @@
         :class="{ active: activeTab === tab.id }"
         @click="setActiveTab(tab.id)"
       >
-        {{ tab.label }}
+        {{ tab.label === 'Unified View' ? $t('data_library.unified_view') : tab.label }}
       </button>
     </div>
 
@@ -30,21 +36,21 @@
       <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
-        <p>Loading data...</p>
+        <p>{{ $t('data_library.loading') }}</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="error" class="error-state">
         <div class="error-icon">⚠️</div>
-        <p>Error: {{ error }}</p>
-        <button class="retry-btn" @click="fetchData">Retry</button>
+        <p>{{ $t('data_library.error', { error: error }) }}</p>
+        <button class="retry-btn" @click="fetchData">{{ $t('data_library.retry') }}</button>
       </div>
 
       <!-- No Data State (only if not loading and no error and no records) -->
       <div v-else-if="!loading && !error && recordCount === 0" class="no-data-state">
         <div class="empty-icon">📊</div>
-        <p>No data available.</p>
-        <p class="hint">Submit some responses to see data here.</p>
+        <p>{{ $t('data_library.no_data') }}</p>
+        <p class="hint">{{ $t('data_library.hint_waiting') }}</p>
       </div>
 
       <!-- Data Table View -->
@@ -61,6 +67,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { HotTable } from '@handsontable/vue3';
 import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
@@ -68,11 +75,16 @@ import 'handsontable/styles/ht-theme-main.min.css';
 import { API_BASE_URL } from '../utils';
 import { extractLabel } from '../utils/labelExtractor';
 
+const { t, locale } = useI18n();
 // Register all Handsontable modules
 registerAllModules();
 
 const route = useRoute();
 const router = useRouter();
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 const routeEventId = computed(() => route.query.eventId);
 const routeModuleId = computed(() => route.query.moduleId);
 
@@ -315,7 +327,10 @@ const fetchUnifiedData = async () => {
   console.log("[UnifiedView] Starting Unified Data Fetch...");
   const promises = eventModules.value.map(m => 
     fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${m.id}/responses`)
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) throw new Error(`Failed to fetch ${m.name} responses: ${res.statusText}`);
+        return res.json();
+      })
       .then(data => ({ moduleId: m.id, type: m.type, responses: data.responses || [] }))
   );
 
@@ -359,7 +374,7 @@ const fetchUnifiedData = async () => {
 
   console.log("[UnifiedView] Aggregated User Map size:", userMap.size);
 
-  const headers = ['User ID', 'Name', 'Total Score'];
+  const headers = [t('data_library.headers.user_id'), t('data_library.headers.name'), t('data_library.headers.total_score')];
   const columns = [
     { data: 'userId', readOnly: true },
     { data: 'name', readOnly: false }, 
@@ -423,7 +438,9 @@ const fetchUnifiedData = async () => {
 const fetchModuleData = async (moduleId) => {
   console.log(`[UnifiedView] Fetching Single Module Data: ${moduleId}`);
   const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/responses`);
-  if (!response.ok) throw new Error('Failed to fetch responses');
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+  }
   const result = await response.json();
   const rawData = result.responses || [];
 
@@ -528,11 +545,24 @@ watch(activeTab, () => {
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
-.header-left h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: #ffffff;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.language-switcher {
+  margin-right: 10px;
+}
+
+.language-switcher select {
+  background-color: #252525;
+  color: white;
+  border: 1px solid #333333;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
 }
 
 .header-right {

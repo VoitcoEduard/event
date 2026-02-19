@@ -4,15 +4,15 @@
       <div class="modal-container" :style="modalStyle">
         <div class="header">
           <div>
-            <p class="title">Quiz Editor</p>
-            <p class="subtitle">{{ module?.name || 'Untitled Quiz' }}</p>
+            <p class="title">{{ $t('quiz_config.title') }}</p>
+            <p class="subtitle">{{ module?.name || $t('quiz_config.untitled') }}</p>
           </div>
           <div class="header-buttons">
-            <button class="icon-button" @click="showLibraryModal = true" title="Load from Library">
+            <button class="icon-button" @click="showLibraryModal = true" :title="$t('quiz_config.load_library')">
               📥
             </button>
             <button class="library-btn" @click="triggerFileInput">
-              📄 Load JSON
+              📄 {{ $t('quiz_config.load_json') }}
             </button>
             <input 
               type="file" 
@@ -40,37 +40,37 @@
 
           <div class="settings-bar">
             <div class="setting-item">
-                <label>Background Music</label>
+                <label>{{ $t('quiz_config.settings.bg_music') }}</label>
                 <select v-model="selectedMusicId" @change="handleMusicChange" class="setting-select">
-                    <option value="">None</option>
+                    <option value="">{{ $t('quiz_config.settings.none') }}</option>
                     <option v-for="track in tracks" :key="track.id" :value="track.id">
                         {{ track.name }}
                     </option>
                 </select>
             </div>
             <div class="setting-item">
-                <label>Audio Output</label>
+                <label>{{ $t('quiz_config.settings.audio_output') }}</label>
                 <select v-model="audioOutput" class="setting-select">
-                    <option value="bigscreen">Big Screen Only</option>
-                    <option value="admin">Admin Only</option>
-                    <option value="both">Both</option>
+                    <option value="bigscreen">{{ $t('quiz_config.settings.bigscreen_only') }}</option>
+                    <option value="admin">{{ $t('quiz_config.settings.admin_only') }}</option>
+                    <option value="both">{{ $t('quiz_config.settings.both') }}</option>
                 </select>
             </div>
           </div>
 
           <div class="action-bar">
             <div class="status-text">
-              {{ questions.length }} Questions
+              {{ $t('quiz_config.status', { count: questions.length }) }}
             </div>
             <div class="action-buttons">
                 <button class="save-template-btn" @click="exportJSON" :disabled="questions.length === 0">
-                    ⬇ Export JSON
+                    {{ $t('quiz_config.export_json') }}
                 </button>
                 <button class="save-template-btn" @click="saveAsTemplate" :disabled="questions.length === 0">
-                    💾 Save as Template
+                    {{ $t('quiz_config.save_template') }}
                 </button>
                 <button class="publish-btn" @click="handleSave" :disabled="loading">
-                {{ loading ? 'Saving...' : 'Save Quiz' }}
+                {{ loading ? $t('quiz_config.saving') : $t('quiz_config.save_quiz') }}
                 </button>
             </div>
           </div>
@@ -81,17 +81,17 @@
       <div v-if="showLibraryModal" class="library-modal-overlay" @click.self="showLibraryModal = false">
         <div class="library-modal">
             <div class="library-header">
-                <h3>Select a Template</h3>
+                <h3>{{ $t('quiz_config.select_template') }}</h3>
                 <button class="close-btn" @click="showLibraryModal = false">✕</button>
             </div>
             <div class="library-content">
-                <div v-if="loadingTemplates" class="loading">Loading...</div>
-                <div v-else-if="templates.length === 0" class="empty">No templates found.</div>
+                <div v-if="loadingTemplates" class="loading">{{ $t('common.loading') }}</div>
+                <div v-else-if="templates.length === 0" class="empty">{{ $t('quiz_config.no_templates') }}</div>
                 <div v-else class="template-list">
                     <div v-for="t in templates" :key="t.id" class="template-item" @click="loadTemplate(t)">
                         <div class="template-info">
                             <span class="t-name">{{ t.name }}</span>
-                            <span class="t-count">{{ (t.data?.questions || []).length }} Qs</span>
+                            <span class="t-count">{{ $t('quiz_config.questions_count', { count: (t.data?.questions || []).length }) }}</span>
                         </div>
                         <p class="t-desc">{{ t.description }}</p>
                     </div>
@@ -105,11 +105,13 @@
 
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from './QuizEditor.vue'
 import { getTracks } from '../services/media'
 
+const { t } = useI18n()
 const props = defineProps({
   visible: { type: Boolean, default: false },
   module: { type: Object, default: null },
@@ -196,7 +198,7 @@ const handleMusicChange = () => {
 
 const loadTemplate = (template) => {
     if(questions.value.length > 0) {
-        if(!confirm('This will replace your current questions. Continue?')) return
+        if(!confirm(t('quiz_config.confirm_replace'))) return
     }
     
     if(template.data?.questions) {
@@ -218,13 +220,13 @@ const loadTemplate = (template) => {
             }
             return q
         })
-        success(`Loaded template: ${template.name}`)
+        success(t('quiz_config.loaded_template', { name: template.name }))
         showLibraryModal.value = false
     }
 }
 
 const saveAsTemplate = async () => {
-    const name = prompt('Enter a name for this template:')
+    const name = prompt(t('quiz_config.enter_template_name'))
     if(!name) return
 
     try {
@@ -242,14 +244,14 @@ const saveAsTemplate = async () => {
         })
         
         if(res.ok) {
-            success('Saved as new template!')
+            success(t('quiz_config.saved_template'))
             fetchTemplates()
         } else {
-            error('Failed to save template')
+            error(t('quiz_config.save_failed'))
         }
     } catch(e) {
         console.error(e)
-        error('Error saving template')
+        error(t('quiz_config.save_failed'))
     }
 }
 
@@ -264,7 +266,7 @@ const addQuestion = () => {
 }
 
 const removeQuestion = (index) => {
-  if (!confirm('Delete this question?')) return
+  if (!confirm(t('quiz_config.delete_question'))) return
   questions.value.splice(index, 1)
 }
 
@@ -325,37 +327,37 @@ const handleSave = async () => {
 
     if (!moduleResponse.ok) throw new Error('Failed to save module config')
 
-    success('Quiz saved successfully!')
+    success(t('quiz_config.saved_success'))
     emit('update')
     handleClose()
 
   } catch (err) {
     console.error('Error saving quiz:', err)
-    error('Failed to save quiz.')
+    error(t('quiz_config.save_error'))
   } finally {
     loading.value = false
   }
 }
 
 const validateQuestions = () => {
-  if (questions.value.length === 0) return 'Please add at least one question.'
+  if (questions.value.length === 0) return t('quiz_config.validation.min_one')
   
   for (const q of questions.value) {
-    if (!q.text.trim()) return 'All questions must have text.'
+    if (!q.text.trim()) return t('quiz_config.validation.text_required')
     
     if (q.type === 'slider') {
         const config = q.sliderConfig
-        if (!config) return 'Slider configuration is missing.'
-        if (config.minValue >= config.maxValue) return 'Slider Min value must be less than Max value.'
-        if (config.step <= 0) return 'Slider Step must be greater than 0.'
+        if (!config) return t('quiz_config.validation.slider_config')
+        if (config.minValue >= config.maxValue) return t('quiz_config.validation.slider_min_max')
+        if (config.step <= 0) return t('quiz_config.validation.slider_step')
     } else if (q.type === 'true_false') {
       // Only check first 2 answers for T/F
-      if (q.answers.slice(0, 2).some(a => !a.trim())) return 'True/False questions must have both True and False options.'
+      if (q.answers.slice(0, 2).some(a => !a.trim())) return t('quiz_config.validation.tf_options')
     } else if (q.type === 'correct_picture') {
-        if (!q.imageOptions || q.imageOptions.length < 2) return 'Correct Picture questions must have at least 2 image options.'
+        if (!q.imageOptions || q.imageOptions.length < 2) return t('quiz_config.validation.cp_options')
     } else {
       // For standard types (multiple_choice, multi_select), ensure all 4 slots are filled
-      if (q.answers.some(a => !a.trim())) return 'All answer options must be filled for multiple choice questions.'
+      if (q.answers.some(a => !a.trim())) return t('quiz_config.validation.mc_options')
     }
   }
   return null
@@ -393,7 +395,7 @@ const handleFileUpload = (event) => {
 
             if(loadedQuestions.length > 0) {
                 if(questions.value.length > 0) {
-                    if(!confirm('This will replace your current questions. Continue?')) return
+                    if(!confirm(t('quiz_config.confirm_replace'))) return
                 }
                 questions.value = loadedQuestions.map(q => {
                     q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
@@ -401,7 +403,7 @@ const handleFileUpload = (event) => {
                     if (q.imageId) {
                         q.imageId = null
                         q.imageAlt = ''
-                        info('Note: Images from imported files need to be re-uploaded')
+                        info(t('quiz_config.import.note_images'))
                     }
                      // Ensure slider config exists
                     if (q.type === 'slider' && !q.sliderConfig) {
@@ -416,13 +418,13 @@ const handleFileUpload = (event) => {
                     }
                     return q
                 })
-                success('Questions loaded from file')
+                success(t('quiz_config.import.success'))
             } else {
-                info('No questions found in file')
+                info(t('quiz_config.import.no_questions'))
             }
         } catch (err) {
             console.error(err)
-            error('Error parsing JSON file')
+            error(t('quiz_config.import.error_parse'))
         } finally {
             event.target.value = ''
         }

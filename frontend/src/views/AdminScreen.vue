@@ -1,27 +1,34 @@
 <template>
   <div class="admin-screen">
     <div class="header">
-      <h1 class="header-title">Event Admin</h1>
-      <div class="header-actions">
-          <button class="library-btn" @click="goToLibrary">📚 Quiz Library</button>
+      <div class="language-switcher">
+        <select v-model="$i18n.locale" @change="changeLanguage">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+          <option value="ro">Română</option>
+        </select>
       </div>
-      <p class="header-subtitle">Manage Events Listings</p>
+      <h1 class="header-title">{{ $t('admin.title') }}</h1>
+      <div class="header-actions">
+          <button class="library-btn" @click="goToLibrary">{{ $t('admin.library_btn') }}</button>
+      </div>
+      <p class="header-subtitle">{{ $t('admin.subtitle') }}</p>
     </div>
 
     <div class="scroll-content">
       <div class="form-card">
-        <h2 class="form-title">{{ editingId ? 'Edit Event' : 'New Event' }}</h2>
+        <h2 class="form-title">{{ editingId ? $t('admin.edit_event') : $t('admin.new_event') }}</h2>
         
         <input
           v-model="name"
           type="text"
-          placeholder="Event Name"
+          :placeholder="$t('admin.event_name_placeholder')"
           class="input"
         />
         
         <textarea
           v-model="description"
-          placeholder="Description"
+          :placeholder="$t('admin.description_placeholder')"
           class="input text-area"
           rows="3"
         ></textarea>
@@ -32,18 +39,18 @@
             class="cancel-button" 
             @click="cancelEdit"
           >
-            Cancel
+            {{ $t('admin.cancel_btn') }}
           </button>
           <button class="submit-button" @click="handleSubmit">
-            {{ editingId ? 'Update Event' : 'Create Event' }}
+            {{ editingId ? $t('admin.update_btn') : $t('admin.create_btn') }}
           </button>
         </div>
       </div>
 
-      <h2 class="section-title">Upcoming Events</h2>
+      <h2 class="section-title">{{ $t('admin.upcoming_events') }}</h2>
 
       <div class="events-grid">
-        <p v-if="isLoading" class="empty-text">Loading events...</p>
+        <p v-if="isLoading" class="empty-text">{{ $t('admin.loading_events') }}</p>
         <template v-else>
           <div v-for="event in events" :key="event.id" class="event-card">
             <div class="card-header" @click="viewDetails(event)">
@@ -55,7 +62,7 @@
                 class="status-badge"
                 :class="event.isActive ? 'status-active' : 'status-inactive'"
               >
-                {{ event.isActive ? 'ACTIVE' : 'INACTIVE' }}
+                {{ event.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
               </span>
             </div>
             
@@ -63,25 +70,25 @@
             
             <div class="card-actions">
               <button class="card-action view-action" @click="viewDetails(event)">
-                Manage Event
+                {{ $t('admin.manage_btn') }}
               </button>
               <button class="card-action edit-action" @click="editEvent(event)">
-                Edit
+                {{ $t('admin.edit_btn') }}
               </button>
               <button class="card-action delete-action" @click="deleteEvent(event.id)">
-                Delete
+                {{ $t('admin.delete_btn') }}
               </button>
             </div>
           </div>
           
           <p v-if="events.length === 0" class="empty-text">
-            No events found. Create one above!
+            {{ $t('admin.no_events') }}
           </p>
         </template>
       </div>
 
       <button class="back-button" @click="goToMain">
-        Back to Main
+        {{ $t('admin.back_to_main') }}
       </button>
     </div>
   </div>
@@ -90,9 +97,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 
+const { t, locale } = useI18n()
 const router = useRouter()
 const events = ref([])
 const name = ref('')
@@ -101,6 +110,10 @@ const editingId = ref(null)
 const isLoading = ref(false)
 
 const { success, error, info } = useToast()
+
+const changeLanguage = () => {
+  localStorage.setItem('userLanguage', locale.value)
+}
 
 const fetchEvents = async () => {
   isLoading.value = true
@@ -125,7 +138,7 @@ onMounted(() => {
 
 const handleSubmit = async () => {
   if (!name.value || !description.value) {
-    info('Please fill in all fields')
+    info(t('admin.messages.fill_fields'))
     return
   }
 
@@ -144,31 +157,32 @@ const handleSubmit = async () => {
     if (response.ok) {
       name.value = ''
       description.value = ''
+      const wasEditing = !!editingId.value
       editingId.value = null
       fetchEvents()
-      success(`Event ${editingId.value ? 'updated' : 'created'} successfully`)
+      success(t(`admin.messages.${wasEditing ? 'updated' : 'created'}`))
     } else {
-      error('Failed to save event')
+      error(t('admin.messages.save_failed'))
     }
   } catch (err) {
     console.error('Error saving event:', err)
-    error('Failed to save event')
+    error(t('admin.messages.save_failed'))
   }
 }
 
 const deleteEvent = async (id) => {
-  if (!confirm('Are you sure you want to delete this event?')) return
+  if (!confirm(t('admin.confirm_delete'))) return
   
   try {
     const response = await fetch(`${API_BASE_URL}/events/${id}`, { method: 'DELETE', headers: { ...getAuthHeaders() } })
     if (response.ok) {
       fetchEvents()
     } else {
-      error('Failed to delete event')
+      error(t('admin.messages.delete_failed'))
     }
   } catch (err) {
     console.error('Error deleting event:', err)
-    error('Failed to delete event')
+    error(t('admin.messages.delete_failed'))
   }
 }
 
@@ -211,6 +225,23 @@ const goToLibrary = () => {
   padding-right: 24px;
   background-color: #1E1E1E;
   border-bottom: 1px solid #2C2C2C;
+  position: relative;
+}
+
+.language-switcher {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.language-switcher select {
+  background-color: #252525;
+  color: white;
+  border: 1px solid #333333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
 }
 
 .header-title {

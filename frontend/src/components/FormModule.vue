@@ -2,9 +2,9 @@
   <div class="form-module">
     <div v-if="completed" class="completed-view">
       <div class="success-icon">✓</div>
-      <h2 class="completed-title">All Done!</h2>
-      <p class="completed-text">Your responses have been saved.</p>
-      <p class="completed-sub">Sit tight for the next activity.</p>
+      <h2 class="completed-title">{{ $t('form_module.completed_title') }}</h2>
+      <p class="completed-text">{{ $t('form_module.completed_text') }}</p>
+      <p class="completed-sub">{{ $t('form_module.completed_sub') }}</p>
     </div>
 
     <template v-else-if="currentStep">
@@ -13,7 +13,7 @@
       </div>
 
       <div class="scroll-content">
-        <p class="step-counter">Step {{ currentStepIndex + 1 }} of {{ timeline.length }}</p>
+        <p class="step-counter">{{ $t('form_module.step_counter', { current: currentStepIndex + 1, total: timeline.length }) }}</p>
 
         <div v-if="currentStep.type === 'message'" class="message-card">
           <p class="message-text">{{ currentStep.data.content }}</p>
@@ -27,7 +27,7 @@
             v-if="currentStep.data.fieldType === 'text'"
             :value="answers[currentStep.id] || ''"
             @input="updateAnswer"
-            placeholder="Type your answer here..."
+            :placeholder="$t('form_module.type_answer')"
             class="field-input text-area"
           ></textarea>
           
@@ -37,7 +37,7 @@
             type="number"
             :value="answers[currentStep.id] || ''"
             @input="updateAnswer"
-            placeholder="Type a number..."
+            :placeholder="$t('form_module.type_number')"
             class="field-input"
           />
           
@@ -71,14 +71,14 @@
               <div class="selection-indicator" :class="{ selected: answers[currentStep.id] === '__other__' }">
                 <div class="selection-dot" v-if="answers[currentStep.id] === '__other__'"></div>
               </div>
-              <span class="selection-text">Other</span>
+              <span class="selection-text">{{ $t('form_module.other') }}</span>
             </div>
             <input
               v-if="currentStep.data.allowOther && answers[currentStep.id] === '__other__'"
               type="text"
               :value="otherAnswers[currentStep.id] || ''"
               @input="updateOtherAnswer"
-              :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
+              :placeholder="currentStep.data.otherPlaceholder || $t('form_module.other_placeholder')"
               class="field-input other-input"
             />
           </div>
@@ -104,19 +104,18 @@
               <div class="selection-indicator" :class="{ selected: isCheckboxSelected(currentStep.id, '__other__') }">
                 <span v-if="isCheckboxSelected(currentStep.id, '__other__')" class="checkbox-check">✓</span>
               </div>
-              <span class="selection-text">Other</span>
+              <span class="selection-text">{{ $t('form_module.other') }}</span>
             </div>
             <input
               v-if="currentStep.data.allowOther && isCheckboxSelected(currentStep.id, '__other__')"
               type="text"
               :value="otherAnswers[currentStep.id] || ''"
               @input="updateOtherAnswer"
-              :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
+              :placeholder="currentStep.data.otherPlaceholder || $t('form_module.other_placeholder')"
               class="field-input other-input"
             />
           </div>
           
-          <!-- Dropdown -->
           <!-- Dropdown -->
           <div v-else-if="currentStep.data.fieldType === 'dropdown'" class="dropdown-wrapper">
             <select
@@ -124,7 +123,7 @@
               @change="updateDropdownAnswer"
               class="field-input dropdown-select"
             >
-              <option value="" disabled>Select an option...</option>
+              <option value="" disabled>{{ $t('form_module.select_option') }}</option>
               <option
                 v-for="option in currentStep.data.predefinedAnswers"
                 :key="option.id"
@@ -132,14 +131,14 @@
               >
                 {{ option.text }}
               </option>
-              <option v-if="currentStep.data.allowOther" value="__other__">Other</option>
+              <option v-if="currentStep.data.allowOther" value="__other__">{{ $t('form_module.other') }}</option>
             </select>
             <input
               v-if="currentStep.data.allowOther && answers[currentStep.id] === '__other__'"
               type="text"
               :value="otherAnswers[currentStep.id] || ''"
               @input="updateOtherAnswer"
-              :placeholder="currentStep.data.otherPlaceholder || 'Please specify...'"
+              :placeholder="currentStep.data.otherPlaceholder || $t('form_module.other_placeholder')"
               class="field-input other-input"
             />
           </div>
@@ -150,7 +149,7 @@
             type="text"
             :value="answers[currentStep.id] || ''"
             @input="updateAnswer"
-            placeholder="Type your answer here..."
+            :placeholder="$t('form_module.type_answer')"
             class="field-input"
           />
         </div>
@@ -163,7 +162,7 @@
           @click="handleBack"
           :disabled="submitting"
         >
-          Back
+          {{ $t('form_module.back') }}
         </button>
         <button 
           class="next-button" 
@@ -171,22 +170,22 @@
           :disabled="submitting"
         >
           <span v-if="submitting" class="loading-spinner-small"></span>
-          <span v-else>{{ isLastStep ? 'Submit' : 'Next' }}</span>
+          <span v-else>{{ isLastStep ? $t('form_module.submit') : $t('form_module.next') }}</span>
         </button>
       </div>
 
       <button class="template-button" @click="showTemplateModal = true">
-        📂 Load Template
+        {{ $t('form_module.load_template') }}
       </button>
     </template>
 
     <div v-if="!currentStep" class="empty-view">
-      <p>Empty Form Configuration</p>
+      <p>{{ $t('form_module.empty_config') }}</p>
     </div>
 
     <div v-if="showTemplateModal" class="modal-overlay" @click.self="showTemplateModal = false">
       <div class="dialog">
-        <h3 class="dialog-title">Load from Template</h3>
+        <h3 class="dialog-title">{{ $t('quiz_config.load_library') }}</h3>
         <div class="template-list">
           <div v-if="loadingTemplates" class="loading-templates">
             <div class="loading-spinner-small"></div>
@@ -206,12 +205,12 @@
               </button>
             </div>
             <p v-if="templates.length === 0" class="no-templates">
-              No templates found.
+              {{ $t('quiz_config.no_templates') }}
             </p>
           </template>
         </div>
         <button class="dialog-close-btn" @click="showTemplateModal = false">
-          Cancel
+          {{ $t('admin.details.cancel_btn') }}
         </button>
       </div>
     </div>
@@ -220,9 +219,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
 
+const { t } = useI18n()
 const props = defineProps({
   module: { type: Object, required: true },
   eventId: { type: String, required: true },
@@ -321,22 +322,22 @@ const loadTemplate = (template) => {
     otherAnswers.value = { ...otherAnswers.value, ...template.data.otherAnswers }
   }
   showTemplateModal.value = false
-  success('Template loaded successfully!')
+  success(t('quiz_config.loaded_template', { name: template.name }))
 }
 
 const deleteTemplate = async (id, name) => {
-  if (!confirm(`Are you sure you want to delete "${name}"?`)) return
+  if (!confirm(t('library.actions.delete_confirm', { name: name }))) return
   
   try {
     const response = await fetch(`${API_BASE_URL}/templates/${id}`, { method: 'DELETE' })
     if (response.ok) {
       fetchTemplates()
     } else {
-      error('Failed to delete template.')
+      error(t('quiz_config.save_failed')) // Reusing save_failed as generic error or add new key
     }
   } catch (err) {
     console.error(err)
-    error('Failed to delete template.')
+    error(t('quiz_config.save_failed'))
   }
 }
 
@@ -366,7 +367,7 @@ const handleNext = async () => {
     if (isSelectionType(fieldType)) {
       // For selection types, check if at least one option is selected
       if (!hasSelection(stepId)) {
-        info('Please select an option.')
+        info(t('form_module.validation.select_option'))
         return
       }
       
@@ -374,14 +375,14 @@ const handleNext = async () => {
       if (fieldType === 'checkbox' && Array.isArray(answer) && answer.includes('__other__')) {
         const otherValue = otherAnswers.value[stepId]
         if (!otherValue || !otherValue.trim()) {
-          info('Please specify your answer for "Other".')
+          info(t('form_module.validation.specify_other'))
           return
         }
       }
     } else {
       // For text, number, date types
       if (!answer || (typeof answer === 'string' && !answer.trim())) {
-        info('Please provide an answer.')
+        info(t('form_module.validation.provide_answer'))
         return
       }
     }
@@ -411,11 +412,11 @@ const handleSubmit = async () => {
       completed.value = true
       emit('complete', answers.value)
     } else {
-      error('Failed to submit response.')
+      error(t('form_module.error_submit'))
     }
   } catch (err) {
     console.error('Error submitting response:', err)
-    error('Failed to submit response.')
+    error(t('form_module.error_submit'))
   } finally {
     submitting.value = false
   }
