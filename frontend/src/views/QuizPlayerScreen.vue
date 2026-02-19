@@ -171,12 +171,24 @@
              </div>
           </div>
 
-          <div class="rank-chip" v-if="rank">
-            🏅 {{ $t('quiz.player.rank_msg', { rank: rank }) }}
-          </div>
        </div>
        <div class="footer-score">
           {{ $t('quiz.player.total_score', { score: score.toLocaleString() }) }}
+       </div>
+    </div>
+
+    <!-- LEADERBOARD STATE -->
+    <div v-else-if="state === States.LEADERBOARD" class="state-container player-leaderboard-container">
+       <div class="player-leaderboard-content">
+          <div class="leaderboard-icon">🏆</div>
+          <h2 class="leaderboard-title">{{ $t('quiz.player.leaderboard', 'Leaderboard') }}</h2>
+          <div class="rank-badge-large">
+             <span class="rank-num">{{ rank }}</span>
+             <span class="rank-label">{{ $t('quiz.player.place') }}</span>
+          </div>
+          <div class="score-display">
+             {{ score.toLocaleString() }} {{ $t('quiz.player.points', 'Points') }}
+          </div>
        </div>
     </div>
 
@@ -389,7 +401,7 @@ const validateAndScore = (answerData) => {
         // Slider Scoring Logic
         const correctValue = Number(question.correctValue !== undefined ? question.correctValue : 0)
         const scoringConfig = question.scoringConfig || {}
-        const maxPoints = Number(scoringConfig.maxPoints) || 1000
+        const maxPoints = Number(scoringConfig.maxPoints) || 100
         const tolerance = Number(scoringConfig.tolerance) || 0
         const mode = scoringConfig.mode || 'symmetric'
 
@@ -974,6 +986,66 @@ onUnmounted(() => {
     border-radius: 20px;
     cursor: pointer;
     font-weight: bold;
+}
+
+/* PLAYER LEADERBOARD STATE */
+.player-leaderboard-container {
+    justify-content: center;
+    background: linear-gradient(135deg, #46178F, #2A0D5D);
+    text-align: center;
+}
+
+.player-leaderboard-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    animation: fadeSlideUp 0.5s ease both;
+}
+
+.leaderboard-icon {
+    font-size: 5rem;
+    animation: iconBounce 1s infinite alternate;
+}
+
+.leaderboard-title {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #FFDF00;
+    text-shadow: 0 4px 12px rgba(255, 223, 0, 0.4);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.rank-badge-large {
+    background: linear-gradient(135deg, #FFD700, #FDB931);
+    color: #1a1a2e;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4), inset 0 -5px 15px rgba(0,0,0,0.2);
+    border: 6px solid rgba(255,255,255,0.2);
+    animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.score-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: rgba(0,0,0,0.3);
+    padding: 12px 30px;
+    border-radius: 30px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .answer-btn.selected {

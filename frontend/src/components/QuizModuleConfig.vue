@@ -164,7 +164,7 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
         questions.value = loadedQuestions.map(q => {
             if (q.type === 'slider') {
                 if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
-                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
             }
             if (q.type === 'true_false') {
                  q.answers = ['True', 'False', '', '']
@@ -212,7 +212,7 @@ const loadTemplate = (template) => {
                 q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
             }
             if (q.type === 'slider' && !q.scoringConfig) {
-                q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+                q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
             }
             if (q.type === 'true_false') {
                  q.answers = ['True', 'False', '', '']
@@ -410,7 +410,7 @@ const handleFileUpload = (event) => {
                         q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
                     }
                     if (q.type === 'slider' && !q.scoringConfig) {
-                        q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 }
+                        q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
                     }
                     if (q.type === 'true_false') {
                          q.answers = ['True', 'False', '', '']

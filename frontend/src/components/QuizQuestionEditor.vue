@@ -228,7 +228,7 @@ const localQuestion = reactive({
   },
   scoringConfig: props.question.scoringConfig || {
       mode: 'symmetric',
-      maxPoints: 1000,
+      maxPoints: 100,
       tolerance: 10,
       partialPercent: 0
   },
@@ -262,7 +262,7 @@ watch(() => props.question, (newVal) => {
           ...newVal,
           type: newVal.type || 'multiple_choice',
           sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
-          scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 },
+          scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 },
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',
@@ -282,7 +282,7 @@ const handleTypeChange = () => {
     } else if (localQuestion.type === 'slider') {
         // Ensure defaults are set
         if (!localQuestion.sliderConfig.maxValue) localQuestion.sliderConfig.maxValue = 100
-        if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 1000
+        if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 100
     } else if (localQuestion.type === 'correct_picture') {
         // Ensure image options exist
         if (!localQuestion.imageOptions || localQuestion.imageOptions.length === 0) {

@@ -291,10 +291,13 @@
               <div 
                 class="lb-score-bar" 
                 :class="'lb-bar-' + (idx + 1)"
-                :style="{ width: getScoreBarWidth(player.score) + '%' }"
+                :style="{ width: getScoreBarWidth(displayedScores[player.id] || 0) + '%' }"
               ></div>
             </div>
-            <div class="lb-score-value">{{ player.score.toLocaleString() }}</div>
+            <div class="lb-score-value" style="position: relative;">
+               {{ (displayedScores[player.id] || 0).toLocaleString() }}
+               <span v-if="player.showDiff" class="lb-diff-anim" :style="{ animationDelay: (((topPlayers.length - 1 - idx) * 0.12) + 0.5) + 's' }">+{{ player.diffValue }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -377,6 +380,7 @@ import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -418,6 +422,40 @@ watch(gameState, (newVal) => {
     }
     if (newVal === 'leaderboard') {
         leaderboardAnimKey.value++
+        
+        topPlayers.value.forEach((p, idx) => {
+            const startScore = displayedScores.value[p.id] || 0
+            const targetScore = p.score
+            const pointsGained = targetScore - startScore
+            
+            p.showDiff = pointsGained > 0
+            p.diffValue = pointsGained
+            
+            displayedScores.value[p.id] = startScore
+            
+            const duration = 1500
+            const delay = ((topPlayers.value.length - 1 - idx) * 120)
+            const startTime = performance.now() + delay
+            
+            const animate = (currentTime) => {
+                if (currentTime < startTime) {
+                    requestAnimationFrame(animate)
+                    return
+                }
+                const elapsed = currentTime - startTime
+                const progress = Math.min(elapsed / duration, 1)
+                const easeOut = 1 - Math.pow(1 - progress, 3) 
+                
+                displayedScores.value[p.id] = Math.floor(startScore + (pointsGained * easeOut))
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate)
+                } else {
+                    displayedScores.value[p.id] = targetScore
+                }
+            }
+            requestAnimationFrame(animate)
+        })
     }
     if (newVal === 'finished') {
         finalAnimKey.value++
@@ -498,6 +536,7 @@ const topPlayers = computed(() => {
 
 const leaderboardAnimKey = ref(0)
 const finalAnimKey = ref(0)
+const displayedScores = ref({})
 
 const getScoreBarWidth = (score) => {
     const max = topPlayers.value[0]?.score || 1
@@ -717,6 +756,7 @@ const enableAudio = () => {
 }
 
 const { success } = useToast()
+const { t } = useI18n()
 
 const copyBigScreenLink = () => {
     const url = `${window.location.origin}/bigscreen/${eventId}/${moduleId}`
@@ -791,6 +831,12 @@ onMounted(async () => {
         if (session.Players || session.players) {
             const playersMap = session.Players || session.players
             players.value = Object.values(playersMap)
+            
+            players.value.forEach(p => {
+               if (displayedScores.value[p.id] === undefined) {
+                   displayedScores.value[p.id] = p.score;
+               }
+            })
         }
         
         // Update Player Signals (for histogram)
@@ -2530,6 +2576,27 @@ onUnmounted(() => {
   border-radius: 6px;
   white-space: nowrap;
   box-shadow: 0 0 12px rgba(48,209,88,0.5);
+}
+
+.lb-diff-anim {
+  color: #32D74B;
+  font-size: 1.5rem;
+  margin-left: 10px;
+  font-weight: 900;
+  opacity: 0;
+  position: absolute;
+  right: -80px;
+  top: 0;
+  animation: floatUpDiff 2s forwards ease-out;
+  text-shadow: 0 2px 10px rgba(50,215,75,0.6);
+}
+
+@keyframes floatUpDiff {
+  0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+  15% { opacity: 1; transform: translateY(0) scale(1.1); }
+  25% { transform: scale(1); }
+  80% { opacity: 1; transform: translateY(-15px); }
+  100% { opacity: 0; transform: translateY(-25px); }
 }
 
 </style>
