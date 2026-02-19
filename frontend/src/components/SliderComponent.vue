@@ -1,452 +1,425 @@
 <template>
-  <div 
-    class="slider-component"
-    :class="{ 'vertical': orientation === 'vertical', 'horizontal': orientation === 'horizontal' }"
-    ref="sliderContainer"
-  >
-    <!-- Fixed Value Display -->
-    <div class="fixed-value-display" :class="orientation">
-      <span class="value-text">{{ formattedValue }}</span>
-      <span v-if="unit" class="unit-text">{{ unit }}</span>
-    </div>
+  <div class="slider-wrapper" ref="wrapperEl">
 
-    <!-- Track -->
-    <div class="slider-track" ref="track">
-      <!-- Filled portion (from min to current value) -->
-      <div 
-        class="slider-fill"
-        :style="{ [fillProperty]: '0%', [sizeProperty]: fillPercentage + '%' }"
-      ></div>
-      
-      <!-- Correct answer marker (shown in results) -->
-      <div 
-        v-if="showCorrectMarker && correctValue !== null"
-        class="correct-marker"
-        :style="{ [fillProperty]: correctPercentage + '%' }"
-      >
-        <div class="marker-label-container">
-           <span class="marker-label">{{ formatNumber(correctValue) }}{{ unit }}</span>
+    <!-- LEFT: Scale + Track -->
+    <div class="slider-left">
+
+      <!-- Tick labels -->
+      <div class="scale-col">
+        <div
+          v-for="tick in ticks"
+          :key="tick.value"
+          class="tick-row"
+          :style="{ bottom: tick.pct + '%' }"
+        >
+          <span class="tick-label" :class="{ active: tick.isActive }">{{ tick.label }}</span>
+          <div class="tick-mark" :class="{ active: tick.isActive }"></div>
+        </div>
+      </div>
+
+      <!-- Track -->
+      <div class="track-bar" ref="trackEl">
+        <div class="track-fill" :style="{ height: fillPercentage + '%' }"></div>
+
+        <!-- Correct answer marker -->
+        <div
+          v-if="showCorrectMarker && correctValue !== null"
+          class="correct-marker"
+          :style="{ bottom: correctPercentage + '%' }"
+        >
+          <div class="correct-tag">{{ formatNumber(correctValue) }}{{ unit }}</div>
+        </div>
+
+        <!-- Thumb -->
+        <div
+          class="thumb"
+          :style="{ bottom: fillPercentage + '%' }"
+          :class="{ dragging: isScrolling }"
+        >
+          <div class="thumb-lines">
+            <span></span><span></span><span></span>
+          </div>
         </div>
       </div>
     </div>
-    
-    <!-- Thumb -->
-    <div 
-      class="slider-thumb"
-      :style="{ [fillProperty]: fillPercentage + '%' }"
-      :class="{ 'dragging': isDragging }"
+
+    <!-- CENTER: Value display -->
+    <div class="value-display">
+      <span class="value-num">{{ formattedValue }}</span>
+      <span v-if="unit" class="value-unit">{{ unit }}</span>
+    </div>
+
+    <!-- RIGHT: Scroll wheel zone -->
+    <div
+      class="scroll-zone"
+      :class="{ active: isScrolling }"
+      ref="scrollZoneEl"
+      @touchstart.prevent="onTouchStart"
+      @touchmove.prevent="onTouchMove"
+      @touchend="onTouchEnd"
+      @mousedown="onMouseDown"
+      @wheel.prevent="onWheel"
     >
-      <div class="thumb-grip" :class="orientation">
-        <div class="grip-line"></div>
+      <div class="notches">
+        <div v-for="i in 20" :key="i" class="notch" :class="{ center: i === 10 || i === 11 }"></div>
       </div>
     </div>
-    
-    <!-- Min/Max Labels -->
-    <div class="slider-labels">
-      <span class="min-label">{{ formatNumber(min) }}{{ unit }}</span>
-      <span class="max-label">{{ formatNumber(max) }}{{ unit }}</span>
-    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
-  min: { type: Number, default: 0 },
-  max: { type: Number, default: 100 },
-  step: { type: Number, default: 1 },
-  modelValue: { type: Number, default: 50 },
-  unit: { type: String, default: '' },
-  decimalPlaces: { type: Number, default: 0 },
-  orientation: { type: String, default: 'horizontal' }, // 'horizontal' | 'vertical'
-  readonly: { type: Boolean, default: false },
+  min:               { type: Number,  default: 0 },
+  max:               { type: Number,  default: 100 },
+  step:              { type: Number,  default: 1 },
+  modelValue:        { type: Number,  default: 50 },
+  unit:              { type: String,  default: '' },
+  decimalPlaces:     { type: Number,  default: 0 },
+  orientation:       { type: String,  default: 'vertical' },
+  readonly:          { type: Boolean, default: false },
   showCorrectMarker: { type: Boolean, default: false },
-  correctValue: { type: Number, default: null }
+  correctValue:      { type: Number,  default: null },
 })
+const emit = defineEmits(['update:modelValue', 'change'])
 
-const emit = defineEmits(['update:modelValue', 'change', 'drag-start', 'drag-end'])
+const wrapperEl    = ref(null)
+const trackEl      = ref(null)
+const scrollZoneEl = ref(null)
+const isScrolling  = ref(false)
 
-const sliderContainer = ref(null)
-const track = ref(null)
-const isDragging = ref(false)
-
-const formatNumber = (num) => {
-    if (num === null || num === undefined) return ''
-    return Number(num).toFixed(props.decimalPlaces).replace(/\.0+$/, '')
+// ── Number helpers ─────────────────────────────────────────
+const formatNumber = (n) => {
+  if (n === null || n === undefined) return ''
+  return Number(n).toFixed(props.decimalPlaces)
 }
+const formattedValue = computed(() => formatNumber(props.modelValue))
+
+// ── Percentages ────────────────────────────────────────────
+const range = computed(() => props.max - props.min)
 
 const fillPercentage = computed(() => {
-  const range = props.max - props.min
-  if (range === 0) return 0
-  return ((props.modelValue - props.min) / range) * 100
+  if (range.value === 0) return 0
+  return Math.max(0, Math.min(100, ((props.modelValue - props.min) / range.value) * 100))
 })
 
 const correctPercentage = computed(() => {
-  if (props.correctValue === null) return 0
-  const range = props.max - props.min
-  if (range === 0) return 0
-  return ((props.correctValue - props.min) / range) * 100
+  if (props.correctValue === null || range.value === 0) return 0
+  return Math.max(0, Math.min(100, ((props.correctValue - props.min) / range.value) * 100))
 })
 
-const fillProperty = computed(() => {
-  return props.orientation === 'vertical' ? 'bottom' : 'left'
-})
+// ── Tick marks ─────────────────────────────────────────────
+const ticks = computed(() => {
+  const result = []
+  const r = range.value
+  const idealTicks = 6
+  let ts = r / idealTicks
+  const mag = Math.pow(10, Math.floor(Math.log10(ts)))
+  ts = Math.ceil(ts / mag) * mag
 
-const sizeProperty = computed(() => {
-  return props.orientation === 'vertical' ? 'height' : 'width'
-})
-
-const formattedValue = computed(() => {
-  return props.modelValue.toFixed(props.decimalPlaces)
-})
-
-// Touch/Mouse handling
-const handleStart = (event) => {
-  if (props.readonly) return
-  isDragging.value = true
-  emit('drag-start')
-  updateValue(event)
-  document.addEventListener('mousemove', handleMove)
-  document.addEventListener('mouseup', handleEnd)
-  document.addEventListener('touchmove', handleMove, { passive: false })
-  document.addEventListener('touchend', handleEnd)
-}
-
-const handleMove = (event) => {
-  if (!isDragging.value) return
-  event.preventDefault() // Prevent scrolling on touch
-  updateValue(event)
-}
-
-const handleEnd = () => {
-  if (!isDragging.value) return
-  isDragging.value = false
-  emit('drag-end')
-  emit('change', props.modelValue)
-  document.removeEventListener('mousemove', handleMove)
-  document.removeEventListener('mouseup', handleEnd)
-  document.removeEventListener('touchmove', handleMove)
-  document.removeEventListener('touchend', handleEnd)
-}
-
-const updateValue = (event) => {
-  if (!track.value) return
-  
-  const rect = track.value.getBoundingClientRect()
-  const clientX = event.touches ? event.touches[0].clientX : event.clientX
-  const clientY = event.touches ? event.touches[0].clientY : event.clientY
-  
-  let position
-  if (props.orientation === 'vertical') {
-     // For vertical, 0 is at bottom, 1 is at top
-     // clientY increases downwards. 
-     // rect.bottom is the y-coordinate of the bottom edge
-     position = (rect.bottom - clientY) / rect.height
-  } else {
-    position = (clientX - rect.left) / rect.width
+  for (let v = props.min; v <= props.max + 1e-9; v += ts) {
+    const snapped = Math.round(v / ts) * ts
+    const pct = ((snapped - props.min) / r) * 100
+    if (pct < -0.5 || pct > 100.5) continue
+    result.push({
+      value: snapped,
+      pct: Math.max(0, Math.min(100, pct)),
+      label: formatNumber(snapped),
+      isActive: snapped <= props.modelValue,
+    })
   }
-  
-  // Clamp position 0..1
-  position = Math.max(0, Math.min(1, position))
-  
-  let value = props.min + (position * (props.max - props.min))
-  
-  // Apply step if specified
+  return result
+})
+
+// ── Haptics ────────────────────────────────────────────────
+let lastHapticValue = null
+const buzz = () => { if (navigator.vibrate) navigator.vibrate(10) }
+
+// ── Core setter ────────────────────────────────────────────
+const applyValue = (raw) => {
+  let v = Math.max(props.min, Math.min(props.max, raw))
   if (props.step > 0) {
-    const steps = Math.round(value / props.step)
-    value = steps * props.step
+    v = Math.round((v - props.min) / props.step) * props.step + props.min
   }
-  
-  // Clamp to range (fix float precision issues potentially)
-  value = Math.max(props.min, Math.min(props.max, value))
-
-  // Round to decimal places
   const pow = Math.pow(10, props.decimalPlaces)
-  value = Math.round(value * pow) / pow
-  
-  emit('update:modelValue', value)
+  v = Math.round(v * pow) / pow
+  if (v !== props.modelValue) {
+    if (lastHapticValue === null || Math.abs(v - lastHapticValue) >= props.step) {
+      buzz()
+      lastHapticValue = v
+    }
+    emit('update:modelValue', v)
+  }
 }
 
-onMounted(() => {
-  if (track.value) {
-    track.value.addEventListener('mousedown', handleStart)
-    track.value.addEventListener('touchstart', handleStart, { passive: false })
-  }
-})
+// ── Scroll sensitivity ─────────────────────────────────────
+// How many pixels of drag = full range. Larger = slower/more precise.
+const DRAG_PX_PER_FULL_RANGE = 600   // drag 600px to go 0→max
+const WHEEL_STEPS_PER_TICK = 1       // one step per wheel tick
 
-onUnmounted(() => {
-  if (track.value) {
-      track.value.removeEventListener('mousedown', handleStart)
-      track.value.removeEventListener('touchstart', handleStart)
+// ── Touch ──────────────────────────────────────────────────
+let touchStartY   = null
+let touchStartVal = null
+
+const onTouchStart = (e) => {
+  if (props.readonly) return
+  touchStartY   = e.touches[0].clientY
+  touchStartVal = props.modelValue
+  isScrolling.value = true
+  buzz()
+}
+
+const onTouchMove = (e) => {
+  if (!isScrolling.value || touchStartY === null) return
+  const dy    = touchStartY - e.touches[0].clientY   // up = positive = increase
+  const delta = (dy / DRAG_PX_PER_FULL_RANGE) * range.value
+  applyValue(touchStartVal + delta)
+}
+
+const onTouchEnd = () => {
+  isScrolling.value = false
+  touchStartY   = null
+  touchStartVal = null
+  if (navigator.vibrate) navigator.vibrate([15, 10, 15])
+}
+
+// ── Mouse drag ─────────────────────────────────────────────
+const onMouseDown = (e) => {
+  if (props.readonly) return
+  const startY   = e.clientY
+  const startVal = props.modelValue
+  isScrolling.value = true
+
+  const onMove = (ev) => {
+    const dy    = startY - ev.clientY
+    const delta = (dy / DRAG_PX_PER_FULL_RANGE) * range.value
+    applyValue(startVal + delta)
   }
-  document.removeEventListener('mousemove', handleMove)
-  document.removeEventListener('mouseup', handleEnd)
-  document.removeEventListener('touchmove', handleMove)
-  document.removeEventListener('touchend', handleEnd)
-})
+  const onUp = () => {
+    isScrolling.value = false
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+// ── Mouse wheel ────────────────────────────────────────────
+const onWheel = (e) => {
+  if (props.readonly) return
+  const dir  = e.deltaY > 0 ? -1 : 1
+  const step = props.step > 0 ? props.step : range.value / 100
+  applyValue(props.modelValue + dir * step * WHEEL_STEPS_PER_TICK)
+}
 </script>
 
 <style scoped>
-.slider-component {
-  position: relative;
+/* ── Root ──────────────────────────────────────────────────────── */
+.slider-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
   width: 100%;
-  padding: 20px 0;
+  height: 100%;
+  min-height: 260px;
   user-select: none;
   touch-action: none;
+  font-family: -apple-system, 'Inter', sans-serif;
 }
 
-.slider-component.horizontal {
-  height: 120px;
-}
-
-.slider-component.vertical {
-  width: 120px;
-  height: 100%;
-  padding: 0 20px;
+/* ── Left panel ────────────────────────────────────────────────── */
+.slider-left {
+  flex: 1;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px 0;
 }
 
-.slider-track {
+/* ── Tick scale ────────────────────────────────────────────────── */
+.scale-col {
   position: relative;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  cursor: pointer;
+  width: 44px;
 }
 
-/* Expand touch/click area for the track */
-.slider-track::before {
-  content: '';
+.tick-row {
   position: absolute;
-  top: -30px;
-  bottom: -30px;
-  left: -20px;
-  right: -20px;
-  background: transparent;
-  z-index: -1;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform: translateY(50%);
 }
 
-.horizontal .slider-track {
-  height: 12px;
-  width: 100%;
+.tick-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  text-align: right;
+  min-width: 28px;
+  transition: color 0.2s;
+}
+.tick-label.active { color: rgba(255,255,255,0.9); }
+
+.tick-mark {
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.2);
+  transition: background 0.2s;
+}
+.tick-mark.active { background: rgba(255,255,255,0.75); }
+
+/* ── Track bar ─────────────────────────────────────────────────── */
+.track-bar {
+  position: relative;
+  width: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
-.vertical .slider-track {
-  width: 12px;
-  height: 100%;
-  margin: 0 auto;
-}
-
-.slider-fill {
+.track-fill {
   position: absolute;
-  background: #0A84FF;
-  border-radius: 8px;
-}
-
-.horizontal .slider-fill {
-  height: 100%;
-  left: 0;
-}
-
-.vertical .slider-fill {
-  width: 100%;
   bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 6px;
+  background: linear-gradient(to top, #0A84FF, #64D2FF);
+  transition: height 0.04s linear;
 }
 
-.slider-thumb {
+/* ── Thumb ─────────────────────────────────────────────────────── */
+.thumb {
   position: absolute;
-  width: 64px;
-  height: 64px;
-  background: white;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  width: 48px;
+  height: 48px;
+  background: #ffffff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: grab;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transform: translate(-50%, 50%); /* Center on the point */
-  transition: transform 0.1s;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+  transition: box-shadow 0.15s, transform 0.04s linear;
   z-index: 5;
 }
-
-/* Expand touch area around thumb */
-.slider-thumb::after {
-  content: '';
-  position: absolute;
-  top: -30px;
-  bottom: -30px;
-  left: -30px;
-  right: -30px;
-  border-radius: 50%;
-  background: transparent;
+.thumb.dragging {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.45);
 }
 
-.horizontal .slider-thumb {
-  top: 50%;
-  left: 0; 
-  transform: translate(-50%, -50%);
-}
-
-.vertical .slider-thumb {
-  left: 50%;
-  bottom: 0;
-  transform: translate(-50%, 50%);
-}
-
-.slider-thumb.dragging {
-  cursor: grabbing;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-.vertical .slider-thumb.dragging {
-  transform: translate(-50%, 50%) scale(1.1);
-}
-
-/* Grip handle lines inside thumb */
-.thumb-grip {
+.thumb-lines {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.thumb-lines span {
+  display: block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(0,0,0,0.22);
+}
+
+/* ── Value display ─────────────────────────────────────────────── */
+.value-display {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  padding: 0 12px;
+  gap: 2px;
   pointer-events: none;
 }
-.thumb-grip.horizontal {
-  flex-direction: row;
+
+.value-num {
+  font-size: 44px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-.thumb-grip.horizontal::before, .thumb-grip.horizontal::after, .thumb-grip.horizontal .grip-line {
-  content: '';
-  width: 3px;
-  height: 18px;
-  background-color: #c7c7cc;
-  border-radius: 2px;
-  display: block;
-}
-.thumb-grip.vertical {
-  flex-direction: column;
-}
-.thumb-grip.vertical::before, .thumb-grip.vertical::after, .thumb-grip.vertical .grip-line {
-  content: '';
-  width: 18px;
-  height: 3px;
-  background-color: #c7c7cc;
-  border-radius: 2px;
-  display: block;
+.value-unit {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.03em;
 }
 
-/* Fixed Value Display */
-.fixed-value-display {
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  margin-bottom: 24px;
-}
-
-.fixed-value-display.vertical {
+/* ── Correct marker ────────────────────────────────────────────── */
+.correct-marker {
   position: absolute;
-  top: -60px;
   left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 0;
+  transform: translate(-50%, 50%);
+  width: 20px;
+  height: 3px;
+  background: #30D158;
+  border-radius: 2px;
+  z-index: 4;
+}
+.correct-tag {
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #30D158;
+  color: #000;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
   white-space: nowrap;
 }
 
-.value-text {
-  font-size: 42px;
-  font-weight: 800;
-  color: white;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.unit-text {
-  font-size: 20px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  margin-left: 4px;
-}
-
-.correct-marker {
-  position: absolute;
-  width: 4px;
-  height: 24px;
-  background: #32D74B;
-  z-index: 1;
-}
-
-.horizontal .correct-marker {
-  height: 24px;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.vertical .correct-marker {
-  width: 24px;
-  height: 4px;
-  left: 50%;
-  transform: translate(-50%, 50%);
-}
-
-.marker-label-container {
-    position: absolute;
-    background: #32D74B;
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-
-.horizontal .marker-label-container {
-    top: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.vertical .marker-label-container {
-    right: -40px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.marker-label {
-  font-size: 12px;
-  font-weight: bold;
-  color: #000;
-}
-
-.slider-labels {
+/* ── Scroll zone ───────────────────────────────────────────────── */
+.scroll-zone {
+  width: 64px;
+  flex-shrink: 0;
+  margin: 8px 0 8px 10px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(255,255,255,0.10);
   display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  width: 100%;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  transition: background 0.2s, border-color 0.2s;
+  overflow: hidden;
 }
 
-.vertical .slider-labels {
-    flex-direction: column-reverse; /* Min at bottom */
-    height: 100%;
-    position: absolute;
-    left: 0;
-    top: 0;
-    margin: 0;
-    padding: 20px 0;
-    align-items: center;
-    pointer-events: none;
+.scroll-zone.active {
+  background: rgba(10, 132, 255, 0.15);
+  border-color: rgba(10, 132, 255, 0.4);
 }
 
-.vertical .min-label {
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
+.notches {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  align-items: center;
 }
 
-.vertical .max-label {
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
+.notch {
+  width: 34px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.22);
+}
+
+/* The two middle notches are slightly wider/brighter — like a center indent */
+.notch.center {
+  width: 42px;
+  background: rgba(255,255,255,0.45);
+}
+
+.scroll-zone.active .notch {
+  background: rgba(100, 210, 255, 0.5);
+}
+.scroll-zone.active .notch.center {
+  background: rgba(100, 210, 255, 0.85);
 }
 </style>

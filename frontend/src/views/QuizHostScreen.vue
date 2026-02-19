@@ -93,11 +93,20 @@
 
         <!-- RIGHT COLUMN: Stacked Answer Cards -->
         <div class="answers-column">
-          <div v-if="isSlider" class="slider-instruction-view">
-             <h2 class="slider-instruction-text">Slide to answer</h2>
-             <div class="slider-demo-track">
-                <div class="slider-demo-thumb"></div>
-             </div>
+          <div v-if="isSlider" class="slider-bigscreen-view">
+            <div class="sbs-label sbs-label-max">
+              {{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+            </div>
+            <div class="sbs-track">
+              <div class="sbs-track-fill sbs-fill-anim"></div>
+              <div class="sbs-thumb sbs-thumb-pulse">
+                <div class="sbs-thumb-lines"><span></span><span></span><span></span></div>
+              </div>
+            </div>
+            <div class="sbs-label sbs-label-min">
+              {{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+            </div>
+            <div class="sbs-hint">↕ Scroll to select</div>
           </div>
           <template v-else>
             <div 
@@ -159,41 +168,35 @@
          </div>
 
          <!-- SLIDER RESULTS -->
-          <div v-else-if="isSlider" class="answers-stats results-mode slider-results-view">
-             <div class="slider-result-container">
-                <div class="slider-result-track"></div>
-                <div class="slider-distribution-overlay">
-                    <div 
-                      v-for="(count, idx) in histogramBuckets" 
-                      :key="idx"
-                      class="distribution-bar-wrapper"
-                      :style="{ left: (idx / histogramBuckets.length * 100) + '%', width: (100 / histogramBuckets.length) + '%' }"
-                    >
-                        <div 
-                          class="distribution-bar"
-                          :style="{ height: getHistogramBarHeight(count) + '%' }"
-                          :class="{ 'has-votes': count > 0 }"
-                        >
-                          <span class="bar-tooltip" v-if="count > 0">{{ count }}</span>
-                        </div>
-                    </div>
+          <div v-else-if="isSlider" class="slider-results-new">
+            <div class="question-column">
+              <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+                <div v-if="questionImageUrl" class="question-image-container">
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+                  <div class="image-overlay-gradient"></div>
                 </div>
-                <div 
-                  class="correct-answer-marker" 
-                  :class="{ 'reveal-marker': revealCorrect }"
-                  :style="{ left: correctMarkerPercentage + '%' }"
-                >
-                    <div class="marker-line"></div>
-                    <div class="marker-label">
-                        <span class="marker-title">Correct</span>
-                        <span class="marker-value">{{ formatNumber(currentQuestion?.correctValue) }}</span>
-                    </div>
+                <div class="question-text-overlay">
+                  <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
                 </div>
-                <div class="slider-labels">
-                    <span class="label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
-                    <span class="label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
+              </div>
+            </div>
+            <div class="answers-column">
+              <div class="slider-result-timeline">
+                <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
+                  <span class="srt-check">✓</span>
+                  <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.sliderConfig?.unit }}</span>
                 </div>
-             </div>
+                <div class="srt-label srt-label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}{{ currentQuestion?.sliderConfig?.unit }}</div>
+                <div class="srt-track">
+                  <div class="srt-fill" :style="{ height: revealCorrect ? correctMarkerPercentage + '%' : '0%' }"></div>
+                  <div class="srt-marker" :class="{ 'srt-marker-reveal': revealCorrect }" :style="{ bottom: correctMarkerPercentage + '%' }">
+                    <div class="srt-marker-line"></div>
+                    <div class="srt-marker-bubble">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.sliderConfig?.unit }}</div>
+                  </div>
+                </div>
+                <div class="srt-label srt-label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}{{ currentQuestion?.sliderConfig?.unit }}</div>
+              </div>
+            </div>
           </div>
 
           <!-- STANDARD QUESTION RESULTS (REDESIGNED) -->
@@ -2347,4 +2350,186 @@ onUnmounted(() => {
     filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
     animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* ── Slider BigScreen View (question-active) ──────────────────── */
+.slider-bigscreen-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  padding: 16px 0;
+}
+.sbs-track {
+  position: relative;
+  width: 10px;
+  flex: 1;
+  min-height: 0;
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+  overflow: visible;
+}
+.sbs-track-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 8px;
+  background: linear-gradient(to top, #0A84FF, #64D2FF);
+}
+@keyframes sbsFillLoop {
+  0%   { height: 0%; }
+  100% { height: 85%; }
+}
+.sbs-fill-anim {
+  animation: sbsFillLoop 4s ease-in-out infinite alternate;
+}
+
+@keyframes sbsThumbMove {
+  0%   { bottom: 0%; }
+  100% { bottom: 85%; }
+}
+
+.sbs-thumb {
+  position: absolute;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+  bottom: 85%;
+  transform: translate(-50%, 50%);
+  animation: sbsThumbMove 4s ease-in-out infinite alternate,
+             sbsThumbPulse 1.8s ease-in-out infinite;
+}
+@keyframes sbsThumbPulse {
+  0%, 100% { box-shadow: 0 3px 14px rgba(0,0,0,0.35), 0 0 0 0 rgba(10,132,255,0); }
+  50%       { box-shadow: 0 3px 14px rgba(0,0,0,0.35), 0 0 0 10px rgba(10,132,255,0.3); }
+}
+.sbs-thumb-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sbs-thumb-lines span {
+  display: block;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(0,0,0,0.22);
+}
+.sbs-label {
+  font-size: 1.3vw;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  text-align: center;
+}
+.sbs-hint {
+  font-size: 1.1vw;
+  font-weight: 600;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+/* ── Slider Results — New Vertical Timeline ───────────────────── */
+.slider-results-new {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+}
+.slider-result-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  padding: 16px 0;
+}
+.srt-correct-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #30D158;
+  border-radius: 14px;
+  padding: 10px 22px;
+  opacity: 0;
+  transform: translateY(-12px) scale(0.9);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+.srt-correct-badge.srt-reveal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.srt-check {
+  font-size: 1.8vw;
+  font-weight: 900;
+  color: #000;
+}
+.srt-value {
+  font-size: 2.4vw;
+  font-weight: 900;
+  color: #000;
+  letter-spacing: -0.01em;
+}
+.srt-label {
+  font-size: 1.1vw;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+}
+.srt-track {
+  position: relative;
+  width: 10px;
+  flex: 1;
+  min-height: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px;
+  overflow: visible;
+}
+.srt-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 8px;
+  background: linear-gradient(to top, #30D158, #86efac);
+  transition: height 1.0s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 0 16px rgba(48,209,88,0.5);
+}
+.srt-marker {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  opacity: 0;
+  transition: bottom 1.0s cubic-bezier(0.22,1,0.36,1), opacity 0.4s ease;
+}
+.srt-marker.srt-marker-reveal { opacity: 1; }
+.srt-marker-line {
+  width: 32px;
+  height: 4px;
+  background: #30D158;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(48,209,88,0.8);
+}
+.srt-marker-bubble {
+  background: #30D158;
+  color: #000;
+  font-size: 1.0vw;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 0 12px rgba(48,209,88,0.5);
+}
+
 </style>

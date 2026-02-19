@@ -94,8 +94,6 @@
       </div>
       
       <div class="slider-question-content">
-        <h2 class="question-text">{{ currentQuestion?.text }}</h2>
-        
         <div class="slider-wrapper">
           <SliderComponent
             :min="currentQuestion?.sliderConfig?.minValue"
@@ -103,13 +101,17 @@
             :step="currentQuestion?.sliderConfig?.step"
             :unit="currentQuestion?.sliderConfig?.unit"
             :decimalPlaces="currentQuestion?.sliderConfig?.decimalPlaces"
-            :orientation="isMobile ? 'vertical' : 'horizontal'"
             v-model="sliderValue"
-            @drag-end="onSliderDragEnd"
           />
         </div>
         
-        <p class="instruction-text">{{ $t('quiz.player.slider_instruction') }}</p>
+        <button 
+          class="slider-submit-btn"
+          :disabled="hasSubmitted"
+          @click="submitSliderAnswer"
+        >
+          {{ hasSubmitted ? '✓' : $t('quiz.player.submit_btn') }}
+        </button>
       </div>
     </div>
 
@@ -336,10 +338,8 @@ const submitMultiSelect = () => {
     submitAnswer(selectedIndices.value)
 }
 
-const onSliderDragEnd = () => {
-  if (hasSubmitted.value) return 
-  
-  // Submit slider value
+const submitSliderAnswer = () => {
+  if (hasSubmitted.value) return
   selectedAnswer.value = sliderValue.value
   submitAnswer(sliderValue.value)
 }
@@ -1166,40 +1166,49 @@ onUnmounted(() => {
 
 .slider-question-content {
   width: 100%;
-  max-width: 600px;
-  text-align: center;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 100%;
-  padding-bottom: 20px;
+  flex: 1;
+  min-height: 0;
+  padding: 8px 16px 16px;
+  box-sizing: border-box;
+  gap: 12px;
 }
 
 .slider-wrapper {
   width: 100%;
-  height: 300px; /* Force height for vertical slider */
+  flex: 1;
+  min-height: 0;
   display: flex;
   justify-content: center;
-  margin: 20px 0;
 }
 
-.question-text {
-  font-size: 1.5rem;
-  margin-bottom: 40px;
-}
-
-.slider-wrapper {
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+.slider-submit-btn {
   width: 100%;
-  display: flex;
-  justify-content: center;
+  max-width: 320px;
+  padding: 16px 0;
+  background: white;
+  color: #1a1a2e;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.25);
 }
-
-.instruction-text {
-  margin-top: 20px;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.6);
+.slider-submit-btn:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+.slider-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 </style>
