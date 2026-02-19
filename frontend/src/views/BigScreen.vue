@@ -74,7 +74,24 @@
           <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
 
-        <div class="question-main-content">
+        <!-- CORRECT PICTURE LAYOUT -->
+        <div v-if="isCorrectPicture" class="correct-picture-layout">
+           <div class="cp-images-grid">
+              <div 
+                v-for="(option, idx) in currentQuestion.imageOptions" 
+                :key="idx"
+                class="cp-image-card"
+              >
+                 <img :src="getImageUrl(option.imageId)" class="cp-image" />
+                 <div class="cp-number-badge">{{ idx + 1 }}</div>
+              </div>
+           </div>
+           <div class="cp-question-text">
+              <h2>{{ currentQuestion.text }}</h2>
+           </div>
+        </div>
+
+        <div v-else class="question-main-content">
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
@@ -121,7 +138,35 @@
           <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
         </div>
 
-        <div v-if="!isSlider" class="correct-answer-reveal">
+        <!-- CORRECT PICTURE RESULTS -->
+        <div v-if="isCorrectPicture" class="correct-picture-results">
+            <div class="cp-results-grid">
+              <div 
+                v-for="(option, idx) in currentQuestion.imageOptions" 
+                :key="idx"
+                class="cp-result-card"
+                :class="{ 
+                    'is-correct': idx === currentQuestion.correctIndex,
+                    'is-wrong': idx !== currentQuestion.correctIndex
+                }"
+              >
+                 <div class="cp-image-wrapper">
+                    <img :src="getImageUrl(option.imageId)" class="cp-image" />
+                    <div v-if="idx === currentQuestion.correctIndex" class="cp-correct-badge">✓</div>
+                 </div>
+                 
+                 <div class="cp-stats-bar">
+                    <div class="cp-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div> <!-- repurposing getBarHeight logic but for width -->
+                    <span class="cp-count">{{ answerCounts[idx] || 0 }}</span>
+                 </div>
+              </div>
+           </div>
+           <div class="cp-question-text results-mode">
+              <h2>{{ currentQuestion.text }}</h2>
+           </div>
+        </div>
+
+        <div v-else-if="!isSlider" class="correct-answer-reveal">
           <p class="correct-label">Correct Answer</p>
           <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
             <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
@@ -332,6 +377,7 @@ const currentQuestion = computed(() => questions.value[currentQuestionIndex.valu
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct_picture')
 const revealCorrect = ref(false)
 
 // Watch gameState to trigger animation
@@ -811,6 +857,166 @@ onUnmounted(() => {
   border-radius: 8px;
   cursor: pointer;
   font-size: 1.2rem;
+}
+
+/* CORRECT PICTURE STYLES */
+.correct-picture-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px;
+}
+
+.cp-images-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.cp-image-card {
+    position: relative;
+    height: 100%;
+    max-height: 50vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #1C1C1E;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #333;
+}
+
+.cp-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.cp-number-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 1.5rem;
+    border: 2px solid white;
+}
+
+.cp-question-text {
+    flex: 0 0 15%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.5);
+    border-radius: 12px;
+    margin-top: 20px;
+    padding: 20px;
+}
+
+.cp-question-text h2 {
+    font-size: 3rem;
+    text-align: center;
+    margin: 0;
+}
+
+/* CP RESULTS */
+.correct-picture-results {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.cp-results-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.cp-result-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.cp-image-wrapper {
+    flex: 1;
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #1C1C1E;
+}
+
+.cp-result-card.is-wrong .cp-image-wrapper {
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
+
+.cp-result-card.is-correct .cp-image-wrapper {
+    border-color: #32D74B;
+    box-shadow: 0 0 30px rgba(50, 215, 75, 0.4);
+}
+
+.cp-correct-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: #32D74B;
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 900;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.cp-stats-bar {
+    height: 40px;
+    background: #333;
+    margin-top: 10px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.cp-bar-fill {
+    height: 100%;
+    background: #0A84FF;
+    transition: width 1s ease-out;
+}
+
+.cp-result-card.is-correct .cp-bar-fill {
+    background: #32D74B;
+}
+
+.cp-count {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 /* Quiz State Styles - Reuse from QuizHostScreen */

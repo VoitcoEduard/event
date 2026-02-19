@@ -36,6 +36,46 @@
       </div>
     </div>
 
+    <!-- CORRECT PICTURE STATE -->
+    <div 
+      v-else-if="state === States.QUESTION_ACTIVE && isCorrectPicture" 
+      class="state-container correct-picture-container"
+    >
+      <div class="question-header-area">
+        <div class="question-number-badge">{{ currentQuestionIndex + 1 }}</div>
+        <h2 class="question-text">{{ currentQuestion?.text }}</h2>
+        <div class="timer-bar">
+          <div class="timer-progress" :style="{ width: (timeRemaining / (currentQuestion?.timeLimit || 20)) * 100 + '%' }"></div>
+        </div>
+      </div>
+      
+      <!-- Interactive Zone: Horizontal Carousel (Middle 60%) -->
+      <div class="carousel-zone">
+        <HorizontalCarousel
+          :images="imageOptionUrls"
+          :initial-index="preselectedIndex"
+          @snap="onCarouselSnap"
+        />
+      </div>
+      
+      <!-- Action Area: Submit Button (Bottom 20%) -->
+      <div class="action-area">
+        <button 
+          class="submit-selection-btn"
+          :class="{ 'active': hasPreselection, 'loading': isSubmitting }"
+          :disabled="!hasPreselection || hasSubmitted"
+          @click="confirmSelection"
+        >
+          <span v-if="!hasPreselection">Swipe to view options</span>
+          <span v-else-if="isSubmitting">
+            <span class="spinner-small"></span>
+            Submitting...
+          </span>
+          <span v-else>Select This Item</span>
+        </button>
+      </div>
+    </div>
+
     <!-- SLIDER QUESTION STATE -->
     <div 
       v-else-if="state === States.QUESTION_ACTIVE && isSlider" 
@@ -144,6 +184,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { useQuizStateMachine } from '../composables/useQuizStateMachine'
 import SliderComponent from '../components/SliderComponent.vue'
+import HorizontalCarousel from '../components/HorizontalCarousel.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
@@ -168,6 +209,27 @@ const currentPoints = ref(0)
 const rank = ref(0)
 const timeRemaining = ref(5)
 
+// Correct Picture specific state
+const preselectedIndex = ref(0)
+const isSubmitting = ref(false)
+const hasPreselection = ref(true) // Default to first item selected effectively
+
+const onCarouselSnap = (idx) => {
+    preselectedIndex.value = idx
+    hasPreselection.value = true
+}
+
+const confirmSelection = () => {
+    if (hasSubmitted.value) return
+    isSubmitting.value = true
+    
+    // Simulate short delay for "working" feel or network
+    setTimeout(() => {
+        submitAnswer(preselectedIndex.value)
+        isSubmitting.value = false
+    }, 300)
+}
+
 const currentQuestion = computed(() => {
     return questionCache.get(currentQuestionIndex.value)
 })
@@ -187,6 +249,31 @@ const isSlider = computed(() => {
 const isMobile = computed(() => {
     return window.innerWidth < 600
 })
+
+const isCorrectPicture = computed(() => {
+    return currentQuestion.value?.type === 'correct_picture'
+})
+
+const imageOptionUrls = computed(() => {
+    if (!currentQuestion.value?.imageOptions) return []
+    // Assuming we have a helper or base URL for images. 
+    // If not, we might need value.imageId. 
+    // Let's assume absolute URLs or we need a helper.
+    // Checking how images are usually handled. 
+    // In BigScreen/Host, getImageUrl is used.
+    return currentQuestion.value.imageOptions.map(opt => ({
+        url: getImageUrl(opt.imageId),
+        alt: opt.label,
+        id: opt.id
+    }))
+}) 
+
+// Helper for image URL
+const getImageUrl = (imageId) => {
+  if (!imageId) return ''
+  return `/api/media/${imageId}`
+}
+
 
 const hasSelected = computed(() => {
     return selectedAnswer.value !== null || selectedIndices.value.length > 0
@@ -436,6 +523,11 @@ onMounted(async () => {
             hasSubmitted.value = false
             isCorrect.value = false
             currentPoints.value = 0
+            
+            // Correct Picture reset
+            preselectedIndex.value = 0
+            isSubmitting.value = false
+            hasPreselection.value = true
         }
         
         if (canTransition(newState)) {
@@ -796,6 +888,119 @@ onUnmounted(() => {
 .slider-container {
   justify-content: center;
   padding: 20px;
+}
+
+/* CORRECT PICTURE STYLES */
+.correct-picture-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  justify-content: space-between;
+  background: #1C1C1E;
+}
+
+.question-header-area {
+  flex: 0 0 15%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.question-number-badge {
+  background: rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.question-text {
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.timer-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+}
+
+.timer-progress {
+  height: 100%;
+  background: #32D74B;
+  transition: width 0.1s linear;
+}
+
+.carousel-zone {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.action-area {
+  flex: 0 0 15%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2;
+  background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+}
+
+.submit-selection-btn {
+  background: #3A3A3C; /* Inactive state */
+  color: #8E8E93;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.submit-selection-btn.active {
+  background: #32D74B;
+  color: white;
+  box-shadow: 0 4px 20px rgba(50, 215, 75, 0.4);
+  transform: translateY(-2px);
+}
+
+.submit-selection-btn:active {
+  transform: translateY(1px);
+}
+
+.submit-selection-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .slider-question-content {

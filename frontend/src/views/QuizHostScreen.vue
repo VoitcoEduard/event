@@ -56,7 +56,23 @@
       </div>
 
       <!-- New Two-Column Layout -->
-      <div class="question-main-content">
+      <div v-if="isCorrectPicture" class="correct-picture-host-layout">
+          <div class="cp-host-grid">
+               <div 
+                 v-for="(option, idx) in currentQuestion.imageOptions" 
+                 :key="idx"
+                 class="cp-host-card"
+               >
+                  <img :src="getImageUrl(option.imageId)" class="cp-host-img" />
+                  <div class="cp-host-badge">{{ idx + 1 }}</div>
+               </div>
+          </div>
+          <div class="cp-host-text">
+             <h2>{{ currentQuestion.text }}</h2>
+          </div>
+      </div>
+
+      <div v-else class="question-main-content">
         <!-- LEFT COLUMN: Question Card with Optional Image -->
         <div class="question-column">
           <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
@@ -116,7 +132,31 @@
          <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
        </div>
 
-       <div v-if="!isSlider" class="correct-answer-reveal">
+       <!-- CORRECT PICTURE RESULTS -->
+       <div v-if="isCorrectPicture" class="correct-picture-results-host">
+           <div class="cp-results-host-grid">
+              <div 
+                v-for="(option, idx) in currentQuestion.imageOptions" 
+                :key="idx"
+                class="cp-result-host-card"
+                :class="{ 
+                    'is-correct': idx === currentQuestion.correctIndex,
+                    'is-wrong': idx !== currentQuestion.correctIndex
+                }"
+              >
+                 <div class="cp-result-host-img-wrapper">
+                    <img :src="getImageUrl(option.imageId)" class="cp-host-img" />
+                    <div v-if="idx === currentQuestion.correctIndex" class="cp-host-correct-badge">✓</div>
+                 </div>
+                 <div class="cp-host-bar-container">
+                    <div class="cp-host-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div>
+                    <span class="cp-host-count">{{ answerCounts[idx] || 0 }}</span>
+                 </div>
+              </div>
+           </div>
+       </div>
+
+       <div v-else-if="!isSlider" class="correct-answer-reveal">
           <p class="correct-label">Correct Answer</p>
           <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
              <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
@@ -125,7 +165,7 @@
        </div>
 
        <!-- Show Stats in Results -->
-       <div v-if="!isSlider" class="answers-stats results-mode">
+       <div v-if="!isCorrectPicture && !isSlider" class="answers-stats results-mode">
           <div class="stats-grid">
              <div v-for="(count, idx) in (isTrueFalse ? 2 : 4)" :key="idx" class="stat-column">
                 <div class="stat-bar-container">
@@ -325,6 +365,7 @@ const currentQuestion = computed(() => questions.value[currentQuestionIndex.valu
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct_picture')
 const revealCorrect = ref(false)
 
 // Watch gameState to trigger animation
@@ -1306,6 +1347,156 @@ onUnmounted(() => {
 
 .color-true { background-color: #0A84FF; }
 .color-false { background-color: #FF3B30; }
+
+/* CORRECT PICTURE HOST STYLES */
+.correct-picture-host-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+.cp-host-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 10px;
+    align-items: center;
+}
+
+.cp-host-card {
+    position: relative;
+    height: 100%; /* max-height handled by grid/flex */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #1C1C1E;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+
+.cp-host-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.cp-host-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 30px;
+    height: 30px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 1px solid white;
+}
+
+.cp-host-text {
+    padding: 20px;
+    text-align: center;
+}
+
+.cp-host-text h2 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+/* CP HOST RESULTS */
+.correct-picture-results-host {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.cp-results-host-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 0 20px;
+    margin-bottom: 20px;
+}
+
+.cp-result-host-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.cp-result-host-img-wrapper {
+    flex: 1;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #1C1C1E;
+}
+
+.cp-result-host-card.is-wrong .cp-result-host-img-wrapper {
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
+
+.cp-result-host-card.is-correct .cp-result-host-img-wrapper {
+    border-color: #32D74B;
+    box-shadow: 0 0 15px rgba(50, 215, 75, 0.3);
+}
+
+.cp-host-correct-badge {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: #32D74B;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.cp-host-bar-container {
+    height: 20px;
+    background: #333;
+    margin-top: 8px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.cp-host-bar-fill {
+    height: 100%;
+    background: #0A84FF;
+    transition: width 0.5s ease;
+}
+
+.cp-result-host-card.is-correct .cp-host-bar-fill {
+    background: #32D74B;
+}
+
+.cp-host-count {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    font-weight: bold;
+}
 
 /* Responsive Design for Smaller Screens */
 @media (max-width: 900px) {

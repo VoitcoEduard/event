@@ -12,6 +12,7 @@
         <option value="multi_select">Multi Select</option>
         <option value="true_false">True / False</option>
         <option value="slider">Slider</option>
+        <option value="correct_picture">Correct Picture</option>
       </select>
     </div>
 
@@ -52,7 +53,7 @@
     </div>
 
     <!-- STANDARD ANSWERS (MC/TF/MS) -->
-    <div v-if="localQuestion.type !== 'slider'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
+    <div v-if="localQuestion.type !== 'slider' && localQuestion.type !== 'correct_picture'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
@@ -165,6 +166,18 @@
 
     </div>
 
+    <!-- CORRECT PICTURE EDITOR -->
+    <div v-if="localQuestion.type === 'correct_picture'" class="image-options-section">
+      <ImageOptionEditor
+        v-model="localQuestion.imageOptions"
+        v-model:correct-index="localQuestion.correctIndex"
+        :event-id="eventId"
+        :module-id="moduleId"
+        @update:modelValue="emitUpdate"
+        @update:correctIndex="emitUpdate"
+      />
+    </div>
+
   </div>
 </template>
 
@@ -172,6 +185,7 @@
 import { reactive, watch } from 'vue'
 import SliderComponent from './SliderComponent.vue'
 import ImageUploader from './ImageUploader.vue'
+import ImageOptionEditor from './ImageOptionEditor.vue'
 
 const props = defineProps({
   question: {
@@ -218,7 +232,11 @@ const localQuestion = reactive({
   },
   correctValue: props.question.correctValue !== undefined ? props.question.correctValue : 0,
   imageId: props.question.imageId || null,
-  imageAlt: props.question.imageAlt || ''
+  imageAlt: props.question.imageAlt || '',
+  imageOptions: props.question.imageOptions || [
+    { id: '1', imageId: '', label: '' },
+    { id: '2', imageId: '', label: '' }
+  ]
 })
 
 // Watch for image changes and emit update
@@ -244,8 +262,10 @@ watch(() => props.question, (newVal) => {
           sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 1000, tolerance: 10, partialPercent: 0 },
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
+          correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
           imageId: newVal.imageId || null,
-          imageAlt: newVal.imageAlt || ''
+          imageAlt: newVal.imageAlt || '',
+          imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }]
       })
   }
 }, { deep: true })
@@ -262,6 +282,14 @@ const handleTypeChange = () => {
         // Ensure defaults are set
         if (!localQuestion.sliderConfig.maxValue) localQuestion.sliderConfig.maxValue = 100
         if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 1000
+    } else if (localQuestion.type === 'correct_picture') {
+        // Ensure image options exist
+        if (!localQuestion.imageOptions || localQuestion.imageOptions.length === 0) {
+            localQuestion.imageOptions = [
+                { id: Date.now().toString(), imageId: '', label: '' },
+                { id: (Date.now() + 1).toString(), imageId: '', label: '' }
+            ]
+        }
     } else {
         // Reset to empty if switching back from T/F
         if (localQuestion.answers[0] === 'True' && localQuestion.answers[1] === 'False') {

@@ -16,6 +16,7 @@ type QuizQuestion struct {
 	TimeLimit      int           `json:"timeLimit" bson:"timeLimit"`           // seconds
 	ImageID        *string       `json:"imageId" bson:"imageId"`
 	ImageAlt       string        `json:"imageAlt" bson:"imageAlt"`
+	ImageOptions   []ImageOption `json:"imageOptions" bson:"imageOptions"` // For correct_picture
 }
 
 // SliderConfig stores slider-specific configuration
@@ -41,7 +42,15 @@ const (
 	QuestionTypeTrueFalse      = "true_false"
 	QuestionTypeMultiSelect    = "multi_select"
 	QuestionTypeSlider         = "slider"
+	QuestionTypeCorrectPicture = "correct_picture"
 )
+
+// ImageOption struct for correct_picture question type
+type ImageOption struct {
+	ID      string `json:"id" bson:"id"`           // Unique option ID
+	ImageID string `json:"imageId" bson:"imageId"` // Reference to media library
+	Label   string `json:"label" bson:"label"`     // Optional label for admin
+}
 
 // Quiz module data - stored in Module.Data
 type QuizModuleData struct {
