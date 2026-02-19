@@ -4,6 +4,12 @@
     :class="{ 'vertical': orientation === 'vertical', 'horizontal': orientation === 'horizontal' }"
     ref="sliderContainer"
   >
+    <!-- Fixed Value Display -->
+    <div class="fixed-value-display" :class="orientation">
+      <span class="value-text">{{ formattedValue }}</span>
+      <span v-if="unit" class="unit-text">{{ unit }}</span>
+    </div>
+
     <!-- Track -->
     <div class="slider-track" ref="track">
       <!-- Filled portion (from min to current value) -->
@@ -30,7 +36,9 @@
       :style="{ [fillProperty]: fillPercentage + '%' }"
       :class="{ 'dragging': isDragging }"
     >
-      <span class="thumb-value">{{ formattedValue }}</span>
+      <div class="thumb-grip" :class="orientation">
+        <div class="grip-line"></div>
+      </div>
     </div>
     
     <!-- Min/Max Labels -->
@@ -208,6 +216,18 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
+/* Expand touch/click area for the track */
+.slider-track::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  bottom: -30px;
+  left: -20px;
+  right: -20px;
+  background: transparent;
+  z-index: -1;
+}
+
 .horizontal .slider-track {
   height: 12px;
   width: 100%;
@@ -237,18 +257,30 @@ onUnmounted(() => {
 
 .slider-thumb {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: 64px;
+  height: 64px;
   background: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transform: translate(-50%, 50%); /* Center on the point */
   transition: transform 0.1s;
-  z-index: 2;
+  z-index: 5;
+}
+
+/* Expand touch area around thumb */
+.slider-thumb::after {
+  content: '';
+  position: absolute;
+  top: -30px;
+  bottom: -30px;
+  left: -30px;
+  right: -30px;
+  border-radius: 50%;
+  background: transparent;
 }
 
 .horizontal .slider-thumb {
@@ -265,6 +297,7 @@ onUnmounted(() => {
 
 .slider-thumb.dragging {
   cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   transform: translate(-50%, -50%) scale(1.1);
 }
 
@@ -272,11 +305,66 @@ onUnmounted(() => {
   transform: translate(-50%, 50%) scale(1.1);
 }
 
-.thumb-value {
-  font-weight: bold;
-  font-size: 14px;
-  color: #000;
+/* Grip handle lines inside thumb */
+.thumb-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   pointer-events: none;
+}
+.thumb-grip.horizontal {
+  flex-direction: row;
+}
+.thumb-grip.horizontal::before, .thumb-grip.horizontal::after, .thumb-grip.horizontal .grip-line {
+  content: '';
+  width: 3px;
+  height: 18px;
+  background-color: #c7c7cc;
+  border-radius: 2px;
+  display: block;
+}
+.thumb-grip.vertical {
+  flex-direction: column;
+}
+.thumb-grip.vertical::before, .thumb-grip.vertical::after, .thumb-grip.vertical .grip-line {
+  content: '';
+  width: 18px;
+  height: 3px;
+  background-color: #c7c7cc;
+  border-radius: 2px;
+  display: block;
+}
+
+/* Fixed Value Display */
+.fixed-value-display {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  margin-bottom: 24px;
+}
+
+.fixed-value-display.vertical {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.value-text {
+  font-size: 42px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.unit-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-left: 4px;
 }
 
 .correct-marker {
