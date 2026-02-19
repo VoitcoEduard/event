@@ -156,17 +156,25 @@
     <!-- RESULT STATE -->
     <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
        <div class="result-content">
-          <div class="result-icon">{{ isCorrect ? '✅' : '❌' }}</div>
+          <div class="result-icon" :class="isCorrect ? 'icon-correct' : 'icon-wrong'">{{ isCorrect ? '✅' : '❌' }}</div>
           <h1 class="result-title">{{ isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}</h1>
 
           <div class="score-summary">
-             <div class="score-delta" v-if="isCorrect">+ {{ currentPoints }}</div>
-             <div class="streak-msg" v-if="streak > 2">{{ $t('quiz.player.streak', { streak: streak }) }}</div>
-             <div class="rank-msg">{{ $t('quiz.player.rank_msg', { rank: rank }) }}</div>
+             <div class="score-delta" v-if="isCorrect">
+               <span class="plus-sign">+</span>{{ currentPoints.toLocaleString() }}
+             </div>
+             <div class="score-delta wrong-delta" v-else>{{ $t('quiz.player.incorrect') }}</div>
+             <div class="streak-badge" v-if="streak > 2">
+               🔥 {{ $t('quiz.player.streak', { streak: streak }) }}
+             </div>
+          </div>
+
+          <div class="rank-chip" v-if="rank">
+            🏅 {{ $t('quiz.player.rank_msg', { rank: rank }) }}
           </div>
        </div>
        <div class="footer-score">
-          {{ $t('quiz.player.total_score', { score: score }) }}
+          {{ $t('quiz.player.total_score', { score: score.toLocaleString() }) }}
        </div>
     </div>
 
@@ -597,6 +605,7 @@ onUnmounted(() => {
 .quiz-player-screen {
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* dynamic viewport height - accounts for mobile browser bars */
     background-color: #46178F; /* Standard Kahoot-like purple */
     color: white;
     display: flex;
@@ -604,6 +613,7 @@ onUnmounted(() => {
     overflow: hidden;
     position: relative;
     font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
 }
 
 .bg-layer {
@@ -638,6 +648,10 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: center;
     width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+    min-height: 0; /* allows flex children to shrink below their content size */
+    padding-top: 56px; /* clear the language switcher (top: 10px + ~30px height + buffer) */
 }
 
 /* NAME ENTRY */
@@ -731,7 +745,8 @@ onUnmounted(() => {
 /* QUESTION */
 .question-container {
     justify-content: flex-end; /* Buttons at bottom usually */
-    padding-bottom: 20px;
+    padding-bottom: env(safe-area-inset-bottom, 10px);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
 }
 
 .question-info {
@@ -747,15 +762,19 @@ onUnmounted(() => {
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    z-index: 2;
 }
 
 .answer-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    padding: 10px;
-    height: 60%; /* Take up bottom half */
+    padding: 8px;
+    box-sizing: border-box;
+    /* Let the grid size to content, not a fixed percentage */
+    flex: 1;
+    min-height: 0;
 }
 
 .answer-btn {
@@ -764,10 +783,11 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 4rem; /* Big icon */
+    font-size: 3rem; /* Big icon */
     cursor: pointer;
     transition: transform 0.1s;
     box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    min-height: 0; /* allow shrinking */
 }
 .answer-btn:active { transform: translateY(4px); box-shadow: none; }
 
@@ -778,8 +798,8 @@ onUnmounted(() => {
 
 
 .true-false-grid {
-    grid-template-columns: 1fr; /* Stack vertically for T/F or keep 2 cols? Let's do 1fr 1fr but bigger */
-    height: 60%;
+    grid-template-columns: 1fr;
+    flex: 1;
 }
 
 .color-true { background-color: #0A84FF; } /* Blue for True */
@@ -801,30 +821,118 @@ onUnmounted(() => {
 /* RESULT */
 .result-container {
     justify-content: center;
+    align-items: center;
     text-align: center;
+    padding: 20px;
+    gap: 0;
 }
-.bg-correct { background-color: #32D74B; }
-.bg-wrong { background-color: #FF3B30; }
+.bg-correct { background: linear-gradient(160deg, #1a5c2e 0%, #145c2e 50%, #0e3d1e 100%); }
+.bg-wrong { background: linear-gradient(160deg, #5c1a1a 0%, #4a0f0f 50%, #2d0808 100%); }
 
-.result-icon { font-size: 5rem; margin-bottom: 20px; }
-.result-title { font-size: 2.5rem; font-weight: 900; margin-bottom: 10px; }
+.result-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    justify-content: center;
+    animation: resultReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes resultReveal {
+    from { opacity: 0; transform: scale(0.7) translateY(30px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.result-icon {
+    font-size: 5rem;
+    line-height: 1;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
+    animation: iconBounce 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.icon-correct { animation: iconBounce 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.icon-wrong   { animation: iconShake 0.5s 0.2s ease both; }
+
+@keyframes iconBounce {
+    from { transform: scale(0) rotate(-15deg); }
+    to   { transform: scale(1) rotate(0deg); }
+}
+@keyframes iconShake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-12px); }
+    40% { transform: translateX(12px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(8px); }
+}
+
+.result-title {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    animation: fadeSlideUp 0.4s 0.3s ease both;
+}
+
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
 
 .score-summary {
-    background: rgba(0,0,0,0.2);
-    padding: 20px;
-    border-radius: 8px;
-    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    animation: fadeSlideUp 0.4s 0.45s ease both;
 }
 
-.score-delta { font-size: 2rem; font-weight: bold; margin-bottom: 10px; }
+.score-delta {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #FFDF00;
+    text-shadow: 0 2px 16px rgba(255,220,0,0.4);
+    letter-spacing: -1px;
+    line-height: 1;
+}
+.score-delta .plus-sign {
+    font-size: 2.5rem;
+    margin-right: 2px;
+}
+.wrong-delta {
+    color: rgba(255,255,255,0.3);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.streak-badge {
+    background: rgba(255,150,0,0.25);
+    border: 1px solid rgba(255,150,0,0.5);
+    color: #FFAA00;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.rank-chip {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    animation: fadeSlideUp 0.4s 0.6s ease both;
+}
 
 .footer-score {
-    position: absolute;
-    bottom: 20px;
+    padding: 12px 24px;
     background: rgba(0,0,0,0.3);
-    padding: 5px 15px;
     border-radius: 20px;
-    font-weight: bold;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    animation: fadeSlideUp 0.4s 0.75s ease both;
 }
 
 /* FINISHED */
@@ -926,19 +1034,28 @@ onUnmounted(() => {
 @media (max-width: 600px) {
     .answer-grid {
         grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 6px;
+    }
+    .answer-btn {
+        font-size: 2.5rem;
+    }
+    .action-bar {
+        padding: 10px;
     }
 }
 
 .slider-container {
   justify-content: center;
   padding: 20px;
+  padding-top: 64px; /* extra clearance for slider — most collision-prone */
 }
 
 /* CORRECT PICTURE STYLES */
 .correct-picture-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   justify-content: space-between;
   background: #1C1C1E;
 }

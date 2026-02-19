@@ -417,6 +417,10 @@ const isAnswerReadOnly = (idx) => {
   gap: 12px;
 }
 
+.true-false-grid {
+  grid-template-columns: 1fr;
+}
+
 .answer-card {
   border-radius: 8px;
   padding: 10px;

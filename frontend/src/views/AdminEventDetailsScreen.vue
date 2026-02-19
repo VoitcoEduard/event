@@ -185,12 +185,6 @@
                           </button>
                           
                           <button
-                            class="module-btn data-btn"
-                            @click="showData(module)"
-                          >
-                            {{ $t('admin.details.data') }}
-                          </button>
-                          <button
                             class="module-btn"
                             :class="module.isActive ? 'stop-button' : 'start-button'"
                             @click="toggleModuleStatus(module)"
@@ -546,16 +540,6 @@ const deleteModule = async (module) => {
     console.error('Error deleting module:', err)
     error('Failed to delete module')
   }
-}
-
-const showData = (module) => {
-  router.push({
-    name: 'data-library',
-    query: {
-      eventId: currentEvent.value.id,
-      moduleId: module.id
-    }
-  })
 }
 
 const goBack = () => {
@@ -1292,11 +1276,6 @@ const copyBigScreenLink = () => {
   color: #FFF;
   font-weight: 600;
   font-size: 16px;
-}
-
-.module-btn.data-btn {
-  background-color: #007AFF;
-  color: #FFF;
 }
 
 .data-view-modal-content {

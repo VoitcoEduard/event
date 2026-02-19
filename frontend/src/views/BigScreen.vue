@@ -184,16 +184,24 @@
 
         <div v-if="!isSlider" class="answers-stats results-mode">
           <div class="stats-grid">
-            <div v-for="(count, idx) in (isTrueFalse ? 2 : 4)" :key="idx" class="stat-column">
+            <div 
+              v-for="(count, idx) in (isTrueFalse ? 2 : 4)" 
+              :key="idx" 
+              class="stat-column"
+              :class="idx === currentQuestion?.correctIndex ? 'stat-col-correct' : 'stat-col-wrong'"
+            >
               <div class="stat-bar-container">
                 <div 
                   class="stat-bar" 
-                  :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : '']"
+                  :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : 'stat-bar-wrong']"
                   :style="{ height: getBarHeight(idx) + '%' }"
                 ></div>
               </div>
               <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
-              <div class="stat-icon">{{ getShapeIcon(idx) }}</div>
+              <div class="stat-icon-wrap">
+                <span class="stat-icon">{{ getShapeIcon(idx) }}</span>
+                <span v-if="idx === currentQuestion?.correctIndex" class="correct-check-badge">✓</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1543,9 +1551,56 @@ onUnmounted(() => {
   transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.stat-bar-correct {
-  box-shadow: 0 0 20px rgba(255,255,255,0.3);
+.stat-col-correct {
   position: relative;
+  animation: correctColReveal 0.5s 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes correctColReveal {
+  from { transform: scale(0.92); }
+  to   { transform: scale(1); }
+}
+
+.stat-col-wrong {
+  opacity: 0.32;
+  filter: grayscale(60%);
+  transition: opacity 0.6s ease, filter 0.6s ease;
+}
+
+.stat-bar-correct {
+  box-shadow: 0 0 28px rgba(50, 215, 75, 0.7), 0 0 8px rgba(255,255,255,0.3);
+  border: 2px solid rgba(50, 215, 75, 0.9);
+  position: relative;
+}
+
+.stat-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.correct-check-badge {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  background: #32D74B;
+  color: white;
+  font-size: 1vw;
+  font-weight: 900;
+  width: 1.8vw;
+  height: 1.8vw;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(50, 215, 75, 0.7);
+  animation: badgePop 0.4s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes badgePop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
 }
 
 .stat-count {
