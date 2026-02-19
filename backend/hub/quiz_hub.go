@@ -403,16 +403,21 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 
 	case "player:signal":
 		if client.IsHost {
+			DebugLog("player:signal rejected - client is host")
 			return
 		}
 		// Payload: { "questionIndex": 0, "answerIndex": 0, "scoreEarned": 1000, "timeSpent": 5000 }
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
+			DebugLog("player:signal rejected - invalid payload type")
 			return
 		}
+		dataBytes, _ := json.Marshal(data)
+		DebugLog("player:signal received: %s", string(dataBytes))
 
 		questionIndexFloat, ok := data["questionIndex"].(float64)
 		if !ok {
+			DebugLog("player:signal rejected - questionIndex not found or wrong type")
 			return
 		}
 		// Handle both single choice (legacy/default) and multi-select
@@ -457,12 +462,19 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 
 		session := h.sessions[client.ModuleID]
 		if session != nil {
+			DebugLog("player:signal - Session found, state: %s, currentIndex: %d, questionWindows: %d",
+				session.State, session.CurrentIndex, len(session.QuestionWindows))
+
 			// Check if signal is within acceptance window
 			var status string = "on_time"
 			if questionIndex < len(session.QuestionWindows) {
 				qWindow := session.QuestionWindows[questionIndex]
 				result := CanAcceptSignal(qWindow, time.Now().Unix())
 				status = result.Reason
+				DebugLog("player:signal - QuestionWindow check: index=%d, startTime=%d, endTime=%d, graceEndTime=%d, now=%d, status=%s",
+					questionIndex, qWindow.StartTime, qWindow.EndTime, qWindow.GraceEndTime, time.Now().Unix(), status)
+			} else {
+				DebugLog("player:signal - No QuestionWindow for index %d (windows count: %d)", questionIndex, len(session.QuestionWindows))
 			}
 
 			// Create and store signal
@@ -863,7 +875,7 @@ func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
 		err := collection.FindOne(context.TODO(), bson.M{"modules.id": session.ModuleID}).Decode(&event)
 		if err == nil {
 			session.EventID = event.ID
-			log.Printf("[DEBUG] saveQuizResults: Resolved missing EventID %s for module %s", event.ID, session.ModuleID)
+			DebugLog("saveQuizResults: Resolved missing EventID %s for module %s", event.ID, session.ModuleID)
 		} else {
 			log.Printf("[ERROR] saveQuizResults: Could not resolve EventID for module %s: %v", session.ModuleID, err)
 		}
@@ -897,7 +909,7 @@ func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
 		PlayerSignals: signalResults,
 	}
 
-	log.Printf("[DEBUG] saveQuizResults: Saving result for EventID=%s, ModuleID=%s, Players=%d, Signals=%d",
+	DebugLog("saveQuizResults: Saving result for EventID=%s, ModuleID=%s, Players=%d, Signals=%d",
 		result.EventID, result.ModuleID, len(result.Players), len(result.PlayerSignals))
 
 	collection := db.GetCollection("quiz_results")

@@ -357,6 +357,13 @@ const submitSliderAnswer = () => {
 }
 
 const submitAnswer = (answerData) => {
+    console.log('[DEBUG] submitAnswer called:', {
+        answerData,
+        currentQuestionIndex: currentQuestionIndex.value,
+        hasSubmitted: hasSubmitted.value,
+        cacheSize: questionCache.cache.size,
+        cacheKeys: [...questionCache.cache.keys()]
+    })
     hasSubmitted.value = true
     clearInterval(timerInterval) // Stop the timer
     transition(States.ANSWERED)
@@ -376,11 +383,20 @@ let timerInterval
 // Answer validation and scoring
 const validateAndScore = (answerData) => {
     // Use questionCache directly instead of the ref from state machine
+    console.log('[DEBUG] validateAndScore called:', {
+        currentQuestionIndex: currentQuestionIndex.value,
+        answerData,
+        cacheSize: questionCache.cache.size,
+        cacheKeys: [...questionCache.cache.keys()],
+        hasQuestion: questionCache.has(currentQuestionIndex.value)
+    })
+    
     const question = questionCache.get(currentQuestionIndex.value)
     if (!question) {
-        console.error('Question not found in cache at index:', currentQuestionIndex.value)
+        console.error('[DEBUG] Question NOT FOUND in cache at index:', currentQuestionIndex.value, 'Cache contents:', JSON.stringify([...questionCache.cache.entries()]))
         return
     }
+    console.log('[DEBUG] Question found:', question.text?.substring(0, 50), 'type:', question.type)
 
     let isCorrectAnswer = false
     let answerPayload = {}
@@ -503,6 +519,7 @@ const validateAndScore = (answerData) => {
         timeSpent: timeSpent * 1000, // Convert to ms
         timestamp: Date.now(),
     }
+    console.log('[DEBUG] Enqueuing signal:', JSON.stringify(signal))
     signalQueue.enqueue(signal)
 }
 
@@ -531,16 +548,18 @@ onMounted(async () => {
     // Listen for WS updates
     quizWS.on('cmd:state', (payload) => {
         const newState = payload.state
-        console.log('Received state change:', newState, 'Payload:', payload)
+        console.log('[DEBUG] cmd:state received:', newState, 'Payload:', JSON.stringify(payload))
+        console.log('[DEBUG] Current state before transition:', state.value, 'currentIndex:', currentQuestionIndex.value)
         
         if (newState === States.GET_READY) {
             // "Get Ready" phase - Server drives transition now
             
             // Update question index if provided
             if (payload.currentIndex !== undefined) {
+                console.log('[DEBUG] Setting currentQuestionIndex to:', payload.currentIndex)
                 currentQuestionIndex.value = payload.currentIndex
             }
-
+            
         
             // Reset for new question
             selectedAnswer.value = null
@@ -568,8 +587,19 @@ onMounted(async () => {
     })
 
     quizWS.on('data:batch', (batch) => {
+        console.log('[DEBUG] data:batch received:', JSON.stringify({
+            startIndex: batch.startIndex,
+            endIndex: batch.endIndex,
+            questionCount: batch.questions?.length,
+            firstQuestion: batch.questions?.[0]?.text?.substring(0, 50)
+        }))
+        // Clear cache at the start of a new quiz (startIndex === 0 = first batch)
+        if (batch.startIndex === 0) {
+            console.log('[DEBUG] New quiz batch (startIndex=0) - clearing question cache before loading')
+            questionCache.clear()
+        }
         questionCache.addBatch(batch)
-        console.log('Batch received, cache now has:', questionCache.cache.size, 'questions')
+        console.log('[DEBUG] After addBatch, cache size:', questionCache.cache.size, 'keys:', [...questionCache.cache.keys()])
     })
 
     quizWS.on('sync:minimal', (payload) => {

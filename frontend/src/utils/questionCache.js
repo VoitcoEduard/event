@@ -1,12 +1,14 @@
 class QuestionCache {
     constructor() {
         this.cache = new Map()
-        this.maxCacheSize = 10 // Keep 10 questions max
+        this.maxCacheSize = 50 // Match backend MaxQuestionsPerBatch
     }
 
     addBatch(batch) {
+        console.log('[DEBUG] addBatch called with startIndex:', batch.startIndex, 'questions count:', batch.questions?.length)
         batch.questions.forEach((q, idx) => {
             const globalIndex = batch.startIndex + idx
+            console.log('[DEBUG] Storing question at index:', globalIndex, '(startIndex:', batch.startIndex, '+ idx:', idx, ')')
             this.cache.set(globalIndex, q)
         })
         this.evictOld()
@@ -18,6 +20,11 @@ class QuestionCache {
 
     has(index) {
         return this.cache.has(index)
+    }
+
+    clear() {
+        this.cache.clear()
+        console.log('[DEBUG] questionCache cleared')
     }
 
     needsBatch(currentIndex) {
