@@ -145,26 +145,26 @@
 
          <!-- CORRECT PICTURE RESULTS -->
          <div v-if="isCorrectPicture" class="correct-picture-results-host">
-             <div class="cp-results-host-grid">
-                <div 
-                  v-for="(option, idx) in currentQuestion.imageOptions" 
-                  :key="idx"
-                  class="cp-result-host-card"
-                  :class="{ 
-                      'is-correct': isAnswerCorrect(idx),
-                      'is-wrong': !isAnswerCorrect(idx)
-                  }"
-                >
-                   <div class="cp-result-host-img-wrapper">
-                      <img :src="getImageUrl(option.imageId)" class="cp-host-img" />
-                      <div v-if="isAnswerCorrect(idx)" class="cp-host-correct-badge">✓</div>
-                   </div>
-                   <div class="cp-host-bar-container">
-                      <div class="cp-host-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div>
-                      <span class="cp-host-count">{{ answerCounts[idx] || 0 }}</span>
-                   </div>
-                </div>
+           <!-- Correct image hero -->
+           <div class="cp-host-correct-hero">
+             <div v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
+               <div v-if="isAnswerCorrect(idx)" class="cp-host-hero-frame">
+                 <div class="cp-host-hero-glow"></div>
+                 <img :src="getImageUrl(option.imageId)" class="cp-host-hero-img" />
+                 <div class="cp-host-hero-check">✓</div>
+                 <div class="cp-host-hero-label">{{ currentQuestion.text }}</div>
+               </div>
              </div>
+           </div>
+           <!-- Wrong images as small thumbnails -->
+           <div class="cp-host-wrong-thumbs">
+             <template v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
+               <div v-if="!isAnswerCorrect(idx)" class="cp-host-thumb-card">
+                 <img :src="getImageUrl(option.imageId)" class="cp-host-thumb-img" />
+                 <div class="cp-host-thumb-count">{{ answerCounts[idx] || 0 }}</div>
+               </div>
+             </template>
+           </div>
          </div>
 
          <!-- SLIDER RESULTS -->
@@ -1539,84 +1539,142 @@ onUnmounted(() => {
 }
 
 /* CP HOST RESULTS */
+/* ===== CORRECT PICTURE RESULTS HOST — HERO LAYOUT ===== */
+@keyframes cpHeroReveal {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes cpCheckPop {
+    from { opacity: 0; transform: scale(0); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes cpThumbFade {
+    from { opacity: 0.5; transform: scale(0.85); }
+    to   { opacity: 0.2; transform: scale(1); }
+}
 .correct-picture-results-host {
     width: 100%;
     flex: 1;
     display: flex;
     flex-direction: column;
-}
-
-.cp-results-host-grid {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
-    padding: 0 20px;
-    margin-bottom: 20px;
-}
-
-.cp-result-host-card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.cp-result-host-img-wrapper {
-    flex: 1;
-    position: relative;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #333;
-    display: flex;
-    justify-content: center;
     align-items: center;
-    background: #1C1C1E;
+    justify-content: center;
+    gap: 16px;
+    padding: 0 16px 12px;
 }
 
-.cp-result-host-card.is-wrong .cp-result-host-img-wrapper {
-    filter: grayscale(100%);
-    opacity: 0.15;
-    transform: scale(0.95);
-    transition: all 0.6s ease;
+.cp-host-correct-hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
-.cp-result-host-card.is-correct .cp-result-host-img-wrapper {
-    border-color: #32D74B;
-    box-shadow: 0 0 50px rgba(50, 215, 75, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
-    transform: scale(1.02);
-    z-index: 10;
-    transition: all 0.6s ease;
+.cp-host-hero-frame {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    max-height: 60vh;
+    max-width: 65vw;
+    width: 100%;
+    aspect-ratio: 4/3;
+    animation: cpHeroReveal 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    border: 3px solid #32D74B;
+    box-shadow:
+        0 0 0 6px rgba(50, 215, 75, 0.2),
+        0 0 40px rgba(50, 215, 75, 0.6),
+        0 0 80px rgba(50, 215, 75, 0.25),
+        0 20px 60px rgba(0,0,0,0.5);
 }
 
-.cp-host-correct-badge {
+.cp-host-hero-glow {
     position: absolute;
-    bottom: 5px;
-    right: 5px;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(50,215,75,0.12) 0%, transparent 70%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.cp-host-hero-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cp-host-hero-check {
+    position: absolute;
+    top: 14px;
+    right: 14px;
     background: #32D74B;
     color: white;
-    width: 30px;
-    height: 30px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    font-weight: bold;
+    font-size: 1.8rem;
+    font-weight: 900;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    z-index: 5;
+    animation: cpCheckPop 0.5s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.cp-host-bar-container {
-    height: 20px;
-    background: #333;
-    margin-top: 8px;
-    border-radius: 10px;
+.cp-host-hero-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 18px 16px 14px;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+    color: #fff;
+    font-size: 1.4vw;
+    font-weight: 700;
+    text-align: center;
+    z-index: 5;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+}
+
+.cp-host-wrong-thumbs {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.cp-host-thumb-card {
     position: relative;
+    width: 90px;
+    border-radius: 10px;
     overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    opacity: 0.2;
+    filter: grayscale(100%) brightness(0.6);
+    animation: cpThumbFade 0.5s ease forwards;
 }
 
-.cp-host-bar-fill {
-    height: 100%;
-    background: #0A84FF;
-    transition: width 0.5s ease;
+.cp-host-thumb-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+}
+
+.cp-host-thumb-count {
+    position: absolute;
+    bottom: 3px;
+    right: 5px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 1px 5px;
+    border-radius: 6px;
 }
 
 .cp-result-host-card.is-correct .cp-host-bar-fill {

@@ -165,30 +165,26 @@
 
         <!-- CORRECT PICTURE RESULTS -->
         <div v-if="isCorrectPicture" class="correct-picture-results">
-            <div class="cp-results-grid">
-              <div 
-                v-for="(option, idx) in currentQuestion.imageOptions" 
-                :key="idx"
-                class="cp-result-card"
-                :class="{ 
-                    'is-correct': isAnswerCorrect(idx),
-                    'is-wrong': !isAnswerCorrect(idx)
-                }"
-              >
-                 <div class="cp-image-wrapper">
-                    <img :src="getImageUrl(option.imageId)" class="cp-image" />
-                     <div v-if="isAnswerCorrect(idx)" class="cp-correct-badge">✓</div>
-                 </div>
-                 
-                 <div class="cp-stats-bar">
-                    <div class="cp-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div>
-                    <span class="cp-count">{{ answerCounts[idx] || 0 }}</span>
-                 </div>
+          <!-- Correct image hero -->
+          <div class="cp-correct-hero">
+            <div v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
+              <div v-if="isAnswerCorrect(idx)" class="cp-hero-frame">
+                <div class="cp-hero-glow"></div>
+                <img :src="getImageUrl(option.imageId)" class="cp-hero-img" />
+                <div class="cp-hero-check">✓</div>
+                <div class="cp-hero-label">{{ currentQuestion.text }}</div>
               </div>
-           </div>
-           <div class="cp-question-text results-mode">
-              <h2>{{ currentQuestion.text }}</h2>
-           </div>
+            </div>
+          </div>
+          <!-- Wrong images shown as small thumbnails -->
+          <div class="cp-wrong-thumbnails">
+            <template v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
+              <div v-if="!isAnswerCorrect(idx)" class="cp-thumb-card">
+                <img :src="getImageUrl(option.imageId)" class="cp-thumb-img" />
+                <div class="cp-thumb-count">{{ answerCounts[idx] || 0 }}</div>
+              </div>
+            </template>
+          </div>
         </div>
 
         <!-- SLIDER RESULTS -->
@@ -1105,97 +1101,145 @@ onUnmounted(() => {
 }
 
 /* CP RESULTS */
+/* ===== CORRECT PICTURE RESULTS — NEW HERO LAYOUT ===== */
 .correct-picture-results {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
-}
-
-.cp-results-grid {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    align-items: center;
+    justify-content: center;
     gap: 20px;
     padding: 20px;
 }
 
-.cp-result-card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.cp-image-wrapper {
+/* Hero: big correct image */
+.cp-correct-hero {
     flex: 1;
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 2px solid #333;
     display: flex;
-    justify-content: center;
     align-items: center;
-    background: #1C1C1E;
+    justify-content: center;
+    width: 100%;
 }
 
-.cp-result-card.is-wrong .cp-image-wrapper {
-    filter: grayscale(100%);
-    opacity: 0.15; /* Matching the text answer dimming */
-    transform: scale(0.95);
-    transition: all 0.6s ease;
+.cp-hero-frame {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    max-height: 70vh;
+    max-width: 70vw;
+    width: 100%;
+    aspect-ratio: 4/3;
+    animation: cpHeroReveal 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    border: 4px solid #32D74B;
+    box-shadow:
+        0 0 0 8px rgba(50, 215, 75, 0.25),
+        0 0 60px rgba(50, 215, 75, 0.7),
+        0 0 120px rgba(50, 215, 75, 0.3),
+        0 30px 80px rgba(0,0,0,0.6);
 }
 
-.cp-result-card.is-correct .cp-image-wrapper {
-    border-color: #32D74B;
-    box-shadow: 0 0 50px rgba(50, 215, 75, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
-    transform: scale(1.02);
-    z-index: 10;
-     transition: all 0.6s ease;
+@keyframes cpHeroReveal {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
 }
 
-.cp-correct-badge {
+.cp-hero-glow {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(50,215,75,0.15) 0%, transparent 70%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.cp-hero-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cp-hero-check {
+    position: absolute;
+    top: 18px;
+    right: 18px;
     background: #32D74B;
     color: white;
-    width: 50px;
-    height: 50px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 2.4rem;
     font-weight: 900;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    z-index: 5;
+    animation: cpCheckPop 0.5s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.cp-stats-bar {
-    height: 40px;
-    background: #333;
-    margin-top: 10px;
-    border-radius: 20px;
-    position: relative;
-    overflow: hidden;
+@keyframes cpCheckPop {
+    from { opacity: 0; transform: scale(0); }
+    to   { opacity: 1; transform: scale(1); }
 }
 
-.cp-bar-fill {
-    height: 100%;
-    background: #0A84FF;
-    transition: width 1s ease-out;
-}
-
-.cp-result-card.is-correct .cp-bar-fill {
-    background: #32D74B;
-}
-
-.cp-count {
+.cp-hero-label {
     position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 20px 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+    color: #fff;
+    font-size: 2vw;
+    font-weight: 700;
+    text-align: center;
+    z-index: 5;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+
+/* Wrong image thumbnails row */
+.cp-wrong-thumbnails {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.cp-thumb-card {
+    position: relative;
+    width: 130px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.1);
+    opacity: 0.22;
+    filter: grayscale(100%) brightness(0.6);
+    animation: cpThumbFade 0.5s ease forwards;
+}
+
+@keyframes cpThumbFade {
+    from { opacity: 0.5; transform: scale(0.85); }
+    to   { opacity: 0.22; transform: scale(1); }
+}
+
+.cp-thumb-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+}
+
+.cp-thumb-count {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    font-size: 0.85rem;
     font-weight: bold;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    padding: 2px 6px;
+    border-radius: 8px;
 }
 
 /* Quiz State Styles - Reuse from QuizHostScreen */
