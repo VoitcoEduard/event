@@ -1304,12 +1304,12 @@ onUnmounted(() => {
   flex: 1;
 }
 
-.color-0 { background: linear-gradient(135deg, #e91e63, #f06292); }
-.color-1 { background: linear-gradient(135deg, #2196f3, #64b5f6); }
-.color-2 { background: linear-gradient(135deg, #ff9800, #ffb74d); }
-.color-3 { background: linear-gradient(135deg, #4caf50, #81c784); }
-.color-true { background: linear-gradient(135deg, #4caf50, #81c784); }
-.color-false { background: linear-gradient(135deg, #f44336, #e57373); }
+.color-0 { background-color: #FF3B30; }
+.color-1 { background-color: #0A84FF; }
+.color-2 { background-color: #FFD60A; }
+.color-3 { background-color: #32D74B; }
+.color-true { background-color: #0A84FF; }
+.color-false { background-color: #FF3B30; }
 
 .answer-counter-widget {
   position: fixed;
