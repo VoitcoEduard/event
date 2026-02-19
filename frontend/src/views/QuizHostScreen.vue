@@ -128,96 +128,103 @@
 
     <!-- RESULTS STATE (no leaderboard) -->
     <div v-else-if="gameState === 'results'" class="state-container results-container">
-       <div class="results-header">
-         <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
-       </div>
+       <div class="results-content-wrapper">
+         <div class="results-header">
+           <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
+         </div>
 
-       <!-- CORRECT PICTURE RESULTS -->
-       <div v-if="isCorrectPicture" class="correct-picture-results-host">
-           <div class="cp-results-host-grid">
-              <div 
-                v-for="(option, idx) in currentQuestion.imageOptions" 
-                :key="idx"
-                class="cp-result-host-card"
-                :class="{ 
-                    'is-correct': idx === currentQuestion.correctIndex,
-                    'is-wrong': idx !== currentQuestion.correctIndex
-                }"
-              >
-                 <div class="cp-result-host-img-wrapper">
-                    <img :src="getImageUrl(option.imageId)" class="cp-host-img" />
-                    <div v-if="idx === currentQuestion.correctIndex" class="cp-host-correct-badge">✓</div>
-                 </div>
-                 <div class="cp-host-bar-container">
-                    <div class="cp-host-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div>
-                    <span class="cp-host-count">{{ answerCounts[idx] || 0 }}</span>
-                 </div>
-              </div>
-           </div>
-       </div>
-
-       <div v-else-if="!isSlider" class="correct-answer-reveal">
-          <p class="correct-label">Correct Answer</p>
-          <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
-             <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
-             <span class="correct-text">{{ currentQuestion?.answers[currentQuestion?.correctIndex] }}</span>
-          </div>
-       </div>
-
-       <!-- Show Stats in Results -->
-       <div v-if="!isCorrectPicture && !isSlider" class="answers-stats results-mode">
-          <div class="stats-grid">
-             <div v-for="(count, idx) in (isTrueFalse ? 2 : 4)" :key="idx" class="stat-column">
-                <div class="stat-bar-container">
-                  <div 
-                    class="stat-bar" 
-                    :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : '']"
-                    :style="{ height: getBarHeight(idx) + '%' }"
-                  ></div>
+         <!-- CORRECT PICTURE RESULTS -->
+         <div v-if="isCorrectPicture" class="correct-picture-results-host">
+             <div class="cp-results-host-grid">
+                <div 
+                  v-for="(option, idx) in currentQuestion.imageOptions" 
+                  :key="idx"
+                  class="cp-result-host-card"
+                  :class="{ 
+                      'is-correct': idx === currentQuestion.correctIndex,
+                      'is-wrong': idx !== currentQuestion.correctIndex
+                  }"
+                >
+                   <div class="cp-result-host-img-wrapper">
+                      <img :src="getImageUrl(option.imageId)" class="cp-host-img" />
+                      <div v-if="idx === currentQuestion.correctIndex" class="cp-host-correct-badge">✓</div>
+                   </div>
+                   <div class="cp-host-bar-container">
+                      <div class="cp-host-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div>
+                      <span class="cp-host-count">{{ answerCounts[idx] || 0 }}</span>
+                   </div>
                 </div>
-                <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
-                <div class="stat-icon">{{ getShapeIcon(idx) }}</div>
+             </div>
+         </div>
+
+         <div v-else-if="!isSlider" class="correct-answer-reveal">
+            <p class="correct-label">Correct Answer</p>
+            <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
+               <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
+               <span class="correct-text">{{ currentQuestion?.answers[currentQuestion?.correctIndex] }}</span>
+            </div>
+         </div>
+
+         <!-- Show Stats in Results -->
+         <div v-if="!isCorrectPicture && !isSlider" class="answers-stats results-mode">
+            <div class="stats-grid">
+               <div 
+                  v-for="(count, idx) in (isTrueFalse ? 2 : 4)" 
+                  :key="idx" 
+                  class="stat-column"
+                  :class="idx === currentQuestion?.correctIndex ? 'stat-col-correct' : 'stat-col-wrong'"
+               >
+                  <div class="stat-bar-container">
+                    <div 
+                      class="stat-bar" 
+                      :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : '']"
+                      :style="{ height: getBarHeight(idx) + '%' }"
+                    ></div>
+                  </div>
+                  <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
+                  <div class="stat-icon">{{ getShapeIcon(idx) }}</div>
+               </div>
+            </div>
+         </div>
+
+          <!-- Slider Histogram Stats -->
+          <div v-if="isSlider" class="answers-stats results-mode slider-results-view">
+             <div class="slider-result-container">
+                <div class="slider-result-track"></div>
+                <div class="slider-distribution-overlay">
+                    <div 
+                      v-for="(count, idx) in histogramBuckets" 
+                      :key="idx"
+                      class="distribution-bar-wrapper"
+                      :style="{ left: (idx / histogramBuckets.length * 100) + '%', width: (100 / histogramBuckets.length) + '%' }"
+                    >
+                        <div 
+                          class="distribution-bar"
+                          :style="{ height: getHistogramBarHeight(count) + '%' }"
+                          :class="{ 'has-votes': count > 0 }"
+                        >
+                          <span class="bar-tooltip" v-if="count > 0">{{ count }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div 
+                  class="correct-answer-marker" 
+                  :class="{ 'reveal-marker': revealCorrect }"
+                  :style="{ left: correctMarkerPercentage + '%' }"
+                >
+                    <div class="marker-line"></div>
+                    <div class="marker-label">
+                        <span class="marker-title">Correct</span>
+                        <span class="marker-value">{{ formatNumber(currentQuestion?.correctValue) }}</span>
+                    </div>
+                </div>
+                <div class="slider-labels">
+                    <span class="label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
+                    <span class="label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
+                </div>
              </div>
           </div>
        </div>
-
-        <!-- Slider Histogram Stats -->
-        <div v-if="isSlider" class="answers-stats results-mode slider-results-view">
-           <div class="slider-result-container">
-              <div class="slider-result-track"></div>
-              <div class="slider-distribution-overlay">
-                  <div 
-                    v-for="(count, idx) in histogramBuckets" 
-                    :key="idx"
-                    class="distribution-bar-wrapper"
-                    :style="{ left: (idx / histogramBuckets.length * 100) + '%', width: (100 / histogramBuckets.length) + '%' }"
-                  >
-                      <div 
-                        class="distribution-bar"
-                        :style="{ height: getHistogramBarHeight(count) + '%' }"
-                        :class="{ 'has-votes': count > 0 }"
-                      >
-                        <span class="bar-tooltip" v-if="count > 0">{{ count }}</span>
-                      </div>
-                  </div>
-              </div>
-              <div 
-                class="correct-answer-marker" 
-                :class="{ 'reveal-marker': revealCorrect }"
-                :style="{ left: correctMarkerPercentage + '%' }"
-              >
-                  <div class="marker-line"></div>
-                  <div class="marker-label">
-                      <span class="marker-title">Correct</span>
-                      <span class="marker-value">{{ formatNumber(currentQuestion?.correctValue) }}</span>
-                  </div>
-              </div>
-              <div class="slider-labels">
-                  <span class="label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
-                  <span class="label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
-              </div>
-           </div>
-        </div>
 
        <div class="host-controls">
          <button class="control-btn primary" @click="nextState">
@@ -1482,12 +1489,17 @@ onUnmounted(() => {
 
 .cp-result-host-card.is-wrong .cp-result-host-img-wrapper {
     filter: grayscale(100%);
-    opacity: 0.5;
+    opacity: 0.15;
+    transform: scale(0.95);
+    transition: all 0.6s ease;
 }
 
 .cp-result-host-card.is-correct .cp-result-host-img-wrapper {
     border-color: #32D74B;
-    box-shadow: 0 0 15px rgba(50, 215, 75, 0.3);
+    box-shadow: 0 0 50px rgba(50, 215, 75, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
+    transform: scale(1.02);
+    z-index: 10;
+    transition: all 0.6s ease;
 }
 
 .cp-host-correct-badge {
@@ -1662,8 +1674,29 @@ onUnmounted(() => {
 
 /* RESULTS */
 .results-container {
-    padding-top: 40px;
+    padding-top: 20px;
     background: radial-gradient(ellipse at top, #1a1a2e 0%, #0d0d0d 70%);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    justify-content: center; /* Vertical centering */
+}
+
+.results-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-height: 0;
+}
+
+.host-controls {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
 }
 
 .results-header {
@@ -1690,26 +1723,33 @@ onUnmounted(() => {
     margin-bottom: 30px;
     text-align: center;
     animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: center center;
+    transform: scale(1.1); /* Slight boost */
 }
 
 .correct-answer-display {
-    font-size: 1.8rem;
-    padding: 10px 20px;
-    border-radius: 10px;
-    margin-top: 8px;
+    font-size: 2.5rem; /* Larger than before */
+    padding: 15px 30px;
+    border-radius: 16px;
+    margin-top: 12px;
     color: white;
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 0 40px rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.3);
+    background-clip: padding-box;
 }
 
 .correct-icon { font-size: 1.6rem; }
 .correct-text { font-weight: 700; }
 
 .stat-bar-correct {
-    box-shadow: 0 0 15px rgba(255,255,255,0.3);
+    box-shadow: 0 0 50px rgba(50, 215, 75, 0.8), 0 0 15px rgba(255,255,255,0.6);
+    border: 3px solid rgba(50, 215, 75, 1);
+    position: relative;
+    z-index: 10;
 }
 
 /* LEADERBOARD */
@@ -2091,7 +2131,7 @@ onUnmounted(() => {
     display: flex;
     height: 100%;
     align-items: flex-end;
-    gap: 20px;
+    gap: 30px;
     padding: 0 40px;
 }
 
@@ -2102,6 +2142,19 @@ onUnmounted(() => {
     align-items: center;
     height: 100%;
     justify-content: flex-end;
+}
+
+.stat-col-wrong {
+    opacity: 0.15;
+    filter: grayscale(100%);
+    transform: scale(0.95);
+    transition: opacity 0.6s ease, filter 0.6s ease, transform 0.6s ease;
+}
+
+.stat-col-correct {
+    position: relative;
+    z-index: 2;
+    animation: popIn 0.5s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .stat-bar-container {

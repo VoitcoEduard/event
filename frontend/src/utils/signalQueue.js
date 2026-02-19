@@ -5,7 +5,7 @@ class SignalQueue {
     }
 
     enqueue(signal) {
-        if (this.isConnected) {
+        if (this.isConnected && this.sender) {
             this.flushSingle(signal)
         } else {
             this.queue.push(signal)
@@ -13,7 +13,7 @@ class SignalQueue {
     }
 
     flush() {
-        if (!this.isConnected) {
+        if (!this.isConnected || !this.sender) {
             return
         }
 

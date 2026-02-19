@@ -154,13 +154,13 @@
                 :key="idx"
                 class="cp-result-card"
                 :class="{ 
-                    'is-correct': idx === currentQuestion.correctIndex,
-                    'is-wrong': idx !== currentQuestion.correctIndex
+                    'is-correct': idx == currentQuestion.correctIndex,
+                    'is-wrong': idx != currentQuestion.correctIndex
                 }"
               >
                  <div class="cp-image-wrapper">
                     <img :src="getImageUrl(option.imageId)" class="cp-image" />
-                    <div v-if="idx === currentQuestion.correctIndex" class="cp-correct-badge">✓</div>
+                     <div v-if="idx == currentQuestion.correctIndex" class="cp-correct-badge">✓</div>
                  </div>
                  
                  <div class="cp-stats-bar">
@@ -188,7 +188,7 @@
               v-for="(count, idx) in (isTrueFalse ? 2 : 4)" 
               :key="idx" 
               class="stat-column"
-              :class="idx === currentQuestion?.correctIndex ? 'stat-col-correct' : 'stat-col-wrong'"
+              :class="idx == currentQuestion?.correctIndex ? 'stat-col-correct' : 'stat-col-wrong'"
             >
               <div class="stat-bar-container">
                 <div 
@@ -200,7 +200,7 @@
               <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
               <div class="stat-icon-wrap">
                 <span class="stat-icon">{{ getShapeIcon(idx) }}</span>
-                <span v-if="idx === currentQuestion?.correctIndex" class="correct-check-badge">✓</span>
+                <span v-if="idx == currentQuestion?.correctIndex" class="correct-check-badge">✓</span>
               </div>
             </div>
           </div>
@@ -1008,12 +1008,17 @@ onUnmounted(() => {
 
 .cp-result-card.is-wrong .cp-image-wrapper {
     filter: grayscale(100%);
-    opacity: 0.5;
+    opacity: 0.15; /* Matching the text answer dimming */
+    transform: scale(0.95);
+    transition: all 0.6s ease;
 }
 
 .cp-result-card.is-correct .cp-image-wrapper {
     border-color: #32D74B;
-    box-shadow: 0 0 30px rgba(50, 215, 75, 0.4);
+    box-shadow: 0 0 50px rgba(50, 215, 75, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
+    transform: scale(1.02);
+    z-index: 10;
+     transition: all 0.6s ease;
 }
 
 .cp-correct-badge {
@@ -1473,7 +1478,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center; /* Center content vertically to reduce dead space */
   padding: 2vw;
+  height: 100%;
   background: radial-gradient(ellipse at top, #1a1a2e 0%, #0d0d0d 70%);
 }
 
@@ -1499,32 +1506,43 @@ onUnmounted(() => {
 
 .correct-answer-reveal {
   text-align: center;
-  margin-bottom: 2.5vh;
+  margin-bottom: 4vh; /* Slightly more space */
   animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center center;
+  /* Make it pop more */
+  transform: scale(1.1);
 }
 
 .correct-answer-display {
-  font-size: 2.8vw;
-  padding: 1.2vw 3vw;
-  border-radius: 1.5vw;
+  font-size: 3.5vw; /* Larger font */
+  padding: 1.5vw 4vw;
+  border-radius: 2vw;
   display: inline-flex;
   align-items: center;
-  gap: 1vw;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  gap: 1.5vw;
+  box-shadow: 0 0 40px rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.3);
+  background-clip: padding-box;
 }
 
 .correct-icon { font-size: 2.5vw; }
 .correct-text { font-weight: 700; }
 
 .answers-stats {
-  width: 80%;
-  margin: 1vh 0;
+  width: 90%; /* Wider */
+  margin: 2vh 0;
+  flex: 1; /* Take up available space */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stats-grid {
   display: flex;
-  gap: 2vw;
-  height: 32vh;
+  gap: 3vw; /* More gap */
+  height: 100%; /* Fill container */
+  max-height: 50vh; /* Limit max height */
+  min-height: 30vh;
 }
 
 .stat-column {
@@ -1562,15 +1580,17 @@ onUnmounted(() => {
 }
 
 .stat-col-wrong {
-  opacity: 0.32;
-  filter: grayscale(60%);
-  transition: opacity 0.6s ease, filter 0.6s ease;
+  opacity: 0.15; /* Much dimmer */
+  filter: grayscale(100%); /* Fully grayscale */
+  transform: scale(0.95); /* Slightly smaller */
+  transition: opacity 0.6s ease, filter 0.6s ease, transform 0.6s ease;
 }
 
 .stat-bar-correct {
-  box-shadow: 0 0 28px rgba(50, 215, 75, 0.7), 0 0 8px rgba(255,255,255,0.3);
-  border: 2px solid rgba(50, 215, 75, 0.9);
+  box-shadow: 0 0 50px rgba(50, 215, 75, 0.8), 0 0 15px rgba(255,255,255,0.6);
+  border: 3px solid rgba(50, 215, 75, 1);
   position: relative;
+  z-index: 10;
 }
 
 .stat-icon-wrap {
