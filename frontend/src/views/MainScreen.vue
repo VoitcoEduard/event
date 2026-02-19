@@ -18,6 +18,8 @@
         <input
           v-model="pin"
           type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
           :placeholder="$t('main.pin_placeholder')"
           maxlength="6"
           class="input"
