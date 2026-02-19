@@ -737,6 +737,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				Type:    "cmd:state",
 				Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
 			})
+
+			// BROADCAST FULL STATE SO PLAYERS GET FINAL SCORES/RANKS
+			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+				Type:    "state:update",
+				Payload: session,
+			})
 		}
 
 	case "host:reset_quiz":

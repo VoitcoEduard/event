@@ -564,6 +564,26 @@ onMounted(async () => {
             console.warn(`You missed ${payload.missedQuestions.length} questions`)
         }
     })
+
+    quizWS.on('state:update', (session) => {
+        const playersMap = session.Players || session.players
+        if (!playersMap) return
+
+        const players = Object.values(playersMap)
+        const myId = quizWS.userId
+
+        // Find current player in the session data
+        const me = players.find(p => p.id === myId || p.nickname === nickname.value)
+
+        if (me) {
+            // Update authoritative score and rank from server
+            score.value = me.score
+
+            const sorted = players.sort((a, b) => b.score - a.score)
+            rank.value = sorted.findIndex(p => p.id === me.id) + 1
+            console.log(`Updated rank from server: ${rank.value}, score: ${score.value}`)
+        }
+    })
 })
 
 onUnmounted(() => {
