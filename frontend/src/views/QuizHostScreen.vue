@@ -127,10 +127,11 @@
     </div>
 
     <!-- RESULTS STATE (no leaderboard) -->
-    <div v-else-if="gameState === 'results'" class="state-container results-container">
+    <div v-else-if="gameState === 'results'" class="state-container results-container-new">
        <div class="results-content-wrapper">
-         <div class="results-header">
-           <span class="results-label">Question {{ currentQuestionIndex + 1 }} Results</span>
+         <div class="question-header" style="margin-bottom: 1rem;">
+             <div class="results-mode-title">Question {{ currentQuestionIndex + 1 }} Results</div>
+             <!-- <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div> -->
          </div>
 
          <!-- CORRECT PICTURE RESULTS -->
@@ -141,13 +142,13 @@
                   :key="idx"
                   class="cp-result-host-card"
                   :class="{ 
-                      'is-correct': idx === currentQuestion.correctIndex,
-                      'is-wrong': idx !== currentQuestion.correctIndex
+                      'is-correct': isAnswerCorrect(idx),
+                      'is-wrong': !isAnswerCorrect(idx)
                   }"
                 >
                    <div class="cp-result-host-img-wrapper">
                       <img :src="getImageUrl(option.imageId)" class="cp-host-img" />
-                      <div v-if="idx === currentQuestion.correctIndex" class="cp-host-correct-badge">✓</div>
+                      <div v-if="isAnswerCorrect(idx)" class="cp-host-correct-badge">✓</div>
                    </div>
                    <div class="cp-host-bar-container">
                       <div class="cp-host-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div>
@@ -157,38 +158,8 @@
              </div>
          </div>
 
-         <div v-else-if="!isSlider" class="correct-answer-reveal">
-            <p class="correct-label">Correct Answer</p>
-            <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
-               <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
-               <span class="correct-text">{{ currentQuestion?.answers[currentQuestion?.correctIndex] }}</span>
-            </div>
-         </div>
-
-         <!-- Show Stats in Results -->
-         <div v-if="!isCorrectPicture && !isSlider" class="answers-stats results-mode">
-            <div class="stats-grid">
-               <div 
-                  v-for="(count, idx) in (isTrueFalse ? 2 : 4)" 
-                  :key="idx" 
-                  class="stat-column"
-                  :class="idx === currentQuestion?.correctIndex ? 'stat-col-correct' : 'stat-col-wrong'"
-               >
-                  <div class="stat-bar-container">
-                    <div 
-                      class="stat-bar" 
-                      :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : '']"
-                      :style="{ height: getBarHeight(idx) + '%' }"
-                    ></div>
-                  </div>
-                  <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
-                  <div class="stat-icon">{{ getShapeIcon(idx) }}</div>
-               </div>
-            </div>
-         </div>
-
-          <!-- Slider Histogram Stats -->
-          <div v-if="isSlider" class="answers-stats results-mode slider-results-view">
+         <!-- SLIDER RESULTS -->
+          <div v-else-if="isSlider" class="answers-stats results-mode slider-results-view">
              <div class="slider-result-container">
                 <div class="slider-result-track"></div>
                 <div class="slider-distribution-overlay">
@@ -223,6 +194,62 @@
                     <span class="label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
                 </div>
              </div>
+          </div>
+
+          <!-- STANDARD QUESTION RESULTS (REDESIGNED) -->
+          <div v-else class="question-main-content">
+            <!-- Left Column: Image + Distribution Overlay -->
+            <div class="question-column">
+              <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+                <div v-if="questionImageUrl" class="question-image-container">
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" />
+                  <div class="image-overlay-gradient"></div>
+                  
+                  <!-- DISTRIBUTION OVERLAY -->
+                  <div class="distribution-overlay-container">
+                      <div class="dist-chart">
+                          <div 
+                              v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
+                              :key="idx"
+                              class="dist-bar-col"
+                          >
+                              <div class="dist-bar-track">
+                                  <div 
+                                      class="dist-bar-fill"
+                                      :class="getAnswerColorClass(idx)"
+                                      :style="{ height: getBarHeight(idx) + '%' }"
+                                  ></div>
+                              </div>
+                              <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
+                              <div class="dist-icon">{{ getShapeIcon(idx) }}</div>
+                          </div>
+                      </div>
+                  </div>
+                </div>
+                
+                <div class="question-text-overlay">
+                  <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Results Answer Cards -->
+            <div class="answers-column">
+               <div 
+                  v-for="(answer, idx) in currentQuestion?.answers" 
+                  :key="idx" 
+                  class="answer-card-stacked result-card"
+                  :class="[
+                      getAnswerColorClass(idx),
+                      isAnswerCorrect(idx) ? 'result-correct' : 'result-wrong'
+                  ]"
+                  v-show="!isTrueFalse || idx < 2"
+                >
+                  <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
+                  <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                  <div v-if="isAnswerCorrect(idx)" class="result-check-icon">✓</div>
+                </div>
+            </div>
           </div>
        </div>
 
@@ -563,6 +590,16 @@ const getAnswerColorClass = (idx) => {
         return idx === 0 ? 'color-true' : 'color-false'
     }
     return 'color-' + idx
+}
+
+const isAnswerCorrect = (idx) => {
+  const q = currentQuestion.value
+  if (!q) return false
+  
+  if (q.type === 'multi_select' && Array.isArray(q.correctIndices)) {
+      return q.correctIndices.includes(idx)
+  }
+  return q.correctIndex === idx
 }
 
 // Timer logic
@@ -2183,5 +2220,131 @@ onUnmounted(() => {
 .stat-icon {
     font-size: 1.4rem;
     margin-top: 4px;
+}
+
+/* ===== NEW RESULTS HOST LAYOUT ===== */
+.results-container-new {
+    display: flex;
+    flex-direction: column;
+    padding: 2vw;
+    box-sizing: border-box;
+    height: 100vh;
+    background: radial-gradient(ellipse at top, #1a1a2e 0%, #0d0d0d 70%);
+}
+
+.results-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0; 
+}
+
+.results-mode-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #fff;
+    margin-right: auto;
+}
+
+/* Dimmed Image */
+.dimmed-image {
+    transition: filter 0.5s ease;
+    filter: brightness(0.4) blur(2px);
+}
+
+/* Distribution Overlay */
+.distribution-overlay-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 20px;
+    background: rgba(0,0,0,0.3);
+}
+
+.dist-chart {
+    display: flex;
+    gap: 20px;
+    width: 80%;
+    height: 50%;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.dist-bar-col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.dist-bar-track {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    /* background: rgba(255,255,255,0.05); */
+    border-radius: 0 0 8px 8px;
+}
+
+.dist-bar-fill {
+    width: 100%;
+    border-radius: 0 0 8px 8px;
+    min-height: 4px;
+    transition: height 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    opacity: 0.9;
+}
+
+.dist-count {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    margin-top: 5px;
+}
+
+.dist-icon {
+    font-size: 1.2rem;
+    margin-top: 5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+/* Result Answer Cards */
+.result-card {
+    transition: all 0.5s ease;
+    border: 3px solid transparent; 
+}
+
+.result-wrong {
+    opacity: 0.3;
+    filter: grayscale(100%);
+    transform: scale(0.98);
+}
+
+.result-correct {
+    opacity: 1;
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(50, 215, 75, 0.6);
+    border-color: #32D74B;
+    z-index: 5;
+    background: linear-gradient(135deg, #2e7d32, #43a047) !important; 
+}
+
+.result-check-icon {
+    font-size: 1.8rem;
+    color: #fff;
+    font-weight: 900;
+    margin-left: 10px;
+    filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 </style>

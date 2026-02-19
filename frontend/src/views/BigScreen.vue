@@ -141,9 +141,11 @@
       </div>
 
       <!-- RESULTS STATE (no leaderboard here) -->
-      <div v-else-if="gameState === 'results'" class="state-container results-container">
-        <div class="results-header">
-          <span class="results-label">{{ $t('quiz.host.results_title', { num: currentQuestionIndex + 1 }) }}</span>
+      <div v-else-if="gameState === 'results'" class="state-container results-container-new">
+        <div class="question-header">
+           <!-- Reuse header but with Results title -->
+           <div class="results-mode-title">{{ $t('quiz.host.results_title', { num: currentQuestionIndex + 1 }) }}</div>
+           <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
 
         <!-- CORRECT PICTURE RESULTS -->
@@ -154,17 +156,17 @@
                 :key="idx"
                 class="cp-result-card"
                 :class="{ 
-                    'is-correct': idx == currentQuestion.correctIndex,
-                    'is-wrong': idx != currentQuestion.correctIndex
+                    'is-correct': isAnswerCorrect(idx),
+                    'is-wrong': !isAnswerCorrect(idx)
                 }"
               >
                  <div class="cp-image-wrapper">
                     <img :src="getImageUrl(option.imageId)" class="cp-image" />
-                     <div v-if="idx == currentQuestion.correctIndex" class="cp-correct-badge">✓</div>
+                     <div v-if="isAnswerCorrect(idx)" class="cp-correct-badge">✓</div>
                  </div>
                  
                  <div class="cp-stats-bar">
-                    <div class="cp-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div> <!-- repurposing getBarHeight logic but for width -->
+                    <div class="cp-bar-fill" :style="{ width: getBarHeight(idx) + '%' }"></div>
                     <span class="cp-count">{{ answerCounts[idx] || 0 }}</span>
                  </div>
               </div>
@@ -174,41 +176,10 @@
            </div>
         </div>
 
-        <div v-else-if="!isSlider" class="correct-answer-reveal">
-          <p class="correct-label">{{ $t('quiz.host.correct_answer') }}</p>
-          <div class="correct-answer-display" :class="getAnswerColorClass(currentQuestion?.correctIndex)">
-            <span class="correct-icon">{{ getShapeIcon(currentQuestion?.correctIndex) }}</span>
-            <span class="correct-text">{{ currentQuestion?.answers[currentQuestion?.correctIndex] }}</span>
-          </div>
-        </div>
-
-        <div v-if="!isSlider" class="answers-stats results-mode">
-          <div class="stats-grid">
-            <div 
-              v-for="(count, idx) in (isTrueFalse ? 2 : 4)" 
-              :key="idx" 
-              class="stat-column"
-              :class="idx == currentQuestion?.correctIndex ? 'stat-col-correct' : 'stat-col-wrong'"
-            >
-              <div class="stat-bar-container">
-                <div 
-                  class="stat-bar" 
-                  :class="[getAnswerColorClass(idx), idx === currentQuestion?.correctIndex ? 'stat-bar-correct' : 'stat-bar-wrong']"
-                  :style="{ height: getBarHeight(idx) + '%' }"
-                ></div>
-              </div>
-              <div class="stat-count">{{ answerCounts[idx] || 0 }}</div>
-              <div class="stat-icon-wrap">
-                <span class="stat-icon">{{ getShapeIcon(idx) }}</span>
-                <span v-if="idx == currentQuestion?.correctIndex" class="correct-check-badge">✓</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Slider Histogram Results -->
-        <div v-if="isSlider" class="answers-stats results-mode slider-results-view">
-          <div class="slider-result-container">
+        <!-- SLIDER RESULTS (Keep existing slider result view if needed or adapt) -->
+        <div v-else-if="isSlider" class="answers-stats results-mode slider-results-view">
+           <!-- ... (Slider results code remains same for now as requested to exclude slider from this specific redesign) ... -->
+           <div class="slider-result-container">
             <div class="slider-result-track"></div>
             <div class="slider-distribution-overlay">
               <div 
@@ -241,6 +212,61 @@
               <span class="label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}</span>
               <span class="label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}</span>
             </div>
+          </div>
+        </div>
+
+        <!-- STANDARD QUESTION RESULTS (The main redesign target) -->
+        <div v-else class="question-main-content">
+          <!-- Image Column with Overlay -->
+          <div class="question-column">
+            <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+              <div v-if="questionImageUrl" class="question-image-container">
+                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" />
+                <div class="image-overlay-gradient"></div>
+                
+                <!-- DISTRIBUTION OVERLAY -->
+                <div class="distribution-overlay-container">
+                    <div class="dist-chart">
+                        <div 
+                            v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
+                            :key="idx"
+                            class="dist-bar-col"
+                        >
+                            <div class="dist-bar-track">
+                                <div 
+                                    class="dist-bar-fill"
+                                    :class="getAnswerColorClass(idx)"
+                                    :style="{ height: getBarHeight(idx) + '%' }"
+                                ></div>
+                            </div>
+                            <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
+                            <div class="dist-icon">{{ getShapeIcon(idx) }}</div>
+                        </div>
+                    </div>
+                </div>
+              </div>
+              <div class="question-text-overlay">
+                <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
+              </div>
+            </div>
+          </div>
+
+          <!-- Answers Column -->
+          <div class="answers-column">
+             <div 
+                v-for="(answer, idx) in currentQuestion?.answers" 
+                :key="idx" 
+                class="answer-card-stacked result-card"
+                :class="[
+                    getAnswerColorClass(idx),
+                    isAnswerCorrect(idx) ? 'result-correct' : 'result-wrong'
+                ]"
+                v-show="!isTrueFalse || idx < 2"
+              >
+                <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
+                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                <div v-if="isAnswerCorrect(idx)" class="result-check-icon">✓</div>
+              </div>
           </div>
         </div>
       </div>
@@ -563,6 +589,16 @@ const getAnswerColorClass = (idx) => {
     return idx === 0 ? 'color-true' : 'color-false'
   }
   return 'color-' + idx
+}
+
+const isAnswerCorrect = (idx) => {
+  const q = currentQuestion.value
+  if (!q) return false
+  
+  if (q.type === 'multi_select' && Array.isArray(q.correctIndices)) {
+      return q.correctIndices.includes(idx)
+  }
+  return q.correctIndex === idx
 }
 
 // Timer
@@ -2072,5 +2108,123 @@ onUnmounted(() => {
 .unmute-btn:hover {
     background-color: rgba(255, 255, 255, 0.3);
     transform: scale(1.05);
+}
+
+/* ===== NEW RESULTS LAYOUT ===== */
+.results-container-new {
+    display: flex;
+    flex-direction: column;
+    padding: 2vw;
+    box-sizing: border-box;
+}
+
+.results-mode-title {
+    font-size: 3vw;
+    font-weight: bold;
+    color: #fff;
+    margin-right: auto;
+}
+
+/* Dimmed Image for Results */
+.dimmed-image {
+    transition: filter 0.5s ease;
+    filter: brightness(0.4) blur(2px);
+}
+
+/* Distribution Overlay */
+.distribution-overlay-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 2vw; /* Space from top */
+    background: rgba(0,0,0,0.3);
+}
+
+.dist-chart {
+    display: flex;
+    gap: 3vw;
+    width: 80%;
+    height: 50%; /* Occupy top 50% of image */
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.dist-bar-col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.dist-bar-track {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    /* background: rgba(255,255,255,0.05); */
+    border-radius: 0 0 8px 8px;
+}
+
+.dist-bar-fill {
+    width: 100%;
+    border-radius: 0 0 8px 8px;
+    min-height: 4px; /* Ensure visibility even if 0 */
+    transition: height 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    opacity: 0.9;
+}
+
+.dist-count {
+    font-size: 2.5vw;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    margin-top: 5px;
+}
+
+.dist-icon {
+    font-size: 2vw;
+    margin-top: 5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+/* Result Answer Cards */
+.result-card {
+    transition: all 0.5s ease;
+    border: 3px solid transparent; /* Prepare for border */
+}
+
+/* Wrong Answers: Dimmed */
+.result-wrong {
+    opacity: 0.3;
+    filter: grayscale(100%);
+    transform: scale(0.98);
+}
+
+/* Correct Answer: Highlighted */
+.result-correct {
+    opacity: 1;
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(50, 215, 75, 0.6);
+    border-color: #32D74B;
+    z-index: 5;
+    background: linear-gradient(135deg, #2e7d32, #43a047) !important; /* Override gradient */
+}
+
+.result-check-icon {
+    font-size: 3vw;
+    color: #fff;
+    font-weight: 900;
+    margin-left: 1vw;
+    filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 </style>
