@@ -93,6 +93,7 @@
       "quiz_option": "🎮 Quiz",
       "big_screen": "🖥️ Ecran Mare",
       "close_big_screen": "❌ Închide Ecranul Mare",
+      "screen_manager": "🖥️ Manager Ecran",
       "toast": {
         "event_link_copied": "Link-ul evenimentului a fost copiat!",
         "module_added": "Modul adăugat. Te rugăm să îl configurezi.",
@@ -100,6 +101,18 @@
         "screensaver_removed": "Imaginea de screensaver a fost eliminată"
       }
     }
+  },
+  "screen_manager": {
+    "title": "Manager Ecran",
+    "open_big_screen": "🖥️ Deschide Ecran Mare",
+    "push_to_screen": "Afișează pe ecran",
+    "welcome_slide": "Slide de Bun Venit",
+    "show_qr": "Arată codul QR",
+    "welcome_hint": "Afișează instrucțiunile de conectare.",
+    "custom_text_slide": "Slide cu Text Personalizat",
+    "custom_text_placeholder": "Introduceți text personalizat...",
+    "live_preview": "Previzualizare Live",
+    "toast_pushed": "Afișat cu succes pe ecran"
   },
   "library": {
     "title": "Librărie",
@@ -154,9 +167,9 @@
     "hint_responses": "Se așteaptă răspunsuri...",
     "retry": "Reîncearcă",
     "headers": {
-        "user_id": "ID utilizator",
-        "name": "Nume",
-        "total_score": "Scor total"
+      "user_id": "ID utilizator",
+      "name": "Nume",
+      "total_score": "Scor total"
     }
   },
   "quiz_config": {
@@ -199,44 +212,44 @@
       "mc_options": "Toate opțiunile de răspuns trebuie completate pentru întrebările cu răspuns multiplu."
     },
     "import": {
-        "note_images": "Notă: Imaginile din fișierele importate trebuie reîncărcate",
-        "success": "Întrebări încărcate din fișier",
-        "no_questions": "Nu au fost găsite întrebări în fișier",
-        "error_parse": "Eroare la parsarea fișierului JSON"
+      "note_images": "Notă: Imaginile din fișierele importate trebuie reîncărcate",
+      "success": "Întrebări încărcate din fișier",
+      "no_questions": "Nu au fost găsite întrebări în fișier",
+      "error_parse": "Eroare la parsarea fișierului JSON"
     },
     "question_editor": {
-        "question_number": "Întrebarea {number}",
-        "type_label": "Tip Întrebare",
-        "text_label": "Text Întrebare",
-        "text_placeholder": "ex. Care este capitala Franței?",
-        "image_label": "Imagine Întrebare (Opțional)",
-        "time_limit": "Limită de Timp (secunde)",
-        "answer_placeholder": "Introdu variantă de răspuns",
-        "types": {
-            "multiple_choice": "Alegere Unică",
-            "multi_select": "Selecție Multiplă",
-            "true_false": "Adevărat / Fals",
-            "slider": "Slider",
-            "correct_picture": "Imagine Corectă"
-        },
-        "slider": {
-            "range_unit": "Interval & Unități",
-            "min_value": "Valoare Min",
-            "max_value": "Valoare Max",
-            "step": "Pas",
-            "unit": "Unitate",
-            "unit_placeholder": "%, kg, ani",
-            "correct_scoring": "Răspuns Corect & Punctaj",
-            "correct_value": "Valoare Corectă",
-            "decimals": "Zecimale",
-            "scoring_mode": "Mod Punctare",
-            "symmetric": "Simetric",
-            "asymmetric": "Asimetric (Fără depășire)",
-            "tolerance": "Toleranță (±)",
-            "max_points": "Puncte Max",
-            "preview": "Previzualizare",
-            "preview_note": "Previzualizarea arată markerul răspunsului corect"
-        }
+      "question_number": "Întrebarea {number}",
+      "type_label": "Tip Întrebare",
+      "text_label": "Text Întrebare",
+      "text_placeholder": "ex. Care este capitala Franței?",
+      "image_label": "Imagine Întrebare (Opțional)",
+      "time_limit": "Limită de Timp (secunde)",
+      "answer_placeholder": "Introdu variantă de răspuns",
+      "types": {
+        "multiple_choice": "Alegere Unică",
+        "multi_select": "Selecție Multiplă",
+        "true_false": "Adevărat / Fals",
+        "slider": "Slider",
+        "correct_picture": "Imagine Corectă"
+      },
+      "slider": {
+        "range_unit": "Interval & Unități",
+        "min_value": "Valoare Min",
+        "max_value": "Valoare Max",
+        "step": "Pas",
+        "unit": "Unitate",
+        "unit_placeholder": "%, kg, ani",
+        "correct_scoring": "Răspuns Corect & Punctaj",
+        "correct_value": "Valoare Corectă",
+        "decimals": "Zecimale",
+        "scoring_mode": "Mod Punctare",
+        "symmetric": "Simetric",
+        "asymmetric": "Asimetric (Fără depășire)",
+        "tolerance": "Toleranță (±)",
+        "max_points": "Puncte Max",
+        "preview": "Previzualizare",
+        "preview_note": "Previzualizarea arată markerul răspunsului corect"
+      }
     }
   },
   "form_module": {
@@ -261,11 +274,11 @@
     },
     "error_submit": "Trimiterea răspunsului a eșuat.",
     "config": {
-        "title": "Editor Formular",
-        "untitled": "Formular fără titlu",
-        "steps_count": "Pași: {count}",
-        "no_steps": "Formularul nu are pași. Te rugăm să adaugi cel puțin unul.",
-        "published": "Configurația formularului a fost publicată cu succes!"
+      "title": "Editor Formular",
+      "untitled": "Formular fără titlu",
+      "steps_count": "Pași: {count}",
+      "no_steps": "Formularul nu are pași. Te rugăm să adaugi cel puțin unul.",
+      "published": "Configurația formularului a fost publicată cu succes!"
     }
   },
   "quiz_editor": {
@@ -295,12 +308,12 @@
     "checkbox_label": "Selectează tot ce se aplică:",
     "welcome_msg": "Bine ai venit la formular!",
     "types": {
-        "text": "Text",
-        "number": "Număr",
-        "date": "Dată",
-        "radio": "Buton radio",
-        "checkbox": "Căsuță de selectare",
-        "dropdown": "Listă derulantă"
+      "text": "Text",
+      "number": "Număr",
+      "date": "Dată",
+      "radio": "Buton radio",
+      "checkbox": "Căsuță de selectare",
+      "dropdown": "Listă derulantă"
     }
   },
   "image_uploader": {

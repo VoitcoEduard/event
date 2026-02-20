@@ -18,12 +18,8 @@
           </div>
         </div>
         <div class="header-right">
-          <button 
-            class="nav-button bigscreen-header-btn" 
-            :class="{ 'close-btn': isBigScreenOpen }"
-            @click="isBigScreenOpen ? closeBigScreen() : openBigScreenFromHeader()"
-          >
-            {{ isBigScreenOpen ? $t('admin.details.close_big_screen') : $t('admin.details.big_screen') }}
+          <button class="nav-button screen-manager-btn" @click="goToScreenManager">
+            {{ $t('admin.details.screen_manager') }}
           </button>
           <button class="nav-button copy-link-btn" @click="copyBigScreenLink" :title="$t('quiz.host.copy_link')">
              🔗
@@ -92,61 +88,8 @@
             </p>
           </div>
 
-          <div class="control-group">
-            <p class="section-label">{{ $t('admin.details.screensaver') }}</p>
-            <p class="control-hint">{{ $t('admin.details.screensaver_desc') }}</p>
-            
-            <div v-if="screensaverPreview" class="screensaver-preview">
-              <img :src="screensaverPreview" alt="Screensaver preview" />
-            </div>
-            
-            <div class="screensaver-upload">
-              <button 
-                class="action-button"
-                @click="handleScreensaverUpload"
-                :disabled="screensaverLoading"
-              >
-                {{ screensaverLoading ? $t('common.loading') : $t('admin.details.select_library') }}
-              </button>
-            </div>
-            
-            <button 
-              v-if="currentEvent?.screensaverConfig?.imageId"
-              class="action-button delete-screensaver-btn"
-              @click="removeScreensaver"
-            >
-              {{ $t('admin.details.remove_image') }}
-            </button>
           </div>
         </div>
-      </div>
-
-      <!-- Library Selector Modal -->
-      <div v-if="showLibrarySelector" class="modal-overlay" @click.self="showLibrarySelector = false">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>{{ $t('admin.details.select_title') }}</h3>
-            <button class="close-btn" @click="showLibrarySelector = false">✕</button>
-          </div>
-          <div class="modal-body">
-            <div v-if="screensavers.length === 0" class="empty-state">
-              <p>{{ $t('admin.details.no_screensavers') }}</p>
-              <p class="hint">{{ $t('admin.details.screensaver_library_hint') }}</p>
-            </div>
-            <div v-else class="screensavers-grid">
-              <div 
-                v-for="screensaver in screensavers" 
-                :key="screensaver.id" 
-                class="screensaver-option"
-                @click="selectScreensaver(screensaver)"
-              >
-                <img :src="screensaver.thumbnailUrl" :alt="screensaver.name" />
-                <p class="screensaver-name">{{ screensaver.name }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div class="card modules-card">
         <div class="card-header">
@@ -554,28 +497,9 @@ const goToDataView = () => {
   router.push(`/data/library?eventId=${currentEvent.value.id}`)
 }
 
-const openBigScreenFromHeader = () => {
-  // If already open, focus it
-  if (bigscreenWindow.value && !bigscreenWindow.value.closed) {
-    bigscreenWindow.value.focus()
-    return
-  }
-  // Find the first quiz module (optional - bigscreen can work without quiz)
-  const quizModule = currentEvent.value?.modules?.find(m => m.type === 'quiz')
-  if (quizModule) {
-    const url = `/bigscreen/${currentEvent.value.id}/${quizModule.id}`
-    bigscreenWindow.value = window.open(url, 'bigscreen', 'width=1200,height=800')
-  } else {
-    // Open bigscreen without quiz module - will show screensaver only
-    const url = `/bigscreen/${currentEvent.value.id}`
-    bigscreenWindow.value = window.open(url, 'bigscreen', 'width=1200,height=800')
-  }
-}
-
-const closeBigScreen = () => {
-  if (bigscreenWindow.value && !bigscreenWindow.value.closed) {
-    bigscreenWindow.value.close()
-    bigscreenWindow.value = null
+const goToScreenManager = () => {
+  if (currentEvent.value?.id) {
+    router.push(`/admin/event/${currentEvent.value.id}/screen-manager`)
   }
 }
 
@@ -701,23 +625,15 @@ const copyBigScreenLink = () => {
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
-.bigscreen-header-btn {
+.screen-manager-btn {
   background-color: #FF9500;
   color: white;
 }
 
-.bigscreen-header-btn:hover {
+.screen-manager-btn:hover {
   background-color: #FFA830;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
-}
-
-.bigscreen-header-btn.close-btn {
-  background-color: #FF3B30;
-}
-
-.bigscreen-header-btn.close-btn:hover {
-  background-color: #FF5C54;
 }
 
 .copy-link-btn {

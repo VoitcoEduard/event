@@ -7,9 +7,40 @@
         <option value="ro">Română</option>
       </select>
     </div>
+    <!-- Screen Manager Overrides -->
+    <div v-if="overrideScreenState?.currentView === 'welcome'" class="screensaver-container welcome-slide-view">
+      <div class="welcome-center">
+        <h1 class="welcome-title">{{ $t('quiz.host.join_title') }}</h1>
+        <div v-if="overrideScreenState.showWelcomeQR" class="qr-container-big">
+          <QRCodeVue :value="joinUrl" :size="400" level="H" />
+        </div>
+        <div class="pin-display-big" :class="{ 'no-qr': !overrideScreenState.showWelcomeQR }">
+          {{ $t('quiz.host.game_pin') }} <span>{{ eventId }}</span>
+        </div>
+        <div class="join-url">{{ joinUrl }}</div>
+      </div>
+    </div>
 
-    <!-- Screensaver Mode -->
-    <div v-if="displayMode === 'screensaver'" class="screensaver-container">
+    <div v-else-if="overrideScreenState?.currentView === 'custom_text'" class="screensaver-container custom-text-view">
+       <h1 class="custom-text-display">{{ overrideScreenState.customText }}</h1>
+    </div>
+
+    <div v-else-if="overrideScreenState?.currentView === 'screensaver'" class="screensaver-container">
+      <img 
+        v-if="screensaverImageUrl" 
+        :src="screensaverImageUrl" 
+        alt="Screensaver" 
+        class="screensaver-image"
+        @load="onImageLoad"
+      />
+      <div v-else class="screensaver-placeholder">
+        <p>{{ $t('big_screen.no_screensaver') }}</p>
+        <p class="hint">{{ $t('big_screen.screensaver_hint') }}</p>
+      </div>
+    </div>
+
+    <!-- Original Display Modes (if screen state is module) -->
+    <div v-else-if="displayMode === 'screensaver'" class="screensaver-container">
       <img 
         v-if="screensaverImageUrl" 
         :src="screensaverImageUrl" 
@@ -407,6 +438,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import QRCodeVue from 'qrcode.vue'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
@@ -420,6 +452,12 @@ const moduleId = route.params.moduleId
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
 }
+
+// Screen Manager State override
+const overrideScreenState = ref(null)
+const joinUrl = computed(() => {
+  return `${window.location.origin}/?pin=${eventId}`
+})
 
 // Display mode: 'connecting', 'screensaver', 'quiz', 'error'
 const displayMode = ref('connecting')
@@ -889,6 +927,22 @@ onMounted(async () => {
   await loadScreensaverConfig()
   await loadModuleConfig()
   
+  // Set up Screen State SSE
+  const sse = new EventSource(`${API_BASE_URL}/events/${eventId}/screen-stream`)
+  sse.onmessage = (event) => {
+    try {
+      const state = JSON.parse(event.data)
+      overrideScreenState.value = state
+      
+      // If it forces screensaver, refresh screensaver image
+      if (state.currentView === 'screensaver') {
+        loadScreensaverConfig() 
+      }
+    } catch (e) {
+      console.error('Failed to parse screen state', e)
+    }
+  }
+
   // Show screensaver first (before connecting to WebSocket)
   displayMode.value = 'screensaver'
   manageAudioPlayback()
@@ -2560,6 +2614,74 @@ onUnmounted(() => {
   border-radius: 6px;
   white-space: nowrap;
   box-shadow: 0 0 12px rgba(48,209,88,0.5);
+}
+
+/* Screen Manager Additions */
+.welcome-slide-view {
+  background: linear-gradient(135deg, #1A1A1D 0%, #000000 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.welcome-center {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+.welcome-title {
+  font-size: 5rem;
+  font-weight: 800;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  margin: 0;
+}
+.qr-container-big {
+  background: white;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  display: inline-block;
+}
+.pin-display-big {
+  font-size: 3rem;
+  font-weight: 600;
+  color: #ddd;
+}
+.pin-display-big span {
+  font-size: 5rem;
+  font-weight: 800;
+  color: #FF9500;
+  margin-left: 20px;
+  letter-spacing: 5px;
+}
+.pin-display-big.no-qr {
+  font-size: 5rem;
+}
+.pin-display-big.no-qr span {
+  font-size: 10rem;
+}
+.join-url {
+  font-size: 2.5rem;
+  color: #aaa;
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.custom-text-view {
+  background: #121212;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 50px;
+}
+.custom-text-display {
+  font-size: 8rem;
+  font-weight: 800;
+  text-align: center;
+  color: white;
+  text-shadow: 2px 4px 12px rgba(0,0,0,0.5);
+  line-height: 1.2;
 }
 
 </style>

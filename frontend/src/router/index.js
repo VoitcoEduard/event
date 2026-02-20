@@ -9,6 +9,7 @@ import LoginScreen from '../views/LoginScreen.vue'
 import QuizHostScreen from '../views/QuizHostScreen.vue'
 import QuizPlayerScreen from '../views/QuizPlayerScreen.vue'
 import BigScreen from '../views/BigScreen.vue'
+import ScreenManagerScreen from '../views/ScreenManagerScreen.vue'
 
 import { isAuthenticated } from '../utils/index.js'
 
@@ -18,6 +19,7 @@ const routes = [
   { path: '/login', name: 'login', component: LoginScreen },
   { path: '/admin', name: 'admin', component: AdminScreen, meta: { requiresAuth: true } },
   { path: '/admin/event/:id', name: 'admin-event-details', component: AdminEventDetailsScreen, meta: { requiresAuth: true } },
+  { path: '/admin/event/:id/screen-manager', name: 'admin-screen-manager', component: ScreenManagerScreen, meta: { requiresAuth: true } },
   { path: '/data/library', name: 'data-library', component: DataLibraryScreen, meta: { requiresAuth: true } },
   { path: '/quiz/library', name: 'quiz-library', component: () => import('../views/QuizLibraryScreen.vue'), meta: { requiresAuth: true } },
   { path: '/quiz/:eventId/:moduleId/host', name: 'quiz-host', component: QuizHostScreen, meta: { requiresAuth: true } },

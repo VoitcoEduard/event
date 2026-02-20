@@ -225,6 +225,28 @@ func main() {
 			}
 		}
 
+		// ScreenState routes
+		if strings.HasSuffix(r.URL.Path, "/screen-state") {
+			if r.Method == "GET" {
+				handlers.GetScreenState(w, r)
+				return
+			}
+			if r.Method == "PUT" {
+				handlers.VerifyAuth(handlers.UpdateScreenState)(w, r)
+				return
+			}
+		}
+
+		if strings.HasSuffix(r.URL.Path, "/screen-stream") {
+			if r.Method == "GET" {
+				// Note: SSE stream should not require standard verify auth because EventSource in browsers
+				// doesn't send Authorization headers easily. Maybe check PIN or rely on public view.
+				// Since BigScreen just watches, let's make it public.
+				handlers.ScreenStream(w, r)
+				return
+			}
+		}
+
 		switch r.Method {
 		case "GET":
 			handlers.GetEvent(w, r)

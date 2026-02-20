@@ -93,6 +93,7 @@
       "quiz_option": "🎮 Quiz",
       "big_screen": "🖥️ Big Screen",
       "close_big_screen": "❌ Close Big Screen",
+      "screen_manager": "🖥️ Screen Manager",
       "toast": {
         "event_link_copied": "Event link copied to clipboard!",
         "module_added": "Module added. Now please configure it.",
@@ -100,6 +101,18 @@
         "screensaver_removed": "Screensaver image removed"
       }
     }
+  },
+  "screen_manager": {
+    "title": "Screen Manager",
+    "open_big_screen": "🖥️ Open Big Screen",
+    "push_to_screen": "Push to Screen",
+    "welcome_slide": "Welcome Slide",
+    "show_qr": "Show QR Code",
+    "welcome_hint": "Displays the join instructions for the event.",
+    "custom_text_slide": "Custom Text Slide",
+    "custom_text_placeholder": "Enter custom text to display...",
+    "live_preview": "Live Preview",
+    "toast_pushed": "Successfully pushed to Big Screen"
   },
   "library": {
     "title": "Library",
@@ -154,9 +167,9 @@
     "hint_responses": "Waiting for responses...",
     "retry": "Retry",
     "headers": {
-        "user_id": "User ID",
-        "name": "Name",
-        "total_score": "Total Score"
+      "user_id": "User ID",
+      "name": "Name",
+      "total_score": "Total Score"
     }
   },
   "quiz_config": {
@@ -199,44 +212,44 @@
       "mc_options": "All answer options must be filled for multiple choice questions."
     },
     "import": {
-        "note_images": "Note: Images from imported files need to be re-uploaded",
-        "success": "Questions loaded from file",
-        "no_questions": "No questions found in file",
-        "error_parse": "Error parsing JSON file"
+      "note_images": "Note: Images from imported files need to be re-uploaded",
+      "success": "Questions loaded from file",
+      "no_questions": "No questions found in file",
+      "error_parse": "Error parsing JSON file"
     },
     "question_editor": {
-        "question_number": "Question {number}",
-        "type_label": "Question Type",
-        "text_label": "Question Text",
-        "text_placeholder": "e.g., What is the capital of France?",
-        "image_label": "Question Image (Optional)",
-        "time_limit": "Time Limit (seconds)",
-        "answer_placeholder": "Type answer option",
-        "types": {
-            "multiple_choice": "Single Choice",
-            "multi_select": "Multi Select",
-            "true_false": "True / False",
-            "slider": "Slider",
-            "correct_picture": "Correct Picture"
-        },
-        "slider": {
-            "range_unit": "Range & Unit",
-            "min_value": "Min Value",
-            "max_value": "Max Value",
-            "step": "Step",
-            "unit": "Unit",
-            "unit_placeholder": "%, kg, years",
-            "correct_scoring": "Correct Answer & Scoring",
-            "correct_value": "Correct Value",
-            "decimals": "Decimals",
-            "scoring_mode": "Scoring Mode",
-            "symmetric": "Symmetric (Both sides)",
-            "asymmetric": "Asymmetric (No overbid)",
-            "tolerance": "Tolerance (±)",
-            "max_points": "Max Points",
-            "preview": "Preview",
-            "preview_note": "Preview shows correct answer marker"
-        }
+      "question_number": "Question {number}",
+      "type_label": "Question Type",
+      "text_label": "Question Text",
+      "text_placeholder": "e.g., What is the capital of France?",
+      "image_label": "Question Image (Optional)",
+      "time_limit": "Time Limit (seconds)",
+      "answer_placeholder": "Type answer option",
+      "types": {
+        "multiple_choice": "Single Choice",
+        "multi_select": "Multi Select",
+        "true_false": "True / False",
+        "slider": "Slider",
+        "correct_picture": "Correct Picture"
+      },
+      "slider": {
+        "range_unit": "Range & Unit",
+        "min_value": "Min Value",
+        "max_value": "Max Value",
+        "step": "Step",
+        "unit": "Unit",
+        "unit_placeholder": "%, kg, years",
+        "correct_scoring": "Correct Answer & Scoring",
+        "correct_value": "Correct Value",
+        "decimals": "Decimals",
+        "scoring_mode": "Scoring Mode",
+        "symmetric": "Symmetric (Both sides)",
+        "asymmetric": "Asymmetric (No overbid)",
+        "tolerance": "Tolerance (±)",
+        "max_points": "Max Points",
+        "preview": "Preview",
+        "preview_note": "Preview shows correct answer marker"
+      }
     }
   },
   "form_module": {
@@ -261,11 +274,11 @@
     },
     "error_submit": "Failed to submit response.",
     "config": {
-        "title": "Form Editor",
-        "untitled": "Untitled Form",
-        "steps_count": "{count} Steps",
-        "no_steps": "Your form has no steps. Please add at least one.",
-        "published": "Form configuration published successfully!"
+      "title": "Form Editor",
+      "untitled": "Untitled Form",
+      "steps_count": "{count} Steps",
+      "no_steps": "Your form has no steps. Please add at least one.",
+      "published": "Form configuration published successfully!"
     }
   },
   "quiz_editor": {
@@ -295,12 +308,12 @@
     "checkbox_label": "Select all that apply:",
     "welcome_msg": "Welcome to the form!",
     "types": {
-        "text": "Text",
-        "number": "Number",
-        "date": "Date",
-        "radio": "Radio",
-        "checkbox": "Checkbox",
-        "dropdown": "Dropdown"
+      "text": "Text",
+      "number": "Number",
+      "date": "Date",
+      "radio": "Radio",
+      "checkbox": "Checkbox",
+      "dropdown": "Dropdown"
     }
   },
   "image_uploader": {

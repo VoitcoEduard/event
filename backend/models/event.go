@@ -35,6 +35,13 @@ type ScreensaverConfig struct {
 	ImageURL string `json:"imageUrl" bson:"imageUrl"` // Computed field for display
 }
 
+type ScreenState struct {
+	CurrentView    string `json:"currentView" bson:"currentView"` // e.g., "screensaver", "welcome", "custom_text", "module"
+	CustomText     string `json:"customText" bson:"customText"`
+	ShowWelcomeQR  bool   `json:"showWelcomeQR" bson:"showWelcomeQR"`
+	ActiveModuleID string `json:"activeModuleId" bson:"activeModuleId"` // ID of the quiz/form if view is "module"
+}
+
 type Event struct {
 	ID                string             `json:"id" bson:"_id"`
 	Name              string             `json:"name" bson:"name"`
@@ -43,4 +50,5 @@ type Event struct {
 	CreatedAt         time.Time          `json:"createdAt" bson:"createdAt"`
 	Modules           []Module           `json:"modules" bson:"modules"`
 	ScreensaverConfig *ScreensaverConfig `json:"screensaverConfig" bson:"screensaverConfig"`
+	ScreenState       *ScreenState       `json:"screenState" bson:"screenState"`
 }
