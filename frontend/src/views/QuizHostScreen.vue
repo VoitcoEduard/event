@@ -727,7 +727,7 @@ const manageAudioPlayback = async () => {
     const shouldPlay = 
         backgroundMusicUrl.value && 
         (audioOutput.value === 'admin' || audioOutput.value === 'both') &&
-        (gameState.value !== 'finished') 
+        (gameState.value === 'get-ready' || gameState.value === 'question-presenting' || gameState.value === 'question-active')
 
     const player = bgMusicPlayer.value
     if (!player) return
@@ -817,6 +817,14 @@ onMounted(async () => {
             }
         } else if (payload.state === 'results') {
             clearInterval(timerInterval)
+        }
+        
+        if ((payload.state === 'get-ready' || payload.state === 'question-presenting') && 
+            (prevState === 'lobby' || prevState === 'leaderboard' || prevState === 'results')) {
+            const player = bgMusicPlayer.value
+            if (player) {
+                player.currentTime = 0
+            }
         }
         
         manageAudioPlayback()

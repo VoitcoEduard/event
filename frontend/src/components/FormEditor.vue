@@ -174,13 +174,17 @@ const emit = defineEmits(['update:timeline'])
 
 const localTimeline = ref([])
 
+// Only sync from props when the array reference itself changes (e.g. loading a
+// template or opening the modal). Deep-watching props and also emitting deep
+// changes back would create an infinite reactive loop.
 watch(() => props.timeline, (newVal) => {
   localTimeline.value = JSON.parse(JSON.stringify(newVal))
-}, { immediate: true, deep: true })
+}, { immediate: true })
 
-watch(localTimeline, (newVal) => {
-    emit('update:timeline', newVal)
-}, { deep: true })
+// Helper: emit the current localTimeline to the parent after each mutation.
+const emitTimeline = () => {
+  emit('update:timeline', localTimeline.value)
+}
 
 const addStep = (type) => {
   // For fields, generate a default label based on type
@@ -208,6 +212,7 @@ const addStep = (type) => {
   }
   
   localTimeline.value = [...localTimeline.value, newStep]
+  emitTimeline()
 }
 
 const updateStep = (id, key, value) => {
@@ -224,6 +229,7 @@ const updateStep = (id, key, value) => {
     }
     return step
   })
+  emitTimeline()
 }
 
 const addAnswer = (stepId) => {
@@ -243,6 +249,7 @@ const addAnswer = (stepId) => {
     }
     return step
   })
+  emitTimeline()
 }
 
 const updateAnswer = (stepId, answerIndex, key, value) => {
@@ -254,6 +261,7 @@ const updateAnswer = (stepId, answerIndex, key, value) => {
     }
     return step
   })
+  emitTimeline()
 }
 
 const removeAnswer = (stepId, answerIndex) => {
@@ -265,11 +273,13 @@ const removeAnswer = (stepId, answerIndex) => {
     }
     return step
   })
+  emitTimeline()
 }
 
 const removeStep = (id) => {
   if (!confirm(t('library.actions.discard_confirm'))) return
   localTimeline.value = localTimeline.value.filter(step => step.id !== id)
+  emitTimeline()
 }
 
 const moveStep = (index, direction) => {
@@ -277,10 +287,12 @@ const moveStep = (index, direction) => {
     const newTimeline = [...localTimeline.value]
     ;[newTimeline[index], newTimeline[index - 1]] = [newTimeline[index - 1], newTimeline[index]]
     localTimeline.value = newTimeline
+    emitTimeline()
   } else if (direction === 'down' && index < localTimeline.value.length - 1) {
     const newTimeline = [...localTimeline.value]
     ;[newTimeline[index], newTimeline[index + 1]] = [newTimeline[index + 1], newTimeline[index]]
     localTimeline.value = newTimeline
+    emitTimeline()
   }
 }
 </script>

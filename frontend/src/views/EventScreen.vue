@@ -181,53 +181,62 @@ const goToMain = () => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+* { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+
 .event-screen {
-  height: 100vh; /* Fixed height to enable centering */
+  height: 100vh;
   width: 100vw;
-  background-color: var(--background-color, #121212);
+  background: #0d0d0f;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* Center vertically on desktop */
-  overflow: hidden; /* Prevent body scroll */
+  justify-content: center;
+  overflow: hidden;
 }
 
 .responsive-wrapper {
   width: 100%;
-  height: 100%; /* Full height by default (mobile) */
+  height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--background-color, #121212);
+  background: #0d0d0f;
   position: relative;
 }
 
 .language-switcher-container {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 14px;
+  right: 14px;
   z-index: 100;
 }
 
 .lang-select {
-  background: rgba(255, 255, 255, 0.06);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 4px 8px;
-  border-radius: 6px;
+  background: #1a1a1f;
+  color: #aaa;
+  border: 1px solid #2a2a35;
+  padding: 5px 10px;
+  border-radius: 8px;
   font-size: 12px;
   cursor: pointer;
   outline: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.lang-select:hover {
+  border-color: #444;
+  color: #fff;
 }
 
 @media (min-width: 500px) {
   .responsive-wrapper {
-    max-width: 480px; /* Constrains width */
-    height: calc(100% - 40px); /* Margin top/bottom essentially */
-    max-height: 850px; /* Reasonable max height for a "phone" view */
-    border-radius: 24px;
-    box-shadow: 0 40px 80px rgba(0,0,0,0.5); /* Strong shadow for depth */
-    border: 1px solid var(--border-color, #333);
-    overflow: hidden; /* Clip content to corners */
+    max-width: 480px;
+    height: calc(100% - 40px);
+    max-height: 850px;
+    border-radius: 28px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7), 0 0 0 1px #202028;
+    overflow: hidden;
   }
 }
 
@@ -238,153 +247,176 @@ const goToMain = () => {
   flex-direction: column;
   align-items: center;
   flex: 1;
-  padding: 20px;
-  padding-top: 40px;
-  overflow: hidden; /* Prevent container expansion */
+  padding: 24px 20px 20px;
+  padding-top: 52px;
+  overflow: hidden;
 }
 
+/* ── Header ── */
 .header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  flex-shrink: 0; /* Header stays at top */
+  flex-shrink: 0;
 }
 
 .status-text {
-  color: var(--text-secondary, #888);
-  font-size: 14px;
+  color: #555;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 6px;
 }
 
 .event-name {
-  color: var(--text-primary, #FFF);
-  font-size: 32px;
-  font-weight: 800;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 900;
   text-align: center;
-  margin-bottom: 4px;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+  line-height: 1.1;
 }
 
 .welcome-text {
-  color: var(--primary-color, #30D158);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
-  margin-top: 4px;
+  margin-top: 2px;
+  color: #6366f1;
 }
 
+/* ── List ── */
 .list-container {
   width: 100%;
   flex: 1;
-  overflow-y: auto; /* Internal scrolling */
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 80px; /* Space for bottom button */
-  padding-right: 4px; /* Prevent scrollbar visual clash */
+  padding-bottom: 84px;
+  padding-right: 2px;
 }
 
-/* Scrollbar styling for webkit */
-.list-container::-webkit-scrollbar,
-.scroll-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.list-container::-webkit-scrollbar-track,
-.scroll-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.list-container::-webkit-scrollbar-thumb,
-.scroll-content::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+.list-container::-webkit-scrollbar { width: 4px; }
+.list-container::-webkit-scrollbar-track { background: transparent; }
+.list-container::-webkit-scrollbar-thumb {
+  background: #2a2a35;
+  border-radius: 4px;
 }
 
 .section-title {
-  color: var(--text-secondary, #888);
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 16px;
+  color: #444;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 14px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
+/* ── Module card ── */
 .module-card {
-  background-color: var(--surface-color, #1E1E1E);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
+  background: #161619;
+  border-radius: 18px;
+  padding: 0;
+  margin-bottom: 12px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  border: 1px solid var(--border-color, #333);
+  border: 1px solid #2a2a35;
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  overflow: hidden;
 }
 
 .module-card:hover {
   transform: translateY(-2px);
-  background-color: var(--surface-hover, #252525);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border-color: #6366f1;
+}
+
+.module-card:active {
+  transform: translateY(0);
+}
+
+/* Coloured left stripe */
+.module-card::before {
+  content: '';
+  display: block;
+  width: 4px;
+  align-self: stretch;
+  background: linear-gradient(180deg, #6366f1, #4f46e5);
+  flex-shrink: 0;
 }
 
 .icon-container {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 12px;
-  background-color: var(--background-color, #333);
+  background: #202028;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16px;
+  margin: 14px 14px 14px 14px;
+  flex-shrink: 0;
 }
 
 .module-icon {
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .module-info {
   flex: 1;
+  padding: 14px 0;
 }
 
 .module-title {
-  color: var(--text-primary, #FFF);
-  font-size: 18px;
+  color: #fff;
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .module-subtitle {
-  color: var(--primary-color, #30D158);
-  font-size: 14px;
-  font-weight: 500;
+  color: #6366f1;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .chevron {
-  color: var(--text-secondary, #666);
-  font-size: 24px;
+  color: #3a3a4a;
+  font-size: 22px;
+  margin-right: 16px;
+  transition: color 0.2s, transform 0.2s;
 }
 
+.module-card:hover .chevron {
+  color: #6366f1;
+  transform: translateX(2px);
+}
+
+/* ── Waiting card ── */
 .waiting-card {
-  background-color: var(--surface-color, #1E1E1E);
-  border-radius: 20px;
-  padding: 40px;
+  background: #161619;
+  border-radius: 22px;
+  padding: 44px 32px;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 40px;
-  border: 1px solid var(--border-color, #333);
+  border: 1px solid #2a2a35;
 }
 
 .loader {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #333;
-  border-top-color: var(--primary-color, #007AFF);
+  width: 44px;
+  height: 44px;
+  border: 3px solid #2a2a35;
+  border-top-color: #6366f1;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 20px;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 22px;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.25);
 }
 
 @keyframes spin {
@@ -392,73 +424,88 @@ const goToMain = () => {
 }
 
 .message {
-  color: var(--text-primary, #FFF);
-  font-size: 18px;
-  font-weight: 600;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
   text-align: center;
   margin-bottom: 8px;
 }
 
 .sub-message {
-  color: var(--text-secondary, #888);
-  font-size: 14px;
+  color: #555;
+  font-size: 13px;
   text-align: center;
+  line-height: 1.5;
 }
 
+/* ── Leave button ── */
 .leave-button {
-  width: calc(100% - 40px); /* Match padding of container */
+  width: calc(100% - 40px);
   position: absolute;
   bottom: 20px;
   left: 20px;
-  padding: 16px 32px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color, #333);
+  padding: 15px 32px;
+  border-radius: 14px;
+  border: 1px solid #2a2a35;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--danger-color, #FF453A);
-  font-size: 16px;
+  color: #f87171;
+  font-size: 15px;
   font-weight: 600;
-  background-color: var(--background-color, #121212); /* Opaque bg mostly */
+  background: #0d0d0f;
   cursor: pointer;
   z-index: 10;
-  box-shadow: 0 -10px 20px rgba(0,0,0,0.2); /* Shadow to separate from list */
+  transition: background 0.2s, border-color 0.2s;
+  box-shadow: 0 -16px 32px rgba(13, 13, 15, 0.9);
 }
 
 .leave-button:hover {
-  background-color: rgba(255, 69, 58, 0.1);
+  background: rgba(248, 113, 113, 0.07);
+  border-color: rgba(248, 113, 113, 0.3);
 }
 
+/* ── Error ── */
 .error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
+  padding: 32px;
 }
 
 .error-text {
-  color: var(--danger-color, #FF453A);
-  font-size: 18px;
+  color: #f87171;
+  font-size: 16px;
   margin-bottom: 20px;
+  text-align: center;
 }
 
 .back-button {
-  padding: 10px;
-  color: var(--text-primary, #FFF);
-  font-size: 16px;
-  background: none;
-  border: none;
+  padding: 12px 24px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  background: #161619;
+  border: 1px solid #2a2a35;
+  border-radius: 12px;
   cursor: pointer;
+  transition: border-color 0.2s;
 }
 
+.back-button:hover {
+  border-color: #6366f1;
+}
+
+/* ── Module view ── */
 .module-view {
   width: 100%;
   height: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Ensure module scrolling is contained */
+  overflow: hidden;
 }
 
 .module-header {
@@ -469,25 +516,31 @@ const goToMain = () => {
   width: 100%;
   flex-shrink: 0;
   z-index: 20;
+  border-bottom: 1px solid #1e1e26;
 }
 
 .back-link {
   display: flex;
   flex-direction: row;
   align-items: center;
-  color: var(--text-primary, #FFF);
-  font-size: 16px;
+  color: #aaa;
+  font-size: 15px;
+  font-weight: 500;
   background: none;
   border: none;
-  padding: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
   cursor: pointer;
+  transition: color 0.2s, background 0.2s;
 }
 
 .back-link:hover {
-  opacity: 0.8;
+  color: #fff;
+  background: #1e1e26;
 }
 
 .back-arrow {
-  margin-right: 8px;
+  margin-right: 6px;
+  font-size: 18px;
 }
 </style>

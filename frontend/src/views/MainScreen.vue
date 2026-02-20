@@ -1,5 +1,7 @@
 <template>
   <div class="main-screen">
+    <div class="bg-glow"></div>
+
     <div class="language-switcher">
       <select v-model="$i18n.locale" @change="changeLanguage">
         <option value="en">English</option>
@@ -7,34 +9,44 @@
         <option value="ro">Română</option>
       </select>
     </div>
+
     <div class="content">
-      <h1 class="title">{{ $t('main.title') }}</h1>
-      <p class="subtitle">{{ $t('main.subtitle') }}</p>
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <h1 class="title">{{ $t('main.title') }}</h1>
+        <p class="subtitle">{{ $t('main.subtitle') }}</p>
+      </div>
 
       <div class="card">
         <h2 class="card-title">{{ $t('main.connect_title') }}</h2>
         <p class="card-text">{{ $t('main.connect_desc') }}</p>
-        
-        <input
-          v-model="pin"
-          type="text"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          :placeholder="$t('main.pin_placeholder')"
-          maxlength="6"
-          class="input"
-          @input="handlePinInput"
-        />
-        
-        <p v-if="error" class="error-text">{{ error }}</p>
-        
-        <button 
-          class="connect-button" 
-          @click="handleConnect" 
+
+        <div class="input-wrapper">
+          <input
+            v-model="pin"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            :placeholder="$t('main.pin_placeholder')"
+            maxlength="6"
+            class="input"
+            @input="handlePinInput"
+          />
+          <div class="input-hint">{{ pin.length }}/6</div>
+        </div>
+
+        <p v-if="error" class="error-text">
+          <span class="error-icon">⚠</span> {{ error }}
+        </p>
+
+        <button
+          class="connect-button"
+          @click="handleConnect"
           :disabled="loading"
+          :class="{ 'is-loading': loading }"
         >
           <span v-if="loading" class="loading-spinner"></span>
-          <span v-else>{{ $t('main.connect_btn') }}</span>
+          <span v-else class="btn-label">{{ $t('main.connect_btn') }} →</span>
         </button>
       </div>
 
@@ -121,146 +133,257 @@ const goToAdmin = () => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+* { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+
 .main-screen {
   min-height: 100vh;
-  background-color: #121212;
+  background: #0d0d0f;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
+  overflow: hidden;
+}
+
+/* Subtle ambient glow — not overdone */
+.bg-glow {
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .language-switcher {
   position: absolute;
   top: 20px;
   right: 20px;
+  z-index: 10;
 }
 
 .language-switcher select {
-  background-color: #252525;
-  color: white;
-  border: 1px solid #333333;
-  padding: 8px 12px;
+  background-color: #1a1a1f;
+  color: #aaa;
+  border: 1px solid #2a2a35;
+  padding: 7px 12px;
   border-radius: 8px;
+  font-size: 13px;
   cursor: pointer;
   outline: none;
+  transition: border-color 0.2s;
+}
+
+.language-switcher select:hover {
+  border-color: #444;
+  color: #fff;
 }
 
 .content {
-  width: 90%;
+  position: relative;
+  z-index: 1;
+  width: 92%;
   max-width: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.title {
-  font-size: 32px;
-  font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 8px;
-  letter-spacing: -0.5;
-}
-
-.subtitle {
-  font-size: 16px;
-  color: #888888;
-  margin-bottom: 40px;
-  font-weight: 500;
-  letter-spacing: 0.5;
-  text-transform: uppercase;
-}
-
-.card {
-  background-color: #1E1E1E;
-  padding: 32px;
-  border-radius: 24px;
-  width: 100%;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  margin-bottom: 32px;
-  border: 1px solid #333333;
+/* Brand */
+.brand {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-bottom: 36px;
+}
+
+.brand-icon {
+  font-size: 40px;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.7));
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6)); }
+  50%       { filter: drop-shadow(0 0 22px rgba(99, 102, 241, 0.9)); }
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 6px;
+  letter-spacing: -1px;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #555;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+/* Card */
+.card {
+  background: #161619;
+  padding: 32px 28px;
+  border-radius: 24px;
+  width: 100%;
+  border: 1px solid #2a2a35;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 .card-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 8px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 6px;
+  text-align: center;
 }
 
 .card-text {
-  font-size: 15px;
-  color: #888888;
+  font-size: 14px;
+  color: #666;
   text-align: center;
-  margin-bottom: 24px;
-  line-height: 22px;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+/* Input */
+.input-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
 }
 
 .input {
-  background-color: #252525;
-  border-radius: 12px;
-  padding: 16px;
-  font-size: 24px;
-  font-weight: 700;
+  width: 100%;
+  background: #0d0d0f;
+  border-radius: 14px;
+  padding: 18px 16px;
+  font-size: 28px;
+  font-weight: 800;
   text-align: center;
-  letter-spacing: 8px;
-  margin-bottom: 24px;
-  color: #ffffff;
-  border: 1px solid #333333;
+  letter-spacing: 10px;
+  color: #fff;
+  border: 2px solid #2a2a35;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: #6366f1;
+}
+
+.input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .input::placeholder {
-  color: #666666;
+  color: #363640;
+  letter-spacing: 4px;
+  font-size: 20px;
 }
 
-.connect-button {
-  background-color: #007AFF;
-  padding: 16px;
-  border-radius: 12px;
-  width: 100%;
-  color: white;
-  font-size: 18px;
+.input-hint {
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  font-size: 11px;
+  color: #444;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.connect-button:hover {
-  background-color: #0056b3;
-}
-
-.admin-link {
-  padding: 16px;
-  background: none;
-  color: #888888;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.admin-link:hover {
-  color: #ffffff;
-}
-
+/* Error */
 .error-text {
-  color: #FF6B6B;
-  font-size: 14px;
+  color: #f87171;
+  font-size: 13px;
+  margin-top: 4px;
   margin-bottom: 16px;
   text-align: center;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
+.error-icon {
+  font-style: normal;
+}
+
+/* Connect Button */
+.connect-button {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  padding: 17px;
+  border-radius: 14px;
+  width: 100%;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+  margin-top: 8px;
+}
+
+.connect-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px rgba(99, 102, 241, 0.5);
+}
+
+.connect-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.connect-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-label {
+  letter-spacing: 0.3px;
+}
+
+/* Admin link */
+.admin-link {
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  color: #444;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.admin-link:hover {
+  color: #888;
+}
+
+/* Spinner */
 .loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(255, 255, 255, 0.25);
   border-top-color: white;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {

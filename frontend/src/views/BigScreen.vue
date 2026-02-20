@@ -816,7 +816,7 @@ const manageAudioPlayback = async () => {
     const shouldPlay = 
         backgroundMusicUrl.value && 
         (audioOutput.value === 'bigscreen' || audioOutput.value === 'both') &&
-        displayMode.value === 'quiz'
+        (gameState.value === 'get-ready' || gameState.value === 'question-presenting' || gameState.value === 'question-active')
 
     const player = bgMusicPlayer.value
     if (!player) return
