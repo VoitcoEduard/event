@@ -31,6 +31,14 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	event.ID = generateID()
 	event.IsActive = false // Default to inactive
 	event.CreatedAt = time.Now()
+
+	welcomeLabel := "What is your name?"
+	if event.Language == "ru" {
+		welcomeLabel = "Как вас зовут?"
+	} else if event.Language == "ro" {
+		welcomeLabel = "Cum te numești?"
+	}
+
 	event.Modules = []models.Module{
 		{
 			ID:       generateID(),
@@ -45,7 +53,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 						"id":   "step_welcome_name",
 						"type": "field",
 						"data": map[string]any{
-							"label":        "What is your name?",
+							"label":        welcomeLabel,
 							"fieldType":    "text",
 							"compactLabel": "name",
 						},
@@ -129,6 +137,7 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	update := bson.M{"$set": bson.M{
 		"name":        event.Name,
 		"description": event.Description,
+		"language":    event.Language,
 	}}
 
 	_, err := collection.UpdateOne(context.Background(), filter, update)

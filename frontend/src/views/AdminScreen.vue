@@ -32,6 +32,12 @@
           class="input text-area"
           rows="3"
         ></textarea>
+
+        <select v-model="eventLanguage" class="input lang-select">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+          <option value="ro">Română</option>
+        </select>
         
         <div class="form-actions">
           <button 
@@ -106,6 +112,7 @@ const router = useRouter()
 const events = ref([])
 const name = ref('')
 const description = ref('')
+const eventLanguage = ref(locale.value)
 const editingId = ref(null)
 const isLoading = ref(false)
 
@@ -113,6 +120,9 @@ const { success, error, info } = useToast()
 
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
+  if (!editingId.value) {
+    eventLanguage.value = locale.value
+  }
 }
 
 const fetchEvents = async () => {
@@ -151,12 +161,13 @@ const handleSubmit = async () => {
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ name: name.value, description: description.value })
+      body: JSON.stringify({ name: name.value, description: description.value, language: eventLanguage.value })
     })
 
     if (response.ok) {
       name.value = ''
       description.value = ''
+      eventLanguage.value = locale.value
       const wasEditing = !!editingId.value
       editingId.value = null
       fetchEvents()
@@ -189,6 +200,7 @@ const deleteEvent = async (id) => {
 const editEvent = (event) => {
   name.value = event.name
   description.value = event.description
+  eventLanguage.value = event.language || locale.value
   editingId.value = event.id
 }
 
@@ -196,6 +208,7 @@ const cancelEdit = () => {
   name.value = ''
   description.value = ''
   editingId.value = null
+  eventLanguage.value = locale.value
 }
 
 const viewDetails = (event) => {
@@ -419,6 +432,7 @@ const goToLibrary = () => {
   margin-bottom: 12px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
