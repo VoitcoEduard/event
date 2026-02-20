@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"strings" // Re-adding strings because it is used for routing
+	"os"
+	"strings"
 
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
 	"github.com/user/go-expo-sample/backend/hub"
-	"github.com/user/go-expo-sample/backend/utils" // New import
+	"github.com/user/go-expo-sample/backend/utils"
 )
 
 type Response struct {
@@ -366,22 +367,39 @@ func main() {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		utils.DebugLog("Received request: %s %s", r.Method, r.URL.Path)
-		enableCors(w, r)
-		if r.Method == "OPTIONS" {
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		response := Response{Message: "Hello from Go Backend!"}
-
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			utils.DebugLog("Error encoding response: %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-	})
+	// Serve the Vue SPA from the ./dist directory (built by `npm run build`).
+	// Any path not matched by an API handler above falls through here.
+	// Unknown paths get index.html so Vue Router handles client-side routing.
+	distDir := "./dist"
+	if _, err := os.Stat(distDir); err == nil {
+		fs := http.FileServer(http.Dir(distDir))
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			utils.DebugLog("Static request: %s %s", r.Method, r.URL.Path)
+			enableCors(w, r)
+			// If the requested file exists in dist/, serve it directly.
+			// Otherwise fall back to index.html for Vue Router history mode.
+			if _, err := os.Stat(distDir + r.URL.Path); os.IsNotExist(err) {
+				http.ServeFile(w, r, distDir+"/index.html")
+				return
+			}
+			fs.ServeHTTP(w, r)
+		})
+	} else {
+		// No dist/ folder — local dev mode, return a simple JSON health check.
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			utils.DebugLog("Received request: %s %s", r.Method, r.URL.Path)
+			enableCors(w, r)
+			if r.Method == "OPTIONS" {
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			response := Response{Message: "Hello from Go Backend!"}
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				utils.DebugLog("Error encoding response: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		})
+	}
 
 	port := ":8080"
 	utils.DebugLog("Server listening on %s", port)

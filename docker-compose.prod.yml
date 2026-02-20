@@ -1,0 +1,42 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────
+#  PRODUCTION  (Asustor NAS / Portainer stack)
+#  MongoDB runs as a SEPARATE container/stack.
+#  Usage: docker compose -f docker-compose.prod.yml up -d
+# ─────────────────────────────────────────────
+
+services:
+
+  app:
+    # Pre-built AMD64 image from GitLab registry (frontend + backend bundled)
+    image: registry.gitlab.com/octiov.ed-group/nas-deploy/event_v2:latest
+    container_name: go_server_app
+    restart: always
+    pull_policy: always
+    # Force AMD64 — prevents "exec format error" on the Asustor NAS (Intel Celeron)
+    platform: linux/amd64
+    environment:
+      PORT: 8080
+      # Point to your separate MongoDB container.
+      # Replace "mongo" with the actual container name or IP if on a different network.
+      MONGO_URI: mongodb://mongo:27017
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD} # set in .env or Portainer env vars
+    ports:
+      - "8080:8080"
+    networks:
+      - game_net
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_tunnel
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN} # set in .env or Portainer env vars
+    networks:
+      - game_net
+
+networks:
+  game_net:
+    driver: bridge

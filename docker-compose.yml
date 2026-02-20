@@ -1,48 +1,62 @@
 version: '3.8'
 
-services:
-  mongo:
-    image: mongo:latest
-    ports:
-      - "0.0.0.0:27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+# ─────────────────────────────────────────────
+#  LOCAL DEVELOPMENT
+#  Usage: docker compose up --build
+# ─────────────────────────────────────────────
 
-  backend:
+services:
+
+  mongo:
+    image: mongo:7
+    container_name: go_server_mongo_dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017" # expose so you can connect with Compass, etc.
+    volumes:
+      - mongo_data_dev:/data/db
+    networks:
+      - game_net
+
+  app:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        DEBUG_MODE: "true"
-    ports:
-      - "0.0.0.0:8080:8080"
+    container_name: go_server_app_dev
+    restart: unless-stopped
     environment:
-      - PORT=8080
-      - MONGO_URI=mongodb://mongo:27017
-      - ADMIN_PASSWORD=admin123
+      PORT: 8080
+      MONGO_URI: mongodb://mongo:27017
+      ADMIN_PASSWORD: dev_password # safe to use a weak password locally
+    ports:
+      - "8080:8080"
     depends_on:
-      mongo:
-        condition: service_healthy
+      - mongo
+    volumes:
+      # Hot-reload: mount source so you can rebuild quickly
+      # (the binary itself is baked into the image; remove this if not needed)
+      - ./backend:/app
+    networks:
+      - game_net
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: go_server_frontend_dev
+    restart: unless-stopped
     ports:
-      - "0.0.0.0:8081:8081"
+      - "8081:8081" # Vite dev server
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=http://192.168.100.58:8080
-    depends_on:
-      - backend
+      - ./frontend:/app # live-reload: source changes are reflected instantly
+      - /app/node_modules # keep container's node_modules isolated
+    networks:
+      - game_net
 
 volumes:
-  mongo_data:
+  mongo_data_dev:
+
+
+networks:
+  game_net:
+    driver: bridge

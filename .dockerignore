@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Node
+frontend/node_modules
+frontend/dist
+
+# Go build cache and binaries
+backend/.cache
+backend/.go
+backend/server
+backend/server_debug
+backend/main
+
+# Secrets
+.env
+
+# macOS
+.DS_Store
+
+# Temp
+.tmp/
+.npm-cache/
+
+# Plans / docs
+plans/
+*.jpg
+*.md

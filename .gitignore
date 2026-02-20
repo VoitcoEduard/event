@@ -1,0 +1,19 @@
+# Secrets — never commit these
+.env
+
+# Go build output
+backend/server
+backend/server_debug
+backend/main
+
+# Node / frontend
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# macOS
+.DS_Store
+
+# Temp files
+.tmp/
+.npm-cache/

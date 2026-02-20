@@ -29,10 +29,18 @@ class QuizWebSocket {
         this.isBigScreen = isBigScreen
         this.intentionalDisconnect = false
 
-        // Determine WS URL from API_BASE_URL (http -> ws, https -> wss)
-        const apiUrl = new URL(API_BASE_URL)
-        const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-        const wsUrl = `${protocol}//${apiUrl.host}/ws`
+        // Determine WS URL.
+        // If API_BASE_URL is empty (same-origin build), derive from current page location.
+        let protocol, host
+        if (API_BASE_URL) {
+            const apiUrl = new URL(API_BASE_URL)
+            protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+            host = apiUrl.host
+        } else {
+            protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+            host = window.location.host
+        }
+        const wsUrl = `${protocol}//${host}/ws`
 
         console.log('Connecting to WebSocket:', wsUrl)
 
