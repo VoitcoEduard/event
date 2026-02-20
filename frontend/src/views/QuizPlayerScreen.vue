@@ -300,8 +300,18 @@ const imageOptionUrls = computed(() => {
     }))
 }) 
 
-
-
+// Preload images for correct_picture questions during presenting phase
+const preloadImages = (question) => {
+    if (question?.type !== 'correct_picture') return
+    const imageUrls = question.imageOptions?.map(opt => getImageUrl(opt.imageId)) || []
+    console.log('[DEBUG] Preloading images for correct_picture question:', imageUrls.length, 'images')
+    imageUrls.forEach(url => {
+        if (url) {
+            const img = new Image()
+            img.src = url  // Browser will cache this
+        }
+    })
+}
 
 const hasSelected = computed(() => {
     return selectedAnswer.value !== null || selectedIndices.value.length > 0
@@ -573,6 +583,13 @@ onMounted(async () => {
             preselectedIndex.value = 0
             isSubmitting.value = false
             hasPreselection.value = true
+            
+            // Preload images for correct_picture questions during the presenting phase
+            // This ensures images are cached before the active answering phase begins
+            const question = questionCache.get(currentQuestionIndex.value)
+            if (question) {
+                preloadImages(question)
+            }
         }
         
         if (canTransition(newState)) {
