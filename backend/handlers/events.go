@@ -38,6 +38,8 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 			Name:     "Welcome",
 			IsActive: true,
 			Data: map[string]any{
+				"mandatoryOnEntry":    true,
+				"hideAfterCompletion": true,
 				"timeline": []map[string]any{
 					{
 						"id":   "step_welcome_name",

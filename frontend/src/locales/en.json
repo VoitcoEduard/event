@@ -278,7 +278,13 @@
       "untitled": "Untitled Form",
       "steps_count": "{count} Steps",
       "no_steps": "Your form has no steps. Please add at least one.",
-      "published": "Form configuration published successfully!"
+      "published": "Form configuration published successfully!",
+      "settings_title": "Module Settings",
+      "mandatory_entry": "Mandatory on Entry",
+      "mandatory_entry_desc": "Redirect users to this form immediately when they join",
+      "hide_completed": "Hide After Completion",
+      "hide_completed_desc": "Hide this form from the active activities list once completed",
+      "save_btn": "Save Form"
     }
   },
   "quiz_editor": {

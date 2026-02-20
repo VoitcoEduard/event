@@ -278,7 +278,13 @@
       "untitled": "Formular fără titlu",
       "steps_count": "Pași: {count}",
       "no_steps": "Formularul nu are pași. Te rugăm să adaugi cel puțin unul.",
-      "published": "Configurația formularului a fost publicată cu succes!"
+      "published": "Configurația formularului a fost publicată cu succes!",
+      "settings_title": "Setări Modul",
+      "mandatory_entry": "Obligatoriu la intrare",
+      "mandatory_entry_desc": "Redirecționează utilizatorii la acest formular imediat ce se alătură",
+      "hide_completed": "Ascunde după completare",
+      "hide_completed_desc": "Ascunde acest formular din lista de activități active odată completat",
+      "save_btn": "Salvează Formularul"
     }
   },
   "quiz_editor": {

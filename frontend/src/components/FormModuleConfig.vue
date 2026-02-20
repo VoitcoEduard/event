@@ -27,12 +27,29 @@
             class="form-editor-instance"
           />
 
+          <div class="settings-bar">
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="mandatoryOnEntry" />
+                {{ $t('form_module.config.mandatory_entry') }}
+              </label>
+              <p class="setting-desc">{{ $t('form_module.config.mandatory_entry_desc') }}</p>
+            </div>
+            <div class="setting-item">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="hideAfterCompletion" />
+                {{ $t('form_module.config.hide_completed') }}
+              </label>
+              <p class="setting-desc">{{ $t('form_module.config.hide_completed_desc') }}</p>
+            </div>
+          </div>
+
           <div class="action-bar">
             <div class="status-text">
                 {{ $t('form_module.config.steps_count', { count: timeline.length }) }}
             </div>
             <button class="publish-btn" @click="handlePublish" :disabled="loading">
-              {{ loading ? $t('quiz_config.saving') : $t('admin.details.update_btn') }}
+              {{ loading ? $t('quiz_config.saving') : $t('form_module.config.save_btn') }}
             </button>
           </div>
         </div>
@@ -84,7 +101,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import FormEditor from './FormEditor.vue'
 
@@ -98,6 +115,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'update'])
 
 const timeline = ref([])
+const mandatoryOnEntry = ref(false)
+const hideAfterCompletion = ref(false)
 const loading = ref(false)
 const templates = ref([])
 const loadingTemplates = ref(false)
@@ -108,10 +127,16 @@ const showSaveTemplateModal = ref(false)
 const { success, error, info } = useToast()
 
 watch(() => [props.visible, props.module], ([visible, mod]) => {
-  if (visible && mod?.data?.timeline) {
-    timeline.value = JSON.parse(JSON.stringify(mod.data.timeline))
+  if (visible && mod?.data) {
+    if (mod.data.timeline) {
+      timeline.value = JSON.parse(JSON.stringify(mod.data.timeline))
+    }
+    mandatoryOnEntry.value = mod.data.mandatoryOnEntry ?? false
+    hideAfterCompletion.value = mod.data.hideAfterCompletion ?? false
   } else if (visible) {
     timeline.value = []
+    mandatoryOnEntry.value = false
+    hideAfterCompletion.value = false
   }
 }, { immediate: true })
 
@@ -129,8 +154,14 @@ const handlePublish = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}/publish`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: { timeline: timeline.value } })
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ 
+        data: { 
+          timeline: timeline.value,
+          mandatoryOnEntry: mandatoryOnEntry.value,
+          hideAfterCompletion: hideAfterCompletion.value
+        } 
+      })
     })
 
     if (response.ok) {
@@ -190,7 +221,7 @@ const saveAsTemplate = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/templates`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         name: templateName.value,
         description: 'Created from ' + props.module.name,
@@ -309,6 +340,44 @@ const modalStyle = computed(() => ({
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.settings-bar {
+  background-color: #1C1C1E;
+  border-top: 1px solid #2C2C2E;
+  padding: 16px 20px;
+  display: flex;
+  gap: 20px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.setting-desc {
+  color: #8E8E93;
+  font-size: 12px;
+  margin: 0;
+  padding-left: 24px;
 }
 
 .status-text { color: #8E8E93; }

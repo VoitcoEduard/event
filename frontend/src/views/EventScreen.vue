@@ -112,7 +112,23 @@ const fetchEvent = async () => {
       const data = await response.json()
       currentEvent.value = data
       if (data.modules) {
-        activeModules.value = data.modules.filter(m => m.isActive)
+        const active = data.modules.filter(m => m.isActive)
+        
+        // Filter out completed modules that should be hidden
+        activeModules.value = active.filter(m => {
+          if (m.data?.hideAfterCompletion) {
+            return localStorage.getItem(`completed_module_${m.id}`) !== 'true'
+          }
+          return true
+        })
+
+        // Auto-redirect to mandatory uncompleted module if not already in a module
+        if (!selectedModule.value) {
+            const mandatoryModule = active.find(m => m.data?.mandatoryOnEntry && localStorage.getItem(`completed_module_${m.id}`) !== 'true')
+            if (mandatoryModule) {
+               selectModule(mandatoryModule)
+            }
+        }
       }
     }
   } catch (error) {
@@ -122,6 +138,7 @@ const fetchEvent = async () => {
 
 onMounted(() => {
   if (currentEvent.value?.id) {
+    fetchEvent() // Initial fetch
     pollingInterval = setInterval(fetchEvent, 3000)
   }
 })
@@ -141,6 +158,10 @@ const selectModule = (module) => {
 }
 
 const handleModuleComplete = (data) => {
+  if (selectedModule.value) {
+    localStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true')
+  }
+
   if (selectedModule.value?.name === 'Welcome' && data) {
     const name = data['step_welcome_name']
     if (name) {
@@ -150,6 +171,7 @@ const handleModuleComplete = (data) => {
   }
   setTimeout(() => {
     selectedModule.value = null
+    fetchEvent() // Refresh immediately
   }, 2000)
 }
 
