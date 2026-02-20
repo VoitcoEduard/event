@@ -247,6 +247,17 @@ func main() {
 			}
 		}
 
+		if strings.HasSuffix(r.URL.Path, "/slides") {
+			if r.Method == "GET" {
+				handlers.GetSlides(w, r)
+				return
+			}
+			if r.Method == "PUT" {
+				handlers.VerifyAuth(handlers.SaveSlides)(w, r)
+				return
+			}
+		}
+
 		switch r.Method {
 		case "GET":
 			handlers.GetEvent(w, r)

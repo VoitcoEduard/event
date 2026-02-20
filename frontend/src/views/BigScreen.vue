@@ -25,6 +25,35 @@
        <h1 class="custom-text-display">{{ overrideScreenState.customText }}</h1>
     </div>
 
+    <!-- New Slide View Mode -->
+    <div v-else-if="overrideScreenState?.currentView === 'slide'" class="slide-bigscreen-container" :style="{ backgroundColor: overrideScreenState.activeSlide?.backgroundColor || '#000000' }">
+      <!-- Background Image -->
+      <img v-if="overrideScreenState.activeSlide?.backgroundImage" :src="getImageUrl(overrideScreenState.activeSlide.backgroundImage)" class="slide-bg-image" />
+      
+      <!-- Canvas Elements -->
+      <div 
+        v-for="element in overrideScreenState.activeSlide?.elements || []" 
+        :key="element.id"
+        class="slide-element"
+        :style="{
+          left: element.x + '%',
+          top: element.y + '%',
+          width: element.width + '%',
+          height: element.height + '%',
+          color: element.color || '#ffffff',
+          fontSize: getScaledFontSize(element.fontSize) + 'px',
+          textAlign: element.textAlign || 'center',
+          fontWeight: element.fontWeight || 'normal'
+        }"
+      >
+        <div v-if="element.type === 'text'" class="slide-text">{{ element.content }}</div>
+        <img v-else-if="element.type === 'image'" :src="getImageUrl(element.content)" class="slide-image" />
+        <div v-else-if="element.type === 'qr'" class="slide-qr">
+           <QRCodeVue :value="joinUrl" :size="300" level="H" />
+        </div>
+      </div>
+    </div>
+
     <div v-else-if="overrideScreenState?.currentView === 'screensaver'" class="screensaver-container">
       <img 
         v-if="screensaverImageUrl" 
@@ -443,6 +472,12 @@ import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
 import { getScreensavers } from '../services/media'
+
+const getScaledFontSize = (size) => {
+    // 1920 is the base width for big-screen
+    const ratio = window.innerWidth / 1920;
+    return size * ratio;
+}
 
 const { locale } = useI18n()
 const route = useRoute()
@@ -965,6 +1000,54 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Newly added Slide Viewer mode */
+.slide-bigscreen-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  overflow: hidden;
+}
+
+.slide-bg-image {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.slide-element {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slide-text {
+  width: 100%;
+  word-wrap: break-word;
+}
+
+.slide-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.slide-qr {
+  background: white;
+  padding: 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
 .big-screen {
   width: 100vw;
   height: 100vh;

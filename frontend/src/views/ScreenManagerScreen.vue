@@ -3,7 +3,7 @@
     <div class="header">
       <div class="header-left">
         <button class="back-btn" @click="goBack">← {{ $t('admin.details.back_btn') }}</button>
-        <h1>{{ $t('screen_manager.title') }}</h1>
+        <h1>Slide Editor</h1>
       </div>
       <div class="header-right">
         <button 
@@ -13,130 +13,196 @@
         >
           {{ isBigScreenOpen ? $t('admin.details.close_big_screen') : $t('screen_manager.open_big_screen') }}
         </button>
+        <button class="push-btn" @click="pushToScreen" :disabled="!activeSlide">
+          Push Current Slide
+        </button>
+        <button class="save-btn" @click="saveSlides">
+          Save All
+        </button>
       </div>
     </div>
 
-    <div class="main-content">
-      <div class="preview-panel">
-        <h2>{{ $t('screen_manager.live_preview') }}</h2>
-        <div class="preview-container">
-           <!-- Render a mini version of what the Big Screen sees based on screenState -->
-           <div v-if="screenState.currentView === 'welcome'" class="mini-view mini-welcome">
-              <h1>{{ $t('quiz.host.join_title') }}</h1>
-              <div v-if="screenState.showWelcomeQR" class="qr-placeholder-mini">QR</div>
-              <div class="pin-mini">PIN: {{ eventId }}</div>
-           </div>
-           <div v-else-if="screenState.currentView === 'custom_text'" class="mini-view mini-custom-text">
-              <h2>{{ screenState.customText || 'Your text here' }}</h2>
-           </div>
-           <div v-else-if="screenState.currentView === 'screensaver'" class="mini-view mini-screensaver">
-              <img v-if="screensaverPreview" :src="screensaverPreview" />
-              <div v-else class="empty-mini">Screensaver</div>
-           </div>
-           <div v-else class="mini-view mini-module">
-              <h2>Module Active</h2>
-           </div>
+    <div class="editor-layout">
+      <!-- Left Sidebar -->
+      <div class="sidebar left-sidebar">
+        <h3>Slides</h3>
+        <ul class="slide-list">
+          <li 
+            v-for="slide in slides" 
+            :key="slide.id"
+            :class="{ active: activeSlideId === slide.id }"
+            @click="selectSlide(slide.id)"
+          >
+            <div class="slide-item">
+              <span>{{ slide.name || slide.type }}</span>
+              <button 
+                v-if="slide.type === 'custom'" 
+                class="icon-btn delete-slide" 
+                @click.stop="deleteSlide(slide.id)"
+              >
+                ✕
+              </button>
+            </div>
+          </li>
+        </ul>
+        <button class="add-slide-btn" @click="addCustomSlide">+ Add Custom Slide</button>
+      </div>
+
+      <!-- Center Canvas -->
+      <div class="canvas-area">
+        <div 
+          class="canvas-container" 
+          ref="canvasRef"
+          :style="{ backgroundColor: activeSlide?.backgroundColor || '#000000' }"
+          @click="deselectElement"
+          @mousemove="onMouseMove"
+          @mouseup="onMouseUp"
+          @mouseleave="onMouseUp"
+        >
+          <img v-if="activeSlide?.backgroundImage" :src="getImageUrl(activeSlide.backgroundImage)" class="canvas-bg-image" />
+          
+          <div
+            v-for="element in activeSlideElements"
+            :key="element.id"
+            class="canvas-element"
+            :class="{ selected: selectedElementId === element.id }"
+            :style="{
+              left: element.x + '%',
+              top: element.y + '%',
+              width: element.width + '%',
+              height: element.height + '%',
+              color: element.color || '#ffffff',
+              fontSize: getScaledFontSize(element.fontSize) + 'px',
+              textAlign: element.textAlign || 'center',
+              fontWeight: element.fontWeight || 'normal'
+            }"
+            @mousedown.stop="startDrag(element, $event)"
+            @click.stop="selectElement(element.id)"
+          >
+            <div class="el-content">
+              <div v-if="element.type === 'text'" class="el-text">{{ element.content || 'Text' }}</div>
+              <img v-else-if="element.type === 'image'" :src="getImageUrl(element.content)" class="el-image" />
+              <div v-else-if="element.type === 'qr'" class="el-qr">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=example" class="el-image" />
+              </div>
+            </div>
+            <div class="resize-handle" v-if="selectedElementId === element.id" @mousedown.stop="startResize(element, $event)"></div>
+          </div>
         </div>
       </div>
 
-      <div class="controls-panel">
-        
-        <!-- Welcome Slide -->
-        <div class="control-card" :class="{ active: screenState.currentView === 'welcome' }">
-          <div class="card-header">
-            <h2>{{ $t('screen_manager.welcome_slide') }}</h2>
-            <button class="push-btn" @click="pushState('welcome')">
-              {{ $t('screen_manager.push_to_screen') }}
-            </button>
+      <!-- Right Sidebar -->
+      <div class="sidebar right-sidebar" v-if="activeSlide">
+        <h3>Properties</h3>
+        <div v-if="selectedElement" class="props-panel">
+          <h4>Element</h4>
+          <div v-if="selectedElement.type === 'text'">
+             <label>Text Content</label>
+             <textarea v-model="selectedElement.content" rows="3"></textarea>
+             
+             <label>Text Color</label>
+             <input type="color" v-model="selectedElement.color" />
+
+             <label>Font Size</label>
+             <input type="range" min="10" max="200" v-model.number="selectedElement.fontSize" />
+             <span>{{ selectedElement.fontSize }}px</span>
           </div>
-          <div class="card-body">
-            <label class="toggle-label">
-              <input type="checkbox" v-model="localState.showWelcomeQR" @change="saveState" />
-              {{ $t('screen_manager.show_qr') }}
-            </label>
-            <p class="hint">{{ $t('screen_manager.welcome_hint') }}</p>
+          <div v-if="selectedElement.type === 'image'">
+             <label>Image</label>
+             <button class="action-btn" @click="showImageSelector('element')">Select an Image</button>
+          </div>
+          
+          <div class="pos-inputs mt-3">
+             <div class="input-group"><label>X(%)</label><input type="number" v-model="selectedElement.x" step="1"/></div>
+             <div class="input-group"><label>Y(%)</label><input type="number" v-model="selectedElement.y" step="1"/></div>
+             <div class="input-group"><label>W(%)</label><input type="number" v-model="selectedElement.width" step="1"/></div>
+             <div class="input-group"><label>H(%)</label><input type="number" v-model="selectedElement.height" step="1"/></div>
+          </div>
+          <button v-if="activeSlide.type !== 'screensaver'" class="danger-btn mt-4" @click="deleteSelectedElement">Delete Element</button>
+        </div>
+        <div v-else class="props-panel">
+          <h4>Slide</h4>
+          <div class="input-group mb-2">
+            <label>Name</label>
+            <input type="text" v-model="activeSlide.name" :disabled="activeSlide.type !== 'custom'" />
+          </div>
+          <div class="input-group mb-2">
+            <label>Background Color</label>
+            <input type="color" v-model="activeSlide.backgroundColor" />
+          </div>
+          <div class="input-group mb-3">
+            <label>Background Image</label>
+            <button class="action-btn block-btn" @click="showImageSelector('bg')">Select Background</button>
+            <button v-if="activeSlide.backgroundImage" @click="activeSlide.backgroundImage = ''" class="danger-btn mt-2 block-btn">Clear Image</button>
+          </div>
+          
+          <hr v-if="activeSlide.type !== 'screensaver'" />
+          <h4 v-if="activeSlide.type !== 'screensaver'">Add Elements</h4>
+          <button class="action-btn block-btn mb-2" v-if="activeSlide.type !== 'screensaver'" @click="addElement('text')">+ Add Text</button>
+          <button class="action-btn block-btn mb-2" v-if="activeSlide.type !== 'screensaver'" @click="addElement('image')">+ Add Image</button>
+          <button class="action-btn block-btn" v-if="activeSlide.type === 'welcome'" @click="addElement('qr')">+ Add QR Code</button>
+          
+          <div v-if="activeSlide.type === 'custom'" class="mt-4">
+            <hr />
+            <h4 class="mt-3">Template Options</h4>
+            <button class="action-btn block-btn mb-2" @click="saveAsTemplate">Save as Template</button>
+            <button class="action-btn block-btn" @click="openTemplateSelector">Apply Template</button>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Custom Text Slide -->
-        <div class="control-card" :class="{ active: screenState.currentView === 'custom_text' }">
-          <div class="card-header">
-            <h2>{{ $t('screen_manager.custom_text_slide') }}</h2>
-            <button class="push-btn" @click="pushState('custom_text')">
-              {{ $t('screen_manager.push_to_screen') }}
-            </button>
-          </div>
-          <div class="card-body">
-            <textarea 
-              v-model="localState.customText" 
-              @blur="saveState"
-              :placeholder="$t('screen_manager.custom_text_placeholder')"
-              rows="3"
-            ></textarea>
-          </div>
+    <!-- Templates Selector Modal -->
+    <div v-if="isTemplateSelectorOpen" class="modal-overlay" @click.self="isTemplateSelectorOpen = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Apply Template</h3>
+          <button class="close-btn" @click="isTemplateSelectorOpen = false">✕</button>
         </div>
-
-        <!-- Screensaver -->
-        <div class="control-card" :class="{ active: screenState.currentView === 'screensaver' }">
-          <div class="card-header">
-            <h2>{{ $t('admin.details.screensaver') }}</h2>
-            <button class="push-btn" @click="pushState('screensaver')">
-              {{ $t('screen_manager.push_to_screen') }}
-            </button>
-          </div>
-          <div class="card-body">
-            <div v-if="screensaverPreview" class="screensaver-preview">
-              <img :src="screensaverPreview" alt="Screensaver preview" />
+        <div class="modal-body">
+          <div v-if="templates.length === 0" style="text-align:center;">No templates saved.</div>
+          <div class="screensavers-grid">
+            <div 
+              v-for="t in templates" 
+              :key="t.id" 
+              class="screensaver-option template-option"
+              @click="applyTemplate(t)"
+            >
+              <div class="template-box">
+                <span class="template-name">{{ t.name }}</span>
+              </div>
             </div>
-            <div class="screensaver-upload">
-              <button class="action-button" @click="handleScreensaverUpload">
-                {{ $t('admin.details.select_library') }}
-              </button>
-              <button 
-                v-if="screensaverPreview"
-                class="action-button delete-btn"
-                @click="removeScreensaver"
-              >
-                {{ $t('admin.details.remove_image') }}
-              </button>
-            </div>
           </div>
         </div>
-
       </div>
     </div>
 
     <!-- Library Selector Modal -->
-    <div v-if="showLibrarySelector" class="modal-overlay" @click.self="showLibrarySelector = false">
+    <div v-if="isImageSelectorOpen" class="modal-overlay" @click.self="isImageSelectorOpen = false">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>{{ $t('admin.details.select_title') }}</h3>
-          <button class="close-btn" @click="showLibrarySelector = false">✕</button>
+          <h3>Select Image</h3>
+          <button class="close-btn" @click="isImageSelectorOpen = false">✕</button>
         </div>
         <div class="modal-body">
-          <div v-if="screensavers.length === 0" class="empty-state">
-            <p>{{ $t('admin.details.no_screensavers') }}</p>
-          </div>
-          <div v-else class="screensavers-grid">
+          <div class="screensavers-grid">
             <div 
-              v-for="s in screensavers" 
+              v-for="s in imageLibrary" 
               :key="s.id" 
               class="screensaver-option"
-              @click="selectScreensaver(s)"
+              @click="handleImageSelect(s.mediaId || s.id)"
             >
-              <img :src="s.thumbnailUrl" />
-              <p>{{ s.name }}</p>
+              <img :src="s.thumbnailUrl || getImageUrl(s.mediaId || s.id)" />
             </div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
@@ -150,67 +216,141 @@ const { success, error } = useToast()
 
 const eventId = route.params.id
 
-// BigScreen window reference
 const bigscreenWindow = ref(null)
 const isBigScreenOpen = computed(() => bigscreenWindow.value && !bigscreenWindow.value.closed)
 
-// Current saved state
-const screenState = ref({
-  currentView: 'screensaver',
-  customText: '',
-  showWelcomeQR: true,
-  activeModuleId: ''
-})
+const slides = ref([])
+const activeSlideId = ref(null)
 
-// Local editable state
-const localState = ref({
-  customText: '',
-  showWelcomeQR: true
-})
+const activeSlide = computed(() => slides.value.find(s => s.id === activeSlideId.value))
+const activeSlideElements = computed(() => activeSlide.value?.elements || [])
 
-const screensaverPreview = ref('')
-const showLibrarySelector = ref(false)
-const screensavers = ref([])
+const selectedElementId = ref(null)
+const selectedElement = computed(() => activeSlideElements.value.find(e => e.id === selectedElementId.value))
 
-onMounted(() => {
-  fetchScreenState()
-  fetchScreensaverConfig()
-})
+const canvasRef = ref(null)
+const isDragging = ref(false)
+const isResizing = ref(false)
+const dragItem = ref(null)
+const dragStart = ref({ x: 0, y: 0, startX: 0, startY: 0, startW: 0, startH: 0 })
 
-const fetchScreenState = async () => {
+const isImageSelectorOpen = ref(false)
+const imageLibrary = ref([])
+const imageSelectorTarget = ref('') // 'bg' or 'element'
+
+const isTemplateSelectorOpen = ref(false)
+const templates = ref([])
+
+const fetchTemplates = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}/screen-state`)
+    const res = await fetch(`${API_BASE_URL}/templates`, { headers: getAuthHeaders() })
     if (res.ok) {
-      const data = await res.json()
-      screenState.value = data
-      localState.value.customText = data.customText
-      localState.value.showWelcomeQR = data.showWelcomeQR
+      const allTpls = await res.json()
+      templates.value = allTpls.filter(t => t.moduleType === 'slide')
     }
-  } catch (err) {
-    console.error('Failed to fetch screen state', err)
+  } catch(err) {
+    console.error(err)
   }
 }
 
-const fetchScreensaverConfig = async () => {
+const saveAsTemplate = async () => {
+  if(!activeSlide.value) return;
+  const tplName = prompt("Enter a name for this template:", activeSlide.value.name);
+  if(!tplName) return;
+
   try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}/screensaver`)
+    const payload = {
+      name: tplName,
+      moduleType: 'slide',
+      data: {
+        backgroundColor: activeSlide.value.backgroundColor,
+        backgroundImage: activeSlide.value.backgroundImage,
+        elements: activeSlide.value.elements
+      }
+    };
+    const res = await fetch(`${API_BASE_URL}/templates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(payload)
+    });
+    if(res.ok) {
+      success('Saved as template successfully');
+    }
+  } catch(err) {
+    error('Failed to save template');
+  }
+}
+
+const openTemplateSelector = async () => {
+  await fetchTemplates();
+  isTemplateSelectorOpen.value = true; // Fix modal display
+}
+
+const applyTemplate = (tpl) => {
+  if(!activeSlide.value || !tpl.data) return;
+  
+  if (confirm(`Apply template "${tpl.name}"? This will overwrite the current slide.`)) {
+    activeSlide.value.backgroundColor = tpl.data.backgroundColor || '#1E1E1E';
+    activeSlide.value.backgroundImage = tpl.data.backgroundImage || '';
+    
+    // Copy elements to generate new IDs so they don't crash
+    const newElements = (tpl.data.elements || []).map(el => ({
+      ...el,
+      id: generateId()
+    }))
+    activeSlide.value.elements = newElements;
+    
+    isTemplateSelectorOpen.value = false;
+    success('Template applied');
+  }
+}
+
+onMounted(() => {
+  fetchSlides()
+})
+
+const fetchSlides = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/${eventId}/slides`, {
+        headers: getAuthHeaders()
+    })
     if (res.ok) {
-      const data = await res.json()
-      if (data.imageId) {
-        screensaverPreview.value = getImageUrl(data.imageId)
+      slides.value = await res.json()
+      if (slides.value.length > 0 && !activeSlideId.value) {
+        activeSlideId.value = slides.value[0].id
       }
     }
   } catch (err) {
-    console.error('Failed to fetch screensaver config', err)
+    console.error(err)
+    error('Failed to load slides')
   }
 }
 
-const pushState = async (viewType) => {
+const saveSlides = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/${eventId}/slides`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(slides.value)
+    })
+    if (res.ok) {
+      success('Slides saved successfully')
+    }
+  } catch (err) {
+    console.error(err)
+    error('Failed to save slides')
+  }
+}
+
+const pushToScreen = async () => {
+  if (!activeSlide.value) return
+  
+  // First save to make sure changes are synced
+  await saveSlides()
+
   const payload = {
-    currentView: viewType,
-    customText: localState.value.customText,
-    showWelcomeQR: localState.value.showWelcomeQR,
-    activeModuleId: screenState.value.activeModuleId
+    currentView: 'slide',
+    activeSlide: activeSlide.value
   }
   
   try {
@@ -220,77 +360,173 @@ const pushState = async (viewType) => {
       body: JSON.stringify(payload)
     })
     if (res.ok) {
-      screenState.value = await res.json()
-      success(t('screen_manager.toast_pushed'))
+      success('Pushed to Big Screen')
     }
   } catch (err) {
-    error('Failed to update screen state')
+    error('Failed to push to screen')
   }
 }
 
-const saveState = async () => {
-  // Save local edits without pushing the view if it's not the active one
-  // Actually, we'll just update the backend so the Big Screen can pull it if it's already active.
-  const payload = {
-    ...screenState.value,
-    customText: localState.value.customText,
-    showWelcomeQR: localState.value.showWelcomeQR
+const selectSlide = (id) => {
+  activeSlideId.value = id
+  selectedElementId.value = null
+}
+
+const generateId = () => Math.random().toString(36).substr(2, 9)
+
+const addCustomSlide = () => {
+  const newSlide = {
+    id: generateId(),
+    type: 'custom',
+    name: 'New Custom Slide',
+    backgroundColor: '#1E1E1E',
+    backgroundImage: '',
+    elements: []
   }
-  try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}/screen-state`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify(payload)
-    })
-    if (res.ok) {
-      screenState.value = await res.json()
+  slides.value.push(newSlide)
+  activeSlideId.value = newSlide.id
+}
+
+const deleteSlide = (id) => {
+  if (confirm('Delete this slide?')) {
+    slides.value = slides.value.filter(s => s.id !== id)
+    if (activeSlideId.value === id) {
+      activeSlideId.value = slides.value[0]?.id || null
     }
-  } catch (err) {
-    console.error(err)
   }
 }
 
-const handleScreensaverUpload = async () => {
-  try {
-    screensavers.value = await getScreensavers()
-    showLibrarySelector.value = true
-  } catch (err) {
-    error('Failed to load screensavers')
+const addElement = (type) => {
+  if (!activeSlide.value) return
+  const newEl = {
+    id: generateId(),
+    type,
+    x: 40,
+    y: 40,
+    width: 20,
+    height: 10,
+    content: type === 'text' ? 'New Text' : '',
+    color: '#ffffff',
+    fontSize: 48,
+    textAlign: 'center'
+  }
+  
+  if (type === 'image') {
+    newEl.width = 20
+    newEl.height = 30
+  }
+  if (type === 'qr') {
+    newEl.width = 15
+    newEl.height = 25
+  }
+
+  if (!activeSlide.value.elements) activeSlide.value.elements = []
+  activeSlide.value.elements.push(newEl)
+  selectedElementId.value = newEl.id
+}
+
+const selectElement = (id) => {
+  selectedElementId.value = id
+}
+
+const deselectElement = () => {
+  selectedElementId.value = null
+}
+
+const deleteSelectedElement = () => {
+  if (activeSlide.value && selectedElementId.value) {
+    activeSlide.value.elements = activeSlide.value.elements.filter(e => e.id !== selectedElementId.value)
+    selectedElementId.value = null
   }
 }
 
-const selectScreensaver = async (s) => {
-  try {
-    const configResponse = await fetch(`${API_BASE_URL}/events/${eventId}/screensaver`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ imageId: s.mediaId })
-    })
+// Mouse Drag/Resize logic processing percentage
+const getCanvasRect = () => {
+  if (!canvasRef.value) return null
+  return canvasRef.value.getBoundingClientRect()
+}
 
-    if (configResponse.ok) {
-      screensaverPreview.value = s.thumbnailUrl
-      showLibrarySelector.value = false
-      success(t('admin.details.toast.screensaver_updated'))
-    }
-  } catch (err) {
-    error('Failed to save screensaver')
+const startDrag = (item, e) => {
+  if (activeSlide.value?.type === 'screensaver') return
+  selectElement(item.id)
+  isDragging.value = true
+  dragItem.value = item
+  dragStart.value = {
+    x: e.clientX,
+    y: e.clientY,
+    startX: item.x,
+    startY: item.y
   }
 }
 
-const removeScreensaver = async () => {
-  try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}/screensaver`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ imageId: '', imageUrl: '' })
-    })
-    if (res.ok) {
-      screensaverPreview.value = ''
-      success(t('admin.details.toast.screensaver_removed'))
-    }
-  } catch (err) {
-    error('Failed to remove screensaver')
+const startResize = (item, e) => {
+  if (activeSlide.value?.type === 'screensaver') return
+  selectElement(item.id)
+  isResizing.value = true
+  dragItem.value = item
+  dragStart.value = {
+    x: e.clientX,
+    y: e.clientY,
+    startW: item.width,
+    startH: item.height
   }
+}
+
+const onMouseMove = (e) => {
+  if ((!isDragging.value && !isResizing.value) || !dragItem.value) return
+  const rect = getCanvasRect()
+  if (!rect) return
+  
+  const dx = e.clientX - dragStart.value.x
+  const dy = e.clientY - dragStart.value.y
+  
+  const dxPct = (dx / rect.width) * 100
+  const dyPct = (dy / rect.height) * 100
+
+  if (isDragging.value) {
+    let newX = dragStart.value.startX + dxPct
+    let newY = dragStart.value.startY + dyPct
+    dragItem.value.x = Math.round(newX * 10) / 10
+    dragItem.value.y = Math.round(newY * 10) / 10
+  } else if (isResizing.value) {
+    let newW = dragStart.value.startW + dxPct
+    let newH = dragStart.value.startH + dyPct
+    dragItem.value.width = Math.max(1, Math.round(newW * 10) / 10)
+    dragItem.value.height = Math.max(1, Math.round(newH * 10) / 10)
+  }
+}
+
+const onMouseUp = () => {
+  isDragging.value = false
+  isResizing.value = false
+  dragItem.value = null
+}
+
+const getScaledFontSize = (size) => {
+    if (!canvasRef.value) return size;
+    const cw = canvasRef.value.clientWidth;
+    // Base standard resolution 1920
+    const ratio = cw / 1920;
+    return size * ratio;
+}
+
+const showImageSelector = async (target) => {
+  imageSelectorTarget.value = target
+  try {
+    imageLibrary.value = await getScreensavers()
+    isImageSelectorOpen.value = true
+  } catch (err) {
+    error('Failed to load library')
+  }
+}
+
+const handleImageSelect = (mediaId) => {
+  if (imageSelectorTarget.value === 'bg') {
+    activeSlide.value.backgroundImage = mediaId
+  } else if (imageSelectorTarget.value === 'element' && selectedElement.value) {
+    selectedElement.value.content = mediaId
+  }
+  isImageSelectorOpen.value = false
 }
 
 const goBack = () => {
@@ -317,213 +553,156 @@ const closeBigScreen = () => {
 <style scoped>
 .screen-manager {
   min-height: 100vh;
-  background-color: #121212;
-  color: white;
-  padding: 40px;
+  background-color: #0d0d0d;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
 }
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
-  background-color: #1E1E1E;
-  padding: 20px;
-  border-radius: 12px;
+  padding: 15px 30px;
+  background-color: #1a1a1d;
+  border-bottom: 1px solid #333;
 }
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
+.header-left { display: flex; align-items: center; gap: 20px; }
+.header-left h1 { margin: 0; font-size: 1.5rem; font-weight: 500; }
 .back-btn {
-  background: #333;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
+  background: transparent; border: 1px solid #444; color: #fff;
+  padding: 6px 12px; border-radius: 4px; cursor: pointer;
 }
-.launch-btn {
-  background: #FF9500;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
+.header-right { display: flex; gap: 10px; }
+.launch-btn, .push-btn, .save-btn, .action-btn, .danger-btn, .add-slide-btn {
+  padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;
+  transition: opacity 0.2s;
 }
-.launch-btn.close-btn {
-  background-color: #FF3B30;
-}
-.launch-btn.close-btn:hover {
-  background-color: #FF5C54;
-}
-.main-content {
+.launch-btn { background: #3b82f6; color: white; }
+.launch-btn.close-btn { background: #ef4444; }
+.push-btn { background: #10b981; color: white; }
+.push-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-btn { background: #6366f1; color: white; }
+.action-btn { background: #4b5563; color: white; }
+.danger-btn { background: #ef4444; color: white; }
+.add-slide-btn { background: #374151; color: white; width: 100%; margin-top: 10px; }
+.icon-btn { background: transparent; color: #9ca3af; border: none; cursor: pointer; }
+.icon-btn:hover { color: #f87171; }
+.block-btn { display: block; width: 100%; }
+
+.editor-layout {
   display: flex;
-  flex-direction: column;
-  gap: 30px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-.controls-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.control-card {
-  background: #1E1E1E;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  padding: 20px;
-  transition: border-color 0.3s;
-}
-.control-card.active {
-  border-color: #4CAF50;
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-.card-header h2 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-.push-btn {
-  background: #4CAF50;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.screensaver-preview {
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #000;
-  margin-bottom: 10px;
-  aspect-ratio: 16/9;
-}
-.screensaver-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-textarea {
-  width: 100%;
-  background: #2A2A2A;
-  color: white;
-  border: 1px solid #444;
-  padding: 10px;
-  border-radius: 6px;
-  resize: vertical;
-}
-.preview-panel {
-  background: #1E1E1E;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-}
-.preview-container {
   flex: 1;
-  background: #000;
-  border-radius: 8px;
-  margin-top: 15px;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 250px;
+  background: #151515;
+  border-right: 1px solid #333;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+}
+.right-sidebar { border-left: 1px solid #333; border-right: none; }
+.sidebar h3 { margin-top: 0; font-weight: 500; color: #9ca3af; font-size: 0.9rem; text-transform: uppercase; }
+
+.slide-list { list-style: none; padding: 0; margin: 0; }
+.slide-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 15px; background: #222; border-radius: 6px; margin-bottom: 8px; cursor: pointer;
+}
+.slide-list li.active .slide-item { background: #3b82f6; color: white; }
+
+.canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center; justify-content: center;
+  background: #111;
   overflow: hidden;
   position: relative;
-  aspect-ratio: 16/9;
 }
-.mini-view {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-.mini-welcome {
-  background: linear-gradient(135deg, #1A1A1D 0%, #000000 100%);
-}
-.mini-custom-text {
-  background: #2c3e50;
-}
-.mini-custom-text h2 {
-  font-size: 2rem;
-  max-width: 80%;
-}
-.mini-screensaver img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.qr-placeholder-mini {
-  width: 100px;
-  height: 100px;
-  background: white;
-  color: black;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 10px 0;
-}
-.action-button {
-  background: #2196F3;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.delete-btn {
-  background: #f44336;
-  margin-left: 10px;
-}
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-content {
-  background: #1E1E1E;
-  padding: 20px;
-  border-radius: 12px;
+
+/* 16:9 Canvas */
+.canvas-container {
   width: 90%;
-  max-width: 800px;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border: 1px solid #333;
+  overflow: hidden;
 }
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.screensavers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 15px;
-}
-.screensaver-option {
-  cursor: pointer;
-  text-align: center;
-}
-.screensaver-option img {
-  width: 100%;
-  aspect-ratio: 16/9;
+
+.canvas-bg-image {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
   object-fit: cover;
+  z-index: 0;
+}
+
+.canvas-element {
+  position: absolute;
+  z-index: 10;
+  cursor: grab;
+  user-select: none;
+}
+.canvas-element:active { cursor: grabbing; }
+.canvas-element.selected { border: 2px dashed #3b82f6; }
+
+.el-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.el-text { user-select: none; width: 100%; }
+.el-image { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.el-qr { background: white; padding: 10px; border-radius: 8px; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+.resize-handle {
+  position: absolute;
+  right: -5px; bottom: -5px;
+  width: 10px; height: 10px;
+  background: #3b82f6;
+  border-radius: 50%;
+  cursor: se-resize;
+}
+
+/* Props Panel */
+.props-panel label { display: block; font-size: 0.8rem; color: #9ca3af; margin-bottom: 4px; margin-top: 10px; }
+.props-panel input[type="text"], .props-panel input[type="number"], .props-panel textarea {
+  width: 100%; background: #222; border: 1px solid #444; color: white; padding: 6px; border-radius: 4px;
+}
+.input-group { display: flex; flex-direction: column; margin-bottom: 10px; }
+.pos-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Modals */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 800px; }
+.screensavers-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;
+}
+.screensaver-option { cursor: pointer; }
+.screensaver-option img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; }
+
+/* Templates */
+.template-box {
+  background: #333;
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
+  border: 1px solid #444;
+  transition: all 0.2s;
+}
+.template-box:hover {
+  border-color: #3b82f6;
+  background: #2563eb;
+}
+.template-name {
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  padding: 10px;
 }
 </style>
