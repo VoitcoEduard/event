@@ -4,6 +4,7 @@ import { ref } from 'vue'
 const States = {
     LOBBY: 'lobby',
     GET_READY: 'get-ready',
+    QUESTION_PRESENTING: 'question-presenting',
     QUESTION_ACTIVE: 'question-active',
     ANSWERED: 'answered',
     QUESTION_ENDED: 'question-ended',
@@ -15,14 +16,15 @@ const States = {
 
 // Define valid transitions
 const transitions = {
-    [States.LOBBY]: [States.GET_READY, States.LOBBY],
-    [States.GET_READY]: [States.QUESTION_ACTIVE, States.BUFFERING],
+    [States.LOBBY]: [States.GET_READY, States.QUESTION_PRESENTING, States.LOBBY],
+    [States.GET_READY]: [States.QUESTION_PRESENTING, States.QUESTION_ACTIVE, States.BUFFERING],
+    [States.QUESTION_PRESENTING]: [States.QUESTION_ACTIVE],
     [States.QUESTION_ACTIVE]: [States.ANSWERED, States.QUESTION_ENDED, States.RESULTS],
     [States.ANSWERED]: [States.QUESTION_ENDED, States.RESULTS, States.LEADERBOARD],
     [States.QUESTION_ENDED]: [States.RESULTS],
     [States.RESULTS]: [States.LEADERBOARD],
-    [States.LEADERBOARD]: [States.GET_READY, States.FINISHED, States.QUESTION_ACTIVE],
-    [States.BUFFERING]: [States.GET_READY],
+    [States.LEADERBOARD]: [States.GET_READY, States.QUESTION_PRESENTING, States.FINISHED, States.QUESTION_ACTIVE],
+    [States.BUFFERING]: [States.GET_READY, States.QUESTION_PRESENTING],
 }
 
 export function useQuizStateMachine() {

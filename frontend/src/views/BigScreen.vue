@@ -73,11 +73,14 @@
         </div>
       </div>
 
-      <!-- QUESTION STATE -->
-      <div v-else-if="gameState === 'question-active'" class="state-container question-container">
+      <!-- QUESTION STATE (Active & Presenting) -->
+      <div v-else-if="gameState === 'question-active' || gameState === 'question-presenting'" class="state-container question-container">
         <div class="question-header">
-          <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }">
+          <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }" v-if="gameState === 'question-active'">
             {{ timeRemaining }}
+          </div>
+          <div class="timer" v-else-if="gameState === 'question-presenting'" style="font-size: 1.5rem">
+            {{ $t('quiz.player.get_ready') || 'Ready!' }}
           </div>
           <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
@@ -671,6 +674,9 @@ let timerInterval
 const startLocalTimer = (duration) => {
   clearInterval(timerInterval)
   timeRemaining.value = duration
+  // Only start countdown if state is active
+  if (gameState.value !== 'question-active') return
+  
   timerInterval = setInterval(() => {
     if (timeRemaining.value > 0) {
       timeRemaining.value--
@@ -784,23 +790,30 @@ const connect = () => {
       currentQuestionIndex.value = payload.currentIndex
     }
 
-    // Try to autoplay music when quiz starts (get-ready or question-active)
-    if (payload.state === 'get-ready' || payload.state === 'question-active') {
+    // Try to autoplay music when quiz starts (get-ready or question-active or question-presenting)
+    if (payload.state === 'get-ready' || payload.state === 'question-active' || payload.state === 'question-presenting') {
       displayMode.value = 'quiz'
       // Try to autoplay when quiz starts - reload audio first
       const player = bgMusicPlayer.value
-      if (player && backgroundMusicUrl.value && (audioOutput.value === 'bigscreen' || audioOutput.value === 'both')) {
-        player.load()
-        player.play().then(() => {
-          isMusicPlaying.value = true
-          showUnmuteButton.value = false
-        }).catch(() => {
-          // Silently fail - don't show button on big screen
-          showUnmuteButton.value = false
-        })
+      // only reload if this is a new 'start' phase
+      if (prevState !== 'get-ready' && prevState !== 'question-presenting' && prevState !== 'question-active') {
+          if (player && backgroundMusicUrl.value && (audioOutput.value === 'bigscreen' || audioOutput.value === 'both')) {
+            player.load()
+            player.play().then(() => {
+              isMusicPlaying.value = true
+              showUnmuteButton.value = false
+            }).catch(() => {
+              // Silently fail - don't show button on big screen
+              showUnmuteButton.value = false
+            })
+          }
       }
+      
       if (payload.state === 'question-active' && (prevState !== 'question-active' || payload.currentIndex !== currentQuestionIndex.value)) {
         startLocalTimer(currentQuestion.value?.timeLimit || 20)
+      } else if (payload.state === 'question-presenting') {
+        // Set timer value but don't count down
+        if (currentQuestion.value?.timeLimit) timeRemaining.value = currentQuestion.value.timeLimit
       }
     } else if (payload.state === 'results') {
       clearInterval(timerInterval)

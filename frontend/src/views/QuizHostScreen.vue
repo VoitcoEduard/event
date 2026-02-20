@@ -46,11 +46,14 @@
       </div>
     </div>
 
-    <!-- QUESTION STATE -->
-    <div v-else-if="gameState === 'question-active'" class="state-container question-container">
+    <!-- QUESTION STATE (Active & Presenting) -->
+    <div v-else-if="gameState === 'question-active' || gameState === 'question-presenting'" class="state-container question-container">
       <div class="question-header">
-        <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }">
+        <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }" v-if="gameState === 'question-active'">
           {{ timeRemaining }}
+        </div>
+        <div class="timer" v-else-if="gameState === 'question-presenting'" style="font-size: 1.5rem">
+          {{ $t('quiz.player.get_ready') || 'Ready!' }}
         </div>
         <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
       </div>
@@ -649,6 +652,9 @@ let timerInterval
 const startLocalTimer = (duration) => {
     clearInterval(timerInterval)
     timeRemaining.value = duration
+    // Only start countdown if state is active
+    if (gameState.value !== 'question-active') return
+    
     timerInterval = setInterval(() => {
         if (timeRemaining.value > 0) {
             timeRemaining.value--
@@ -803,6 +809,11 @@ onMounted(async () => {
             // Restart timer when entering question state
             if (prevState !== 'question-active' || payload.currentIndex !== currentQuestionIndex.value) {
                 startLocalTimer(currentQuestion.value?.timeLimit || 20)
+            }
+        } else if (payload.state === 'question-presenting') {
+            // Set time remaining to question time without starting timer
+            if (currentQuestion.value?.timeLimit) {
+                timeRemaining.value = currentQuestion.value.timeLimit
             }
         } else if (payload.state === 'results') {
             clearInterval(timerInterval)

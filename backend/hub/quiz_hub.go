@@ -340,7 +340,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		session := h.sessions[client.ModuleID]
 		if session != nil {
 			session.EventID = event.ID // Ensure EventID is set
-			session.State = "get-ready"
+			session.State = "question-presenting"
 			session.CurrentIndex = 0
 			session.PlayerSignals = []models.PlayerSignal{}
 			session.AnswerCounts = make(map[int]int)
@@ -369,20 +369,20 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				})
 			}
 
-			// Notify state change - send 'get-ready' for countdown
+			// Notify state change - send 'question-presenting' for presentation
 			h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 				Type:    "cmd:state",
-				Payload: map[string]interface{}{"state": "get-ready", "currentIndex": session.CurrentIndex},
+				Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex},
 			})
 
-			// Auto-transition to question-active after 2 seconds
+			// Auto-transition to question-active after 5 seconds
 			go func(modID string, idx int) {
-				time.Sleep(2 * time.Second)
+				time.Sleep(5 * time.Second)
 				h.mu.Lock()
 				defer h.mu.Unlock()
 
 				sess := h.sessions[modID]
-				if sess != nil && sess.CurrentIndex == idx && sess.State == "get-ready" {
+				if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" {
 					sess.State = "question-active"
 					sess.StartTime = time.Now().Unix()
 
@@ -661,21 +661,21 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				session.QuestionWindows = append(session.QuestionWindows, qWindow)
 			}
 
-			// Notify state change - send 'get-ready' first
-			session.State = "get-ready"
+			// Notify state change - send 'question-presenting' first
+			session.State = "question-presenting"
 			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 				Type:    "cmd:state",
-				Payload: map[string]interface{}{"state": "get-ready", "currentIndex": session.CurrentIndex},
+				Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex},
 			})
 
-			// Auto-transition to question-active after 2 seconds
+			// Auto-transition to question-active after 5 seconds
 			go func(modID string, idx int) {
-				time.Sleep(2 * time.Second)
+				time.Sleep(5 * time.Second)
 				h.mu.Lock()
 				defer h.mu.Unlock()
 
 				sess := h.sessions[modID]
-				if sess != nil && sess.CurrentIndex == idx && sess.State == "get-ready" {
+				if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" {
 					sess.State = "question-active"
 					sess.StartTime = time.Now().Unix()
 

@@ -36,8 +36,8 @@
       </div>
     </div>
 
-    <!-- GET READY STATE -->
-    <div v-else-if="state === States.GET_READY" class="state-container get-ready-container">
+    <!-- GET READY / PRESENTING STATE -->
+    <div v-else-if="state === States.GET_READY || state === States.QUESTION_PRESENTING" class="state-container get-ready-container">
       <div class="ready-content">
         <h1>{{ $t('quiz.player.get_ready') }}</h1>
         <div class="loader"></div>
@@ -551,8 +551,8 @@ onMounted(async () => {
         console.log('[DEBUG] cmd:state received:', newState, 'Payload:', JSON.stringify(payload))
         console.log('[DEBUG] Current state before transition:', state.value, 'currentIndex:', currentQuestionIndex.value)
         
-        if (newState === States.GET_READY) {
-            // "Get Ready" phase - Server drives transition now
+        if (newState === States.GET_READY || newState === States.QUESTION_PRESENTING) {
+            // "Get Ready" / "Presenting" phase - Server drives transition now
             
             // Update question index if provided
             if (payload.currentIndex !== undefined) {
