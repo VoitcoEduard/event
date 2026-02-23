@@ -15,7 +15,7 @@ class QuizWebSocket {
         this.intentionalDisconnect = false
     }
 
-    connect(moduleId, nickname = '', isHost = false, isBigScreen = false) {
+    connect(moduleId, nickname = '', isHost = false, isBigScreen = false, eventId = null) {
         // Mark as intentional if reconnecting while already connected
         if (this.socket) {
             this.intentionalDisconnect = true
@@ -68,6 +68,9 @@ class QuizWebSocket {
             }
 
             const payload = { moduleId }
+            if (eventId) {
+                payload.eventId = eventId
+            }
             if (!isHost && !isBigScreen) {
                 payload.nickname = nickname
                 payload.userId = this.userId

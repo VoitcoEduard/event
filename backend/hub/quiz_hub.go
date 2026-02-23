@@ -264,47 +264,64 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		DebugLog("host:join: Sent state:update to host for module: %s", moduleID)
 
 	case "bigscreen:join":
-		// Payload: { "moduleId": "..." }
+		// Payload: { "moduleId": "...", "eventId": "..." }
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
 			return
 		}
 		moduleID, _ := data["moduleId"].(string)
+		eventID, _ := data["eventId"].(string)
 
-		DebugLog("bigscreen:join received for module: %s", moduleID)
+		DebugLog("bigscreen:join received for module: %s, event: %s", moduleID, eventID)
 
 		client.ModuleID = moduleID
+		client.EventID = eventID
 		client.IsBigScreen = true
 
-		// Ensure session exists (same logic as host)
-		if _, exists := h.sessions[moduleID]; !exists {
-			DebugLog("bigscreen:join: Creating new session for module: %s", moduleID)
-			h.sessions[moduleID] = &models.QuizSession{
-				ModuleID:      moduleID,
-				State:         "lobby",
-				Players:       make(map[string]*models.Player),
-				PlayerSignals: []models.PlayerSignal{},
-				AnswerCounts:  make(map[int]int),
+		if moduleID != "" {
+			// Ensure session exists (same logic as host)
+			if _, exists := h.sessions[moduleID]; !exists {
+				DebugLog("bigscreen:join: Creating new session for module: %s", moduleID)
+				h.sessions[moduleID] = &models.QuizSession{
+					ModuleID:      moduleID,
+					State:         "lobby",
+					Players:       make(map[string]*models.Player),
+					PlayerSignals: []models.PlayerSignal{},
+					AnswerCounts:  make(map[int]int),
+				}
 			}
+
+			// Send current state to bigscreen via cmd:state (same as host)
+			jsonMsg, _ := json.Marshal(ServerMessage{
+				Type: "cmd:state",
+				Payload: map[string]interface{}{
+					"state":        h.sessions[moduleID].State,
+					"currentIndex": h.sessions[moduleID].CurrentIndex,
+				},
+			})
+			client.send <- jsonMsg
+
+			// Also send full session data via state:update (for player list)
+			jsonMsg2, _ := json.Marshal(ServerMessage{
+				Type:    "state:update",
+				Payload: h.sessions[moduleID],
+			})
+			client.send <- jsonMsg2
+
+			// Send data:batch with questions to bigscreen
+			if len(h.sessions[moduleID].Batches) > 0 {
+				jsonMsg3, _ := json.Marshal(ServerMessage{
+					Type:    "data:batch",
+					Payload: h.sessions[moduleID].Batches[0],
+				})
+				client.send <- jsonMsg3
+				DebugLog("bigscreen:join: Sent data:batch to bigscreen for module: %s", moduleID)
+			}
+
+			DebugLog("bigscreen:join: Sent state:update to bigscreen for module: %s", moduleID)
+		} else {
+			DebugLog("bigscreen:join: No module ID provided, connected to event %s", eventID)
 		}
-
-		// Send current state to bigscreen via cmd:state (same as host)
-		jsonMsg, _ := json.Marshal(ServerMessage{
-			Type: "cmd:state",
-			Payload: map[string]interface{}{
-				"state":        h.sessions[moduleID].State,
-				"currentIndex": h.sessions[moduleID].CurrentIndex,
-			},
-		})
-		client.send <- jsonMsg
-
-		// Also send full session data via state:update (for player list)
-		jsonMsg2, _ := json.Marshal(ServerMessage{
-			Type:    "state:update",
-			Payload: h.sessions[moduleID],
-		})
-		client.send <- jsonMsg2
-		DebugLog("bigscreen:join: Sent state:update to bigscreen for module: %s", moduleID)
 
 	case "host:start_quiz":
 		if !client.IsHost {
@@ -928,4 +945,30 @@ func mustMarshal(v interface{}) []byte {
 		return nil
 	}
 	return b
+}
+
+// BroadcastScreenState broadcasts the screen state update to Big Screens connected to a specific event
+func (h *QuizHub) BroadcastScreenState(eventID string, state interface{}) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	jsonMsg, err := json.Marshal(ServerMessage{
+		Type:    "screen:state_update",
+		Payload: state,
+	})
+	if err != nil {
+		log.Println("Error marshalling broadcast message:", err)
+		return
+	}
+
+	for client := range h.clients {
+		if client.IsBigScreen && client.EventID == eventID {
+			select {
+			case client.send <- jsonMsg:
+			default:
+				close(client.send)
+				delete(h.clients, client)
+			}
+		}
+	}
 }

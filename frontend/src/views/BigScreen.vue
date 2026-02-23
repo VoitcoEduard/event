@@ -482,7 +482,10 @@ const getScaledFontSize = (size) => {
 const { locale } = useI18n()
 const route = useRoute()
 const eventId = route.params.eventId
-const moduleId = route.params.moduleId
+// Make moduleId reactive to allow dynamic switching when host pushes quiz to big screen
+const activeModuleId = ref(route.params.moduleId)
+// Keep moduleId as a computed for backward compatibility
+const moduleId = computed(() => activeModuleId.value)
 
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
@@ -527,7 +530,10 @@ const totalAnswered = computed(() => {
 })
 
 const totalQuestions = computed(() => questions.value.length)
-const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
+const currentQuestion = computed(() => {
+  console.log('[BigScreen] currentQuestion computed, index:', currentQuestionIndex.value, 'questions:', questions.value.length)
+  return questions.value[currentQuestionIndex.value]
+})
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
@@ -794,9 +800,10 @@ const loadScreensaverConfig = async () => {
 
 // Load Module Config (for music)
 const loadModuleConfig = async () => {
-    if (!moduleId) return
+    // Use activeModuleId.value since it's now a ref
+    if (!activeModuleId.value) return
     try {
-        const res = await fetch(`${API_BASE_URL}/events/${eventId}/modules/${moduleId}`)
+        const res = await fetch(`${API_BASE_URL}/events/${eventId}/modules/${activeModuleId.value}`)
         if (res.ok) {
             const mod = await res.json()
             if (mod.data) {
@@ -856,6 +863,7 @@ const connect = () => {
   
   // Register handlers before connecting
   quizWS.on('cmd:state', (payload) => {
+    console.log('[BigScreen] cmd:state received:', payload)
     const prevState = gameState.value
     gameState.value = payload.state
 
@@ -934,6 +942,7 @@ const connect = () => {
   })
 
   quizWS.on('data:batch', (batch) => {
+    console.log('[BigScreen] data:batch received:', batch)
     if (batch.questions) {
       questions.value = batch.questions
     }
@@ -946,7 +955,15 @@ const connect = () => {
   })
 
   // Connect as bigscreen
-  quizWS.connect(moduleId, '', false, true)
+  quizWS.connect(activeModuleId.value || '', '', false, true, eventId)
+  
+  // Set display mode to screensaver if no state message is received within 2 seconds
+  // This handles the case where no quiz is active
+  setTimeout(() => {
+    if (displayMode.value === 'connecting') {
+      displayMode.value = 'screensaver'
+    }
+  }, 2000)
 }
 
 const retryConnection = () => {
@@ -960,36 +977,80 @@ const onImageLoad = () => {
 onMounted(async () => {
   // Load screensaver config first
   await loadScreensaverConfig()
-  await loadModuleConfig()
   
-  // Set up Screen State SSE
-  const sse = new EventSource(`${API_BASE_URL}/events/${eventId}/screen-stream`)
-  sse.onmessage = (event) => {
+  // Check if there's an active quiz module in this event and auto-connect
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/${eventId}`)
+    if (res.ok) {
+      const eventData = await res.json()
+      // Find active quiz module
+      const activeQuiz = eventData.modules?.find(m => m.type === 'quiz' && m.isActive)
+      if (activeQuiz) {
+        console.log('[BigScreen] Found active quiz, auto-connecting:', activeQuiz.id)
+        activeModuleId.value = activeQuiz.id
+        await loadModuleConfig()
+      }
+    }
+  } catch (e) {
+    console.error('[BigScreen] Failed to check for active quiz:', e)
+  }
+  
+  // Register screen state handler via WebSocket
+  quizWS.on('screen:state_update', (state) => {
     try {
-      const state = JSON.parse(event.data)
       overrideScreenState.value = state
-      
       // If it forces screensaver, refresh screensaver image
       if (state.currentView === 'screensaver') {
         loadScreensaverConfig() 
       }
+      
+      // Handle quiz push - when host pushes a specific quiz to big screen
+      if (state.currentView === 'quiz' && state.moduleId) {
+        const newModuleId = state.moduleId
+        console.log('[BigScreen] Received quiz push, switching to module:', newModuleId)
+        // Only switch if the moduleId is different
+        if (activeModuleId.value !== newModuleId) {
+          activeModuleId.value = newModuleId
+          // Clear quiz state and reconnect to new quiz session
+          gameState.value = 'lobby'
+          players.value = []
+          questions.value = []
+          currentQuestionIndex.value = 0
+          answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
+          playerSignals.value = []
+          displayedScores.value = {}
+          // Disconnect and clear WebSocket handlers
+          quizWS.disconnect()
+          quizWS.clearHandlers()
+          // Re-register screen state handler and reconnect
+          setTimeout(async () => {
+            // Re-register screen state update handler
+            quizWS.on('screen:state_update', (newState) => {
+              console.log('[BigScreen] screen:state_update received:', newState)
+              overrideScreenState.value = newState
+              if (newState.currentView === 'screensaver') {
+                loadScreensaverConfig() 
+              }
+            })
+            
+            await loadModuleConfig()
+            connect()
+          }, 500)
+        }
+      }
     } catch (e) {
       console.error('Failed to parse screen state', e)
     }
-  }
+  })
 
   // Show screensaver first (before connecting to WebSocket)
   displayMode.value = 'screensaver'
   manageAudioPlayback()
   
-  // Only connect to WebSocket if we have a moduleId (quiz mode)
-  if (moduleId) {
-    // Connect to WebSocket after a brief delay to allow screensaver to render
-    setTimeout(() => {
-      connect()
-    }, 500)
-  }
-  // If no moduleId, just show screensaver (static display mode)
+  // Always connect to WebSocket to receive screen state updates
+  setTimeout(() => {
+    connect()
+  }, 500)
 })
 
 onUnmounted(() => {

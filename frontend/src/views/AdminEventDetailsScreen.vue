@@ -128,6 +128,14 @@
                           </button>
                           
                           <button
+                            v-if="module.type === 'quiz'"
+                            class="module-btn push-btn"
+                            @click="pushQuizToBigScreen(module)"
+                          >
+                            🖥️ {{ $t('admin.details.push_to_big_screen') }}
+                          </button>
+                          
+                          <button
                             class="module-btn"
                             :class="module.isActive ? 'stop-button' : 'start-button'"
                             @click="toggleModuleStatus(module)"
@@ -392,6 +400,30 @@ const launchBigScreen = (module) => {
   // Open big screen in a new window
   const url = `/bigscreen/${currentEvent.value.id}/${module.id}`
   bigscreenWindow.value = window.open(url, 'bigscreen', 'width=1200,height=800')
+}
+
+const pushQuizToBigScreen = async (module) => {
+  // Push the quiz to big screen without opening a new window
+  // This will send a screen state update to the big screen
+  try {
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screen-state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({
+        currentView: 'quiz',
+        moduleId: module.id
+      })
+    })
+    
+    if (response.ok) {
+      success(t('admin.details.pushed_to_big_screen'))
+    } else {
+      error(t('admin.details.push_error'))
+    }
+  } catch (err) {
+    console.error('Error pushing to big screen:', err)
+    error(t('admin.details.push_error'))
+  }
 }
 
 const addModule = async () => {
@@ -1161,6 +1193,15 @@ const copyBigScreenLink = () => {
 
 .module-btn.bigscreen-btn:hover {
   background-color: #FFA830;
+}
+
+.module-btn.push-btn {
+  background-color: #30D158;
+  color: #FFF;
+}
+
+.module-btn.push-btn:hover {
+  background-color: #28cd41;
 }
 
 .dropdown-select {

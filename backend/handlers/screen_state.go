@@ -117,6 +117,11 @@ func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	// Notify SSE subscribers
 	notifyScreenSubscribers(id, input)
 
+	// Notify WS subscribers (Big Screen)
+	if quizHub != nil {
+		quizHub.BroadcastScreenState(id, input)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(input)
 }

@@ -42,6 +42,7 @@ type Client struct {
 
 	// Session tracking
 	ModuleID    string // The quiz/module ID this client is connected to
+	EventID     string // The event ID this client is connected to (for big screen)
 	PlayerID    string // The player ID (if player)
 	IsHost      bool   // True if this client is the host
 	IsBigScreen bool   // True if this client is a big screen display
