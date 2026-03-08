@@ -121,24 +121,34 @@
          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
       </div>
 
+      <!-- Multi-select mode hint -->
+      <div v-if="isMultiSelect" class="multi-hint-pill">
+        <span class="multi-hint-icon">☑</span>
+        <span>{{ $t('quiz.player.select_multiple', 'Select all that apply') }}</span>
+      </div>
+
       <div class="answer-grid" :class="{ 'true-false-grid': isTrueFalse, 'multi-select-grid': isMultiSelect }">
          <button
             v-for="(shape, idx) in shapes"
             :key="idx"
             class="answer-btn"
             :class="[
-                isTrueFalse ? (idx === 0 ? 'color-true' : 'color-false') : 'color-' + idx, 
-                { 'selected': isSelected(idx), 'dimmed': hasSelected && !isSelected(idx), 'has-text': currentQuestion?.answers?.[idx] }
+                isTrueFalse ? (idx === 0 ? 'color-true' : 'color-false') : 'color-' + idx,
+                isMultiSelect ? 'multi-btn' : '',
+                { 'selected': isSelected(idx), 'dimmed': hasSelected && !isSelected(idx) && !isMultiSelect, 'has-text': currentQuestion?.answers?.[idx] }
             ]"
             @click="handleAnswerClick(idx)"
             :disabled="hasSubmitted"
          >
+            <!-- Multi-select checkbox corner indicator -->
+            <div v-if="isMultiSelect" class="ms-checkbox" :class="{ 'ms-checked': isSelected(idx) }">
+              <span v-if="isSelected(idx)">✓</span>
+            </div>
             <div class="answer-btn-layout" :class="{ 'row-layout': isTrueFalse }">
                <span class="shape-icon">{{ shape }}</span>
                <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false') }}</span>
                <span v-else-if="currentQuestion?.answers?.[idx]" class="answer-text">{{ currentQuestion.answers[idx] }}</span>
             </div>
-            <div v-if="isMultiSelect && isSelected(idx)" class="checkmark-badge">✓</div>
          </button>
       </div>
       
@@ -827,6 +837,33 @@ onUnmounted(() => {
     z-index: 2;
 }
 
+/* ── Multi-select hint pill ─────────────────────────────────── */
+.multi-hint-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 214, 10, 0.18);
+    border: 1.5px solid rgba(255, 214, 10, 0.55);
+    color: #FFD60A;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+    animation: pill-pulse 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+.multi-hint-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+@keyframes pill-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 10, 0); }
+    50%       { box-shadow: 0 0 10px 3px rgba(255, 214, 10, 0.25); }
+}
+
+/* ── Answer grid ────────────────────────────────────────────── */
 .answer-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -834,7 +871,6 @@ onUnmounted(() => {
     width: 100%;
     padding: 8px;
     box-sizing: border-box;
-    /* Let the grid size to content, not a fixed percentage */
     flex: 1;
     min-height: 0;
 }
@@ -845,13 +881,57 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3rem; /* Big icon */
+    font-size: 3rem;
     cursor: pointer;
-    transition: transform 0.1s;
+    transition: transform 0.1s, box-shadow 0.1s, opacity 0.15s;
     box-shadow: 0 4px 0 rgba(0,0,0,0.2);
-    min-height: 0; /* allow shrinking */
+    min-height: 0;
     padding: 0;
+    position: relative;
 }
+
+/* ── Multi-select button style ──────────────────────────────── */
+/* Rounded + outlined feel — distinctly different from flat single-choice */
+.answer-btn.multi-btn {
+    border-radius: 14px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2), inset 0 0 0 0 transparent;
+    opacity: 0.82;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.1s;
+}
+.answer-btn.multi-btn.selected {
+    border-color: #fff;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 0 0 3px rgba(255,255,255,0.4);
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+/* ── Checkbox corner indicator ──────────────────────────────── */
+.ms-checkbox {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2.5px solid rgba(255,255,255,0.55);
+    background: rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: #000;
+    transition: background 0.15s, border-color 0.15s;
+    z-index: 2;
+    line-height: 1;
+}
+.ms-checkbox.ms-checked {
+    background: #fff;
+    border-color: #fff;
+    color: #000;
+}
+
 .answer-btn-layout {
     display: flex;
     flex-direction: column;
@@ -867,7 +947,7 @@ onUnmounted(() => {
     flex-direction: row;
 }
 .answer-btn.has-text {
-    font-size: 1.8rem; /* Shrink the icon slightly when there is text */
+    font-size: 1.8rem;
 }
 
 .answer-text {
@@ -885,20 +965,22 @@ onUnmounted(() => {
 }
 
 .answer-btn:active { transform: translateY(4px); box-shadow: none; }
+.answer-btn.multi-btn.selected:active { transform: translateY(2px); }
 
 .color-0 { background-color: #FF3B30; }
 .color-1 { background-color: #0A84FF; }
 .color-2 { background-color: #FFD60A; }
 .color-3 { background-color: #32D74B; }
 
+.dimmed { opacity: 0.45; }
 
 .true-false-grid {
     grid-template-columns: 1fr;
     flex: 1;
 }
 
-.color-true { background-color: #0A84FF; } /* Blue for True */
-.color-false { background-color: #FF3B30; } /* Red for False */
+.color-true { background-color: #0A84FF; }
+.color-false { background-color: #FF3B30; }
 
 .tf-label {
     margin-left: 10px;
