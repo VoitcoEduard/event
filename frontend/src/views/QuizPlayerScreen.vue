@@ -40,7 +40,8 @@
     <div v-else-if="state === States.GET_READY || state === States.QUESTION_PRESENTING" class="state-container get-ready-container">
       <div class="ready-content">
         <h1>{{ $t('quiz.player.get_ready') }}</h1>
-        <div class="loader"></div>
+        <div v-if="explainTimeRemaining > 0" class="explain-timer">{{ explainTimeRemaining }}</div>
+        <div v-else class="loader"></div>
       </div>
     </div>
 
@@ -258,6 +259,7 @@ const isCorrect = ref(false)
 const currentPoints = ref(0)
 const rank = ref(0)
 const timeRemaining = ref(5)
+const explainTimeRemaining = ref(0)
 
 // Correct Picture specific state
 const preselectedIndex = ref(0)
@@ -402,6 +404,7 @@ const goHome = () => {
 }
 
 let timerInterval
+let explainTimerInterval
 
 // Answer validation and scoring
 const validateAndScore = (answerData) => {
@@ -561,6 +564,18 @@ const startLocalTimer = (timeLimit) => {
     }, 1000)
 }
 
+const startExplainTimer = (timeLimit) => {
+    clearInterval(explainTimerInterval)
+    explainTimeRemaining.value = timeLimit
+    if (timeLimit <= 0) return
+    explainTimerInterval = setInterval(() => {
+        explainTimeRemaining.value--
+        if (explainTimeRemaining.value <= 0) {
+            clearInterval(explainTimerInterval)
+        }
+    }, 1000)
+}
+
 // WS & Logic
 onMounted(async () => {
     // Auto-join if nickname exists
@@ -610,6 +625,8 @@ onMounted(async () => {
             
             if (newState === States.QUESTION_ACTIVE) {
                  startLocalTimer(payload?.timeLimit || 20)
+            } else if (newState === States.QUESTION_PRESENTING) {
+                 startExplainTimer(payload?.timeLimit || 5)
             }
         } else {
             console.warn('Invalid state transition attempted:', state.value, '->', newState)
@@ -668,6 +685,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     clearInterval(timerInterval)
+    clearInterval(explainTimerInterval)
     quizWS.disconnect()
     quizWS.clearHandlers()
 })

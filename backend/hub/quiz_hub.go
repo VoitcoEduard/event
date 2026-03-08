@@ -387,14 +387,18 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			}
 
 			// Notify state change - send 'question-presenting' for presentation
+			explainTime := session.Questions[session.CurrentIndex].ExplainTime
+			if explainTime == 0 {
+				explainTime = 5 // default
+			}
 			h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 				Type:    "cmd:state",
-				Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex},
+				Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
 			})
 
-			// Auto-transition to question-active after 5 seconds
-			go func(modID string, idx int) {
-				time.Sleep(5 * time.Second)
+			// Auto-transition to question-active after explainTime seconds
+			go func(modID string, idx int, delay int) {
+				time.Sleep(time.Duration(delay) * time.Second)
 				h.mu.Lock()
 				defer h.mu.Unlock()
 
@@ -415,7 +419,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 						Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
 					})
 				}
-			}(client.ModuleID, session.CurrentIndex)
+			}(client.ModuleID, session.CurrentIndex, explainTime)
 		}
 
 	case "player:signal":
@@ -680,14 +684,18 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 
 			// Notify state change - send 'question-presenting' first
 			session.State = "question-presenting"
+			explainTime := session.Questions[session.CurrentIndex].ExplainTime
+			if explainTime == 0 {
+				explainTime = 5 // default
+			}
 			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 				Type:    "cmd:state",
-				Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex},
+				Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
 			})
 
-			// Auto-transition to question-active after 5 seconds
-			go func(modID string, idx int) {
-				time.Sleep(5 * time.Second)
+			// Auto-transition to question-active after explainTime seconds
+			go func(modID string, idx int, delay int) {
+				time.Sleep(time.Duration(delay) * time.Second)
 				h.mu.Lock()
 				defer h.mu.Unlock()
 
@@ -708,7 +716,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 						Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
 					})
 				}
-			}(client.ModuleID, session.CurrentIndex)
+			}(client.ModuleID, session.CurrentIndex, explainTime)
 		}
 
 	case "host:show_results":

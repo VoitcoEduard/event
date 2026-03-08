@@ -139,8 +139,8 @@
           <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }" v-if="gameState === 'question-active'">
             {{ timeRemaining }}
           </div>
-          <div class="timer" v-else-if="gameState === 'question-presenting'" style="font-size: 1.5rem">
-            {{ $t('quiz.player.get_ready') || 'Ready!' }}
+          <div class="timer" v-else-if="gameState === 'question-presenting'" :style="explainTimeRemaining > 0 ? '' : 'font-size: 1.5rem'">
+            {{ explainTimeRemaining > 0 ? explainTimeRemaining : ($t('quiz.player.get_ready') || 'Ready!') }}
           </div>
           <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
@@ -521,6 +521,7 @@ const players = ref([])
 const questions = ref([])
 const currentQuestionIndex = ref(0)
 const timeRemaining = ref(20)
+const explainTimeRemaining = ref(0)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 })
 const playerSignals = ref([])
 
@@ -750,6 +751,8 @@ const isAnswerCorrect = (idx) => {
 
 // Timer
 let timerInterval
+let explainTimerInterval
+
 const startLocalTimer = (duration) => {
   clearInterval(timerInterval)
   timeRemaining.value = duration
@@ -763,6 +766,19 @@ const startLocalTimer = (duration) => {
       clearInterval(timerInterval)
     }
   }, 1000)
+}
+
+const startExplainTimer = (duration) => {
+    clearInterval(explainTimerInterval)
+    explainTimeRemaining.value = duration
+    if (duration <= 0) return
+    explainTimerInterval = setInterval(() => {
+        if (explainTimeRemaining.value > 0) {
+            explainTimeRemaining.value--
+        } else {
+            clearInterval(explainTimerInterval)
+        }
+    }, 1000)
 }
 
 // Load screensaver config
@@ -895,9 +911,11 @@ const connect = () => {
       } else if (payload.state === 'question-presenting') {
         // Set timer value but don't count down
         if (currentQuestion.value?.timeLimit) timeRemaining.value = currentQuestion.value.timeLimit
+        startExplainTimer(payload.timeLimit || 5) // note: payload.timeLimit in cmd:state is the ExplainTime
       }
     } else if (payload.state === 'results') {
       clearInterval(timerInterval)
+      clearInterval(explainTimerInterval)
       displayMode.value = 'quiz'
     } else if (payload.state === 'finished') {
       // Show screensaver when quiz is finished

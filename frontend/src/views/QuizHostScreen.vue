@@ -52,8 +52,8 @@
         <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }" v-if="gameState === 'question-active'">
           {{ timeRemaining }}
         </div>
-        <div class="timer" v-else-if="gameState === 'question-presenting'" style="font-size: 1.5rem">
-          {{ $t('quiz.player.get_ready') || 'Ready!' }}
+        <div class="timer" v-else-if="gameState === 'question-presenting'" :style="explainTimeRemaining > 0 ? '' : 'font-size: 1.5rem'">
+          {{ explainTimeRemaining > 0 ? explainTimeRemaining : ($t('quiz.player.get_ready') || 'Ready!') }}
         </div>
         <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
       </div>
@@ -649,6 +649,8 @@ const isAnswerCorrect = (idx) => {
 
 // Timer logic
 let timerInterval
+let explainTimerInterval
+
 const startLocalTimer = (duration) => {
     clearInterval(timerInterval)
     timeRemaining.value = duration
@@ -664,6 +666,19 @@ const startLocalTimer = (duration) => {
             if (gameState.value === 'question-active') {
                 goToResults()
             }
+        }
+    }, 1000)
+}
+
+const startExplainTimer = (duration) => {
+    clearInterval(explainTimerInterval)
+    explainTimeRemaining.value = duration
+    if (duration <= 0) return
+    explainTimerInterval = setInterval(() => {
+        if (explainTimeRemaining.value > 0) {
+            explainTimeRemaining.value--
+        } else {
+            clearInterval(explainTimerInterval)
         }
     }, 1000)
 }
@@ -815,8 +830,10 @@ onMounted(async () => {
             if (currentQuestion.value?.timeLimit) {
                 timeRemaining.value = currentQuestion.value.timeLimit
             }
+            startExplainTimer(payload.timeLimit || 5) // note: payload.timeLimit in cmd:state is the ExplainTime
         } else if (payload.state === 'results') {
             clearInterval(timerInterval)
+            clearInterval(explainTimerInterval)
         }
         
         if ((payload.state === 'get-ready' || payload.state === 'question-presenting') && 
@@ -882,6 +899,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     clearInterval(timerInterval)
+    clearInterval(explainTimerInterval)
     quizWS.disconnect()
     quizWS.clearHandlers()
 })
