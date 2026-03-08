@@ -65,6 +65,10 @@
     </div>
 
     <!-- STANDARD ANSWERS (MC/TF/MS) -->
+    <!-- Multi-select warning -->
+    <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
+      ⚠️ Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
+    </div>
     <div v-if="localQuestion.type !== 'slider' && localQuestion.type !== 'correct_picture'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
@@ -194,7 +198,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SliderComponent from './SliderComponent.vue'
 import ImageUploader from './ImageUploader.vue'
@@ -319,6 +323,12 @@ const handleTypeChange = () => {
     }
     emitUpdate()
 }
+
+// Warning shown when multi_select has fewer than 2 correct answers selected
+const multiSelectWarning = computed(() => {
+  if (localQuestion.type !== 'multi_select') return false
+  return (localQuestion.correctIndices || []).length < 2
+})
 
 const isCorrect = (idx) => {
     if (localQuestion.type === 'multi_select') {
@@ -575,6 +585,24 @@ const isAnswerReadOnly = (idx) => {
     text-align: center;
     margin-top: 6px;
     font-style: italic;
+}
+
+.multi-select-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(255, 159, 10, 0.12);
+  border: 1px solid rgba(255, 159, 10, 0.45);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: #FFB340;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.multi-select-warning strong {
+  color: #FFCC00;
 }
 
 @media (max-width: 600px) {
