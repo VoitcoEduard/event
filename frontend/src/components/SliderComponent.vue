@@ -52,7 +52,7 @@
     <!-- RIGHT: Scroll wheel zone -->
     <div
       class="scroll-zone"
-      :class="{ active: isScrolling }"
+      :class="{ active: isScrolling, hint: !hasInteracted && !isScrolling }"
       ref="scrollZoneEl"
       @touchstart.prevent="onTouchStart"
       @touchmove.prevent="onTouchMove"
@@ -60,7 +60,16 @@
       @mousedown="onMouseDown"
       @wheel.prevent="onWheel"
     >
-      <div class="notches">
+      <!-- Idle hint arrows -->
+      <div v-if="!hasInteracted && !isScrolling" class="hint-arrows">
+        <svg class="arrow arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+        <svg class="arrow arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <div class="notches" :class="{ faded: !hasInteracted && !isScrolling }">
         <div v-for="i in 20" :key="i" class="notch" :class="{ center: i === 10 || i === 11 }"></div>
       </div>
     </div>
@@ -69,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   min:               { type: Number,  default: 0 },
@@ -89,6 +98,7 @@ const wrapperEl    = ref(null)
 const trackEl      = ref(null)
 const scrollZoneEl = ref(null)
 const isScrolling  = ref(false)
+const hasInteracted = ref(false)
 
 // ── Number helpers ─────────────────────────────────────────
 const formatNumber = (n) => {
@@ -165,6 +175,7 @@ let touchStartVal = null
 
 const onTouchStart = (e) => {
   if (props.readonly) return
+  hasInteracted.value = true
   touchStartY   = e.touches[0].clientY
   touchStartVal = props.modelValue
   isScrolling.value = true
@@ -188,6 +199,7 @@ const onTouchEnd = () => {
 // ── Mouse drag ─────────────────────────────────────────────
 const onMouseDown = (e) => {
   if (props.readonly) return
+  hasInteracted.value = true
   const startY   = e.clientY
   const startVal = props.modelValue
   isScrolling.value = true
@@ -209,6 +221,7 @@ const onMouseDown = (e) => {
 // ── Mouse wheel ────────────────────────────────────────────
 const onWheel = (e) => {
   if (props.readonly) return
+  hasInteracted.value = true
   const dir  = e.deltaY > 0 ? -1 : 1
   const step = props.step > 0 ? props.step : range.value / 100
   applyValue(props.modelValue + dir * step * WHEEL_STEPS_PER_TICK)
@@ -384,23 +397,82 @@ const onWheel = (e) => {
   background: rgba(255,255,255,0.06);
   border: 1.5px solid rgba(255,255,255,0.10);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: ns-resize;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
   overflow: hidden;
+  position: relative;
+  gap: 6px;
+}
+
+/* Idle hint: pulsing glow + bright border */
+@keyframes wheel-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.0),  0 0 0 0   rgba(10, 132, 255, 0.0); }
+  30%  { box-shadow: 0 0 10px 3px rgba(10, 132, 255, 0.55), 0 0 22px 8px rgba(10, 132, 255, 0.2); }
+  60%  { box-shadow: 0 0 10px 3px rgba(10, 132, 255, 0.55), 0 0 22px 8px rgba(10, 132, 255, 0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.0),  0 0 0 0   rgba(10, 132, 255, 0.0); }
+}
+
+.scroll-zone.hint {
+  background: rgba(10, 132, 255, 0.08);
+  border-color: rgba(10, 132, 255, 0.55);
+  animation: wheel-pulse 2s ease-in-out infinite;
 }
 
 .scroll-zone.active {
   background: rgba(10, 132, 255, 0.15);
   border-color: rgba(10, 132, 255, 0.4);
+  animation: none;
+  box-shadow: none;
 }
 
+/* ── Hint arrows ───────────────────────────────────────────────── */
+.hint-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  justify-content: space-between;
+  padding: 10px 0;
+  pointer-events: none;
+}
+
+@keyframes arrow-bob-up {
+  0%, 100% { transform: translateY(0);   opacity: 0.6; }
+  50%       { transform: translateY(-5px); opacity: 1;   }
+}
+@keyframes arrow-bob-down {
+  0%, 100% { transform: translateY(0);  opacity: 0.6; }
+  50%       { transform: translateY(5px); opacity: 1;   }
+}
+
+.arrow {
+  width: 22px;
+  height: 22px;
+  color: #0A84FF;
+  filter: drop-shadow(0 0 4px rgba(10,132,255,0.7));
+}
+.arrow-up   { animation: arrow-bob-up   1.4s ease-in-out infinite; }
+.arrow-down { animation: arrow-bob-down 1.4s ease-in-out infinite; }
+
+/* ── Notches ───────────────────────────────────────────────────── */
 .notches {
   display: flex;
   flex-direction: column;
   gap: 9px;
   align-items: center;
+  transition: opacity 0.3s;
+}
+
+.notches.faded {
+  opacity: 0.35;
 }
 
 .notch {
