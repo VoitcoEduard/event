@@ -128,13 +128,16 @@
             class="answer-btn"
             :class="[
                 isTrueFalse ? (idx === 0 ? 'color-true' : 'color-false') : 'color-' + idx, 
-                { 'selected': isSelected(idx), 'dimmed': hasSelected && !isSelected(idx) }
+                { 'selected': isSelected(idx), 'dimmed': hasSelected && !isSelected(idx), 'has-text': currentQuestion?.answers?.[idx] }
             ]"
             @click="handleAnswerClick(idx)"
             :disabled="hasSubmitted"
          >
-            <span class="shape-icon">{{ shape }}</span>
-            <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false') }}</span>
+            <div class="answer-btn-layout" :class="{ 'row-layout': isTrueFalse }">
+               <span class="shape-icon">{{ shape }}</span>
+               <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false') }}</span>
+               <span v-else-if="currentQuestion?.answers?.[idx]" class="answer-text">{{ currentQuestion.answers[idx] }}</span>
+            </div>
             <div v-if="isMultiSelect && isSelected(idx)" class="checkmark-badge">✓</div>
          </button>
       </div>
@@ -847,7 +850,40 @@ onUnmounted(() => {
     transition: transform 0.1s;
     box-shadow: 0 4px 0 rgba(0,0,0,0.2);
     min-height: 0; /* allow shrinking */
+    padding: 0;
 }
+.answer-btn-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    gap: 8px;
+}
+.answer-btn-layout.row-layout {
+    flex-direction: row;
+}
+.answer-btn.has-text {
+    font-size: 1.8rem; /* Shrink the icon slightly when there is text */
+}
+
+.answer-text {
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
 .answer-btn:active { transform: translateY(4px); box-shadow: none; }
 
 .color-0 { background-color: #FF3B30; }
