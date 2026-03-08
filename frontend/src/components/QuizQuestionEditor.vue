@@ -233,7 +233,7 @@ const localQuestion = reactive({
   answers: props.question.answers && props.question.answers.length >= 2 
     ? [...props.question.answers] 
     : ['', '', '', ''],
-  explainTime: props.question.explainTime !== undefined ? props.question.explainTime : 20,
+  explainTime: props.question.explainTime !== undefined ? props.question.explainTime : 5,
   correctIndices: props.question.correctIndices || [],
   // Initialize slider config if missing
   sliderConfig: props.question.sliderConfig || {
@@ -280,7 +280,7 @@ watch(() => props.question, (newVal) => {
           type: newVal.type || 'multiple_choice',
           sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 },
-          explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 20,
+          explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 5,
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',

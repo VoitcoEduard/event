@@ -399,9 +399,9 @@ const currentQuestionIndex = ref(0)
 const timeRemaining = ref(20)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 }) 
 const playerSignals = ref([]) // Store signals for slider histogram
+const realTimeAnsweredCount = ref(0)
 const totalAnswered = computed(() => {
-    if (isSlider.value) return playerSignals.value.length
-    return Object.values(answerCounts.value).reduce((a, b) => a + b, 0)
+    return realTimeAnsweredCount.value
 })
 
 const totalQuestions = computed(() => questions.value.length)
@@ -831,6 +831,9 @@ onMounted(async () => {
                 timeRemaining.value = currentQuestion.value.timeLimit
             }
             startExplainTimer(payload.timeLimit || 5) // note: payload.timeLimit in cmd:state is the ExplainTime
+            realTimeAnsweredCount.value = 0 // Reset for new question
+            answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 } // Reset counts to zero
+            playerSignals.value = [] // Reset slider player signals
         } else if (payload.state === 'results') {
             clearInterval(timerInterval)
             clearInterval(explainTimerInterval)
@@ -849,6 +852,9 @@ onMounted(async () => {
 
     // Listen for minimal sync updates (answer counts, player info)
     quizWS.on('sync:minimal', (payload) => {
+        // Ignore stats for an old question arriving during a new question's explain delay
+        if (payload.questionIndex !== undefined && payload.questionIndex !== currentQuestionIndex.value) return;
+        
         // Update answer counts if provided
         if (payload.answerCounts) {
             // Convert string keys from JSON to numeric keys for proper reactivity
@@ -858,6 +864,9 @@ onMounted(async () => {
                 2: payload.answerCounts["2"] || 0,
                 3: payload.answerCounts["3"] || 0,
             }
+        }
+        if (payload.answeredCount !== undefined) {
+            realTimeAnsweredCount.value = payload.answeredCount
         }
     })
 
@@ -879,6 +888,7 @@ onMounted(async () => {
         if (session.PlayerSignals || session.playerSignals) {
              const signals = session.PlayerSignals || session.playerSignals
              playerSignals.value = signals.filter(s => s.questionIndex === currentQuestionIndex.value)
+             realTimeAnsweredCount.value = playerSignals.value.length
         }
 
         // Update Answer Counts

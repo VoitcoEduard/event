@@ -170,7 +170,7 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
                  q.answers = ['True', 'False', '', '']
                  if (q.correctIndex > 1) q.correctIndex = 0
             }
-            if (q.explainTime === undefined) q.explainTime = 20
+            if (q.explainTime === undefined) q.explainTime = 5
             return q
         })
      } else {
@@ -219,7 +219,7 @@ const loadTemplate = (template) => {
                  q.answers = ['True', 'False', '', '']
                  if (q.correctIndex > 1) q.correctIndex = 0
             }
-            if (q.explainTime === undefined) q.explainTime = 20
+            if (q.explainTime === undefined) q.explainTime = 5
             return q
         })
         success(t('quiz_config.loaded_template', { name: template.name }))
@@ -264,7 +264,7 @@ const addQuestion = () => {
     answers: ['', '', '', ''],
     correctIndex: 0,
     timeLimit: 20,
-    explainTime: 20
+    explainTime: 5
   })
 }
 
@@ -419,7 +419,7 @@ const handleFileUpload = (event) => {
                          q.answers = ['True', 'False', '', '']
                          if (q.correctIndex > 1) q.correctIndex = 0
                     }
-                    if (q.explainTime === undefined) q.explainTime = 20
+                    if (q.explainTime === undefined) q.explainTime = 5
                     return q
                 })
                 success(t('quiz_config.import.success'))
