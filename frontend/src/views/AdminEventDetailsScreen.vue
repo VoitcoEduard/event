@@ -120,7 +120,7 @@
                             {{ $t('admin.details.configure') }}
                           </button>
                           <button
-                            v-if="module.type === 'quiz'"
+                            v-if="module.type === 'quiz' || module.type === 'wrong_pictures'"
                             class="module-btn host-btn"
                             @click="hostQuiz(module)"
                           >
@@ -128,7 +128,7 @@
                           </button>
                           
                           <button
-                            v-if="module.type === 'quiz'"
+                            v-if="module.type === 'quiz' || module.type === 'wrong_pictures'"
                             class="module-btn push-btn"
                             @click="pushQuizToBigScreen(module)"
                           >
@@ -176,6 +176,15 @@
       @update="fetchEventDetails"
     />
 
+    <WrongPicturesModuleConfig
+      v-if="showConfigModal && selectedModule?.type === 'wrong_pictures'"
+      :visible="showConfigModal && selectedModule?.type === 'wrong_pictures'"
+      :module="selectedModule"
+      :event-id="currentEvent?.id"
+      @close="closeConfigModal"
+      @update="fetchEventDetails"
+    />
+
     <div v-if="showModuleModal" class="modal-overlay" @click.self="showModuleModal = false">
       <div class="add-module-container">
         <div class="add-module-header">
@@ -195,6 +204,7 @@
         <select v-model="selectedModuleType" class="dropdown-select">
           <option value="form">{{ $t('admin.details.form_option') }}</option>
           <option value="quiz">{{ $t('admin.details.quiz_option') }}</option>
+          <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
         </select>
 
         <button class="add-module-button" @click="addModule">
@@ -213,6 +223,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QuizModuleConfig from '../components/QuizModuleConfig.vue'
+import WrongPicturesModuleConfig from '../components/WrongPicturesModuleConfig.vue'
 
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
@@ -393,7 +404,11 @@ const closeConfigModal = () => {
 }
 
 const hostQuiz = (module) => {
-  router.push(`/quiz/${currentEvent.value.id}/${module.id}/host`)
+  if (module.type === 'wrong_pictures') {
+    router.push(`/wrong-pictures/${currentEvent.value.id}/${module.id}/host`)
+  } else {
+    router.push(`/quiz/${currentEvent.value.id}/${module.id}/host`)
+  }
 }
 
 const launchBigScreen = (module) => {
@@ -460,8 +475,8 @@ const addModule = async () => {
 const toggleModuleStatus = async (module) => {
   console.log('[DEBUG] toggleModuleStatus: Starting for module:', module.id, 'current isActive:', module.isActive)
   
-  // If stopping a quiz module, reset the quiz session first
-  if (module.isActive && module.type === 'quiz') {
+  // If stopping a quiz/wrong_pictures module, reset the quiz session first
+  if (module.isActive && (module.type === 'quiz' || module.type === 'wrong_pictures')) {
     try {
       console.log('[DEBUG] toggleModuleStatus: Resetting quiz session for module:', module.id)
       await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/quiz/reset`, {

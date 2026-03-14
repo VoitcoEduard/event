@@ -162,6 +162,16 @@
            </div>
         </div>
 
+        <!-- WRONG PICTURES LAYOUT -->
+        <div v-else-if="isWrongPictures" class="wrong-picture-layout">
+          <div class="question-text-overlay-wp">
+             <h2>{{ currentQuestion.text }}</h2>
+          </div>
+          <div class="wp-image-container">
+             <img :src="questionImageUrl" class="wp-big-img" />
+          </div>
+        </div>
+
         <div v-else class="question-main-content">
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
@@ -247,6 +257,34 @@
                 <div class="cp-thumb-count">{{ answerCounts[idx] || 0 }}</div>
               </div>
             </template>
+          </div>
+        </div>
+
+        <!-- WRONG PICTURES RESULTS -->
+        <div v-else-if="isWrongPictures" class="wrong-picture-results">
+          <div class="question-text-overlay-wp">
+             <h2>{{ currentQuestion.text }}</h2>
+          </div>
+          <div class="wp-image-container">
+             <img :src="questionImageUrl" class="wp-big-img" />
+             
+             <!-- Show the correct targets natively -->
+             <div 
+               v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
+               :key="idx" 
+               class="wp-target-area"
+               :class="{ 'wp-target-reveal': revealCorrect }"
+               :style="{
+                 left: target.xPercent + '%',
+                 top: target.yPercent + '%',
+                 width: (target.radius * 2) + '%',
+                 height: (target.radius * 2) + '%',
+                 transform: 'translate(-50%, -50%)'
+               }"
+             >
+               <div class="wp-target-pulse"></div>
+               <div class="wp-target-label">{{ target.label }}</div>
+             </div>
           </div>
         </div>
 
@@ -539,11 +577,12 @@ const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestio
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
 const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct_picture')
+const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
 const revealCorrect = ref(false)
 
 // Watch gameState to trigger animation
 watch(gameState, (newVal) => {
-    if (newVal === 'results' && isSlider.value) {
+    if (newVal === 'results') {
         revealCorrect.value = false
         setTimeout(() => {
             revealCorrect.value = true
@@ -2844,6 +2883,95 @@ onUnmounted(() => {
   color: white;
   text-shadow: 2px 4px 12px rgba(0,0,0,0.5);
   line-height: 1.2;
+}
+
+/* WRONG PICTURES */
+.wrong-picture-layout, .wrong-picture-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+}
+
+.question-text-overlay-wp {
+  margin-bottom: 20px;
+  text-align: center;
+  z-index: 2;
+}
+
+.question-text-overlay-wp h2 {
+  font-size: 3rem;
+  margin: 0;
+  text-shadow: 2px 4px 12px rgba(0,0,0,0.8);
+}
+
+.wp-image-container {
+  position: relative;
+  max-width: 90%;
+  max-height: 65vh;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wp-big-img {
+  max-height: 65vh;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.wp-target-area {
+  position: absolute;
+  border: 4px solid #32D74B;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(50, 215, 75, 0.2);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.wp-target-reveal {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1) !important;
+}
+
+.wp-target-pulse {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(50, 215, 75, 0.7);
+  animation: pulseTarget 2s infinite;
+}
+
+@keyframes pulseTarget {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(50, 215, 75, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(50, 215, 75, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(50, 215, 75, 0); }
+}
+
+.wp-target-label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #32D74B;
+  color: #1a1a2e;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 1.2rem;
+  white-space: nowrap;
+  margin-bottom: 5px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
 
 </style>

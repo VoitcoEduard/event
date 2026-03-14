@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -211,9 +212,9 @@ func ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", mediaFile.MimeType)
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Write(data)
+	// Use ServeContent to automatically support Range / chunked requests
+	http.ServeContent(w, r, mediaFile.Filename, mediaFile.CreatedAt, bytes.NewReader(data))
 }
 
 func DeleteMedia(w http.ResponseWriter, r *http.Request) {

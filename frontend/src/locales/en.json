@@ -233,7 +233,14 @@
         "multi_select": "Multi Select",
         "true_false": "True / False",
         "slider": "Slider",
-        "correct_picture": "Correct Picture"
+        "correct_picture": "Correct Picture",
+        "wrong_pictures": "Wrong Pictures"
+      },
+      "wrong_pictures": {
+        "max_points": "Max Points",
+        "tolerance": "Tolerance Radius (%)",
+        "set_targets": "Set Target Locations",
+        "image_required": "Please upload an image first to set wrong picture targets."
       },
       "slider": {
         "range_unit": "Range & Unit",

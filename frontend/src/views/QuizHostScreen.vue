@@ -410,6 +410,7 @@ const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestio
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
 const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct_picture')
+const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
 const revealCorrect = ref(false)
 
 // Watch gameState to trigger animation

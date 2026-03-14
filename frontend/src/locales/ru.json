@@ -233,7 +233,14 @@
         "multi_select": "Множественный выбор",
         "true_false": "Правда / Ложь",
         "slider": "Слайдер",
-        "correct_picture": "Правильная картинка"
+        "correct_picture": "Правильная картинка",
+        "wrong_pictures": "Неправильные картинки"
+      },
+      "wrong_pictures": {
+        "max_points": "Макс. баллов",
+        "tolerance": "Радиус допуска (%)",
+        "set_targets": "Задать цели",
+        "image_required": "Пожалуйста, сначала загрузите изображение, чтобы задать цели."
       },
       "slider": {
         "range_unit": "Диапазон и Единицы",

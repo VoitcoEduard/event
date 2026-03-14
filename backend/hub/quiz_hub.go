@@ -481,6 +481,13 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			answerValue = val
 		}
 
+		// Extract Guesses for wrong_pictures type (optional)
+		var guesses []models.PlayerGuess
+		if guessesInterface, ok := data["guesses"].([]interface{}); ok {
+			guessesBytes, _ := json.Marshal(guessesInterface)
+			json.Unmarshal(guessesBytes, &guesses)
+		}
+
 		session := h.sessions[client.ModuleID]
 		if session != nil {
 			DebugLog("player:signal - Session found, state: %s, currentIndex: %d, questionWindows: %d",
@@ -504,6 +511,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				QuestionIndex: questionIndex,
 				AnswerIndices: answerIndices,
 				AnswerValue:   answerValue,
+				Guesses:       guesses,
 				ScoreEarned:   scoreEarned,
 				TimeSpent:     timeSpent,
 				Timestamp:     time.Now().Unix(),
@@ -923,6 +931,7 @@ func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
 			AnswerValue:   s.AnswerValue,
 			ScoreEarned:   s.ScoreEarned,
 			TimeSpent:     s.TimeSpent,
+			Guesses:       s.Guesses,
 		})
 	}
 

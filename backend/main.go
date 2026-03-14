@@ -163,6 +163,16 @@ func main() {
 			}
 		}
 
+		// Wrong Pictures endpoints
+		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/wrongpictures/") {
+			if strings.HasSuffix(r.URL.Path, "/preload") && r.Method == "GET" {
+				// Make this public so clients can preload without authorization hassle (or use auth)
+				// It's just fetching metadata.
+				handlers.PreloadWrongPictures(w, r)
+				return
+			}
+		}
+
 		// Get Module Responses
 		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/responses") && r.Method == "GET" {
 			handlers.VerifyAuth(handlers.GetModuleResponses)(w, r)

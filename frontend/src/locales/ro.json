@@ -233,7 +233,14 @@
         "multi_select": "Selecție Multiplă",
         "true_false": "Adevărat / Fals",
         "slider": "Slider",
-        "correct_picture": "Imagine Corectă"
+        "correct_picture": "Imagine Corectă",
+        "wrong_pictures": "Imagini Greșite"
+      },
+      "wrong_pictures": {
+        "max_points": "Puncte Maxime",
+        "tolerance": "Rază de Toleranță (%)",
+        "set_targets": "Setează Locațiile Corecte",
+        "image_required": "Te rugăm să încarci o imagine prima dată pentru a seta țintele."
       },
       "slider": {
         "range_unit": "Interval & Unități",

@@ -768,7 +768,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 	utils.DebugLog("GetModuleResponses: Fetching responses for EventID: %s, ModuleID: %s, Type: %s", eventID, moduleID, moduleType)
 
-	if moduleType == "quiz" {
+	if moduleType == "quiz" || moduleType == "wrong_pictures" {
 		collection := db.GetCollection("quiz_results")
 		filter := bson.M{"eventId": eventID, "moduleId": moduleID}
 

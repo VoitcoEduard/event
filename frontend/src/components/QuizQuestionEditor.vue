@@ -13,6 +13,7 @@
         <option value="true_false">{{ $t('quiz_config.question_editor.types.true_false') }}</option>
         <option value="slider">{{ $t('quiz_config.question_editor.types.slider') }}</option>
         <option value="correct_picture">{{ $t('quiz_config.question_editor.types.correct_picture') }}</option>
+        <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
       </select>
     </div>
 
@@ -69,7 +70,7 @@
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
       ⚠️ Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
     </div>
-    <div v-if="localQuestion.type !== 'slider' && localQuestion.type !== 'correct_picture'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
+    <div v-if="localQuestion.type !== 'slider' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
@@ -194,6 +195,43 @@
       />
     </div>
 
+    <!-- WRONG PICTURES CONFIGURATION -->
+    <div v-if="localQuestion.type === 'wrong_pictures'" class="wrong-pictures-config">
+      <div class="config-grid">
+        <div class="input-group">
+          <label>{{ $t('quiz_config.question_editor.wrong_pictures.max_points') }}</label>
+          <input 
+            type="number" 
+            v-model.number="localQuestion.wrongPictureConfig.maxPoints" 
+            class="config-input"
+            @input="emitUpdate"
+          />
+        </div>
+        
+        <div class="input-group">
+          <label>{{ $t('quiz_config.question_editor.wrong_pictures.tolerance') }}</label>
+          <input 
+            type="number" 
+            v-model.number="localQuestion.wrongPictureConfig.tolerancePercent"
+            class="config-input"
+            @input="emitUpdate"
+          />
+        </div>
+      </div>
+      
+      <div v-if="localQuestion.imageId" class="coordinate-picker-wrapper">
+        <label>{{ $t('quiz_config.question_editor.wrong_pictures.set_targets') }}</label>
+        <CoordinatePicker
+          :image-id="localQuestion.imageId"
+          :targets="localQuestion.wrongPictureConfig.targets"
+          @update:targets="updateTargets"
+        />
+      </div>
+      <div v-else class="image-required-warning">
+        ⚠️ {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -203,6 +241,7 @@ import { useI18n } from 'vue-i18n'
 import SliderComponent from './SliderComponent.vue'
 import ImageUploader from './ImageUploader.vue'
 import ImageOptionEditor from './ImageOptionEditor.vue'
+import CoordinatePicker from './CoordinatePicker.vue'
 
 const { t } = useI18n()
 const props = defineProps({
@@ -255,7 +294,12 @@ const localQuestion = reactive({
   imageOptions: props.question.imageOptions || [
     { id: '1', imageId: '', label: '' },
     { id: '2', imageId: '', label: '' }
-  ]
+  ],
+  wrongPictureConfig: props.question.wrongPictureConfig || {
+      targets: [],
+      tolerancePercent: 10,
+      maxPoints: 1000
+  }
 })
 
 // Watch for image changes and emit update
@@ -284,7 +328,8 @@ watch(() => props.question, (newVal) => {
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',
-          imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }]
+          imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }],
+          wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 1000 }
       })
   }
 }, { deep: true })
@@ -309,6 +354,10 @@ const handleTypeChange = () => {
                 { id: (Date.now() + 1).toString(), imageId: '', label: '' }
             ]
         }
+    } else if (localQuestion.type === 'wrong_pictures') {
+        if (!localQuestion.wrongPictureConfig) {
+             localQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 1000 }
+        }
     } else {
         // Reset to empty if switching back from T/F
         if (localQuestion.answers[0] === 'True' && localQuestion.answers[1] === 'False') {
@@ -321,6 +370,11 @@ const handleTypeChange = () => {
             localQuestion.correctIndices = [localQuestion.correctIndex]
         }
     }
+    emitUpdate()
+}
+
+const updateTargets = (newTargets) => {
+    localQuestion.wrongPictureConfig.targets = [...newTargets]
     emitUpdate()
 }
 
@@ -603,6 +657,34 @@ const isAnswerReadOnly = (idx) => {
 
 .multi-select-warning strong {
   color: #FFCC00;
+}
+
+.wrong-pictures-config {
+  background: #232325;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px dashed #3A3A3C;
+}
+
+.coordinate-picker-wrapper {
+  margin-top: 16px;
+}
+
+.coordinate-picker-wrapper > label {
+  font-size: 13px;
+  color: #E5E5EA;
+  font-weight: 600;
+  display: block;
+}
+
+.image-required-warning {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(255, 204, 0, 0.1);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  color: #FFCC00;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 @media (max-width: 600px) {

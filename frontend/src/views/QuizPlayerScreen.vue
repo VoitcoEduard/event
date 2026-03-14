@@ -85,6 +85,56 @@
       </div>
     </div>
 
+    <!-- WRONG PICTURES STATE -->
+    <div 
+      v-else-if="state === States.QUESTION_ACTIVE && isWrongPictures" 
+      class="state-container wrong-pictures-container"
+    >
+      <div class="question-header-area">
+        <div class="question-number-badge">{{ currentQuestionIndex + 1 }}</div>
+        <h2 class="question-text">{{ currentQuestion?.text }}</h2>
+        <div class="timer-bar">
+          <div class="timer-progress" :style="{ width: (timeRemaining / (currentQuestion?.timeLimit || 20)) * 100 + '%' }"></div>
+        </div>
+      </div>
+      
+      <div class="wp-interactive-zone" ref="wpOuterContainer">
+        <ZoomPanImage v-if="currentQuestion?.imageId">
+          <div class="wp-image-wrapper" ref="wpImageContainer">
+            <img :src="getImageUrl(currentQuestion.imageId)" class="wp-main-img" @load="updateWpContainerRect" />
+            
+            <GuessMarker
+              v-for="(guess, i) in wpGuesses"
+              :key="i"
+              :marker-number="i + 1"
+              :x-percent="guess.xPercent"
+              :y-percent="guess.yPercent"
+              :is-placed="guess.isPlaced"
+              :is-correct="guess.isCorrect"
+              :is-active="activeMarkerIndex === i"
+              :container-rect="wpContainerRect"
+              @update:position="updateGuessPosition(i, $event)"
+              @interaction-start="activeMarkerIndex = i"
+            />
+          </div>
+        </ZoomPanImage>
+      </div>
+      
+      <div class="action-area">
+        <button 
+          v-if="!hasSubmitted"
+          class="submit-selection-btn"
+          :class="{ 'active': wpGuesses.some(g => g.isPlaced) }"
+          @click="submitWrongPictures"
+        >
+          {{ $t('quiz.player.submit_btn') }}
+        </button>
+        <button v-else class="submit-selection-btn active">
+          {{ isCorrect ? Math.round(currentPoints) + ' Points' : '0 Points' }}
+        </button>
+      </div>
+    </div>
+
     <!-- SLIDER QUESTION STATE -->
     <div 
       v-else-if="state === States.QUESTION_ACTIVE && isSlider" 
@@ -230,10 +280,13 @@ import { quizWS } from '../services/websocket'
 import { useQuizStateMachine } from '../composables/useQuizStateMachine'
 import SliderComponent from '../components/SliderComponent.vue'
 import HorizontalCarousel from '../components/HorizontalCarousel.vue'
+import ZoomPanImage from '../components/ZoomPanImage.vue'
+import GuessMarker from '../components/GuessMarker.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
 import { getImageUrl } from '../services/media'
+import { calculateTotalScore } from '../utils/wrongPicturesScoring'
 
 const { locale } = useI18n()
 const router = useRouter()
@@ -265,6 +318,36 @@ const explainTimeRemaining = ref(0)
 const preselectedIndex = ref(0)
 const isSubmitting = ref(false)
 const hasPreselection = ref(true) // Default to first item selected effectively
+
+// Wrong Pictures specific state
+const wpGuesses = ref([])
+const activeMarkerIndex = ref(null)
+const wpOuterContainer = ref(null)
+const wpImageContainer = ref(null)
+const wpContainerRect = ref(null)
+
+const updateWpContainerRect = () => {
+    if (wpImageContainer.value) {
+        wpContainerRect.value = wpImageContainer.value.getBoundingClientRect()
+    }
+}
+
+const updateGuessPosition = (index, pos) => {
+    if (hasSubmitted.value) return
+    if (wpGuesses.value[index]) {
+        wpGuesses.value[index].xPercent = pos.xPercent
+        wpGuesses.value[index].yPercent = pos.yPercent
+        wpGuesses.value[index].isPlaced = true
+        // Recalculate container bounds periodically in case of scale/resize
+        updateWpContainerRect()
+    }
+}
+
+const submitWrongPictures = () => {
+    if (hasSubmitted.value) return
+    const placedGuesses = wpGuesses.value.filter(g => g.isPlaced)
+    submitAnswer(placedGuesses)
+}
 
 const onCarouselSnap = (idx) => {
     preselectedIndex.value = idx
@@ -304,6 +387,10 @@ const isMobile = computed(() => {
 
 const isCorrectPicture = computed(() => {
     return currentQuestion.value?.type === 'correct_picture'
+})
+
+const isWrongPictures = computed(() => {
+    return currentQuestion.value?.type === 'wrong_pictures'
 })
 
 const imageOptionUrls = computed(() => {
@@ -399,7 +486,6 @@ const submitAnswer = (answerData) => {
 
 const goHome = () => {
     quizWS.disconnect()
-    // Redirect to event page with ID to ensure they go back to the lobby
     router.push({ path: '/event', query: { id: eventId } })
 }
 
@@ -427,7 +513,37 @@ const validateAndScore = (answerData) => {
     let isCorrectAnswer = false
     let answerPayload = {}
 
-    if (question.type === 'multi_select') {
+    if (question.type === 'wrong_pictures') {
+        const guessesData = Array.isArray(answerData) ? answerData : []
+        const config = question.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 1000 }
+        
+        const result = calculateTotalScore(guessesData, config.targets, config)
+        
+        // Update local guesses with feedback
+        wpGuesses.value = result.scoredGuesses
+        
+        answerPayload = { guesses: result.scoredGuesses }
+        currentPoints.value = result.totalScore
+        isCorrectAnswer = result.totalScore > 0
+        score.value += currentPoints.value
+        
+        if (isCorrectAnswer) streak.value++
+        else streak.value = 0
+        
+        isCorrect.value = isCorrectAnswer
+        
+        const timeLimit = question.timeLimit || 20
+        const timeSpent = timeLimit - timeRemaining.value 
+        const signal = {
+            questionIndex: currentQuestionIndex.value,
+            ...answerPayload,
+            scoreEarned: currentPoints.value,
+            timeSpent: timeSpent * 1000,
+            timestamp: Date.now(),
+        }
+        signalQueue.enqueue(signal)
+        return
+    } else if (question.type === 'multi_select') {
         // Strict equality check for arrays
         const userIndices = Array.isArray(answerData) ? answerData : []
         // Sort for comparison
@@ -612,9 +728,22 @@ onMounted(async () => {
             isSubmitting.value = false
             hasPreselection.value = true
             
-            // Preload images for correct_picture questions during the presenting phase
-            // This ensures images are cached before the active answering phase begins
+            // Wrong Pictures reset
+            wpGuesses.value = []
+            activeMarkerIndex.value = null
+            
             const question = questionCache.get(currentQuestionIndex.value)
+            
+            if (question && question.type === 'wrong_pictures' && question.wrongPictureConfig) {
+                 const numTargets = question.wrongPictureConfig.targets?.length || 1
+                 wpGuesses.value = Array.from({ length: numTargets }).map((_, i) => ({
+                      xPercent: 50 + (i * 5) - (numTargets * 2.5),
+                      yPercent: 90,
+                      isPlaced: false,
+                      isCorrect: null
+                 }))
+                 setTimeout(updateWpContainerRect, 500)
+            }
             if (question) {
                 preloadImages(question)
             }
@@ -1465,5 +1594,41 @@ onUnmounted(() => {
   cursor: default;
   transform: none;
   box-shadow: none;
+}
+
+/* WRONG PICTURES STYLES */
+.wrong-pictures-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
+  background: #1C1C1E;
+}
+
+.wp-interactive-zone {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wp-image-wrapper {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.wp-main-img {
+  max-width: 100vw;
+  max-height: 65vh; /* leave room for header and footer */
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 </style>

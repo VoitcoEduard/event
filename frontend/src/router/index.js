@@ -24,6 +24,8 @@ const routes = [
   { path: '/quiz/library', name: 'quiz-library', component: () => import('../views/QuizLibraryScreen.vue'), meta: { requiresAuth: true } },
   { path: '/quiz/:eventId/:moduleId/host', name: 'quiz-host', component: QuizHostScreen, meta: { requiresAuth: true } },
   { path: '/quiz/:eventId/:moduleId/player', name: 'quiz-player', component: QuizPlayerScreen },
+  { path: '/wrong-pictures/:eventId/:moduleId/host', name: 'wrong-pictures-host', component: QuizHostScreen, meta: { requiresAuth: true } },
+  { path: '/wrong-pictures/:eventId/:moduleId/player', name: 'wrong-pictures-player', component: QuizPlayerScreen },
   { path: '/bigscreen/:eventId/:moduleId', name: 'bigscreen', component: BigScreen },
   { path: '/bigscreen/:eventId', name: 'bigscreen-screensaver', component: BigScreen }
 ]

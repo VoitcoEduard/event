@@ -7,10 +7,9 @@ import (
 type ModuleType string
 
 const (
-	ModuleTypeForm ModuleType = "form"
-	ModuleTypeQuiz ModuleType = "quiz"
-	// Add other module types here
-
+	ModuleTypeForm          ModuleType = "form"
+	ModuleTypeQuiz          ModuleType = "quiz"
+	ModuleTypeWrongPictures ModuleType = "wrong_pictures"
 )
 
 type Module struct {

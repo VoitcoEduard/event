@@ -4,20 +4,21 @@ import "time"
 
 // Question model
 type QuizQuestion struct {
-	ID             string        `json:"id" bson:"id"`
-	Type           string        `json:"type" bson:"type"` // "multiple_choice", "true_false", "multi_select"
-	Text           string        `json:"text" bson:"text"`
-	Answers        []string      `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
-	CorrectIndex   int           `json:"correctIndex" bson:"correctIndex"`
-	CorrectIndices []int         `json:"correctIndices" bson:"correctIndices"` // For multi_select
-	CorrectValue   float64       `json:"correctValue" bson:"correctValue"`     // For slider
-	SliderConfig   SliderConfig  `json:"sliderConfig" bson:"sliderConfig"`     // For slider
-	ScoringConfig  ScoringConfig `json:"scoringConfig" bson:"scoringConfig"`   // For slider
-	TimeLimit      int           `json:"timeLimit" bson:"timeLimit"`           // seconds
-	ExplainTime    int           `json:"explainTime" bson:"explainTime"`       // seconds for explanation before question starts
-	ImageID        *string       `json:"imageId" bson:"imageId"`
-	ImageAlt       string        `json:"imageAlt" bson:"imageAlt"`
-	ImageOptions   []ImageOption `json:"imageOptions" bson:"imageOptions"` // For correct_picture
+	ID                 string              `json:"id" bson:"id"`
+	Type               string              `json:"type" bson:"type"` // "multiple_choice", "true_false", "multi_select"
+	Text               string              `json:"text" bson:"text"`
+	Answers            []string            `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
+	CorrectIndex       int                 `json:"correctIndex" bson:"correctIndex"`
+	CorrectIndices     []int               `json:"correctIndices" bson:"correctIndices"` // For multi_select
+	CorrectValue       float64             `json:"correctValue" bson:"correctValue"`     // For slider
+	SliderConfig       SliderConfig        `json:"sliderConfig" bson:"sliderConfig"`     // For slider
+	ScoringConfig      ScoringConfig       `json:"scoringConfig" bson:"scoringConfig"`   // For slider
+	TimeLimit          int                 `json:"timeLimit" bson:"timeLimit"`           // seconds
+	ExplainTime        int                 `json:"explainTime" bson:"explainTime"`       // seconds for explanation before question starts
+	ImageID            *string             `json:"imageId" bson:"imageId"`
+	ImageAlt           string              `json:"imageAlt" bson:"imageAlt"`
+	ImageOptions       []ImageOption       `json:"imageOptions" bson:"imageOptions"`             // For correct_picture
+	WrongPictureConfig *WrongPictureConfig `json:"wrongPictureConfig" bson:"wrongPictureConfig"` // For wrong_pictures
 }
 
 // SliderConfig stores slider-specific configuration
@@ -38,12 +39,29 @@ type ScoringConfig struct {
 
 }
 
+// WrongPictureTarget represents a modification location on an image
+type WrongPictureTarget struct {
+	ID       string  `json:"id" bson:"id"`             // Unique target ID
+	Label    string  `json:"label" bson:"label"`       // Description (e.g., "Modern sneakers")
+	XPercent float64 `json:"xPercent" bson:"xPercent"` // X position as percentage (0-100)
+	YPercent float64 `json:"yPercent" bson:"yPercent"` // Y position as percentage (0-100)
+	Radius   float64 `json:"radius" bson:"radius"`     // Hit radius as percentage
+}
+
+// WrongPictureConfig stores wrong_pictures specific configuration
+type WrongPictureConfig struct {
+	Targets          []WrongPictureTarget `json:"targets" bson:"targets"`
+	TolerancePercent float64              `json:"tolerancePercent" bson:"tolerancePercent"` // For scoring
+	MaxPoints        int                  `json:"maxPoints" bson:"maxPoints"`
+}
+
 const (
 	QuestionTypeMultipleChoice = "multiple_choice"
 	QuestionTypeTrueFalse      = "true_false"
 	QuestionTypeMultiSelect    = "multi_select"
 	QuestionTypeSlider         = "slider"
 	QuestionTypeCorrectPicture = "correct_picture"
+	QuestionTypeWrongPictures  = "wrong_pictures"
 )
 
 // ImageOption struct for correct_picture question type
@@ -70,15 +88,25 @@ type Player struct {
 
 // PlayerSignal represents a player's answer signal with metadata
 type PlayerSignal struct {
-	PlayerID      string  `json:"playerId" bson:"playerId"`
-	QuestionIndex int     `json:"questionIndex" bson:"questionIndex"`
-	AnswerIndex   int     `json:"answerIndex" bson:"answerIndex"`     // For single choice
-	AnswerIndices []int   `json:"answerIndices" bson:"answerIndices"` // For multi_select
-	AnswerValue   float64 `json:"answerValue" bson:"answerValue"`     // For slider
-	ScoreEarned   int     `json:"scoreEarned" bson:"scoreEarned"`
-	TimeSpent     int     `json:"timeSpent" bson:"timeSpent"` // ms
-	Timestamp     int64   `json:"timestamp" bson:"timestamp"`
-	Status        string  `json:"status" bson:"status"` // "on_time", "grace_period", "missed"
+	PlayerID      string        `json:"playerId" bson:"playerId"`
+	QuestionIndex int           `json:"questionIndex" bson:"questionIndex"`
+	AnswerIndex   int           `json:"answerIndex" bson:"answerIndex"`     // For single choice
+	AnswerIndices []int         `json:"answerIndices" bson:"answerIndices"` // For multi_select
+	AnswerValue   float64       `json:"answerValue" bson:"answerValue"`     // For slider
+	ScoreEarned   int           `json:"scoreEarned" bson:"scoreEarned"`
+	TimeSpent     int           `json:"timeSpent" bson:"timeSpent"` // ms
+	Timestamp     int64         `json:"timestamp" bson:"timestamp"`
+	Status        string        `json:"status" bson:"status"`   // "on_time", "grace_period", "missed"
+	Guesses       []PlayerGuess `json:"guesses" bson:"guesses"` // For wrong_pictures type
+}
+
+// PlayerGuess represents a player's guess marker
+type PlayerGuess struct {
+	TargetID  string  `json:"targetId" bson:"targetId"`   // Which target they're guessing
+	XPercent  float64 `json:"xPercent" bson:"xPercent"`   // X position as percentage
+	YPercent  float64 `json:"yPercent" bson:"yPercent"`   // Y position as percentage
+	Distance  float64 `json:"distance" bson:"distance"`   // Distance from actual (calculated client-side)
+	IsCorrect bool    `json:"isCorrect" bson:"isCorrect"` // Whether within tolerance
 }
 
 // QuestionWindow tracks the timing and acceptance window for a question
@@ -135,9 +163,10 @@ type PlayerResult struct {
 }
 
 type SignalResult struct {
-	PlayerID      string  `json:"playerId" bson:"playerId"`
-	QuestionIndex int     `json:"questionIndex" bson:"questionIndex"`
-	AnswerValue   float64 `json:"answerValue" bson:"answerValue"` // For slider questions
-	ScoreEarned   int     `json:"scoreEarned" bson:"scoreEarned"`
-	TimeSpent     int     `json:"timeSpent" bson:"timeSpent"` // milliseconds
+	PlayerID      string        `json:"playerId" bson:"playerId"`
+	QuestionIndex int           `json:"questionIndex" bson:"questionIndex"`
+	AnswerValue   float64       `json:"answerValue" bson:"answerValue"` // For slider questions
+	ScoreEarned   int           `json:"scoreEarned" bson:"scoreEarned"`
+	TimeSpent     int           `json:"timeSpent" bson:"timeSpent"` // milliseconds
+	Guesses       []PlayerGuess `json:"guesses" bson:"guesses"`     // For wrong_pictures type
 }

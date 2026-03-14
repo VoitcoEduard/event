@@ -9,6 +9,11 @@ import (
 	_ "image/png"
 
 	"golang.org/x/image/webp"
+
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
 )
 
 var SupportedImageTypes = map[string]string{
@@ -83,6 +88,43 @@ func GetImageDimensions(data []byte) (int, int, error) {
 	return config.Width, config.Height, nil
 }
 
+// ConvertToWebP converts image data to WebP format using available system tools
+func ConvertToWebP(data []byte) ([]byte, error) {
+	// Create temporary input file
+	tmpIn, err := os.CreateTemp("", "img-*.in")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(tmpIn.Name())
+	if _, err := tmpIn.Write(data); err != nil {
+		return nil, err
+	}
+	tmpIn.Close()
+
+	// Create temporary output file path
+	tmpOut := tmpIn.Name() + ".webp"
+	defer os.Remove(tmpOut)
+
+	// Try standard tools based on OS
+	var cmd *exec.Cmd
+	if _, err := exec.LookPath("cwebp"); err == nil {
+		cmd = exec.Command("cwebp", "-q", "80", tmpIn.Name(), "-o", tmpOut)
+	} else if _, err := exec.LookPath("sips"); err == nil {
+		cmd = exec.Command("sips", "-s", "format", "webp", tmpIn.Name(), "--out", tmpOut)
+	} else if _, err := exec.LookPath("ffmpeg"); err == nil {
+		cmd = exec.Command("ffmpeg", "-y", "-i", tmpIn.Name(), "-c:v", "libwebp", "-lossless", "0", "-qscale", "80", tmpOut)
+	} else {
+		return nil, errors.New("no standard tools available for webp conversion (cwebp, sips, ffmpeg)")
+	}
+
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("conversion failed: %v: %s", err, string(output))
+	}
+
+	// Read converted data
+	return os.ReadFile(tmpOut)
+}
+
 func ProcessImage(data []byte) ([]byte, int, int, string, error) {
 	if len(data) == 0 {
 		return nil, 0, 0, "", errors.New("empty image data")
@@ -98,5 +140,18 @@ func ProcessImage(data []byte) ([]byte, int, int, string, error) {
 		return nil, 0, 0, "", err
 	}
 
-	return data, width, height, contentType, nil
+	// Convert to WebP if not already WebP
+	processedData := data
+	finalMimeType := contentType
+	if contentType != "image/webp" {
+		if webpData, err := ConvertToWebP(data); err == nil {
+			processedData = webpData
+			finalMimeType = "image/webp"
+		} else {
+			// Log conversion error and fallback to original
+			log.Printf("WebP conversion failed, using original: %v", err)
+		}
+	}
+
+	return processedData, width, height, finalMimeType, nil
 }
