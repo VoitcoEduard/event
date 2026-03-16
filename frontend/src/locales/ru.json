@@ -122,12 +122,14 @@
     "manage_templates": "Управление шаблонами",
     "new_form": "+ Новый шаблон формы",
     "new_quiz": "+ Новый шаблон викторины",
+    "new_wrong_pictures": "+ Новый шаблон 'Картинки'",
     "upload_screensaver": "+ Загрузить заставку",
     "upload_music": "+ Загрузить музыку",
     "import": "📂 Импорт",
     "tabs": {
       "forms": "Формы",
       "quizzes": "Викторины",
+      "wrong_pictures": "Картинки",
       "screensavers": "Заставки",
       "music": "Музыка"
     },

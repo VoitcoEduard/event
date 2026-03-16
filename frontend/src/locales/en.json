@@ -122,12 +122,14 @@
     "manage_templates": "Manage Templates",
     "new_form": "+ New Form Template",
     "new_quiz": "+ New Quiz Template",
+    "new_wrong_pictures": "+ New Wrong Pictures Template",
     "upload_screensaver": "+ Upload Screensaver",
     "upload_music": "+ Upload Music",
     "import": "📂 Import",
     "tabs": {
       "forms": "Forms",
       "quizzes": "Quizzes",
+      "wrong_pictures": "Wrong Pictures",
       "screensavers": "Screensavers",
       "music": "Music"
     },

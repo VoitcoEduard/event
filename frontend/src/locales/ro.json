@@ -122,12 +122,14 @@
     "manage_templates": "Gestionare Șabloane",
     "new_form": "+ Șablon Formular Nou",
     "new_quiz": "+ Șablon Quiz Nou",
+    "new_wrong_pictures": "+ Șablon Picturi Greșite",
     "upload_screensaver": "+ Încarcă Screensaver",
     "upload_music": "+ Încarcă Muzică",
     "import": "📂 Importă",
     "tabs": {
       "forms": "Formulare",
       "quizzes": "Quiz-uri",
+      "wrong_pictures": "Picturi",
       "screensavers": "Screensavere",
       "music": "Muzică"
     },

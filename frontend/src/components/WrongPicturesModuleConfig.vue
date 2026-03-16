@@ -8,6 +8,9 @@
             <p class="subtitle">{{ module?.name || 'Untitled' }}</p>
           </div>
           <div class="header-buttons">
+            <button class="icon-button" @click="showLibraryModal = true" :title="$t('quiz_config.load_library')">
+              📥
+            </button>
             <button class="close-button" @click="handleClose">
               ✕
             </button>
@@ -51,8 +54,8 @@
               <!-- Image Upload integration -->
               <div class="image-section">
                 <ImageUploader 
-                  v-model:imageId="question.imageId"
-                  v-model:imageAlt="question.imageAlt"
+                  v-model="question.imageId"
+                  v-model:altText="question.imageAlt"
                   :eventId="eventId"
                   :moduleId="module?.id"
                 />
@@ -101,12 +104,40 @@
               {{ questions.length }} Rounds
             </div>
             <div class="action-buttons">
+                <button class="save-template-btn" @click="saveAsTemplate" :disabled="questions.length === 0">
+                    {{ $t('quiz_config.save_template') }}
+                </button>
                 <button class="publish-btn" @click="handleSave" :disabled="loading">
                   {{ loading ? $t('quiz_config.saving') : $t('quiz_config.save_quiz') }}
                 </button>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- Library Modal -->
+  <Teleport to="body">
+    <div v-if="showLibraryModal" class="library-modal-overlay" @click.self="showLibraryModal = false">
+      <div class="library-modal">
+          <div class="library-header">
+              <h3>{{ $t('quiz_config.select_template') }}</h3>
+              <button class="close-btn" @click="showLibraryModal = false">✕</button>
+          </div>
+          <div class="library-content">
+              <div v-if="loadingTemplates" class="loading">{{ $t('common.loading') }}</div>
+              <div v-else-if="templates.length === 0" class="empty">{{ $t('quiz_config.no_templates') }}</div>
+              <div v-else class="template-list">
+                  <div v-for="t in templates" :key="t.id" class="template-item" @click="loadTemplate(t)">
+                      <div class="template-info">
+                          <span class="t-name">{{ t.name }}</span>
+                          <span class="t-count">{{ t.data?.questions?.length || 0 }} Rounds</span>
+                      </div>
+                      <p class="t-desc">{{ t.description }}</p>
+                  </div>
+              </div>
+          </div>
       </div>
     </div>
   </Teleport>
@@ -137,12 +168,94 @@ const tracks = ref([])
 const selectedMusicId = ref('')
 const audioOutput = ref('bigscreen')
 
+const showLibraryModal = ref(false)
+const templates = ref([])
+const loadingTemplates = ref(false)
+
+const fetchTemplates = async () => {
+    loadingTemplates.value = true
+    try {
+        const res = await fetch(`${API_BASE_URL}/templates`)
+        if(res.ok) {
+            const data = await res.json()
+            templates.value = data.filter(t => t.moduleType === 'wrong_pictures')
+        }
+    } catch(e) {
+        console.error(e)
+    } finally {
+        loadingTemplates.value = false
+    }
+}
+
 const fetchTracks = async () => {
     try {
         const data = await getTracks()
         tracks.value = data
     } catch (e) {
         console.error("Failed to load tracks", e)
+    }
+}
+
+const addRound = () => {
+  questions.value.push({
+    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+    type: 'wrong_pictures',
+    text: '',
+    timeLimit: 45,
+    explainTime: 5,
+    wrongPictureConfig: {
+      targets: [],
+      maxPoints: 1000,
+      tolerancePercent: 5
+    }
+  })
+}
+
+const loadTemplate = (template) => {
+    if(questions.value.length > 0) {
+        if(!confirm(t('quiz_config.confirm_replace'))) return
+    }
+    
+    if(template.data?.questions) {
+        let loadedQuestions = JSON.parse(JSON.stringify(template.data.questions))
+        // Hydrate and regenerate IDs
+        questions.value = loadedQuestions.map(q => {
+            q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+            // Keep imageId - library templates share the same database so images still exist
+            return q
+        })
+        success(t('quiz_config.loaded_template', { name: template.name }))
+        showLibraryModal.value = false
+    }
+}
+
+const saveAsTemplate = async () => {
+    const name = prompt(t('quiz_config.enter_template_name'))
+    if(!name) return
+
+    try {
+        const payload = {
+            name,
+            description: `Created from event ${props.eventId}`,
+            moduleType: 'wrong_pictures',
+            data: { questions: questions.value }
+        }
+        
+        const res = await fetch(`${API_BASE_URL}/templates`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', ...getAuthHeaders()},
+            body: JSON.stringify(payload)
+        })
+        
+        if(res.ok) {
+            success(t('quiz_config.saved_template'))
+            fetchTemplates()
+        } else {
+            error(t('quiz_config.save_failed'))
+        }
+    } catch(e) {
+        console.error(e)
+        error(t('quiz_config.save_failed'))
     }
 }
 
@@ -163,6 +276,7 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
   }
   
   if (visible) {
+      fetchTemplates()
       fetchTracks()
       if (questions.value.length === 0) {
         addRound()
@@ -170,20 +284,6 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
   }
 }, { immediate: true })
 
-const addRound = () => {
-  questions.value.push({
-    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-    type: 'wrong_pictures',
-    text: '',
-    timeLimit: 45,
-    explainTime: 5,
-    wrongPictureConfig: {
-      targets: [],
-      maxPoints: 1000,
-      tolerancePercent: 5
-    }
-  })
-}
 
 const removeRound = (index) => {
   if (!confirm('Remove this round?')) return
@@ -488,4 +588,88 @@ const modalStyle = computed(() => ({
   font-size: 14px;
   border: 1px solid rgba(255, 159, 10, 0.3);
 }
+
+.icon-button {
+  padding: 8px;
+  border-radius: 8px;
+  background-color: #2C2C2E;
+  font-size: 20px;
+  border: 1px solid #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-button:hover { background-color: #333; }
+
+.save-template-btn {
+    background: none;
+    border: 1px solid #333;
+    color: #ccc;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.save-template-btn:hover { background-color: #333; color: white; }
+.save-template-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Library Modal */
+.library-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.library-modal {
+    background-color: #2C2C2E;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80%;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.library-header {
+    padding: 16px;
+    border-bottom: 1px solid #3A3A3C;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.library-header h3 { color: white; margin: 0; font-size: 18px; }
+
+.library-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.close-btn { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; }
+
+.template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.template-item {
+    background-color: #1C1C1E;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.template-item:hover { border-color: #0A84FF; }
+
+.template-info { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.t-name { color: white; font-weight: 600; }
+.t-count { color: #888; font-size: 12px; }
+.t-desc { color: #aaa; font-size: 12px; margin: 0; }
 </style>

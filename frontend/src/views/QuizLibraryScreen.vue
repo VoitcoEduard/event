@@ -17,7 +17,7 @@
       <div class="header-actions">
         <p class="header-subtitle">{{ $t('library.manage_templates') }}</p>
         <button v-if="activeTab !== 'screensaver' && activeTab !== 'music'" class="create-btn" @click="createNewTemplate">
-          {{ activeTab === 'form' ? $t('library.new_form') : $t('library.new_quiz') }}
+          {{ activeTab === 'form' ? $t('library.new_form') : (activeTab === 'quiz' ? $t('library.new_quiz') : $t('library.new_wrong_pictures')) }}
         </button>
         <button v-if="activeTab === 'screensaver'" class="create-btn" @click="triggerScreensaverUpload">
           {{ $t('library.upload_screensaver') }}
@@ -86,6 +86,14 @@
             >
                 <span class="tab-icon">🎵</span>
                 {{ $t('library.tabs.music') }}
+            </button>
+            <button 
+                class="tab-btn" 
+                :class="{ active: activeTab === 'wrong_pictures' }"
+                @click="activeTab = 'wrong_pictures'"
+            >
+                <span class="tab-icon">🖼️</span>
+                {{ $t('library.tabs.wrong_pictures') }}
             </button>
         </div>
 
@@ -212,6 +220,18 @@
                 v-if="currentTemplate.moduleType === 'form'"
                 :timeline="currentTemplate.timeline"
                 @update:timeline="handleUpdateTimeline"
+                class="editor-component"
+            />
+
+            <QuizEditor
+                v-if="currentTemplate.moduleType === 'wrong_pictures'"
+                :questions="currentTemplate.questions"
+                event-id=""
+                module-id=""
+                @update-question="handleUpdateQuestion"
+                @remove-question="handleRemoveQuestion"
+                @add-question="handleAddQuestion"
+                @move-question="handleMoveQuestion"
                 class="editor-component"
             />
         </div>
@@ -391,9 +411,14 @@ const goBack = () => {
 }
 
 const createNewTemplate = () => {
+  let defaultName = 'New Template'
+  if (activeTab.value === 'form') defaultName = 'New Form Template'
+  else if (activeTab.value === 'quiz') defaultName = 'New Quiz Template'
+  else if (activeTab.value === 'wrong_pictures') defaultName = 'New Wrong Pictures Template'
+
   currentTemplate.value = {
     id: null,
-    name: activeTab.value === 'form' ? 'New Form Template' : 'New Quiz Template',
+    name: defaultName,
     description: '',
     moduleType: activeTab.value,
     questions: [],
@@ -452,8 +477,9 @@ const saveTemplate = async () => {
   }
   
   const isQuiz = currentTemplate.value.moduleType === 'quiz'
+  const isWrongPictures = currentTemplate.value.moduleType === 'wrong_pictures'
   
-  if (isQuiz && currentTemplate.value.questions.length === 0) {
+  if ((isQuiz || isWrongPictures) && currentTemplate.value.questions.length === 0) {
        if(!confirm(t('library.actions.discard_confirm'))) return
    }
 
@@ -463,7 +489,7 @@ const saveTemplate = async () => {
       name: currentTemplate.value.name,
       description: currentTemplate.value.description,
       moduleType: currentTemplate.value.moduleType,
-      data: isQuiz 
+      data: (isQuiz || isWrongPictures) 
         ? { questions: currentTemplate.value.questions } 
         : { timeline: currentTemplate.value.timeline }
     }
@@ -514,12 +540,19 @@ const handleRemoveQuestion = (index) => {
 }
 
 const handleAddQuestion = () => {
+    const isWrongPictures = currentTemplate.value.moduleType === 'wrong_pictures'
     currentTemplate.value.questions.push({
-        id: Date.now().toString(),
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        type: isWrongPictures ? 'wrong_pictures' : 'multiple_choice',
         text: '',
-        answers: ['', '', '', ''],
+        answers: isWrongPictures ? [] : ['', '', '', ''],
         correctIndex: 0,
-        timeLimit: 20
+        timeLimit: isWrongPictures ? 45 : 20,
+        wrongPictureConfig: isWrongPictures ? {
+            targets: [],
+            tolerancePercent: 5,
+            maxPoints: 1000
+        } : null
     })
 }
 
