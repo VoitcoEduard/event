@@ -72,7 +72,7 @@ import { HotTable } from '@handsontable/vue3';
 import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
 import 'handsontable/styles/ht-theme-main.min.css';
-import { API_BASE_URL } from '../utils';
+import { API_BASE_URL, getAuthHeaders } from '../utils';
 import { extractLabel } from '../utils/labelExtractor';
 
 const { t, locale } = useI18n();
@@ -326,7 +326,7 @@ const fetchData = async () => {
 const fetchUnifiedData = async () => {
   console.log("[UnifiedView] Starting Unified Data Fetch...");
   const promises = eventModules.value.map(m => 
-    fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${m.id}/responses`)
+    fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${m.id}/responses`, { headers: getAuthHeaders() })
       .then(async res => {
         if (!res.ok) throw new Error(`Failed to fetch ${m.name} responses: ${res.statusText}`);
         return res.json();
@@ -437,7 +437,7 @@ const fetchUnifiedData = async () => {
 
 const fetchModuleData = async (moduleId) => {
   console.log(`[UnifiedView] Fetching Single Module Data: ${moduleId}`);
-  const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/responses`);
+  const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/responses`, { headers: getAuthHeaders() });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
   }

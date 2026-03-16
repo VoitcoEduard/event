@@ -311,7 +311,7 @@ const fetchData = async () => {
 const fetchUnifiedData = async () => {
   console.log("[UnifiedView] Starting Unified Data Fetch");
   const promises = selectedEvent.value.modules.map(m => 
-    fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${m.id}/responses`)
+    fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${m.id}/responses`, { headers: getAuthHeaders() })
       .then(async res => {
         if (!res.ok) throw new Error(`Failed to fetch ${m.name} responses: ${res.statusText}`);
         return res.json();
@@ -416,7 +416,7 @@ const fetchUnifiedData = async () => {
 };
 
 const fetchModuleData = async () => {
-    const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${activeTab.value}/responses`);
+    const response = await fetch(`${API_BASE_URL}/events/${selectedEvent.value.id}/modules/${activeTab.value}/responses`, { headers: getAuthHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
     }
