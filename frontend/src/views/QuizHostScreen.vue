@@ -75,6 +75,17 @@
           </div>
       </div>
 
+      <!-- WRONG PICTURES HOST LAYOUT -->
+      <div v-else-if="isWrongPictures" class="wrong-picture-host-layout">
+          <div class="wp-host-header">
+              <h1 class="wp-host-title">What is wrong with the picture?</h1>
+              <p class="wp-host-instruction">{{ currentQuestion.text }}</p>
+          </div>
+          <div class="wp-host-image-container">
+              <img :src="questionImageUrl" class="wp-host-big-img" />
+          </div>
+      </div>
+
       <div v-else class="question-main-content">
         <!-- LEFT COLUMN: Question Card with Optional Image -->
         <div class="question-column">
@@ -169,6 +180,34 @@
              </template>
            </div>
          </div>
+
+          <!-- WRONG PICTURES RESULTS HOST -->
+          <div v-else-if="isWrongPictures" class="wrong-picture-results-host">
+             <div class="wp-host-header">
+                <h1 class="wp-host-title">What is wrong with the picture?</h1>
+                <p class="wp-host-instruction">{{ currentQuestion.text }}</p>
+             </div>
+             <div class="wp-host-image-container results-mode">
+                <img :src="questionImageUrl" class="wp-host-big-img dimmed" />
+                
+                <!-- Targets reveal -->
+                <div 
+                  v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
+                  :key="idx" 
+                  class="wp-host-target-area"
+                  :style="{
+                    left: target.xPercent + '%',
+                    top: target.yPercent + '%',
+                    width: (target.radius * 2) + '%',
+                    height: (target.radius * 2) + '%',
+                    transform: 'translate(-50%, -50%)'
+                  }"
+                >
+                  <div class="wp-host-target-pulse"></div>
+                  <div class="wp-host-target-label">{{ target.label }}</div>
+                </div>
+             </div>
+          </div>
 
          <!-- SLIDER RESULTS -->
           <div v-else-if="isSlider" class="slider-results-new">
@@ -1737,6 +1776,96 @@ onUnmounted(() => {
     transform: translateY(-50%);
     font-size: 0.8rem;
     font-weight: bold;
+}
+
+/* WRONG PICTURES HOST STYLES */
+.wrong-picture-host-layout, .wrong-picture-results-host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.wp-host-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.wp-host-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #fff;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.wp-host-instruction {
+    font-size: 1.2rem;
+    color: #8E8E93;
+    margin-top: 5px;
+}
+
+.wp-host-image-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    position: relative;
+    background: #1C1C1E;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+
+.wp-host-big-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.wp-host-big-img.dimmed {
+    filter: brightness(0.5);
+}
+
+/* WP Results Targets */
+.wp-host-target-area {
+    position: absolute;
+    border: 3px solid #32D74B;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 20px rgba(50, 215, 75, 0.6);
+    z-index: 10;
+}
+
+.wp-host-target-pulse {
+    position: absolute;
+    inset: -5px;
+    border: 2px solid #32D74B;
+    border-radius: 50%;
+    animation: wp-host-pulse 2s infinite;
+}
+
+@keyframes wp-host-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.3); opacity: 0; }
+}
+
+.wp-host-target-label {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #32D74B;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    white-space: nowrap;
 }
 
 /* Responsive Design for Smaller Screens */

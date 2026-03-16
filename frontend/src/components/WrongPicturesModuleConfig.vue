@@ -201,7 +201,7 @@ const addRound = () => {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
     type: 'wrong_pictures',
     text: '',
-    timeLimit: 45,
+    timeLimit: 60,
     explainTime: 5,
     wrongPictureConfig: {
       targets: [],
