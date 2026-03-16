@@ -12,11 +12,9 @@ export function calculateGuessScore(guess, target, tolerancePercent, maxPoints) 
         target.yPercent
     );
 
+    // All-or-nothing scoring: if within radius (including tolerance), full points. Otherwise 0.
     if (distance <= target.radius + tolerancePercent) {
-        // Within tolerance - calculate partial score based on distance
-        const maxDistance = target.radius + tolerancePercent;
-        const accuracy = 1 - (distance / maxDistance);
-        return Math.round(maxPoints * accuracy);
+        return Math.round(maxPoints);
     }
 
     return 0;

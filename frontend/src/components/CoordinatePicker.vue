@@ -17,11 +17,19 @@
         :style="getTargetStyle(target)"
         @click.stop="selectTarget(target.id)"
       >
-        <div class="hit-area" :style="getHitAreaStyle(target)"></div>
         <div class="marker-point">
            <span class="target-number">{{ index + 1 }}</span>
         </div>
       </div>
+
+      <!-- Hit areas as separate layer for correct percentage sizing -->
+      <div
+        v-for="target in targets"
+        :key="'hit-' + target.id"
+        class="hit-area"
+        :class="{ active: selectedTargetId === target.id }"
+        :style="[getTargetStyle(target), getHitAreaStyle(target)]"
+      ></div>
     </div>
     
     <!-- Target list -->
@@ -224,9 +232,10 @@ const onImageLoad = () => {
   transform: translate(-50%, -50%);
 }
 
-.target-marker.active .hit-area {
+.hit-area.active {
   border-color: rgba(50, 215, 75, 0.8);
   background: rgba(50, 215, 75, 0.3);
+  z-index: 2;
 }
 
 .targets-header {
