@@ -214,6 +214,7 @@
       "slider_step": "Slider Step must be greater than 0.",
       "tf_options": "True/False questions must have both True and False options.",
       "cp_options": "Correct Picture questions must have at least 2 image options.",
+      "number_required": "Correct answer for number question is required.",
       "mc_options": "All answer options must be filled for multiple choice questions."
     },
     "import": {
@@ -236,7 +237,12 @@
         "true_false": "True / False",
         "slider": "Slider",
         "correct_picture": "Correct Picture",
-        "wrong_pictures": "Wrong Pictures"
+        "wrong_pictures": "Wrong Pictures",
+        "number": "Number"
+      },
+      "number": {
+        "correct_answer": "Correct Answer",
+        "points": "Points"
       },
       "wrong_pictures": {
         "max_points": "Max Points",
@@ -387,6 +393,8 @@
       "slider_instruction": "Drag and release to submit",
       "true": "TRUE",
       "false": "FALSE",
+      "enter_number": "Enter a number",
+      "submit": "Submit",
       "submit_btn": "Submit Answer",
       "submitted": "Answer Submitted!",
       "waiting_others": "Waiting for others...",
@@ -411,6 +419,7 @@
       "go_to_results": "Go to Results",
       "results_title": "Question {num} Results",
       "correct_answer": "Correct Answer",
+      "players_entering_number": "Players are entering a number",
       "answers_label": "Answers",
       "slide_to_answer": "Slide to answer",
       "correct_label": "Correct",

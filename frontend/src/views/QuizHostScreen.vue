@@ -122,6 +122,12 @@
             </div>
             <div class="sbs-hint">↕ Scroll to select</div>
           </div>
+          <template v-else-if="isNumber">
+            <div class="number-host-view">
+              <div class="nh-input-icon">🔢</div>
+              <div class="nh-label">{{ $t('quiz.host.players_entering_number') }}</div>
+            </div>
+          </template>
           <template v-else>
             <div 
                 v-for="(answer, idx) in currentQuestion?.answers" 
@@ -248,6 +254,28 @@
                 </div>
                 <div class="srt-label srt-label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}{{ currentQuestion?.sliderConfig?.unit }}</div>
               </div>
+            </div>
+          </div>
+
+          <!-- NUMBER RESULTS -->
+          <div v-else-if="isNumber" class="number-results-host">
+            <div class="question-column">
+              <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+                <div v-if="questionImageUrl" class="question-image-container">
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+                  <div class="image-overlay-gradient"></div>
+                </div>
+                <div class="question-text-overlay">
+                  <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
+                </div>
+              </div>
+            </div>
+            <div class="answers-column">
+               <div class="number-result-card">
+                  <div class="nr-label">{{ $t('quiz.host.correct_answer') }}</div>
+                  <div class="nr-value">{{ currentQuestion?.correctNumber }}</div>
+                  <div class="nr-check">✓</div>
+               </div>
             </div>
           </div>
 
@@ -460,6 +488,7 @@ const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
 const isSlider = computed(() => currentQuestion.value?.type === 'slider')
 const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct_picture')
 const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
+const isNumber = computed(() => currentQuestion.value?.type === 'number')
 const revealCorrect = ref(false)
 
 // Watch gameState to trigger animation
@@ -1574,6 +1603,82 @@ onUnmounted(() => {
 
 .color-true { background: #000; border-color: #0A84FF; box-shadow: 0 4px 15px rgba(10,132,255,0.3); }
 .color-false { background: #000; border-color: #FF3B30; box-shadow: 0 4px 15px rgba(255,59,48,0.3); }
+
+/* NUMBER HOST STYLES */
+.number-host-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 20px;
+}
+
+.nh-input-icon {
+    font-size: 5rem;
+    animation: bounce 2s infinite ease-in-out;
+}
+
+.nh-label {
+    font-size: 1.5rem;
+    color: #8E8E93;
+    font-weight: 600;
+}
+
+.number-results-host {
+    width: 100%;
+    display: flex;
+    gap: 30px;
+    align-items: stretch;
+    flex: 1;
+}
+
+.number-result-card {
+    background: #1C1C1E;
+    border: 3px solid #32D74B;
+    border-radius: 20px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 0 40px rgba(50, 215, 75, 0.2);
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nr-label {
+    font-size: 1.5rem;
+    color: #8E8E93;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.nr-value {
+    font-size: 8rem;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+}
+
+.nr-check {
+    font-size: 4rem;
+    color: #32D74B;
+    background: rgba(50, 215, 75, 0.1);
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
 
 /* CORRECT PICTURE HOST STYLES */
 .correct-picture-host-layout {

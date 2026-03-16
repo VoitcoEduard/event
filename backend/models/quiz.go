@@ -19,6 +19,7 @@ type QuizQuestion struct {
 	ImageAlt           string              `json:"imageAlt" bson:"imageAlt"`
 	ImageOptions       []ImageOption       `json:"imageOptions" bson:"imageOptions"`             // For correct_picture
 	WrongPictureConfig *WrongPictureConfig `json:"wrongPictureConfig" bson:"wrongPictureConfig"` // For wrong_pictures
+	CorrectNumber      int                 `json:"correctNumber" bson:"correctNumber"`           // For number
 }
 
 // SliderConfig stores slider-specific configuration
@@ -62,6 +63,7 @@ const (
 	QuestionTypeSlider         = "slider"
 	QuestionTypeCorrectPicture = "correct_picture"
 	QuestionTypeWrongPictures  = "wrong_pictures"
+	QuestionTypeNumber         = "number"
 )
 
 // ImageOption struct for correct_picture question type

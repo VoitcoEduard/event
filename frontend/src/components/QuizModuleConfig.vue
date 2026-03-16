@@ -170,6 +170,10 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
                  q.answers = ['True', 'False', '', '']
                  if (q.correctIndex > 1) q.correctIndex = 0
             }
+            if (q.type === 'number') {
+                if (q.correctNumber === undefined) q.correctNumber = 0
+                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+            }
             if (q.explainTime === undefined) q.explainTime = 5
             return q
         })
@@ -218,6 +222,10 @@ const loadTemplate = (template) => {
             if (q.type === 'true_false') {
                  q.answers = ['True', 'False', '', '']
                  if (q.correctIndex > 1) q.correctIndex = 0
+            }
+            if (q.type === 'number') {
+                if (q.correctNumber === undefined) q.correctNumber = 0
+                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
             }
             if (q.explainTime === undefined) q.explainTime = 5
             return q
@@ -358,6 +366,8 @@ const validateQuestions = () => {
       if (q.answers.slice(0, 2).some(a => !a.trim())) return t('quiz_config.validation.tf_options')
     } else if (q.type === 'correct_picture') {
         if (!q.imageOptions || q.imageOptions.length < 2) return t('quiz_config.validation.cp_options')
+    } else if (q.type === 'number') {
+        if (q.correctNumber === undefined || q.correctNumber === null) return t('quiz_config.validation.number_required')
     } else {
       // For standard types (multiple_choice, multi_select), ensure all 4 slots are filled
       if (q.answers.some(a => !a.trim())) return t('quiz_config.validation.mc_options')
@@ -418,6 +428,10 @@ const handleFileUpload = (event) => {
                     if (q.type === 'true_false') {
                          q.answers = ['True', 'False', '', '']
                          if (q.correctIndex > 1) q.correctIndex = 0
+                    }
+                    if (q.type === 'number') {
+                        if (q.correctNumber === undefined) q.correctNumber = 0
+                        if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
                     }
                     if (q.explainTime === undefined) q.explainTime = 5
                     return q

@@ -157,6 +157,40 @@
       </div>
     </div>
 
+    <!-- NUMBER QUESTION STATE -->
+    <div 
+      v-else-if="state === States.QUESTION_ACTIVE && isNumber" 
+      class="state-container number-container"
+    >
+      <div class="question-info">
+        <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+      </div>
+      
+      <div class="number-question-content">
+        <div class="number-input-wrapper">
+          <input 
+            type="number" 
+            inputmode="numeric" 
+            pattern="[0-9]*"
+            v-model.number="numberValue"
+            class="number-answer-input"
+            :placeholder="$t('quiz.player.enter_number')"
+            :disabled="hasSubmitted"
+            @keyup.enter="submitNumberAnswer"
+          />
+        </div>
+        
+        <button 
+          class="number-submit-btn"
+          :class="{ 'active': numberValue !== null && numberValue !== '' }"
+          :disabled="hasSubmitted || numberValue === null || numberValue === ''"
+          @click="submitNumberAnswer"
+        >
+          {{ hasSubmitted ? '✓' : $t('quiz.player.submit_btn') }}
+        </button>
+      </div>
+    </div>
+
     <!-- QUESTION/ANSWER STATE (Generic/Multiple Choice) -->
     <div v-else-if="state === States.QUESTION_ACTIVE" class="state-container question-container">
       <div class="question-info">
@@ -303,6 +337,7 @@ const currentPoints = ref(0)
 const rank = ref(0)
 const timeRemaining = ref(5)
 const explainTimeRemaining = ref(0)
+const numberValue = ref(null)
 
 // Correct Picture specific state
 const preselectedIndex = ref(0)
@@ -372,6 +407,10 @@ const isCorrectPicture = computed(() => {
 
 const isWrongPictures = computed(() => {
     return currentQuestion.value?.type === 'wrong_pictures'
+})
+
+const isNumber = computed(() => {
+    return currentQuestion.value?.type === 'number'
 })
 
 const imageOptionUrls = computed(() => {
@@ -447,6 +486,11 @@ const submitSliderAnswer = () => {
   if (hasSubmitted.value) return
   selectedAnswer.value = sliderValue.value
   submitAnswer(sliderValue.value)
+}
+
+const submitNumberAnswer = () => {
+  if (hasSubmitted.value || numberValue.value === null || numberValue.value === '') return
+  submitAnswer(numberValue.value)
 }
 
 const submitAnswer = (answerData) => {
@@ -610,6 +654,37 @@ const validateAndScore = (answerData) => {
         signalQueue.enqueue(signal)
         return // Exit generic flow
         
+    } else if (question.type === 'number') {
+        const val = Number(answerData)
+        answerPayload = { answerValue: val }
+        
+        // Binary scoring for number type
+        const correctNumber = Number(question.correctNumber || 0)
+        const maxPoints = Number(question.scoringConfig?.maxPoints || 1000)
+        
+        isCorrectAnswer = val === correctNumber
+        currentPoints.value = isCorrectAnswer ? maxPoints : 0
+        score.value += currentPoints.value
+        
+        if (isCorrectAnswer) streak.value++
+        else streak.value = 0
+        
+        isCorrect.value = isCorrectAnswer
+        
+        // Send signal
+        const timeLimit = question.timeLimit || 20
+        const timeSpent = timeLimit - timeRemaining.value 
+        
+        const signal = {
+            questionIndex: currentQuestionIndex.value,
+            ...answerPayload,
+            scoreEarned: currentPoints.value,
+            timeSpent: timeSpent * 1000,
+            timestamp: Date.now(),
+        }
+        signalQueue.enqueue(signal)
+        return // Exit generic flow
+
     } else {
         const idx = typeof answerData === 'number' ? answerData : -1
         isCorrectAnswer = idx === question.correctIndex
@@ -719,6 +794,9 @@ onMounted(async () => {
                  // Start with empty guesses for new map-style picker
                  wpGuesses.value = []
                  setTimeout(updateWpContainerRect, 500)
+            }
+            if (question && question.type === 'number') {
+                numberValue.value = null
             }
             if (question) {
                 preloadImages(question)
@@ -1622,5 +1700,94 @@ onUnmounted(() => {
   display: block;
   user-select: none;
   -webkit-user-drag: none;
+}
+
+/* NUMBER QUESTION STYLES */
+.number-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.number-question-content {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+.number-input-wrapper {
+  width: 100%;
+}
+
+.number-answer-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.number-answer-input:focus {
+  border-color: #0A84FF;
+  background: rgba(10, 132, 255, 0.1);
+  box-shadow: 0 0 20px rgba(10, 132, 255, 0.2);
+}
+
+.number-answer-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+/* Hide number input spinners */
+.number-answer-input::-webkit-outer-spin-button,
+.number-answer-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.number-submit-btn {
+  width: 100%;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1.2rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.number-submit-btn.active {
+  background: #32D74B;
+  color: white;
+  border-color: #32D74B;
+  box-shadow: 0 8px 16px rgba(50, 215, 75, 0.3);
+}
+
+.number-submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.config-note {
+  font-size: 12px;
+  color: #8E8E93;
+  margin-top: 10px;
+  text-align: center;
 }
 </style>

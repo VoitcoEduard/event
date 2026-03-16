@@ -214,6 +214,7 @@
       "slider_step": "Pasul slider-ului trebuie să fie mai mare decât 0.",
       "tf_options": "Întrebările Adevărat/Fals trebuie să aibă ambele opțiuni.",
       "cp_options": "Întrebările Imagine Corectă trebuie să aibă cel puțin 2 opțiuni de imagine.",
+      "number_required": "Răspunsul corect pentru întrebarea de tip număr este obligatoriu.",
       "mc_options": "Toate opțiunile de răspuns trebuie completate pentru întrebările cu răspuns multiplu."
     },
     "import": {
@@ -236,7 +237,12 @@
         "true_false": "Adevărat / Fals",
         "slider": "Slider",
         "correct_picture": "Imagine Corectă",
-        "wrong_pictures": "Imagini Greșite"
+        "wrong_pictures": "Imagini Greșite",
+        "number": "Număr"
+      },
+      "number": {
+        "correct_answer": "Răspuns Corect",
+        "points": "Puncte"
       },
       "wrong_pictures": {
         "max_points": "Puncte Maxime",
@@ -387,6 +393,8 @@
       "slider_instruction": "Trage și eliberează pentru a trimite",
       "true": "ADEVĂRAT",
       "false": "FALS",
+      "enter_number": "Introdu un număr",
+      "submit": "Trimite",
       "submit_btn": "Trimite Răspunsul",
       "submitted": "Răspuns Trimis!",
       "waiting_others": "Se așteaptă ceilalți...",
@@ -411,6 +419,7 @@
       "go_to_results": "Mergi la Rezultate",
       "results_title": "Rezultate Întrebarea {num}",
       "correct_answer": "Răspuns Corect",
+      "players_entering_number": "Jucătorii introduc un număr",
       "answers_label": "Răspunsuri",
       "slide_to_answer": "Glisează pentru a răspunde",
       "correct_label": "Corect",

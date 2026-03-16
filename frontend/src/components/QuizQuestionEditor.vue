@@ -12,6 +12,7 @@
         <option value="multi_select">{{ $t('quiz_config.question_editor.types.multi_select') }}</option>
         <option value="true_false">{{ $t('quiz_config.question_editor.types.true_false') }}</option>
         <option value="slider">{{ $t('quiz_config.question_editor.types.slider') }}</option>
+        <option value="number">{{ $t('quiz_config.question_editor.types.number') }}</option>
         <option value="correct_picture">{{ $t('quiz_config.question_editor.types.correct_picture') }}</option>
         <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
       </select>
@@ -70,7 +71,7 @@
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
       ⚠️ Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
     </div>
-    <div v-if="localQuestion.type !== 'slider' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
+    <div v-if="localQuestion.type !== 'slider' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
@@ -181,6 +182,30 @@
          <p class="preview-note">{{ $t('quiz_config.question_editor.slider.preview_note') }}</p>
       </div>
 
+    </div>
+    
+    <!-- NUMBER CONFIGURATION -->
+    <div v-if="localQuestion.type === 'number'" class="number-config-panel">
+      <div class="config-section">
+        <h4 class="section-title">{{ $t('quiz_config.question_editor.number.configuration') }}</h4>
+        <div class="config-grid">
+           <div class="input-group">
+              <label>{{ $t('quiz_config.question_editor.number.correct_answer') }}</label>
+              <input type="number" v-model.number="localQuestion.correctNumber" class="config-input correct-value-input" @input="emitUpdate" />
+           </div>
+           <div class="input-group">
+              <label>{{ $t('quiz_config.question_editor.number.points') }}</label>
+              <input type="number" v-model.number="localQuestion.scoringConfig.maxPoints" class="config-input" @input="emitUpdate" />
+           </div>
+        </div>
+        <p class="config-note">Players must input this exact number to score points. No time bonus applies.</p>
+      </div>
+
+      <div class="number-input-preview">
+        <div class="input-placeholder">
+          {{ $t('quiz.player.enter_number') }}
+        </div>
+      </div>
     </div>
 
     <!-- CORRECT PICTURE EDITOR -->
@@ -310,6 +335,7 @@ const localQuestion = reactive({
       partialPercent: 0
   },
   correctValue: props.question.correctValue !== undefined ? props.question.correctValue : 0,
+  correctNumber: props.question.correctNumber !== undefined ? props.question.correctNumber : 0,
   imageId: props.question.imageId || null,
   imageAlt: props.question.imageAlt || '',
   imageOptions: props.question.imageOptions || [
@@ -347,6 +373,7 @@ watch(() => props.question, (newVal) => {
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 },
           explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 5,
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
+          correctNumber: newVal.correctNumber !== undefined ? newVal.correctNumber : 0,
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',
           imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }],
@@ -367,6 +394,8 @@ const handleTypeChange = () => {
         // Ensure defaults are set
         if (!localQuestion.sliderConfig.maxValue) localQuestion.sliderConfig.maxValue = 100
         if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 100
+    } else if (localQuestion.type === 'number') {
+        if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 1000
     } else if (localQuestion.type === 'correct_picture') {
         // Ensure image options exist
         if (!localQuestion.imageOptions || localQuestion.imageOptions.length === 0) {
@@ -719,6 +748,37 @@ const isAnswerReadOnly = (idx) => {
   font-weight: 600;
   display: block;
   margin-bottom: 8px;
+}
+
+.number-config-panel {
+  background: #232325;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px dashed #3A3A3C;
+}
+
+.config-note {
+  font-size: 11px;
+  color: #8E8E93;
+  margin-top: 12px;
+  font-style: italic;
+}
+
+.number-input-preview {
+  margin-top: 20px;
+  background: #1C1C1E;
+  border: 1px solid #3A3A3C;
+  border-radius: 8px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-placeholder {
+  color: #48484A;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 /* Small Switch Styles */
