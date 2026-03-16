@@ -10,7 +10,7 @@
     "errors": {
       "invalid_pin": "Te rugăm să introduci un cod PIN valid de 6 cifre",
       "not_found": "Evenimentul nu a fost găsit. Verifică codul PIN.",
-      "not_active": "Acest eveniment nu este activ în prezent.",
+      "not_active": "Evenimentul nu a început încă, spune-i administratorului să îl pornească.",
       "failed": "Conectarea la eveniment a eșuat.",
       "network": "Eroare de rețea. Te rugăm să încerci din nou."
     }
@@ -80,10 +80,10 @@
       "modules_desc": "Gestionează modulele interactive pentru acest eveniment.",
       "no_modules": "Nu au fost adăugate module încă.",
       "configure": "Configurează",
-      "host": "Găzduiește",
-      "push_to_big_screen": "Trimite",
-      "pushed_to_big_screen": "Trimis pe Ecranul Mare!",
-      "push_error": "Eroare la trimiterea pe Ecranul Mare",
+      "admin": "Admin",
+      "push_to_big_screen": "Proiect",
+      "pushed_to_big_screen": "Trimis pe Proiector!",
+      "push_error": "Eroare la trimiterea pe Proiector",
       "data": "Date",
       "stop": "Stop",
       "start": "Start",
@@ -94,9 +94,9 @@
       "module_type_label": "Tip Modul",
       "form_option": "📝 Formular",
       "quiz_option": "🎮 Quiz",
-      "big_screen": "🖥️ Ecran Mare",
-      "close_big_screen": "❌ Închide Ecranul Mare",
-      "screen_manager": "🖥️ Manager Ecran",
+      "big_screen": "🖥️ Proiector",
+      "close_big_screen": "❌ Închide Proiector",
+      "screen_manager": "🖥️ Manager Proiector",
       "toast": {
         "event_link_copied": "Link-ul evenimentului a fost copiat!",
         "module_added": "Modul adăugat. Te rugăm să îl configurezi.",
@@ -106,8 +106,8 @@
     }
   },
   "screen_manager": {
-    "title": "Manager Ecran",
-    "open_big_screen": "🖥️ Deschide Ecran Mare",
+    "title": "Manager Proiector",
+    "open_big_screen": "🖥️ Deschide Proiector",
     "push_to_screen": "Afișează pe ecran",
     "welcome_slide": "Slide de Bun Venit",
     "show_qr": "Arată codul QR",
@@ -115,7 +115,7 @@
     "custom_text_slide": "Slide cu Text Personalizat",
     "custom_text_placeholder": "Introduceți text personalizat...",
     "live_preview": "Previzualizare Live",
-    "toast_pushed": "Afișat cu succes pe ecran"
+    "toast_pushed": "Afișat cu succes pe proiector"
   },
   "library": {
     "title": "Librărie",
@@ -186,7 +186,7 @@
       "bg_music": "Muzică de Fundal",
       "none": "Niciuna",
       "audio_output": "Ieșire Audio",
-      "bigscreen_only": "Doar Big Screen",
+      "bigscreen_only": "Doar Proiector",
       "admin_only": "Doar Admin",
       "both": "Ambele"
     },
@@ -229,7 +229,8 @@
       "text_label": "Text Întrebare",
       "text_placeholder": "ex. Care este capitala Franței?",
       "image_label": "Imagine Întrebare (Opțional)",
-      "time_limit": "Limită de Timp (secunde)",
+      "explain_time": "Timp pentru explicație (s)",
+      "time_limit": "Timp pentru răspuns (s)",
       "answer_placeholder": "Introdu variantă de răspuns",
       "types": {
         "multiple_choice": "Alegere Unică",

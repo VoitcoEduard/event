@@ -53,7 +53,7 @@
         </select>
       </div>
       <div class="input-group">
-        <label>Explain Time (s)</label>
+        <label>{{ $t('quiz_config.question_editor.explain_time') }}</label>
         <select v-model.number="localQuestion.explainTime" class="select-input" @change="emitUpdate">
           <option :value="0">0s</option>
           <option :value="5">5s</option>

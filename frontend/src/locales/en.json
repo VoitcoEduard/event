@@ -10,7 +10,7 @@
     "errors": {
       "invalid_pin": "Please enter a valid 6-digit PIN",
       "not_found": "Event not found. Check your PIN.",
-      "not_active": "This event is not active currently.",
+      "not_active": "Event is not yet started, tell admin to start it.",
       "failed": "Failed to connect to event.",
       "network": "Network error. Please try again."
     }
@@ -80,10 +80,10 @@
       "modules_desc": "Manage interactive modules for this event.",
       "no_modules": "No modules added yet.",
       "configure": "Configure",
-      "host": "Host",
-      "push_to_big_screen": "Push",
-      "pushed_to_big_screen": "Pushed to Big Screen!",
-      "push_error": "Failed to push to Big Screen",
+      "admin": "Admin",
+      "push_to_big_screen": "Project",
+      "pushed_to_big_screen": "Pushed to Projector!",
+      "push_error": "Failed to push to Projector",
       "data": "Data",
       "stop": "Stop",
       "start": "Start",
@@ -94,9 +94,9 @@
       "module_type_label": "Module Type",
       "form_option": "📝 Form",
       "quiz_option": "🎮 Quiz",
-      "big_screen": "🖥️ Big Screen",
-      "close_big_screen": "❌ Close Big Screen",
-      "screen_manager": "🖥️ Screen Manager",
+      "big_screen": "🖥️ Projector",
+      "close_big_screen": "❌ Close Projector",
+      "screen_manager": "🖥️ Projector",
       "toast": {
         "event_link_copied": "Event link copied to clipboard!",
         "module_added": "Module added. Now please configure it.",
@@ -106,8 +106,8 @@
     }
   },
   "screen_manager": {
-    "title": "Screen Manager",
-    "open_big_screen": "🖥️ Open Big Screen",
+    "title": "Projector",
+    "open_big_screen": "🖥️ Open Projector",
     "push_to_screen": "Push to Screen",
     "welcome_slide": "Welcome Slide",
     "show_qr": "Show QR Code",
@@ -115,7 +115,7 @@
     "custom_text_slide": "Custom Text Slide",
     "custom_text_placeholder": "Enter custom text to display...",
     "live_preview": "Live Preview",
-    "toast_pushed": "Successfully pushed to Big Screen"
+    "toast_pushed": "Successfully pushed to Projector"
   },
   "library": {
     "title": "Library",
@@ -186,7 +186,7 @@
       "bg_music": "Background Music",
       "none": "None",
       "audio_output": "Audio Output",
-      "bigscreen_only": "Big Screen Only",
+      "bigscreen_only": "Projector Only",
       "admin_only": "Admin Only",
       "both": "Both"
     },
@@ -229,7 +229,8 @@
       "text_label": "Question Text",
       "text_placeholder": "e.g., What is the capital of France?",
       "image_label": "Question Image (Optional)",
-      "time_limit": "Time Limit (seconds)",
+      "explain_time": "Explain Time (s)",
+      "time_limit": "Time for answer (s)",
       "answer_placeholder": "Type answer option",
       "types": {
         "multiple_choice": "Single Choice",
@@ -261,7 +262,7 @@
         "max_value": "Max Value",
         "step": "Step",
         "unit": "Unit",
-      "unit_placeholder": "%, kg, years",
+        "unit_placeholder": "%, kg, years",
         "correct_scoring": "Correct Answer & Scoring",
         "correct_value": "Correct Value",
         "decimals": "Decimals",

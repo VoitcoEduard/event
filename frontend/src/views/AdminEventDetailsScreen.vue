@@ -124,7 +124,7 @@
                             class="module-btn host-btn"
                             @click="hostQuiz(module)"
                           >
-                            {{ $t('admin.details.host') }}
+                            {{ $t('admin.details.admin') }}
                           </button>
                           
                           <button
