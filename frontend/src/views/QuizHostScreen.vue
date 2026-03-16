@@ -181,30 +181,40 @@
            </div>
          </div>
 
-          <!-- WRONG PICTURES RESULTS HOST -->
-          <div v-else-if="isWrongPictures" class="wrong-picture-results-host">
-             <div class="wp-host-header">
-                <h1 class="wp-host-title">What is wrong with the picture?</h1>
-                <p class="wp-host-instruction">{{ currentQuestion.text }}</p>
-             </div>
-             <div class="wp-host-image-container results-mode">
-                <img :src="questionImageUrl" class="wp-host-big-img dimmed" />
-                
-                <!-- Targets reveal -->
-                <div 
-                  v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
-                  :key="idx" 
-                  class="wp-host-target-area"
-                  :style="{
-                    left: target.xPercent + '%',
-                    top: target.yPercent + '%',
-                    width: (target.radius * 2) + '%',
-                    height: (target.radius * 2) + '%',
-                    transform: 'translate(-50%, -50%)'
-                  }"
-                >
-                  <div class="wp-host-target-pulse"></div>
-                  <div class="wp-host-target-label">{{ target.label }}</div>
+          <!-- WRONG PICTURES RESULTS HOST (Magnified) -->
+          <div v-else-if="isWrongPictures" class="wrong-picture-results-magnified">
+             <div class="wp-magnified-results-grid">
+                <!-- Left Column: Magnified Crops (70% space) -->
+                <div class="wp-magnified-column">
+                    <div 
+                      v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
+                      :key="'crop-' + idx"
+                      class="wp-magnified-crop-card"
+                    >
+                        <div class="wp-crop-container square">
+                            <div 
+                                class="wp-crop-image" 
+                                :style="{ 
+                                    backgroundImage: `url(${questionImageUrl})`,
+                                    backgroundPosition: `${target.xPercent}% ${target.yPercent}%`,
+                                    backgroundSize: `${100 / (target.radius * 0.15)}%` 
+                                }"
+                            ></div>
+                            <div class="wp-crop-badge">{{ idx + 1 }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Answer Labels (30% space) -->
+                <div class="wp-labels-column">
+                    <div 
+                      v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
+                      :key="'label-' + idx"
+                      class="wp-result-label-card compact"
+                    >
+                        <div class="wp-label-number small">{{ idx + 1 }}</div>
+                        <div class="wp-label-text small">{{ target.label }}</div>
+                    </div>
                 </div>
              </div>
           </div>
@@ -1779,18 +1789,20 @@ onUnmounted(() => {
 }
 
 /* WRONG PICTURES HOST STYLES */
-.wrong-picture-host-layout, .wrong-picture-results-host {
+.wrong-picture-host-layout, .wrong-picture-results-magnified {
     display: flex;
     flex-direction: column;
     height: 100%;
     width: 100%;
     padding: 20px;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .wp-host-header {
     text-align: center;
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .wp-host-title {
@@ -1827,11 +1839,125 @@ onUnmounted(() => {
     object-fit: contain;
 }
 
-.wp-host-big-img.dimmed {
-    filter: brightness(0.5);
+/* MAGNIFIED RESULTS LAYOUT */
+.wp-magnified-results-grid {
+    flex: 1;
+    display: flex;
+    gap: 30px;
+    min-height: 0;
+    width: 100%;
+    margin: 0 auto;
 }
 
-/* WP Results Targets */
+.wp-magnified-column {
+    flex: 7; /* 70% of space */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-auto-rows: min-content;
+    gap: 25px;
+    overflow-y: auto;
+    padding: 20px;
+    align-content: center;
+}
+
+.wp-labels-column {
+    flex: 3; /* 30% of space */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+/* Magnified Crop Card */
+.wp-magnified-crop-card {
+    background: #2C2C2E;
+    border-radius: 12px;
+    padding: 6px;
+    border: 1px solid #444;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    transition: transform 0.2s ease;
+}
+
+.wp-magnified-crop-card:hover {
+    transform: scale(1.02);
+    border-color: #32D74B;
+}
+
+.wp-crop-container {
+    position: relative;
+    width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #000;
+}
+
+.wp-crop-container.square {
+    aspect-ratio: 1 / 1;
+}
+
+.wp-crop-image {
+    width: 100%;
+    height: 100%;
+    background-repeat: no-repeat;
+}
+
+.wp-crop-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 28px;
+    height: 28px;
+    background: #32D74B;
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 1rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    z-index: 2;
+}
+
+/* Result Label Card */
+.wp-result-label-card.compact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #1C1C1E;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 1px solid #32D74B;
+    box-shadow: 0 2px 10px rgba(50, 215, 75, 0.1);
+    animation: wp-label-reveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.wp-label-number.small {
+    width: 32px;
+    height: 32px;
+    background: #32D74B;
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.wp-label-text.small {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* WP Results Targets - Deprecated but keeping style pattern for reference */
 .wp-host-target-area {
     position: absolute;
     border: 3px solid #32D74B;
