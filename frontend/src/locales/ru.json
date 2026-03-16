@@ -242,7 +242,12 @@
         "max_points": "Макс. баллов",
         "tolerance": "Радиус допуска (%)",
         "set_targets": "Задать цели",
-        "image_required": "Пожалуйста, сначала загрузите изображение, чтобы задать цели."
+        "image_required": "Пожалуйста, сначала загрузите изображение, чтобы задать цели.",
+        "instructions_label": "Заголовок / Инструкции",
+        "points_short": "Баллы",
+        "tolerance_short": "Допуск %",
+        "time_short": "Время (с)",
+        "show_count": "Показать кол-во"
       },
       "slider": {
         "range_unit": "Диапазон и Единицы",
@@ -261,6 +266,14 @@
         "max_points": "Макс. баллов",
         "preview": "Предпросмотр",
         "preview_note": "В предпросмотре показан маркер правильного ответа"
+      },
+      "coordinate_picker": {
+        "targets_title": "Цели",
+        "add_target": "+ Добавить цель",
+        "placing_hint": "Нажмите на изображение...",
+        "no_targets": "Цели не заданы.",
+        "label_placeholder": "Метка...",
+        "radius_label": "Радиус:"
       }
     }
   },

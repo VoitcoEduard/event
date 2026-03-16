@@ -29,56 +29,60 @@
                 <button class="remove-btn" @click="removeRound(index)">✕</button>
               </div>
               
-              <div class="config-grid">
-                <div class="input-group full-width">
-                  <label>Round Title / Instructions</label>
-                  <input type="text" v-model="question.text" class="setting-input" placeholder="e.g. Find 3 historical inaccuracies" />
+              <div class="config-compact-row">
+                <div class="input-group flex-grow">
+                  <label>{{ $t('quiz_config.question_editor.wrong_pictures.instructions_label') }}</label>
+                  <input 
+                    type="text" 
+                    v-model="question.text" 
+                    class="setting-input" 
+                    :placeholder="$t('quiz_config.question_editor.text_placeholder')"
+                  />
                 </div>
                 
-                <div class="input-group">
-                  <label>{{ $t('quiz_config.question_editor.wrong_pictures.max_points') }}</label>
+                <div class="input-group mini">
+                  <label>{{ $t('quiz_config.question_editor.wrong_pictures.points_short') }}</label>
                   <input type="number" v-model.number="question.wrongPictureConfig.maxPoints" class="setting-input" />
                 </div>
                 
-                <div class="input-group">
-                  <label>{{ $t('quiz_config.question_editor.wrong_pictures.tolerance') }}</label>
+                <div class="input-group mini">
+                  <label>{{ $t('quiz_config.question_editor.wrong_pictures.tolerance_short') }}</label>
                   <input type="number" v-model.number="question.wrongPictureConfig.tolerancePercent" class="setting-input" />
                 </div>
                 
-                <div class="input-group">
-                  <label>{{ $t('quiz_config.question_editor.time_limit') }}</label>
+                <div class="input-group mini">
+                  <label>{{ $t('quiz_config.question_editor.wrong_pictures.time_short') }}</label>
                   <input type="number" v-model.number="question.timeLimit" class="setting-input" />
                 </div>
                 
-                <div class="input-group">
-                  <label>Show Target Count to Players</label>
-                  <label class="switch">
+                <div class="input-group mini center">
+                  <label>{{ $t('quiz_config.question_editor.wrong_pictures.show_count') }}</label>
+                  <label class="switch small">
                     <input type="checkbox" v-model="question.wrongPictureConfig.showTargetCount">
                     <span class="slider round"></span>
                   </label>
                 </div>
               </div>
 
-              <!-- Image Upload integration -->
-              <div class="image-section">
+              <div class="image-management-section">
                 <ImageUploader 
                   v-model="question.imageId"
                   v-model:altText="question.imageAlt"
                   :eventId="eventId"
                   :moduleId="module?.id"
+                  :hidePreview="true"
                 />
-              </div>
 
-              <div v-if="question.imageId" class="coordinate-picker-wrapper mt-3">
-                <label>{{ $t('quiz_config.question_editor.wrong_pictures.set_targets') }}</label>
-                <CoordinatePicker
-                  :image-id="question.imageId"
-                  :targets="question.wrongPictureConfig.targets"
-                  @update:targets="val => question.wrongPictureConfig.targets = val"
-                />
-              </div>
-              <div v-else class="image-required-warning mt-3">
-                ⚠️ {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+                <div v-if="question.imageId" class="coordinate-picker-container">
+                  <CoordinatePicker
+                    :image-id="question.imageId"
+                    :targets="question.wrongPictureConfig.targets"
+                    @update:targets="val => question.wrongPictureConfig.targets = val"
+                  />
+                </div>
+                <div v-else class="image-required-warning">
+                  ⚠️ {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+                </div>
               </div>
             </div>
           </div>
@@ -462,50 +466,49 @@ const modalStyle = computed(() => ({
   font-size: 16px;
 }
 
-.config-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.full-width {
-  grid-column: 1 / -1;
+.config-compact-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: flex-end;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
+.flex-grow { flex: 1; }
+.mini { width: 80px; }
+.center { align-items: center; }
+
 .input-group label {
-  font-size: 12px;
+  font-size: 11px;
   color: #8E8E93;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .setting-input {
   background-color: #1C1C1E;
   border: 1px solid #3A3A3C;
   color: white;
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 100%;
 }
 
-.image-section {
-  margin-top: 16px;
+.image-management-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.coordinate-picker-wrapper {
-  background-color: #1C1C1E;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #3A3A3C;
-}
-
-.mt-3 {
-  margin-top: 16px;
+.coordinate-picker-container {
+  border-top: 1px solid #3A3A3C;
+  padding-top: 12px;
 }
 
 .mt-auto {
@@ -599,6 +602,23 @@ const modalStyle = computed(() => ({
 }
 
 /* Switch Styles */
+.switch.small {
+  width: 36px;
+  height: 20px;
+  margin-top: 0;
+}
+
+.switch.small .slider:before {
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+}
+
+.switch.small input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
 .switch {
   position: relative;
   display: inline-block;

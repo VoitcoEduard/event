@@ -28,7 +28,7 @@
       />
     </div>
 
-    <div class="input-group">
+    <div v-if="localQuestion.type !== 'wrong_pictures'" class="input-group">
       <label>{{ $t('quiz_config.question_editor.image_label') }}</label>
       <ImageUploader
         v-model="localQuestion.imageId"
@@ -197,9 +197,9 @@
 
     <!-- WRONG PICTURES CONFIGURATION -->
     <div v-if="localQuestion.type === 'wrong_pictures'" class="wrong-pictures-config">
-      <div class="config-grid">
-        <div class="input-group">
-          <label>{{ $t('quiz_config.question_editor.wrong_pictures.max_points') }}</label>
+      <div class="config-compact-row">
+        <div class="input-group mini">
+          <label>{{ $t('quiz_config.question_editor.wrong_pictures.points_short') }}</label>
           <input 
             type="number" 
             v-model.number="localQuestion.wrongPictureConfig.maxPoints" 
@@ -208,8 +208,8 @@
           />
         </div>
         
-        <div class="input-group">
-          <label>{{ $t('quiz_config.question_editor.wrong_pictures.tolerance') }}</label>
+        <div class="input-group mini">
+          <label>{{ $t('quiz_config.question_editor.wrong_pictures.tolerance_short') }}</label>
           <input 
             type="number" 
             v-model.number="localQuestion.wrongPictureConfig.tolerancePercent"
@@ -217,18 +217,39 @@
             @input="emitUpdate"
           />
         </div>
+
+        <div class="input-group mini center">
+          <label>{{ $t('quiz_config.question_editor.wrong_pictures.show_count') }}</label>
+          <label class="switch-small">
+            <input 
+              type="checkbox" 
+              v-model="localQuestion.wrongPictureConfig.showTargetCount"
+              @change="emitUpdate"
+            >
+            <span class="slider-round"></span>
+          </label>
+        </div>
       </div>
       
-      <div v-if="localQuestion.imageId" class="coordinate-picker-wrapper">
-        <label>{{ $t('quiz_config.question_editor.wrong_pictures.set_targets') }}</label>
-        <CoordinatePicker
-          :image-id="localQuestion.imageId"
-          :targets="localQuestion.wrongPictureConfig.targets"
-          @update:targets="updateTargets"
+      <div class="image-management-section">
+        <ImageUploader
+          v-model="localQuestion.imageId"
+          v-model:altText="localQuestion.imageAlt"
+          :event-id="eventId"
+          :module-id="moduleId"
+          :hidePreview="true"
         />
-      </div>
-      <div v-else class="image-required-warning">
-        ⚠️ {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+
+        <div v-if="localQuestion.imageId" class="coordinate-picker-wrapper">
+          <CoordinatePicker
+            :image-id="localQuestion.imageId"
+            :targets="localQuestion.wrongPictureConfig.targets"
+            @update:targets="updateTargets"
+          />
+        </div>
+        <div v-else class="image-required-warning">
+          ⚠️ {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+        </div>
       </div>
     </div>
 
@@ -666,8 +687,30 @@ const isAnswerReadOnly = (idx) => {
   border: 1px dashed #3A3A3C;
 }
 
+.config-compact-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: flex-end;
+}
+
+.mini {
+  width: 80px;
+}
+
+.center {
+  align-items: center;
+}
+
+.image-management-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .coordinate-picker-wrapper {
-  margin-top: 16px;
+  border-top: 1px solid #3A3A3C;
+  padding-top: 16px;
 }
 
 .coordinate-picker-wrapper > label {
@@ -675,16 +718,50 @@ const isAnswerReadOnly = (idx) => {
   color: #E5E5EA;
   font-weight: 600;
   display: block;
+  margin-bottom: 8px;
 }
 
-.image-required-warning {
-  margin-top: 16px;
-  padding: 12px;
-  background: rgba(255, 204, 0, 0.1);
-  border: 1px solid rgba(255, 204, 0, 0.3);
-  color: #FFCC00;
-  border-radius: 8px;
-  font-size: 13px;
+/* Small Switch Styles */
+.switch-small {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.switch-small input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider-round {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #3A3A3C;
+  transition: .4s;
+  border-radius: 20px;
+}
+
+.slider-round:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.switch-small input:checked + .slider-round {
+  background-color: #32D74B;
+}
+
+.switch-small input:checked + .slider-round:before {
+  transform: translateX(16px);
 }
 
 @media (max-width: 600px) {

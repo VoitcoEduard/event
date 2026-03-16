@@ -1,12 +1,21 @@
 <template>
   <div class="image-uploader">
-    <div v-if="modelValue" class="image-preview-container">
+    <div v-if="modelValue && !hidePreview" class="image-preview-container">
       <img :src="imageUrl" :alt="altText" class="image-preview" />
       <div class="image-actions">
         <button type="button" class="remove-btn" @click="removeImage" :disabled="disabled">
           {{ $t('image_uploader.remove') }}
         </button>
       </div>
+    </div>
+    
+    <div v-if="modelValue && hidePreview" class="compact-actions">
+      <button type="button" class="change-btn" @click="triggerFileSelect" :disabled="disabled">
+        🔄 Change Image
+      </button>
+      <button type="button" class="remove-btn-compact" @click="removeImage" :disabled="disabled">
+        ✕ Remove
+      </button>
     </div>
     
     <div v-if="modelValue" class="alt-text-input">
@@ -76,6 +85,10 @@ const props = defineProps({
     required: true
   },
   disabled: {
+    type: Boolean,
+    default: false
+  },
+  hidePreview: {
     type: Boolean,
     default: false
   }
@@ -251,6 +264,44 @@ function updateAltText(value) {
 
 .remove-btn:hover:not(:disabled) {
   background: rgba(255, 59, 48, 0.8);
+}
+
+.compact-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.change-btn {
+  background: #3A3A3C;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.change-btn:hover:not(:disabled) {
+  background: #4A4A4C;
+}
+
+.remove-btn-compact {
+  background: rgba(255, 69, 58, 0.1);
+  color: #FF453A;
+  border: 1px solid rgba(255, 69, 58, 0.3);
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.remove-btn-compact:hover:not(:disabled) {
+  background: rgba(255, 69, 58, 0.2);
 }
 
 .remove-btn:disabled {

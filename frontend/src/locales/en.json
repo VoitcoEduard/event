@@ -242,7 +242,12 @@
         "max_points": "Max Points",
         "tolerance": "Tolerance Radius (%)",
         "set_targets": "Set Target Locations",
-        "image_required": "Please upload an image first to set wrong picture targets."
+        "image_required": "Please upload an image first to set wrong picture targets.",
+        "instructions_label": "Round Title / Instructions",
+        "points_short": "Points",
+        "tolerance_short": "Tolerance %",
+        "time_short": "Time (s)",
+        "show_count": "Show Count"
       },
       "slider": {
         "range_unit": "Range & Unit",
@@ -250,7 +255,7 @@
         "max_value": "Max Value",
         "step": "Step",
         "unit": "Unit",
-        "unit_placeholder": "%, kg, years",
+      "unit_placeholder": "%, kg, years",
         "correct_scoring": "Correct Answer & Scoring",
         "correct_value": "Correct Value",
         "decimals": "Decimals",
@@ -261,6 +266,14 @@
         "max_points": "Max Points",
         "preview": "Preview",
         "preview_note": "Preview shows correct answer marker"
+      },
+      "coordinate_picker": {
+        "targets_title": "Targets",
+        "add_target": "+ Add Target",
+        "placing_hint": "Click on image...",
+        "no_targets": "No targets set.",
+        "label_placeholder": "Label...",
+        "radius_label": "Radius:"
       }
     }
   },

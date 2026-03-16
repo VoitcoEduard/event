@@ -242,7 +242,12 @@
         "max_points": "Puncte Maxime",
         "tolerance": "Rază de Toleranță (%)",
         "set_targets": "Setează Locațiile Corecte",
-        "image_required": "Te rugăm să încarci o imagine prima dată pentru a seta țintele."
+        "image_required": "Te rugăm să încarci o imagine prima dată pentru a seta țintele.",
+        "instructions_label": "Titlu Rundă / Instrucțiuni",
+        "points_short": "Puncte",
+        "tolerance_short": "Toleranță %",
+        "time_short": "Timp (s)",
+        "show_count": "Arată Nr."
       },
       "slider": {
         "range_unit": "Interval & Unități",
@@ -261,6 +266,14 @@
         "max_points": "Puncte Max",
         "preview": "Previzualizare",
         "preview_note": "Previzualizarea arată markerul răspunsului corect"
+      },
+      "coordinate_picker": {
+        "targets_title": "Ținte",
+        "add_target": "+ Adaugă Țintă",
+        "placing_hint": "Apasă pe imagine...",
+        "no_targets": "Nicio țintă setată.",
+        "label_placeholder": "Etichetă...",
+        "radius_label": "Rază:"
       }
     }
   },
