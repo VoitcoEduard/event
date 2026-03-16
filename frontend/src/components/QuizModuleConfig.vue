@@ -369,7 +369,7 @@ const validateQuestions = () => {
     } else if (q.type === 'number') {
         if (q.correctNumber === undefined || q.correctNumber === null) return t('quiz_config.validation.number_required')
     } else {
-      // For standard types (multiple_choice, multi_select), ensure all 4 slots are filled
+      // For standard types (classic, multi_select), ensure all 4 slots are filled
       if (q.answers.some(a => !a.trim())) return t('quiz_config.validation.mc_options')
     }
   }

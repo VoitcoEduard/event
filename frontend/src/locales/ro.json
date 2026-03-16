@@ -235,7 +235,7 @@
       "default_hint": "imp.",
       "answer_placeholder": "Introdu variantă de răspuns",
       "types": {
-        "multiple_choice": "Alegere Unică",
+        "classic": "Clasic",
         "multi_select": "Selecție Multiplă",
         "true_false": "Adevărat / Fals",
         "slider": "Slider",

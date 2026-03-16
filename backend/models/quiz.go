@@ -5,7 +5,7 @@ import "time"
 // Question model
 type QuizQuestion struct {
 	ID                 string              `json:"id" bson:"id"`
-	Type               string              `json:"type" bson:"type"` // "multiple_choice", "true_false", "multi_select"
+	Type               string              `json:"type" bson:"type"` // "classic", "true_false", "multi_select"
 	Text               string              `json:"text" bson:"text"`
 	Answers            []string            `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
 	CorrectIndex       int                 `json:"correctIndex" bson:"correctIndex"`
@@ -57,7 +57,7 @@ type WrongPictureConfig struct {
 }
 
 const (
-	QuestionTypeMultipleChoice = "multiple_choice"
+	QuestionTypeClassic = "classic"
 	QuestionTypeTrueFalse      = "true_false"
 	QuestionTypeMultiSelect    = "multi_select"
 	QuestionTypeSlider         = "slider"

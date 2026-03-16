@@ -235,7 +235,7 @@
       "default_hint": "по ум.",
       "answer_placeholder": "Введите вариант ответа",
       "types": {
-        "multiple_choice": "Одиночный выбор",
+        "classic": "Классик",
         "multi_select": "Множественный выбор",
         "true_false": "Правда / Ложь",
         "slider": "Слайдер",

@@ -543,7 +543,7 @@ const handleAddQuestion = () => {
     const isWrongPictures = currentTemplate.value.moduleType === 'wrong_pictures'
     currentTemplate.value.questions.push({
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        type: isWrongPictures ? 'wrong_pictures' : 'multiple_choice',
+        type: isWrongPictures ? 'wrong_pictures' : 'classic',
         text: '',
         answers: isWrongPictures ? [] : ['', '', '', ''],
         correctIndex: 0,

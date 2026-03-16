@@ -8,7 +8,7 @@
     <div class="input-group">
       <label>{{ $t('quiz_config.question_editor.type_label') }}</label>
       <select v-model="localQuestion.type" class="select-input" @change="handleTypeChange">
-        <option value="multiple_choice">{{ $t('quiz_config.question_editor.types.multiple_choice') }}</option>
+        <option value="classic">{{ $t('quiz_config.question_editor.types.classic') }}</option>
         <option value="multi_select">{{ $t('quiz_config.question_editor.types.multi_select') }}</option>
         <option value="true_false">{{ $t('quiz_config.question_editor.types.true_false') }}</option>
         <option value="slider">{{ $t('quiz_config.question_editor.types.slider') }}</option>
@@ -310,7 +310,7 @@ const emit = defineEmits(['update', 'delete'])
 // Initialize local state from props
 const localQuestion = reactive({
   ...props.question,
-  type: props.question.type || 'multiple_choice',
+  type: props.question.type || 'classic',
   answers: props.question.answers && props.question.answers.length >= 2 
     ? [...props.question.answers] 
     : ['', '', '', ''],
@@ -382,7 +382,7 @@ watch(() => props.question, (newVal) => {
   if (newVal.id !== localQuestion.id) {
        Object.assign(localQuestion, {
           ...newVal,
-          type: newVal.type || 'multiple_choice',
+          type: newVal.type || 'classic',
           sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 },
           explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 5,

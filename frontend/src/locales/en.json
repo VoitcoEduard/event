@@ -235,7 +235,7 @@
       "default_hint": "default",
       "answer_placeholder": "Type answer option",
       "types": {
-        "multiple_choice": "Single Choice",
+        "classic": "Classic",
         "multi_select": "Multi Select",
         "true_false": "True / False",
         "slider": "Slider",
