@@ -102,7 +102,10 @@
         <MapCoordinatePicker
           v-if="currentQuestion?.imageId"
           :image-url="getImageUrl(currentQuestion.imageId)"
-          :max-targets="currentQuestion?.wrongPictureConfig?.targets?.length || 1"
+          :max-targets="currentQuestion?.wrongPictureConfig?.showTargetCount 
+            ? (currentQuestion?.wrongPictureConfig?.targets?.length || 1)
+            : (currentQuestion?.wrongPictureConfig?.targets?.length || 1) + 3"
+          :show-target-count="currentQuestion?.wrongPictureConfig?.showTargetCount"
           :initial-markers="wpGuesses"
           @update:markers="wpGuesses = $event"
         />

@@ -21,6 +21,9 @@ export function calculateGuessScore(guess, target, tolerancePercent, maxPoints) 
 }
 
 // Calculate total score for all guesses
+// New scoring: Each correct guess (within tolerance of ANY target) scores maxPoints
+// No need to match to specific targets - just count correct guesses
+// This allows user to guess any number of markers without knowing target count
 export function calculateTotalScore(guesses, targets, config) {
     let totalScore = 0;
     const scoredGuesses = [];
@@ -29,17 +32,15 @@ export function calculateTotalScore(guesses, targets, config) {
         return { totalScore: 0, scoredGuesses: guesses || [] };
     }
 
-    // Match each guess to nearest unmatched target
-    const usedTargets = new Set();
-    const maxPointsPerTarget = config.maxPoints / targets.length;
+    const maxPointsPerGuess = config.maxPoints;
 
     for (const guess of guesses) {
-        let bestMatch = null;
+        let isCorrect = false;
+        let matchedTargetId = null;
         let bestDistance = Infinity;
 
+        // Check if this guess is within tolerance of ANY target
         for (const target of targets) {
-            if (usedTargets.has(target.id)) continue;
-
             const distance = calculateDistance(
                 guess.xPercent,
                 guess.yPercent,
@@ -49,29 +50,28 @@ export function calculateTotalScore(guesses, targets, config) {
 
             if (distance < bestDistance) {
                 bestDistance = distance;
-                bestMatch = target;
+            }
+
+            if (distance <= target.radius + config.tolerancePercent) {
+                isCorrect = true;
+                matchedTargetId = target.id;
+                // Keep checking other targets to find the closest one for display
             }
         }
 
-        if (bestMatch && bestDistance <= bestMatch.radius + config.tolerancePercent) {
-            usedTargets.add(bestMatch.id);
-            const score = calculateGuessScore(
-                guess,
-                bestMatch,
-                config.tolerancePercent,
-                maxPointsPerTarget
-            );
-            totalScore += score;
+        if (isCorrect) {
+            // Each correct guess scores maxPoints
+            totalScore += maxPointsPerGuess;
 
             scoredGuesses.push({
                 ...guess,
-                targetId: bestMatch.id,
+                targetId: matchedTargetId,
                 distance: bestDistance,
-                isCorrect: score > 0,
-                scoreEarned: score
+                isCorrect: true,
+                scoreEarned: maxPointsPerGuess
             });
         } else {
-            // no match within tolerance
+            // Incorrect guess - no match within tolerance
             scoredGuesses.push({
                 ...guess,
                 targetId: null,

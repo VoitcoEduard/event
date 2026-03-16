@@ -49,6 +49,14 @@
                   <label>{{ $t('quiz_config.question_editor.time_limit') }}</label>
                   <input type="number" v-model.number="question.timeLimit" class="setting-input" />
                 </div>
+                
+                <div class="input-group">
+                  <label>Show Target Count to Players</label>
+                  <label class="switch">
+                    <input type="checkbox" v-model="question.wrongPictureConfig.showTargetCount">
+                    <span class="slider round"></span>
+                  </label>
+                </div>
               </div>
 
               <!-- Image Upload integration -->
@@ -206,7 +214,8 @@ const addRound = () => {
     wrongPictureConfig: {
       targets: [],
       maxPoints: 1000,
-      tolerancePercent: 5
+      tolerancePercent: 5,
+      showTargetCount: false
     }
   })
 }
@@ -587,6 +596,63 @@ const modalStyle = computed(() => ({
   border-radius: 8px;
   font-size: 14px;
   border: 1px solid rgba(255, 159, 10, 0.3);
+}
+
+/* Switch Styles */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  margin-top: 4px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #3A3A3C;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #0A84FF;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #0A84FF;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
 }
 
 .icon-button {

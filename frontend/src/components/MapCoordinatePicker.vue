@@ -53,7 +53,7 @@
 
     <!-- UI Controls -->
     <div class="picker-controls">
-      <div class="target-counter" v-if="maxTargets > 1">
+      <div class="target-counter" v-if="showTargetCount">
         <span class="count">{{ localMarkers.length }}</span> / {{ maxTargets }} 
         <span class="label">Answers</span>
       </div>
@@ -90,7 +90,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 const props = defineProps({
   imageUrl: { type: String, required: true },
   maxTargets: { type: Number, default: 3 },
-  initialMarkers: { type: Array, default: () => [] }
+  initialMarkers: { type: Array, default: () => [] },
+  showTargetCount: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:markers'])
