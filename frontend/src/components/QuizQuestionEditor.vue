@@ -85,7 +85,7 @@
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
       ⚠️ Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
     </div>
-    <div v-if="localQuestion.type !== 'slider' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
+    <div v-if="localQuestion.type !== 'range' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
@@ -317,7 +317,7 @@ const localQuestion = reactive({
   explainTime: props.question.explainTime !== undefined ? props.question.explainTime : 5,
   timeLimit: props.question.timeLimit !== undefined ? props.question.timeLimit : 20,
   correctIndices: props.question.correctIndices || [],
-  // Initialize slider config if missing
+  // Initialize range config if missing
   rangeConfig: props.question.rangeConfig || {
       minValue: 0,
       maxValue: 100,
@@ -377,7 +377,7 @@ watch(() => props.question, (newVal) => {
   // without overwriting local typing immediately if we are the ones who triggered it.
   // For simplicity, we sync back basic fields if ID changes or strict updates needed.
   // Ideally, valid Vue form pattern is :modelValue + @update:modelValue.
-  // Here we just ensure we don't lose the slider/scoring config objects structure.
+  // Here we just ensure we don't lose the range/scoring config objects structure.
   
   if (newVal.id !== localQuestion.id) {
        Object.assign(localQuestion, {
@@ -666,8 +666,8 @@ const isAnswerReadOnly = (idx) => {
   transform: rotate(45deg);
 }
 
-/* SLIDER CONFIG STYLES */
-.slider-config-panel {
+/* RANGE CONFIG STYLES */
+.range-config-panel {
     background: #232325;
     padding: 16px;
     border-radius: 8px;
