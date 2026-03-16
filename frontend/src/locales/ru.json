@@ -231,6 +231,8 @@
       "image_label": "Изображение (необязательно)",
       "explain_time": "Время на объяснение (с)",
       "time_limit": "Время на ответ (с)",
+      "points": "Баллы",
+      "default_hint": "по ум.",
       "answer_placeholder": "Введите вариант ответа",
       "types": {
         "multiple_choice": "Одиночный выбор",

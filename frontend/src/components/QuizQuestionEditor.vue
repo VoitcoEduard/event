@@ -39,9 +39,12 @@
       />
     </div>
 
-    <div class="settings-row">
+    <div class="settings-row compact">
       <div class="input-group">
-        <label>{{ $t('quiz_config.question_editor.time_limit') }}</label>
+        <label>
+          {{ $t('quiz_config.question_editor.time_limit') }}
+          <span v-if="localQuestion.timeLimit === 20" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+        </label>
         <select v-model.number="localQuestion.timeLimit" class="select-input" @change="emitUpdate">
           <option :value="5">5s</option>
           <option :value="10">10s</option>
@@ -53,7 +56,10 @@
         </select>
       </div>
       <div class="input-group">
-        <label>{{ $t('quiz_config.question_editor.explain_time') }}</label>
+        <label>
+          {{ $t('quiz_config.question_editor.explain_time') }}
+          <span v-if="localQuestion.explainTime === 5" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+        </label>
         <select v-model.number="localQuestion.explainTime" class="select-input" @change="emitUpdate">
           <option :value="0">0s</option>
           <option :value="5">5s</option>
@@ -63,6 +69,14 @@
           <option :value="30">30s</option>
           <option :value="40">40s</option>
         </select>
+      </div>
+      <div class="input-group">
+        <label>
+          {{ $t('quiz_config.question_editor.points') }}
+          <span v-if="localMaxPoints === 100 && localQuestion.type === 'slider'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+          <span v-if="localMaxPoints === 1000 && localQuestion.type !== 'slider'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+        </label>
+        <input type="number" v-model.number="localMaxPoints" class="select-input" @input="emitUpdate" />
       </div>
     </div>
 
@@ -156,10 +170,6 @@
               <label>{{ $t('quiz_config.question_editor.slider.tolerance') }}</label>
               <input type="number" v-model.number="localQuestion.scoringConfig.tolerance" class="config-input" @input="emitUpdate" />
            </div>
-            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.max_points') }}</label>
-              <input type="number" v-model.number="localQuestion.scoringConfig.maxPoints" class="config-input" @input="emitUpdate" />
-           </div>
         </div>
       </div>
 
@@ -193,10 +203,6 @@
               <label>{{ $t('quiz_config.question_editor.number.correct_answer') }}</label>
               <input type="number" v-model.number="localQuestion.correctNumber" class="config-input correct-value-input" @input="emitUpdate" />
            </div>
-           <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.number.points') }}</label>
-              <input type="number" v-model.number="localQuestion.scoringConfig.maxPoints" class="config-input" @input="emitUpdate" />
-           </div>
         </div>
         <p class="config-note">Players must input this exact number to score points. No time bonus applies.</p>
       </div>
@@ -223,16 +229,6 @@
     <!-- WRONG PICTURES CONFIGURATION -->
     <div v-if="localQuestion.type === 'wrong_pictures'" class="wrong-pictures-config">
       <div class="config-compact-row">
-        <div class="input-group mini">
-          <label>{{ $t('quiz_config.question_editor.wrong_pictures.points_short') }}</label>
-          <input 
-            type="number" 
-            v-model.number="localQuestion.wrongPictureConfig.maxPoints" 
-            class="config-input"
-            @input="emitUpdate"
-          />
-        </div>
-        
         <div class="input-group mini">
           <label>{{ $t('quiz_config.question_editor.wrong_pictures.tolerance_short') }}</label>
           <input 
@@ -319,6 +315,7 @@ const localQuestion = reactive({
     ? [...props.question.answers] 
     : ['', '', '', ''],
   explainTime: props.question.explainTime !== undefined ? props.question.explainTime : 5,
+  timeLimit: props.question.timeLimit !== undefined ? props.question.timeLimit : 20,
   correctIndices: props.question.correctIndices || [],
   // Initialize slider config if missing
   sliderConfig: props.question.sliderConfig || {
@@ -346,6 +343,23 @@ const localQuestion = reactive({
       targets: [],
       tolerancePercent: 10,
       maxPoints: 1000
+  }
+})
+
+// Unified Points Accessor
+const localMaxPoints = computed({
+  get() {
+    if (localQuestion.type === 'wrong_pictures') {
+      return localQuestion.wrongPictureConfig.maxPoints
+    }
+    return localQuestion.scoringConfig.maxPoints
+  },
+  set(val) {
+    if (localQuestion.type === 'wrong_pictures') {
+      localQuestion.wrongPictureConfig.maxPoints = val
+    } else {
+      localQuestion.scoringConfig.maxPoints = val
+    }
   }
 })
 
@@ -537,6 +551,21 @@ const isAnswerReadOnly = (idx) => {
   padding: 10px;
   color: white;
   font-size: 16px;
+}
+
+.settings-row.compact {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.default-hint {
+  color: #8E8E93;
+  font-weight: normal;
+  font-style: italic;
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 4px;
 }
 
 .answers-grid {

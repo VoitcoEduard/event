@@ -231,6 +231,8 @@
       "image_label": "Imagine Întrebare (Opțional)",
       "explain_time": "Timp pentru explicație (s)",
       "time_limit": "Timp pentru răspuns (s)",
+      "points": "Puncte",
+      "default_hint": "imp.",
       "answer_placeholder": "Introdu variantă de răspuns",
       "types": {
         "multiple_choice": "Alegere Unică",

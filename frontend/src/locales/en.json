@@ -231,6 +231,8 @@
       "image_label": "Question Image (Optional)",
       "explain_time": "Explain Time (s)",
       "time_limit": "Time for answer (s)",
+      "points": "Points",
+      "default_hint": "default",
       "answer_placeholder": "Type answer option",
       "types": {
         "multiple_choice": "Single Choice",
