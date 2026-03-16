@@ -209,9 +209,9 @@
     "validation": {
       "min_one": "Please add at least one question.",
       "text_required": "All questions must have text.",
-      "slider_config": "Slider configuration is missing.",
-      "slider_min_max": "Slider Min value must be less than Max value.",
-      "slider_step": "Slider Step must be greater than 0.",
+      "range_config": "Range configuration is missing.",
+      "range_min_max": "Range Min value must be less than Max value.",
+      "range_step": "Range Step must be greater than 0.",
       "tf_options": "True/False questions must have both True and False options.",
       "cp_options": "Correct Picture questions must have at least 2 image options.",
       "number_required": "Correct answer for number question is required.",
@@ -238,7 +238,7 @@
         "classic": "Classic",
         "multi_select": "Multi Select",
         "true_false": "True / False",
-        "slider": "Slider",
+        "range": "Range",
         "correct_picture": "Correct Picture",
         "wrong_pictures": "Wrong Pictures",
         "number": "Number"
@@ -258,7 +258,7 @@
         "time_short": "Time (s)",
         "show_count": "Show Count"
       },
-      "slider": {
+      "range": {
         "range_unit": "Range & Unit",
         "min_value": "Min Value",
         "max_value": "Max Value",
@@ -393,7 +393,7 @@
       "swipe_to_view": "Swipe to view options",
       "submitting": "Submitting...",
       "select_item": "Select This Item",
-      "slider_instruction": "Drag and release to submit",
+      "range_instruction": "Drag and release to submit",
       "true": "TRUE",
       "false": "FALSE",
       "enter_number": "Enter a number",
@@ -424,7 +424,7 @@
       "correct_answer": "Correct Answer",
       "players_entering_number": "Players are entering a number",
       "answers_label": "Answers",
-      "slide_to_answer": "Slide to answer",
+      "range_to_answer": "Slide to answer",
       "correct_label": "Correct",
       "leaderboard_title": "Leaderboard",
       "next_question": "Next Question",

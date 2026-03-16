@@ -1,8 +1,8 @@
 <template>
-  <div class="slider-wrapper" ref="wrapperEl">
+  <div class="range-wrapper" ref="wrapperEl">
 
     <!-- LEFT: Scale + Track -->
-    <div class="slider-left">
+    <div class="range-left">
 
       <!-- Tick labels -->
       <div class="scale-col">
@@ -230,7 +230,7 @@ const onWheel = (e) => {
 
 <style scoped>
 /* ── Root ──────────────────────────────────────────────────────── */
-.slider-wrapper {
+.range-wrapper {
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -243,7 +243,7 @@ const onWheel = (e) => {
 }
 
 /* ── Left panel ────────────────────────────────────────────────── */
-.slider-left {
+.range-left {
   flex: 1;
   display: flex;
   flex-direction: row;

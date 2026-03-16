@@ -186,10 +186,10 @@
           </div>
 
           <div class="answers-column">
-            <div v-if="isSlider" class="slider-bigscreen-view">
+            <div v-if="isRange" class="range-bigscreen-view">
               <!-- Min / Max labels -->
               <div class="sbs-label sbs-label-max">
-                {{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+                {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
               </div>
 
               <!-- The track -->
@@ -202,7 +202,7 @@
               </div>
 
               <div class="sbs-label sbs-label-min">
-                {{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+                {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
               </div>
 
               <div class="sbs-hint">↕ Scroll to select</div>
@@ -295,7 +295,7 @@
         </div>
 
         <!-- SLIDER RESULTS -->
-        <div v-else-if="isSlider" class="slider-results-new">
+        <div v-else-if="isRange" class="range-results-new">
           <!-- Left: question card as usual -->
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
@@ -311,15 +311,15 @@
 
           <!-- Right: vertical slider timeline showing correct answer -->
           <div class="answers-column">
-            <div class="slider-result-timeline">
+            <div class="range-result-timeline">
               <!-- Big correct value badge -->
               <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
                 <span class="srt-check">✓</span>
-                <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.sliderConfig?.unit }}</span>
+                <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</span>
               </div>
 
               <div class="srt-label srt-label-max">
-                {{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+                {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
               </div>
 
               <!-- Track with animated marker -->
@@ -337,13 +337,13 @@
                 >
                   <div class="srt-marker-line"></div>
                   <div class="srt-marker-bubble">
-                    {{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+                    {{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}
                   </div>
                 </div>
               </div>
 
               <div class="srt-label srt-label-min">
-                {{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+                {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
               </div>
             </div>
           </div>
@@ -592,7 +592,7 @@ const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 })
 const playerSignals = ref([])
 
 const totalAnswered = computed(() => {
-  if (isSlider.value) return playerSignals.value.length
+  if (isRange.value) return playerSignals.value.length
   return Object.values(answerCounts.value).reduce((a, b) => a + b, 0)
 })
 
@@ -603,7 +603,7 @@ const currentQuestion = computed(() => {
 })
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
-const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+const isRange = computed(() => currentQuestion.value?.type === 'range')
 const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct_picture')
 const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
 const isNumber = computed(() => currentQuestion.value?.type === 'number')
@@ -743,12 +743,12 @@ const getBarHeight = (idx) => {
 }
 
 const histogramBuckets = computed(() => {
-  if (!isSlider.value) return []
+  if (!isRange.value) return []
   const q = currentQuestion.value
-  if (!q || !q.sliderConfig) return []
+  if (!q || !q.rangeConfig) return []
 
-  const min = q.sliderConfig.minValue
-  const max = q.sliderConfig.maxValue
+  const min = q.rangeConfig.minValue
+  const max = q.rangeConfig.maxValue
   const bucketCount = 20
   const buckets = new Array(bucketCount).fill(0)
   const range = max - min
@@ -771,10 +771,10 @@ const getHistogramBarHeight = (count) => {
 }
 
 const correctMarkerPercentage = computed(() => {
-  if (!isSlider.value) return 0
+  if (!isRange.value) return 0
   const q = currentQuestion.value
-  const min = q?.sliderConfig?.minValue || 0
-  const max = q?.sliderConfig?.maxValue || 100
+  const min = q?.rangeConfig?.minValue || 0
+  const max = q?.rangeConfig?.maxValue || 100
   const range = max - min
   if (range === 0) return 0
   return ((q.correctValue - min) / range) * 100
@@ -782,8 +782,8 @@ const correctMarkerPercentage = computed(() => {
 
 const isBucketCorrect = (bucketIdx) => {
   const q = currentQuestion.value
-  const min = q.sliderConfig.minValue
-  const max = q.sliderConfig.maxValue
+  const min = q.rangeConfig.minValue
+  const max = q.rangeConfig.maxValue
   const bucketCount = 20
   const range = max - min
   const val = q.correctValue
@@ -1846,7 +1846,7 @@ onUnmounted(() => {
 }
 
 /* Slider Instruction View */
-.slider-instruction-view {
+.range-instruction-view {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1864,7 +1864,7 @@ onUnmounted(() => {
   to { opacity: 1; transform: scale(1); }
 }
 
-.slider-instruction-text {
+.range-instruction-text {
   font-size: 3vw;
   font-weight: 800;
   color: #fff;
@@ -1872,7 +1872,7 @@ onUnmounted(() => {
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-.slider-demo-track {
+.range-demo-track {
   width: 80%;
   height: 4vh;
   background: rgba(255,255,255,0.2);
@@ -1881,7 +1881,7 @@ onUnmounted(() => {
   overflow: visible;
 }
 
-.slider-demo-thumb {
+.range-demo-thumb {
   position: absolute;
   top: 50%;
   left: 0;
@@ -1903,18 +1903,18 @@ onUnmounted(() => {
 }
 
 /* Slider Results View */
-.slider-results-view {
+.range-results-view {
   width: 90%;
   margin: 2vh 0;
 }
 
-.slider-result-container {
+.range-result-container {
   position: relative;
   height: 40vh;
   padding: 2vw;
 }
 
-.slider-result-track {
+.range-result-track {
   position: absolute;
   top: 50%;
   left: 5%;
@@ -1925,7 +1925,7 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-.slider-distribution-overlay {
+.range-distribution-overlay {
   position: absolute;
   top: 10%;
   left: 5%;
@@ -2012,7 +2012,7 @@ onUnmounted(() => {
   color: white;
 }
 
-.slider-labels {
+.range-labels {
   position: absolute;
   bottom: 0;
   left: 5%;
@@ -2743,7 +2743,7 @@ onUnmounted(() => {
 }
 
 /* ── Slider BigScreen View (question-active) ──────────────────── */
-.slider-bigscreen-view {
+.range-bigscreen-view {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2829,13 +2829,13 @@ onUnmounted(() => {
 }
 
 /* ── Slider Results — New Vertical Timeline ───────────────────── */
-.slider-results-new {
+.range-results-new {
   display: flex;
   flex-direction: row;
   width: 100%;
   height: 100%;
 }
-.slider-result-timeline {
+.range-result-timeline {
   display: flex;
   flex-direction: column;
   align-items: center;

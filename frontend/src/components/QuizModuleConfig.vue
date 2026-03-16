@@ -162,8 +162,8 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
      if (mod.data.questions) {
         let loadedQuestions = JSON.parse(JSON.stringify(mod.data.questions))
         questions.value = loadedQuestions.map(q => {
-            if (q.type === 'slider') {
-                if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+            if (q.type === 'range') {
+                if (!q.rangeConfig) q.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
                 if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
             }
             if (q.type === 'true_false') {
@@ -213,10 +213,10 @@ const loadTemplate = (template) => {
             q.id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
             // Keep imageId - library templates share the same database so images still exist
             // Ensure slider config exists
-            if (q.type === 'slider' && !q.sliderConfig) {
-                q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+            if (q.type === 'range' && !q.rangeConfig) {
+                q.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
             }
-            if (q.type === 'slider' && !q.scoringConfig) {
+            if (q.type === 'range' && !q.scoringConfig) {
                 q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
             }
             if (q.type === 'true_false') {
@@ -356,8 +356,8 @@ const validateQuestions = () => {
   for (const q of questions.value) {
     if (!q.text.trim()) return t('quiz_config.validation.text_required')
     
-    if (q.type === 'slider') {
-        const config = q.sliderConfig
+    if (q.type === 'range') {
+        const config = q.rangeConfig
         if (!config) return t('quiz_config.validation.slider_config')
         if (config.minValue >= config.maxValue) return t('quiz_config.validation.slider_min_max')
         if (config.step <= 0) return t('quiz_config.validation.slider_step')
@@ -419,10 +419,10 @@ const handleFileUpload = (event) => {
                         info(t('quiz_config.import.note_images'))
                     }
                      // Ensure slider config exists
-                    if (q.type === 'slider' && !q.sliderConfig) {
-                        q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+                    if (q.type === 'range' && !q.rangeConfig) {
+                        q.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
                     }
-                    if (q.type === 'slider' && !q.scoringConfig) {
+                    if (q.type === 'range' && !q.scoringConfig) {
                         q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
                     }
                     if (q.type === 'true_false') {

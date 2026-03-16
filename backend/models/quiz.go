@@ -10,9 +10,9 @@ type QuizQuestion struct {
 	Answers            []string            `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
 	CorrectIndex       int                 `json:"correctIndex" bson:"correctIndex"`
 	CorrectIndices     []int               `json:"correctIndices" bson:"correctIndices"` // For multi_select
-	CorrectValue       float64             `json:"correctValue" bson:"correctValue"`     // For slider
-	SliderConfig       SliderConfig        `json:"sliderConfig" bson:"sliderConfig"`     // For slider
-	ScoringConfig      ScoringConfig       `json:"scoringConfig" bson:"scoringConfig"`   // For slider
+	CorrectValue       float64             `json:"correctValue" bson:"correctValue"`     // For range
+	RangeConfig        RangeConfig         `json:"rangeConfig" bson:"rangeConfig"`     // For range
+	ScoringConfig      ScoringConfig       `json:"scoringConfig" bson:"scoringConfig"`   // For range
 	TimeLimit          int                 `json:"timeLimit" bson:"timeLimit"`           // seconds
 	ExplainTime        int                 `json:"explainTime" bson:"explainTime"`       // seconds for explanation before question starts
 	ImageID            *string             `json:"imageId" bson:"imageId"`
@@ -22,8 +22,8 @@ type QuizQuestion struct {
 	CorrectNumber      int                 `json:"correctNumber" bson:"correctNumber"`           // For number
 }
 
-// SliderConfig stores slider-specific configuration
-type SliderConfig struct {
+// RangeConfig stores range-specific configuration
+type RangeConfig struct {
 	MinValue      float64 `json:"minValue" bson:"minValue"`
 	MaxValue      float64 `json:"maxValue" bson:"maxValue"`
 	Step          float64 `json:"step" bson:"step"`
@@ -60,7 +60,7 @@ const (
 	QuestionTypeClassic = "classic"
 	QuestionTypeTrueFalse      = "true_false"
 	QuestionTypeMultiSelect    = "multi_select"
-	QuestionTypeSlider         = "slider"
+	QuestionTypeRange          = "range"
 	QuestionTypeCorrectPicture = "correct_picture"
 	QuestionTypeWrongPictures  = "wrong_pictures"
 	QuestionTypeNumber         = "number"
@@ -94,7 +94,7 @@ type PlayerSignal struct {
 	QuestionIndex int           `json:"questionIndex" bson:"questionIndex"`
 	AnswerIndex   int           `json:"answerIndex" bson:"answerIndex"`     // For single choice
 	AnswerIndices []int         `json:"answerIndices" bson:"answerIndices"` // For multi_select
-	AnswerValue   float64       `json:"answerValue" bson:"answerValue"`     // For slider
+	AnswerValue   float64       `json:"answerValue" bson:"answerValue"`     // For range
 	ScoreEarned   int           `json:"scoreEarned" bson:"scoreEarned"`
 	TimeSpent     int           `json:"timeSpent" bson:"timeSpent"` // ms
 	Timestamp     int64         `json:"timestamp" bson:"timestamp"`
@@ -167,7 +167,7 @@ type PlayerResult struct {
 type SignalResult struct {
 	PlayerID      string        `json:"playerId" bson:"playerId"`
 	QuestionIndex int           `json:"questionIndex" bson:"questionIndex"`
-	AnswerValue   float64       `json:"answerValue" bson:"answerValue"` // For slider questions
+	AnswerValue   float64       `json:"answerValue" bson:"answerValue"` // For range questions
 	ScoreEarned   int           `json:"scoreEarned" bson:"scoreEarned"`
 	TimeSpent     int           `json:"timeSpent" bson:"timeSpent"` // milliseconds
 	Guesses       []PlayerGuess `json:"guesses" bson:"guesses"`     // For wrong_pictures type

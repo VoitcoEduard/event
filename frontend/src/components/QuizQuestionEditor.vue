@@ -11,7 +11,7 @@
         <option value="classic">{{ $t('quiz_config.question_editor.types.classic') }}</option>
         <option value="multi_select">{{ $t('quiz_config.question_editor.types.multi_select') }}</option>
         <option value="true_false">{{ $t('quiz_config.question_editor.types.true_false') }}</option>
-        <option value="slider">{{ $t('quiz_config.question_editor.types.slider') }}</option>
+        <option value="range">{{ $t('quiz_config.question_editor.types.range') }}</option>
         <option value="number">{{ $t('quiz_config.question_editor.types.number') }}</option>
         <option value="correct_picture">{{ $t('quiz_config.question_editor.types.correct_picture') }}</option>
         <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
@@ -73,8 +73,8 @@
       <div class="input-group">
         <label>
           {{ $t('quiz_config.question_editor.points') }}
-          <span v-if="localMaxPoints === 100 && localQuestion.type === 'slider'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
-          <span v-if="localMaxPoints === 1000 && localQuestion.type !== 'slider'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+          <span v-if="localMaxPoints === 100 && localQuestion.type === 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+          <span v-if="localMaxPoints === 1000 && localQuestion.type !== 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
         </label>
         <input type="number" v-model.number="localMaxPoints" class="select-input" @input="emitUpdate" />
       </div>
@@ -115,42 +115,42 @@
       </div>
     </div>
 
-    <!-- SLIDER CONFIGURATION -->
-    <div v-if="localQuestion.type === 'slider'" class="slider-config-panel">
+    <!-- RANGE CONFIGURATION -->
+    <div v-if="localQuestion.type === 'range'" class="range-config-panel">
       
       <div class="config-section">
-        <h4 class="section-title">{{ $t('quiz_config.question_editor.slider.range_unit') }}</h4>
+        <h4 class="section-title">{{ $t('quiz_config.question_editor.range.range_unit') }}</h4>
         <div class="config-grid">
            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.min_value') }}</label>
-              <input type="number" v-model.number="localQuestion.sliderConfig.minValue" class="config-input" @input="emitUpdate" />
+              <label>{{ $t('quiz_config.question_editor.range.min_value') }}</label>
+              <input type="number" v-model.number="localQuestion.rangeConfig.minValue" class="config-input" @input="emitUpdate" />
            </div>
            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.max_value') }}</label>
-              <input type="number" v-model.number="localQuestion.sliderConfig.maxValue" class="config-input" @input="emitUpdate" />
+              <label>{{ $t('quiz_config.question_editor.range.max_value') }}</label>
+              <input type="number" v-model.number="localQuestion.rangeConfig.maxValue" class="config-input" @input="emitUpdate" />
            </div>
            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.step') }}</label>
-              <input type="number" v-model.number="localQuestion.sliderConfig.step" class="config-input" min="0" step="any" @input="emitUpdate" />
+              <label>{{ $t('quiz_config.question_editor.range.step') }}</label>
+              <input type="number" v-model.number="localQuestion.rangeConfig.step" class="config-input" min="0" step="any" @input="emitUpdate" />
            </div>
            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.unit') }}</label>
-              <input type="text" v-model="localQuestion.sliderConfig.unit" class="config-input" :placeholder="$t('quiz_config.question_editor.slider.unit_placeholder')" @input="emitUpdate" />
+              <label>{{ $t('quiz_config.question_editor.range.unit') }}</label>
+              <input type="text" v-model="localQuestion.rangeConfig.unit" class="config-input" :placeholder="$t('quiz_config.question_editor.range.unit_placeholder')" @input="emitUpdate" />
            </div>
         </div>
       </div>
 
       <div class="config-section">
-        <h4 class="section-title">{{ $t('quiz_config.question_editor.slider.correct_scoring') }}</h4>
+        <h4 class="section-title">{{ $t('quiz_config.question_editor.range.correct_scoring') }}</h4>
         <div class="config-grid">
            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.correct_value') }}</label>
+              <label>{{ $t('quiz_config.question_editor.range.correct_value') }}</label>
               <input type="number" v-model.number="localQuestion.correctValue" class="config-input correct-value-input" @input="emitUpdate" />
            </div>
            
            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.decimals') }}</label>
-              <select v-model.number="localQuestion.sliderConfig.decimalPlaces" class="select-input small-select" @change="emitUpdate">
+              <label>{{ $t('quiz_config.question_editor.range.decimals') }}</label>
+              <select v-model.number="localQuestion.rangeConfig.decimalPlaces" class="select-input small-select" @change="emitUpdate">
                 <option :value="0">0</option>
                 <option :value="1">1</option>
                 <option :value="2">2</option>
@@ -160,36 +160,36 @@
         
         <div class="config-grid mt-2">
             <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.scoring_mode') }}</label>
+              <label>{{ $t('quiz_config.question_editor.range.scoring_mode') }}</label>
               <select v-model="localQuestion.scoringConfig.mode" class="select-input small-select" @change="emitUpdate">
-                <option value="symmetric">{{ $t('quiz_config.question_editor.slider.symmetric') }}</option>
-                <option value="asymmetric">{{ $t('quiz_config.question_editor.slider.asymmetric') }}</option>
+                <option value="symmetric">{{ $t('quiz_config.question_editor.range.symmetric') }}</option>
+                <option value="asymmetric">{{ $t('quiz_config.question_editor.range.asymmetric') }}</option>
               </select>
            </div>
            <div class="input-group">
-              <label>{{ $t('quiz_config.question_editor.slider.tolerance') }}</label>
+              <label>{{ $t('quiz_config.question_editor.range.tolerance') }}</label>
               <input type="number" v-model.number="localQuestion.scoringConfig.tolerance" class="config-input" @input="emitUpdate" />
            </div>
         </div>
       </div>
 
       <!-- Preview -->
-      <div class="slider-preview-container">
-         <label>{{ $t('quiz_config.question_editor.slider.preview') }}</label>
+      <div class="range-preview-container">
+         <label>{{ $t('quiz_config.question_editor.range.preview') }}</label>
          <div class="preview-box">
-            <SliderComponent
-                :min="localQuestion.sliderConfig.minValue"
-                :max="localQuestion.sliderConfig.maxValue"
-                :step="localQuestion.sliderConfig.step"
-                :unit="localQuestion.sliderConfig.unit"
-                :decimalPlaces="localQuestion.sliderConfig.decimalPlaces"
+            <RangeComponent
+                :min="localQuestion.rangeConfig.minValue"
+                :max="localQuestion.rangeConfig.maxValue"
+                :step="localQuestion.rangeConfig.step"
+                :unit="localQuestion.rangeConfig.unit"
+                :decimalPlaces="localQuestion.rangeConfig.decimalPlaces"
                 :modelValue="localQuestion.correctValue" 
                 :readonly="true"
                 :showCorrectMarker="true"
                 :correctValue="localQuestion.correctValue"
             />
          </div>
-         <p class="preview-note">{{ $t('quiz_config.question_editor.slider.preview_note') }}</p>
+         <p class="preview-note">{{ $t('quiz_config.question_editor.range.preview_note') }}</p>
       </div>
 
     </div>
@@ -280,7 +280,7 @@
 <script setup>
 import { reactive, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import SliderComponent from './SliderComponent.vue'
+import RangeComponent from './RangeComponent.vue'
 import ImageUploader from './ImageUploader.vue'
 import ImageOptionEditor from './ImageOptionEditor.vue'
 import CoordinatePicker from './CoordinatePicker.vue'
@@ -318,7 +318,7 @@ const localQuestion = reactive({
   timeLimit: props.question.timeLimit !== undefined ? props.question.timeLimit : 20,
   correctIndices: props.question.correctIndices || [],
   // Initialize slider config if missing
-  sliderConfig: props.question.sliderConfig || {
+  rangeConfig: props.question.rangeConfig || {
       minValue: 0,
       maxValue: 100,
       step: 1,
@@ -383,7 +383,7 @@ watch(() => props.question, (newVal) => {
        Object.assign(localQuestion, {
           ...newVal,
           type: newVal.type || 'classic',
-          sliderConfig: newVal.sliderConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
+          rangeConfig: newVal.rangeConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 },
           explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 5,
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
@@ -404,9 +404,9 @@ const handleTypeChange = () => {
     if (localQuestion.type === 'true_false') {
         localQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
         if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
-    } else if (localQuestion.type === 'slider') {
+    } else if (localQuestion.type === 'range') {
         // Ensure defaults are set
-        if (!localQuestion.sliderConfig.maxValue) localQuestion.sliderConfig.maxValue = 100
+        if (!localQuestion.rangeConfig.maxValue) localQuestion.rangeConfig.maxValue = 100
         if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 100
     } else if (localQuestion.type === 'number') {
         if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 1000

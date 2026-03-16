@@ -107,9 +107,9 @@
 
         <!-- RIGHT COLUMN: Stacked Answer Cards -->
         <div class="answers-column">
-          <div v-if="isSlider" class="slider-bigscreen-view">
+          <div v-if="isRange" class="range-bigscreen-view">
             <div class="sbs-label sbs-label-max">
-              {{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+              {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
             </div>
             <div class="sbs-track">
               <div class="sbs-track-fill sbs-fill-anim"></div>
@@ -118,7 +118,7 @@
               </div>
             </div>
             <div class="sbs-label sbs-label-min">
-              {{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}{{ currentQuestion?.sliderConfig?.unit }}
+              {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
             </div>
             <div class="sbs-hint">↕ Scroll to select</div>
           </div>
@@ -226,7 +226,7 @@
           </div>
 
          <!-- SLIDER RESULTS -->
-          <div v-else-if="isSlider" class="slider-results-new">
+          <div v-else-if="isRange" class="range-results-new">
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
@@ -239,20 +239,20 @@
               </div>
             </div>
             <div class="answers-column">
-              <div class="slider-result-timeline">
+              <div class="range-result-timeline">
                 <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
                   <span class="srt-check">✓</span>
-                  <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.sliderConfig?.unit }}</span>
+                  <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</span>
                 </div>
-                <div class="srt-label srt-label-max">{{ formatNumber(currentQuestion?.sliderConfig?.maxValue) }}{{ currentQuestion?.sliderConfig?.unit }}</div>
+                <div class="srt-label srt-label-max">{{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}</div>
                 <div class="srt-track">
                   <div class="srt-fill" :style="{ height: revealCorrect ? correctMarkerPercentage + '%' : '0%' }"></div>
                   <div class="srt-marker" :class="{ 'srt-marker-reveal': revealCorrect }" :style="{ bottom: correctMarkerPercentage + '%' }">
                     <div class="srt-marker-line"></div>
-                    <div class="srt-marker-bubble">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.sliderConfig?.unit }}</div>
+                    <div class="srt-marker-bubble">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</div>
                   </div>
                 </div>
-                <div class="srt-label srt-label-min">{{ formatNumber(currentQuestion?.sliderConfig?.minValue) }}{{ currentQuestion?.sliderConfig?.unit }}</div>
+                <div class="srt-label srt-label-min">{{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}</div>
               </div>
             </div>
           </div>
@@ -485,7 +485,7 @@ const totalQuestions = computed(() => questions.value.length)
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
-const isSlider = computed(() => currentQuestion.value?.type === 'slider')
+const isRange = computed(() => currentQuestion.value?.type === 'range')
 const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct_picture')
 const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
 const isNumber = computed(() => currentQuestion.value?.type === 'number')
@@ -494,7 +494,7 @@ const revealCorrect = ref(false)
 // Watch gameState to trigger animation
 import { watch } from 'vue'
 watch(gameState, (newVal) => {
-    if (newVal === 'results' && isSlider.value) {
+    if (newVal === 'results' && isRange.value) {
         revealCorrect.value = false
         setTimeout(() => {
             revealCorrect.value = true
@@ -647,12 +647,12 @@ const getBarHeight = (idx) => {
 }
 
 const histogramBuckets = computed(() => {
-    if (!isSlider.value) return []
+    if (!isRange.value) return []
     const q = currentQuestion.value
-    if (!q || !q.sliderConfig) return []
+    if (!q || !q.rangeConfig) return []
 
-    const min = q.sliderConfig.minValue
-    const max = q.sliderConfig.maxValue
+    const min = q.rangeConfig.minValue
+    const max = q.rangeConfig.maxValue
     const bucketCount = 20
     const buckets = new Array(bucketCount).fill(0)
     const range = max - min
@@ -676,10 +676,10 @@ const getHistogramBarHeight = (count) => {
 }
 
 const correctMarkerPercentage = computed(() => {
-    if (!isSlider.value) return 0
+    if (!isRange.value) return 0
     const q = currentQuestion.value
-    const min = q?.sliderConfig?.minValue || 0
-    const max = q?.sliderConfig?.maxValue || 100
+    const min = q?.rangeConfig?.minValue || 0
+    const max = q?.rangeConfig?.maxValue || 100
     const range = max - min
     if (range === 0) return 0
     return ((q.correctValue - min) / range) * 100
@@ -690,8 +690,8 @@ const isBucketCorrect = (bucketIdx) => {
     // Determine which bucket correctValue falls into
     // Re-use logic or duplicate lightly simple math
     const q = currentQuestion.value
-    const min = q.sliderConfig.minValue
-    const max = q.sliderConfig.maxValue
+    const min = q.rangeConfig.minValue
+    const max = q.rangeConfig.maxValue
     const bucketCount = 20
     const range = max - min
     const val = q.correctValue
@@ -1312,7 +1312,7 @@ onUnmounted(() => {
 }
 
 /* Slider Instruction */
-.slider-instruction-view {
+.range-instruction-view {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -1324,7 +1324,7 @@ onUnmounted(() => {
     border: 1px solid rgba(255,255,255,0.1);
 }
 
-.slider-instruction-text {
+.range-instruction-text {
     font-size: 2.5rem;
     font-weight: 800;
     margin-bottom: 40px;
@@ -1333,7 +1333,7 @@ onUnmounted(() => {
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-.slider-demo-track {
+.range-demo-track {
     width: 80%;
     height: 10px;
     background: rgba(255,255,255,0.2);
@@ -1342,7 +1342,7 @@ onUnmounted(() => {
     overflow: visible;
 }
 
-.slider-demo-thumb {
+.range-demo-thumb {
     width: 40px;
     height: 40px;
     background: #0A84FF;
@@ -1363,7 +1363,7 @@ onUnmounted(() => {
 }
 
 /* Slider Results - New Design */
-.slider-results-view {
+.range-results-view {
     width: 100%;
     height: 100%;
     display: flex;
@@ -1371,7 +1371,7 @@ onUnmounted(() => {
     justify-content: center;
 }
 
-.slider-result-container {
+.range-result-container {
     width: 90%;
     height: 300px;
     position: relative;
@@ -1381,7 +1381,7 @@ onUnmounted(() => {
 }
 
 /* Track Line */
-.slider-result-track {
+.range-result-track {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -1392,7 +1392,7 @@ onUnmounted(() => {
 }
 
 /* Distribution Bars */
-.slider-distribution-overlay {
+.range-distribution-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 4px; /* Sit on track */
     display: flex;
@@ -1501,7 +1501,7 @@ onUnmounted(() => {
 }
 
 /* Labels */
-.slider-labels {
+.range-labels {
     position: absolute;
     bottom: -40px;
     left: 0;
@@ -2865,7 +2865,7 @@ onUnmounted(() => {
 }
 
 /* ── Slider BigScreen View (question-active) ──────────────────── */
-.slider-bigscreen-view {
+.range-bigscreen-view {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2951,13 +2951,13 @@ onUnmounted(() => {
 }
 
 /* ── Slider Results — New Vertical Timeline ───────────────────── */
-.slider-results-new {
+.range-results-new {
   display: flex;
   flex-direction: row;
   width: 100%;
   height: 100%;
 }
-.slider-result-timeline {
+.range-result-timeline {
   display: flex;
   flex-direction: column;
   align-items: center;

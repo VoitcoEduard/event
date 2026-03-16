@@ -209,9 +209,9 @@
     "validation": {
       "min_one": "Te rugăm să adaugi cel puțin o întrebare.",
       "text_required": "Toate întrebările trebuie să aibă text.",
-      "slider_config": "Configurația slider-ului lipsește.",
-      "slider_min_max": "Valoarea minimă a slider-ului trebuie să fie mai mică decât cea maximă.",
-      "slider_step": "Pasul slider-ului trebuie să fie mai mare decât 0.",
+      "range_config": "Configurația intervalului lipsește.",
+      "range_min_max": "Valoarea minimă a intervalului trebuie să fie mai mică decât valoarea maximă.",
+      "range_step": "Pasul intervalului trebuie să fie mai mare de 0.",
       "tf_options": "Întrebările Adevărat/Fals trebuie să aibă ambele opțiuni.",
       "cp_options": "Întrebările Imagine Corectă trebuie să aibă cel puțin 2 opțiuni de imagine.",
       "number_required": "Răspunsul corect pentru întrebarea de tip număr este obligatoriu.",
@@ -238,7 +238,7 @@
         "classic": "Clasic",
         "multi_select": "Selecție Multiplă",
         "true_false": "Adevărat / Fals",
-        "slider": "Slider",
+        "range": "Interval",
         "correct_picture": "Imagine Corectă",
         "wrong_pictures": "Imagini Greșite",
         "number": "Număr"
@@ -258,7 +258,7 @@
         "time_short": "Timp (s)",
         "show_count": "Arată Nr."
       },
-      "slider": {
+      "range": {
         "range_unit": "Interval & Unități",
         "min_value": "Valoare Min",
         "max_value": "Valoare Max",
@@ -393,7 +393,7 @@
       "swipe_to_view": "Glisează pentru opțiuni",
       "submitting": "Se trimite...",
       "select_item": "Selectează acest element",
-      "slider_instruction": "Trage și eliberează pentru a trimite",
+      "range_instruction": "Trage și eliberează pentru a trimite",
       "true": "ADEVĂRAT",
       "false": "FALS",
       "enter_number": "Introdu un număr",
@@ -424,7 +424,7 @@
       "correct_answer": "Răspuns Corect",
       "players_entering_number": "Jucătorii introduc un număr",
       "answers_label": "Răspunsuri",
-      "slide_to_answer": "Glisează pentru a răspunde",
+      "range_to_answer": "Glisează pentru a răspunde",
       "correct_label": "Corect",
       "leaderboard_title": "Clasament",
       "next_question": "Următoarea Întrebare",

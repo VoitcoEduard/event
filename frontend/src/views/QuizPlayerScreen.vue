@@ -128,29 +128,29 @@
 
     <!-- SLIDER QUESTION STATE -->
     <div 
-      v-else-if="state === States.QUESTION_ACTIVE && isSlider" 
-      class="state-container slider-container"
+      v-else-if="state === States.QUESTION_ACTIVE && isRange" 
+      class="state-container range-container"
     >
       <div class="question-info">
         <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
       </div>
       
-      <div class="slider-question-content">
-        <div class="slider-wrapper">
-          <SliderComponent
-            :min="currentQuestion?.sliderConfig?.minValue"
-            :max="currentQuestion?.sliderConfig?.maxValue"
-            :step="currentQuestion?.sliderConfig?.step"
-            :unit="currentQuestion?.sliderConfig?.unit"
-            :decimalPlaces="currentQuestion?.sliderConfig?.decimalPlaces"
-            v-model="sliderValue"
+      <div class="range-question-content">
+        <div class="range-wrapper">
+          <RangeComponent
+            :min="currentQuestion?.rangeConfig?.minValue"
+            :max="currentQuestion?.rangeConfig?.maxValue"
+            :step="currentQuestion?.rangeConfig?.step"
+            :unit="currentQuestion?.rangeConfig?.unit"
+            :decimalPlaces="currentQuestion?.rangeConfig?.decimalPlaces"
+            v-model="rangeValue"
           />
         </div>
         
         <button 
-          class="slider-submit-btn"
+          class="range-submit-btn"
           :disabled="hasSubmitted"
-          @click="submitSliderAnswer"
+          @click="submitRangeAnswer"
         >
           {{ hasSubmitted ? '✓' : $t('quiz.player.submit_btn') }}
         </button>
@@ -303,7 +303,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { quizWS } from '../services/websocket'
 import { useQuizStateMachine } from '../composables/useQuizStateMachine'
-import SliderComponent from '../components/SliderComponent.vue'
+import RangeComponent from '../components/RangeComponent.vue'
 import HorizontalCarousel from '../components/HorizontalCarousel.vue'
 import MapCoordinatePicker from '../components/MapCoordinatePicker.vue'
 import { questionCache } from '../utils/questionCache'
@@ -330,7 +330,7 @@ const nickname = ref(getUserName())
 const joined = ref(false)
 const selectedAnswer = ref(null) // For single choice
 const selectedIndices = ref([])  // For multi select
-const sliderValue = ref(50)      // For slider
+const rangeValue = ref(50)      // For slider
 const hasSubmitted = ref(false)
 const isCorrect = ref(false)
 const currentPoints = ref(0)
@@ -393,8 +393,8 @@ const isMultiSelect = computed(() => {
     return currentQuestion.value?.type === 'multi_select'
 })
 
-const isSlider = computed(() => {
-    return currentQuestion.value?.type === 'slider'
+const isRange = computed(() => {
+    return currentQuestion.value?.type === 'range'
 })
 
 const isMobile = computed(() => {
@@ -482,10 +482,10 @@ const submitMultiSelect = () => {
     submitAnswer(selectedIndices.value)
 }
 
-const submitSliderAnswer = () => {
+const submitRangeAnswer = () => {
   if (hasSubmitted.value) return
-  selectedAnswer.value = sliderValue.value
-  submitAnswer(sliderValue.value)
+  selectedAnswer.value = rangeValue.value
+  submitAnswer(rangeValue.value)
 }
 
 const submitNumberAnswer = () => {
@@ -577,7 +577,7 @@ const validateAndScore = (answerData) => {
         
         isCorrectAnswer = JSON.stringify(sortedUser) === JSON.stringify(sortedCorrect)
         answerPayload = { answerIndices: userIndices }
-    } else if (question.type === 'slider') {
+    } else if (question.type === 'range') {
         const val = Number(answerData) || 0
         answerPayload = { answerValue: val }
         
@@ -774,7 +774,7 @@ onMounted(async () => {
             // Reset for new question
             selectedAnswer.value = null
             selectedIndices.value = []
-            sliderValue.value = questionCache.get(currentQuestionIndex.value)?.sliderConfig?.minValue || 0
+            rangeValue.value = questionCache.get(currentQuestionIndex.value)?.rangeConfig?.minValue || 0
             hasSubmitted.value = false
             isCorrect.value = false
             currentPoints.value = 0
@@ -1483,7 +1483,7 @@ onUnmounted(() => {
     }
 }
 
-.slider-container {
+.range-container {
   justify-content: center;
   padding: 20px;
   padding-top: 64px; /* extra clearance for slider — most collision-prone */
@@ -1614,7 +1614,7 @@ onUnmounted(() => {
   animation: spin 0.8s linear infinite;
 }
 
-.slider-question-content {
+.range-question-content {
   width: 100%;
   max-width: 480px;
   display: flex;
@@ -1627,7 +1627,7 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.slider-wrapper {
+.range-wrapper {
   width: 100%;
   flex: 1;
   min-height: 0;
@@ -1635,7 +1635,7 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.slider-submit-btn {
+.range-submit-btn {
   width: 100%;
   max-width: 320px;
   padding: 16px 0;
@@ -1651,11 +1651,11 @@ onUnmounted(() => {
   transition: background 0.15s, transform 0.1s;
   box-shadow: 0 4px 0 rgba(0,0,0,0.25);
 }
-.slider-submit-btn:active {
+.range-submit-btn:active {
   transform: translateY(4px);
   box-shadow: none;
 }
-.slider-submit-btn:disabled {
+.range-submit-btn:disabled {
   opacity: 0.5;
   cursor: default;
   transform: none;

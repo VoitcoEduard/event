@@ -475,7 +475,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 
 		DebugLog("player:signal: User=%s, Q=%d, Score=%d, Time=%d", client.PlayerID, questionIndex, scoreEarned, timeSpent)
 
-		// Extract AnswerValue for slider (optional)
+		// Extract AnswerValue for range (optional)
 		var answerValue float64
 		if val, ok := data["answerValue"].(float64); ok {
 			answerValue = val

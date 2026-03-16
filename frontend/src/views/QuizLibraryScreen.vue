@@ -434,8 +434,8 @@ const editTemplate = (template) => {
     description: template.description,
     moduleType: template.moduleType,
     questions: JSON.parse(JSON.stringify(template.data?.questions || [])).map(q => {
-        if (q.type === 'slider') {
-            if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+        if (q.type === 'range') {
+            if (!q.rangeConfig) q.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
             if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
         }
         if (q.type === 'true_false') {
@@ -614,8 +614,8 @@ const handleFileUpload = (event) => {
             // Sanitize questions if quiz
             if (payload.moduleType === 'quiz' && payload.data.questions) {
                  payload.data.questions = payload.data.questions.map(q => {
-                    if (q.type === 'slider') {
-                        if (!q.sliderConfig) q.sliderConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+                    if (q.type === 'range') {
+                        if (!q.rangeConfig) q.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
                         if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
                     }
                     if (q.type === 'true_false') {
