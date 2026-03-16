@@ -36,42 +36,71 @@
       </div>
     </div>
 
-    <!-- Fixed Center Selector (Google Maps style) -->
-    <div class="fixed-selector-overlay" v-if="!isMaxTargets">
-      <div class="center-crosshair">
-        <div class="crosshair-v"></div>
-        <div class="crosshair-h"></div>
-      </div>
-      <div class="center-marker-floating">
-        <div class="floating-pin-head">
-          <div class="pin-inner"></div>
+    <!-- Fixed Center Selector (Google Maps style) - Only in placement mode -->
+    <Transition name="scale">
+      <div class="fixed-selector-overlay" v-if="isPlacementMode && !isMaxTargets">
+        <div class="center-crosshair">
+          <div class="crosshair-v"></div>
+          <div class="crosshair-h"></div>
         </div>
-        <div class="floating-pin-bottom"></div>
-        <div class="floating-shadow"></div>
+        <div class="center-marker-floating">
+          <div class="floating-pin-head">
+            <div class="pin-inner"></div>
+          </div>
+          <div class="floating-pin-bottom"></div>
+          <div class="floating-shadow"></div>
+        </div>
       </div>
-    </div>
+    </Transition>
+
+    <!-- Placement Mode Indicator / Layer -->
+    <Transition name="fade">
+      <div class="placement-layer-overlay" v-if="isPlacementMode">
+        <button class="exit-placement-btn" @click="isPlacementMode = false">
+          <span>Close Selection</span>
+          <span class="icon">✕</span>
+        </button>
+      </div>
+    </Transition>
 
     <!-- UI Controls -->
     <div class="picker-controls">
-      <div class="target-counter" v-if="showTargetCount">
-        <span class="count">{{ localMarkers.length }}</span> / {{ maxTargets }} 
-        <span class="label">Answers</span>
+      <div class="top-controls">
+          <div class="target-counter" v-if="showTargetCount">
+            <span class="count">{{ localMarkers.length }}</span> / {{ maxTargets }} 
+            <span class="label">Answers</span>
+          </div>
       </div>
       
-      <button 
-        class="add-answer-btn" 
-        @click="addCurrentPosition" 
-        :disabled="isMaxTargets"
-        :class="{ 'pulse-active': !isMaxTargets && localMarkers.length === 0 }"
-      >
-        <span class="btn-icon">+</span>
-        <span class="btn-text">{{ localMarkers.length === 0 ? 'Place Answer' : 'Add Answer' }}</span>
-      </button>
+      <div class="bottom-controls">
+          <!-- Main Toggle / Add Action -->
+          <button 
+            v-if="!isPlacementMode"
+            class="enter-placement-btn" 
+            @click="isPlacementMode = true"
+            :disabled="isMaxTargets"
+          >
+            <span class="btn-icon">📍</span>
+            <span class="btn-text">Place Answer</span>
+          </button>
 
-      <div class="zoom-controls">
-        <button @click="adjustZoom(1.2)">+</button>
-        <div class="zoom-divider"></div>
-        <button @click="adjustZoom(0.8)">−</button>
+          <button 
+            v-else
+            class="confirm-placement-btn" 
+            @click="addCurrentPosition" 
+            :disabled="isMaxTargets"
+          >
+            <span class="btn-icon">✓</span>
+            <span class="btn-text">Drop Pin</span>
+          </button>
+      </div>
+
+      <div class="side-controls">
+          <div class="zoom-controls">
+            <button @click="adjustZoom(1.2)">+</button>
+            <div class="zoom-divider"></div>
+            <button @click="adjustZoom(0.8)">−</button>
+          </div>
       </div>
     </div>
 
@@ -103,6 +132,7 @@ const translateX = ref(0)
 const translateY = ref(0)
 const localMarkers = ref([...props.initialMarkers])
 const showHint = ref(true)
+const isPlacementMode = ref(false)
 
 // Navigation state
 const isDragging = ref(false)
@@ -156,6 +186,10 @@ const addCurrentPosition = () => {
       yPercent,
       isPlaced: true
     })
+
+    // Optional: auto-exit placement after drop
+    isPlacementMode.value = false
+
     emit('update:markers', localMarkers.value)
   }
 }
@@ -432,15 +466,64 @@ const handleMouseUp = () => isDragging.value = false
   right: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 20;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
 }
 
-.add-answer-btn {
+.top-controls {
+    padding: 1rem;
+    pointer-events: none;
+}
+
+.bottom-controls {
+    margin-top: auto;
+    padding: 1.5rem;
+    padding-bottom: 90px; /* Space for parent submit btn */
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.side-controls {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.placement-layer-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.3) 100%);
+    pointer-events: none;
+    z-index: 50;
+    border: 2px solid rgba(59, 130, 246, 0.4);
+    pointer-events: none;
+}
+
+.exit-placement-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.6rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.enter-placement-btn, .confirm-placement-btn {
   pointer-events: auto;
-  position: absolute;
-  bottom: 120px; /* Leave space for parent submit button at bottom */
-  left: 50%;
-  transform: translateX(-50%);
   background: linear-gradient(to right, #2563eb, #3b82f6);
   color: white;
   border: none;
@@ -451,31 +534,37 @@ const handleMouseUp = () => isDragging.value = false
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  box-shadow: 
-    0 10px 25px rgba(37, 99, 235, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.add-answer-btn:hover:not(:disabled) {
-  transform: translateX(-50%) translateY(-2px);
+.confirm-placement-btn {
+    background: linear-gradient(to right, #10b981, #059669);
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+}
+
+.enter-placement-btn:hover {
+  transform: translateY(-2px);
   box-shadow: 0 20px 35px rgba(37, 99, 235, 0.5);
 }
 
-.add-answer-btn:active:not(:disabled) {
-  transform: translateX(-50%) translateY(0);
+.confirm-placement-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 35px rgba(16, 185, 129, 0.5);
 }
 
-.add-answer-btn:disabled {
+.enter-placement-btn:active, .confirm-placement-btn:active {
+  transform: translateY(0);
+}
+
+.enter-placement-btn:disabled {
   background: #3f3f46;
   opacity: 0.5;
   box-shadow: none;
 }
 
 .target-counter {
-  position: absolute;
-  top: 80px; /* Below the header area */
-  left: 1rem;
+  pointer-events: auto;
   background: rgba(15, 15, 18, 0.8);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -484,14 +573,10 @@ const handleMouseUp = () => isDragging.value = false
   color: #a1a1aa;
   font-size: 0.9rem;
   font-weight: 600;
-  pointer-events: auto;
+  display: inline-block;
 }
 
 .zoom-controls {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
   pointer-events: auto;
   display: flex;
   flex-direction: column;
@@ -546,6 +631,14 @@ const handleMouseUp = () => isDragging.value = false
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
-  transform: translate(-50%, -10px);
+}
+
+.scale-enter-active, .scale-leave-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.scale-enter-from, .scale-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
 }
 </style>
