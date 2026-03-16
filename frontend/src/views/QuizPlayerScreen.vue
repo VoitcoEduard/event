@@ -98,26 +98,14 @@
         </div>
       </div>
       
-      <div class="wp-interactive-zone" ref="wpOuterContainer">
-        <ZoomPanImage v-if="currentQuestion?.imageId">
-          <div class="wp-image-wrapper" ref="wpImageContainer">
-            <img :src="getImageUrl(currentQuestion.imageId)" class="wp-main-img" @load="updateWpContainerRect" />
-            
-            <GuessMarker
-              v-for="(guess, i) in wpGuesses"
-              :key="i"
-              :marker-number="i + 1"
-              :x-percent="guess.xPercent"
-              :y-percent="guess.yPercent"
-              :is-placed="guess.isPlaced"
-              :is-correct="guess.isCorrect"
-              :is-active="activeMarkerIndex === i"
-              :container-rect="wpContainerRect"
-              @update:position="updateGuessPosition(i, $event)"
-              @interaction-start="activeMarkerIndex = i"
-            />
-          </div>
-        </ZoomPanImage>
+      <div class="wp-interactive-zone-modern" ref="wpOuterContainer">
+        <MapCoordinatePicker
+          v-if="currentQuestion?.imageId"
+          :image-url="getImageUrl(currentQuestion.imageId)"
+          :max-targets="currentQuestion?.wrongPictureConfig?.targets?.length || 1"
+          :initial-markers="wpGuesses"
+          @update:markers="wpGuesses = $event"
+        />
       </div>
       
       <div class="action-area">
@@ -280,8 +268,7 @@ import { quizWS } from '../services/websocket'
 import { useQuizStateMachine } from '../composables/useQuizStateMachine'
 import SliderComponent from '../components/SliderComponent.vue'
 import HorizontalCarousel from '../components/HorizontalCarousel.vue'
-import ZoomPanImage from '../components/ZoomPanImage.vue'
-import GuessMarker from '../components/GuessMarker.vue'
+import MapCoordinatePicker from '../components/MapCoordinatePicker.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
@@ -327,20 +314,11 @@ const wpImageContainer = ref(null)
 const wpContainerRect = ref(null)
 
 const updateWpContainerRect = () => {
-    if (wpImageContainer.value) {
-        wpContainerRect.value = wpImageContainer.value.getBoundingClientRect()
-    }
+    // Legacy - kept for safety if needed by other components, but MapCoordinatePicker handles its own rect
 }
 
 const updateGuessPosition = (index, pos) => {
-    if (hasSubmitted.value) return
-    if (wpGuesses.value[index]) {
-        wpGuesses.value[index].xPercent = pos.xPercent
-        wpGuesses.value[index].yPercent = pos.yPercent
-        wpGuesses.value[index].isPlaced = true
-        // Recalculate container bounds periodically in case of scale/resize
-        updateWpContainerRect()
-    }
+    // Legacy - MapCoordinatePicker emits whole array
 }
 
 const submitWrongPictures = () => {
@@ -735,13 +713,8 @@ onMounted(async () => {
             const question = questionCache.get(currentQuestionIndex.value)
             
             if (question && question.type === 'wrong_pictures' && question.wrongPictureConfig) {
-                 const numTargets = question.wrongPictureConfig.targets?.length || 1
-                 wpGuesses.value = Array.from({ length: numTargets }).map((_, i) => ({
-                      xPercent: 50 + (i * 5) - (numTargets * 2.5),
-                      yPercent: 90,
-                      isPlaced: false,
-                      isCorrect: null
-                 }))
+                 // Start with empty guesses for new map-style picker
+                 wpGuesses.value = []
                  setTimeout(updateWpContainerRect, 500)
             }
             if (question) {
@@ -1445,14 +1418,18 @@ onUnmounted(() => {
 }
 
 .question-header-area {
-  flex: 0 0 15%;
-  padding: 20px;
+  flex: 0 0 auto;
+  padding: 12px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
-  z-index: 2;
+  position: absolute; /* Float over the top */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
 }
 
 .question-number-badge {
@@ -1496,30 +1473,38 @@ onUnmounted(() => {
 }
 
 .action-area {
-  flex: 0 0 15%;
+  flex: 0 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  z-index: 2;
-  background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+  z-index: 100;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
 }
 
 .submit-selection-btn {
-  background: #3A3A3C; /* Inactive state */
+  background: rgba(58, 58, 60, 0.8); /* Semi-transparent base */
+  backdrop-filter: blur(10px);
   color: #8E8E93;
-  border: none;
-  padding: 16px 32px;
-  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px 28px;
+  border-radius: 20px;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 800;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  width: 100%;
+  width: auto; /* Don't take full width */
+  min-width: 200px;
   max-width: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
 
 .submit-selection-btn.active {
@@ -1600,12 +1585,14 @@ onUnmounted(() => {
 .wrong-pictures-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  justify-content: space-between;
-  background: #1C1C1E;
+  height: 100vh; /* Full viewport height */
+  width: 100%;
+  justify-content: flex-start;
+  background: #000;
+  overflow: hidden;
 }
 
-.wp-interactive-zone {
+.wp-interactive-zone-modern {
   flex: 1;
   width: 100%;
   position: relative;
@@ -1614,6 +1601,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Remove padding to maximize space */
+  padding: 0;
 }
 
 .wp-image-wrapper {
