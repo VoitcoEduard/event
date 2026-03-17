@@ -113,6 +113,14 @@ func main() {
 			return
 		}
 
+		// Session routes under events
+		if strings.HasSuffix(r.URL.Path, "/sessions") {
+			if r.Method == "POST" {
+				handlers.VerifyAuth(handlers.CreateSession)(w, r)
+				return
+			}
+		}
+
 		// Check for modules related paths
 		if strings.Contains(r.URL.Path, "/modules/") && strings.HasSuffix(r.URL.Path, "/response") {
 			if r.Method == "POST" {
@@ -269,6 +277,18 @@ func main() {
 			}
 		}
 
+		// Participant routes
+		if strings.Contains(r.URL.Path, "/participants") {
+			if strings.HasSuffix(r.URL.Path, "/join") && r.Method == "POST" {
+				handlers.JoinEvent(w, r)
+				return
+			}
+			if r.Method == "GET" {
+				handlers.VerifyAuth(handlers.GetParticipants)(w, r)
+				return
+			}
+		}
+
 		switch r.Method {
 		case "GET":
 			handlers.GetEvent(w, r)
@@ -279,6 +299,31 @@ func main() {
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+
+	// Standalone Session routes
+	http.HandleFunc("/sessions/", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w, r)
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		if strings.HasSuffix(r.URL.Path, "/status") && r.Method == "PUT" {
+			handlers.VerifyAuth(handlers.UpdateSessionStatus)(w, r)
+			return
+		}
+
+		if strings.HasSuffix(r.URL.Path, "/active_module") && r.Method == "PUT" {
+			handlers.VerifyAuth(handlers.AdvanceSessionModule)(w, r)
+			return
+		}
+
+		if r.Method == "GET" {
+			handlers.VerifyAuth(handlers.GetSession)(w, r)
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
 	// Screensavers library

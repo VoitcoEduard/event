@@ -12,12 +12,37 @@ const (
 	ModuleTypeWrongPictures ModuleType = "wrong_pictures"
 )
 
+type ModuleInputBinding struct {
+	TargetKey  string `json:"targetKey" bson:"targetKey"`
+	SourceType string `json:"sourceType" bson:"sourceType"`
+	SourceKey  string `json:"sourceKey,omitempty" bson:"sourceKey,omitempty"`
+	Required   bool   `json:"required" bson:"required"`
+}
+
+type ModuleOutputDefinition struct {
+	Key       string `json:"key" bson:"key"`
+	Scope     string `json:"scope" bson:"scope"`
+	ValueType string `json:"valueType" bson:"valueType"`
+	Persist   bool   `json:"persist" bson:"persist"`
+}
+
+type ActivationRule struct {
+	Type           string `json:"type" bson:"type"`
+	SourceModuleID string `json:"sourceModuleId,omitempty" bson:"sourceModuleId,omitempty"`
+	Key            string `json:"key,omitempty" bson:"key,omitempty"`
+	Operator       string `json:"operator,omitempty" bson:"operator,omitempty"`
+	Value          any    `json:"value,omitempty" bson:"value,omitempty"`
+}
+
 type Module struct {
-	ID       string         `json:"id" bson:"id"`
-	Type     ModuleType     `json:"type" bson:"type"`
-	IsActive bool           `json:"isActive" bson:"isActive"`
-	Name     string         `json:"name" bson:"name"`
-	Data     map[string]any `json:"data" bson:"data"` // Generic data holder, now including timeline configuration
+	ID              string                   `json:"id" bson:"id"`
+	Type            ModuleType               `json:"type" bson:"type"`
+	IsActive        bool                     `json:"isActive" bson:"isActive"`
+	Name            string                   `json:"name" bson:"name"`
+	Data            map[string]any           `json:"data" bson:"data"` // Generic data holder, now including timeline configuration
+	Inputs          []ModuleInputBinding     `json:"inputs,omitempty" bson:"inputs,omitempty"`
+	Outputs         []ModuleOutputDefinition `json:"outputs,omitempty" bson:"outputs,omitempty"`
+	ActivationRules []ActivationRule         `json:"activationRules,omitempty" bson:"activationRules,omitempty"`
 }
 
 type Template struct {
@@ -65,15 +90,31 @@ type ScreenState struct {
 	ActiveSlide    *Slide `json:"activeSlide" bson:"activeSlide"`
 }
 
+type ParticipantPolicy struct {
+	IdentityMode      string   `json:"identityMode" bson:"identityMode"`
+	RequiredFields    []string `json:"requiredFields" bson:"requiredFields"`
+	DedupeStrategy    string   `json:"dedupeStrategy" bson:"dedupeStrategy"`
+	ReconnectStrategy string   `json:"reconnectStrategy" bson:"reconnectStrategy"`
+}
+
+type EventScoringPolicy struct {
+	Aggregation     string             `json:"aggregation" bson:"aggregation"`
+	ModuleWeights   map[string]float64 `json:"moduleWeights" bson:"moduleWeights"`
+	RankingScope    string             `json:"rankingScope" bson:"rankingScope"`
+	TieBreakerRules []string           `json:"tieBreakerRules" bson:"tieBreakerRules"`
+}
+
 type Event struct {
-	ID                string             `json:"id" bson:"_id"`
-	Name              string             `json:"name" bson:"name"`
-	Description       string             `json:"description" bson:"description"`
-	Language          string             `json:"language" bson:"language"`
-	IsActive          bool               `json:"isActive" bson:"isActive"`
-	CreatedAt         time.Time          `json:"createdAt" bson:"createdAt"`
-	Modules           []Module           `json:"modules" bson:"modules"`
-	ScreensaverConfig *ScreensaverConfig `json:"screensaverConfig" bson:"screensaverConfig"`
-	ScreenState       *ScreenState       `json:"screenState" bson:"screenState"`
-	Slides            []Slide            `json:"slides" bson:"slides"`
+	ID                string               `json:"id" bson:"_id"`
+	Name              string               `json:"name" bson:"name"`
+	Description       string               `json:"description" bson:"description"`
+	Language          string               `json:"language" bson:"language"`
+	IsActive          bool                 `json:"isActive" bson:"isActive"`
+	CreatedAt         time.Time            `json:"createdAt" bson:"createdAt"`
+	Modules           []Module             `json:"modules" bson:"modules"`
+	ScreensaverConfig *ScreensaverConfig   `json:"screensaverConfig" bson:"screensaverConfig"`
+	ScreenState       *ScreenState         `json:"screenState" bson:"screenState"`
+	Slides            []Slide              `json:"slides" bson:"slides"`
+	ParticipantPolicy *ParticipantPolicy   `json:"participantPolicy,omitempty" bson:"participantPolicy,omitempty"`
+	ScoringPolicy     *EventScoringPolicy  `json:"scoringPolicy,omitempty" bson:"scoringPolicy,omitempty"`
 }
