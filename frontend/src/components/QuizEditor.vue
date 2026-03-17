@@ -20,6 +20,7 @@
                  :module-id="moduleId"
                  @update="(updatedQ) => emit('update-question', index, updatedQ)"
                  @delete="emit('remove-question', index)"
+                 @change-type="handleChangeType(index)"
               />
             </div>
         </div>
@@ -56,14 +57,28 @@ const props = defineProps({
 const emit = defineEmits(['update-question', 'remove-question', 'add-question', 'move-question'])
 
 const showTypeSelector = ref(false)
+const editingQuestionIndex = ref(null)
 
 const handleAddClick = () => {
+  editingQuestionIndex.value = null
+  showTypeSelector.value = true
+}
+
+const handleChangeType = (index) => {
+  editingQuestionIndex.value = index
   showTypeSelector.value = true
 }
 
 const handleTypeSelect = (type) => {
   showTypeSelector.value = false
-  emit('add-question', type)
+  if (editingQuestionIndex.value !== null) {
+      // Change existing question type
+      const question = { ...props.questions[editingQuestionIndex.value], type }
+      emit('update-question', editingQuestionIndex.value, question)
+  } else {
+      // Add new question
+      emit('add-question', type)
+  }
 }
 </script>
 

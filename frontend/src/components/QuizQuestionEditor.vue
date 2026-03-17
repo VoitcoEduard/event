@@ -1,24 +1,69 @@
 <template>
   <div class="question-editor">
     <div class="editor-header">
-      <span class="question-number">{{ $t('quiz_config.question_editor.question_number', { number: index + 1 }) }}</span>
+      <div class="header-left">
+        <span class="question-number">{{ $t('quiz_config.question_editor.question_number', { number: index + 1 }) }}</span>
+        <span class="question-type-tag" @click="$emit('change-type')">{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</span>
+      </div>
       <button class="delete-btn" @click="$emit('delete')">🗑</button>
     </div>
 
-    <div class="input-group">
-      <label>{{ $t('quiz_config.question_editor.type_label') }}</label>
-      <select v-model="localQuestion.type" class="select-input" @change="handleTypeChange">
-        <option value="classic">{{ $t('quiz_config.question_editor.types.classic') }}</option>
-        <option value="multi_select">{{ $t('quiz_config.question_editor.types.multi_select') }}</option>
-        <option value="true_false">{{ $t('quiz_config.question_editor.types.true_false') }}</option>
-        <option value="range">{{ $t('quiz_config.question_editor.types.range') }}</option>
-        <option value="number">{{ $t('quiz_config.question_editor.types.number') }}</option>
-        <option value="correct_picture">{{ $t('quiz_config.question_editor.types.correct_picture') }}</option>
-        <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
-      </select>
-    </div>
 
-    <div class="input-group">
+    <div class="editor-main-row">
+      <div v-if="localQuestion.type !== 'wrong_pictures'" class="image-section">
+        <label>{{ $t('quiz_config.question_editor.image_label') }}</label>
+        <ImageUploader
+          v-model="localQuestion.imageId"
+          v-model:altText="localQuestion.imageAlt"
+          :event-id="eventId"
+          :module-id="moduleId"
+        />
+      </div>
+
+      <div class="settings-stack">
+        <div class="input-group">
+          <label>
+            {{ $t('quiz_config.question_editor.time_limit') }}
+            <span v-if="localQuestion.timeLimit === 20" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+          </label>
+          <select v-model.number="localQuestion.timeLimit" class="select-input" @change="emitUpdate">
+            <option :value="5">5s</option>
+            <option :value="10">10s</option>
+            <option :value="20">20s</option>
+            <option :value="30">30s</option>
+            <option :value="60">60s</option>
+            <option :value="90">90s</option>
+            <option :value="120">120s</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>
+            {{ $t('quiz_config.question_editor.explain_time') }}
+            <span v-if="localQuestion.explainTime === 5" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+          </label>
+          <select v-model.number="localQuestion.explainTime" class="select-input" @change="emitUpdate">
+            <option :value="0">0s</option>
+            <option :value="5">5s</option>
+            <option :value="10">10s</option>
+            <option :value="15">15s</option>
+            <option :value="20">20s</option>
+            <option :value="30">30s</option>
+            <option :value="40">40s</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>
+            {{ $t('quiz_config.question_editor.points') }}
+            <span v-if="localMaxPoints === 100 && localQuestion.type === 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+            <span v-if="localMaxPoints === 1000 && localQuestion.type !== 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+          </label>
+          <input type="number" v-model.number="localMaxPoints" class="select-input" @input="emitUpdate" />
+        </div>
+      </div>
+    </div>
+    
+    <!-- QUESTION TEXT -->
+    <div class="input-group text-group">
       <label>{{ $t('quiz_config.question_editor.text_label') }}</label>
       <input 
         type="text" 
@@ -29,56 +74,6 @@
       />
     </div>
 
-    <div v-if="localQuestion.type !== 'wrong_pictures'" class="input-group">
-      <label>{{ $t('quiz_config.question_editor.image_label') }}</label>
-      <ImageUploader
-        v-model="localQuestion.imageId"
-        v-model:altText="localQuestion.imageAlt"
-        :event-id="eventId"
-        :module-id="moduleId"
-      />
-    </div>
-
-    <div class="settings-row compact">
-      <div class="input-group">
-        <label>
-          {{ $t('quiz_config.question_editor.time_limit') }}
-          <span v-if="localQuestion.timeLimit === 20" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
-        </label>
-        <select v-model.number="localQuestion.timeLimit" class="select-input" @change="emitUpdate">
-          <option :value="5">5s</option>
-          <option :value="10">10s</option>
-          <option :value="20">20s</option>
-          <option :value="30">30s</option>
-          <option :value="60">60s</option>
-          <option :value="90">90s</option>
-          <option :value="120">120s</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label>
-          {{ $t('quiz_config.question_editor.explain_time') }}
-          <span v-if="localQuestion.explainTime === 5" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
-        </label>
-        <select v-model.number="localQuestion.explainTime" class="select-input" @change="emitUpdate">
-          <option :value="0">0s</option>
-          <option :value="5">5s</option>
-          <option :value="10">10s</option>
-          <option :value="15">15s</option>
-          <option :value="20">20s</option>
-          <option :value="30">30s</option>
-          <option :value="40">40s</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label>
-          {{ $t('quiz_config.question_editor.points') }}
-          <span v-if="localMaxPoints === 100 && localQuestion.type === 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
-          <span v-if="localMaxPoints === 1000 && localQuestion.type !== 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
-        </label>
-        <input type="number" v-model.number="localMaxPoints" class="select-input" @input="emitUpdate" />
-      </div>
-    </div>
 
     <!-- STANDARD ANSWERS (MC/TF/MS) -->
     <!-- Multi-select warning -->
@@ -305,7 +300,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update', 'delete'])
+const emit = defineEmits(['update', 'delete', 'change-type'])
 
 // Initialize local state from props
 const localQuestion = reactive({
@@ -379,7 +374,8 @@ watch(() => props.question, (newVal) => {
   // Ideally, valid Vue form pattern is :modelValue + @update:modelValue.
   // Here we just ensure we don't lose the range/scoring config objects structure.
   
-  if (newVal.id !== localQuestion.id) {
+  if (newVal.id !== localQuestion.id || newVal.type !== localQuestion.type) {
+       const typeChanged = newVal.type !== localQuestion.type
        Object.assign(localQuestion, {
           ...newVal,
           type: newVal.type || 'classic',
@@ -393,6 +389,9 @@ watch(() => props.question, (newVal) => {
           imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }],
           wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 1000 }
       })
+      if (typeChanged) {
+          handleTypeChange()
+      }
   }
 }, { deep: true })
 
@@ -509,7 +508,32 @@ const isAnswerReadOnly = (idx) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #3A3A3C;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.question-type-tag {
+  background-color: #3A3A3C;
+  color: #E5E5EA;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.question-type-tag:hover {
+  background-color: #48484A;
 }
 
 .question-number {
@@ -553,10 +577,42 @@ const isAnswerReadOnly = (idx) => {
   font-size: 16px;
 }
 
-.settings-row.compact {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+.editor-main-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+
+.image-section {
+  flex: 60;
+  display: flex;
+  flex-direction: column;
+}
+
+.image-section label {
+  font-size: 12px;
+  color: #8E8E93;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  flex: 40;
+  flex-shrink: 0;
+}
+
+.settings-stack .input-group {
+  margin-bottom: 0;
+}
+
+.text-group {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #3A3A3C;
 }
 
 .default-hint {
