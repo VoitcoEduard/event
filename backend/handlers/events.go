@@ -33,9 +33,10 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	event.CreatedAt = time.Now()
 
 	welcomeLabel := "What is your name?"
-	if event.Language == "ru" {
+	switch event.Language {
+	case "ru":
 		welcomeLabel = "Как вас зовут?"
-	} else if event.Language == "ro" {
+	case "ro":
 		welcomeLabel = "Cum te numești?"
 	}
 

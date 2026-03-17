@@ -10,6 +10,7 @@ const (
 	ModuleTypeForm          ModuleType = "form"
 	ModuleTypeQuiz          ModuleType = "quiz"
 	ModuleTypeWrongPictures ModuleType = "wrong_pictures"
+	ModuleTypeTeams         ModuleType = "teams"
 )
 
 type ModuleInputBinding struct {
@@ -43,6 +44,15 @@ type Module struct {
 	Inputs          []ModuleInputBinding     `json:"inputs,omitempty" bson:"inputs,omitempty"`
 	Outputs         []ModuleOutputDefinition `json:"outputs,omitempty" bson:"outputs,omitempty"`
 	ActivationRules []ActivationRule         `json:"activationRules,omitempty" bson:"activationRules,omitempty"`
+}
+
+// TeamsModuleConfig defines configuration for the teams module
+type TeamsModuleConfig struct {
+	SplitMethod        string   `json:"splitMethod" bson:"splitMethod"`               // "random", "self_assign", "manual"
+	TeamNames          []string `json:"teamNames" bson:"teamNames"`                   // Custom team names
+	TeamColors         []string `json:"teamColors" bson:"teamColors"`                 // Team colors for UI
+	PersistAfterModule bool     `json:"persistAfterModule" bson:"persistAfterModule"` // Keep teams after module ends
+	AllowSelfAssign    bool     `json:"allowSelfAssign" bson:"allowSelfAssign"`       // Allow participants to self-assign
 }
 
 type Template struct {
@@ -105,16 +115,16 @@ type EventScoringPolicy struct {
 }
 
 type Event struct {
-	ID                string               `json:"id" bson:"_id"`
-	Name              string               `json:"name" bson:"name"`
-	Description       string               `json:"description" bson:"description"`
-	Language          string               `json:"language" bson:"language"`
-	IsActive          bool                 `json:"isActive" bson:"isActive"`
-	CreatedAt         time.Time            `json:"createdAt" bson:"createdAt"`
-	Modules           []Module             `json:"modules" bson:"modules"`
-	ScreensaverConfig *ScreensaverConfig   `json:"screensaverConfig" bson:"screensaverConfig"`
-	ScreenState       *ScreenState         `json:"screenState" bson:"screenState"`
-	Slides            []Slide              `json:"slides" bson:"slides"`
-	ParticipantPolicy *ParticipantPolicy   `json:"participantPolicy,omitempty" bson:"participantPolicy,omitempty"`
-	ScoringPolicy     *EventScoringPolicy  `json:"scoringPolicy,omitempty" bson:"scoringPolicy,omitempty"`
+	ID                string              `json:"id" bson:"_id"`
+	Name              string              `json:"name" bson:"name"`
+	Description       string              `json:"description" bson:"description"`
+	Language          string              `json:"language" bson:"language"`
+	IsActive          bool                `json:"isActive" bson:"isActive"`
+	CreatedAt         time.Time           `json:"createdAt" bson:"createdAt"`
+	Modules           []Module            `json:"modules" bson:"modules"`
+	ScreensaverConfig *ScreensaverConfig  `json:"screensaverConfig" bson:"screensaverConfig"`
+	ScreenState       *ScreenState        `json:"screenState" bson:"screenState"`
+	Slides            []Slide             `json:"slides" bson:"slides"`
+	ParticipantPolicy *ParticipantPolicy  `json:"participantPolicy,omitempty" bson:"participantPolicy,omitempty"`
+	ScoringPolicy     *EventScoringPolicy `json:"scoringPolicy,omitempty" bson:"scoringPolicy,omitempty"`
 }

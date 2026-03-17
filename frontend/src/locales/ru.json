@@ -94,7 +94,23 @@
       "module_type_label": "Тип модуля",
       "form_option": "📝 Форма",
       "quiz_option": "🎮 Викторина",
+      "teams_option": "👥 Команды",
       "big_screen": "🖥️ Проектор",
+      "teams_config": {
+        "title": "Настройка модуля команд",
+        "split_method": "Метод разделения на команды",
+        "random": "Случайно",
+        "self_assign": "Самостоятельный выбор",
+        "manual": "Вручную",
+        "number_of_teams": "Количество команд",
+        "team_names": "Названия команд",
+        "team_name_placeholder": "Команда {n}",
+        "add_team": "Добавить команду",
+        "team_colors": "Цвета команд",
+        "allow_self_assign": "Разрешить участникам выбирать команду",
+        "persist_after_module": "Сохранить команды после завершения модуля"
+      },
+      "module_save": "Сохранить настройки",
       "close_big_screen": "❌ Закрыть Проектор",
       "screen_manager": "🖥️ Управление Проектором",
       "toast": {

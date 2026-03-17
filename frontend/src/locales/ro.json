@@ -94,7 +94,23 @@
       "module_type_label": "Tip Modul",
       "form_option": "📝 Formular",
       "quiz_option": "🎮 Quiz",
+      "teams_option": "👥 Echipe",
       "big_screen": "🖥️ Proiector",
+      "teams_config": {
+        "title": "Configurare Modul Echipe",
+        "split_method": "Metoda de Împărțire în Echipe",
+        "random": "Aleatoriu",
+        "self_assign": "Auto-selectare",
+        "manual": "Manual",
+        "number_of_teams": "Numărul de Echipe",
+        "team_names": "Numele Echipelor",
+        "team_name_placeholder": "Echipa {n}",
+        "add_team": "Adaugă Echipă",
+        "team_colors": "Culorile Echipelor",
+        "allow_self_assign": "Permite participanților să-și aleagă echipa",
+        "persist_after_module": "Păstrează echipele după terminarea modulului"
+      },
+      "module_save": "Salvează Configurarea",
       "close_big_screen": "❌ Închide Proiector",
       "screen_manager": "🖥️ Manager Proiector",
       "toast": {

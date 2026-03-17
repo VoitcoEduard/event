@@ -86,11 +86,12 @@ func CreateTrack(w http.ResponseWriter, r *http.Request) {
 
 	// Determine extension
 	ext := ".mp3" // Default fall back
-	if mimeType == "audio/wav" || mimeType == "audio/x-wav" {
+	switch mimeType {
+	case "audio/wav", "audio/x-wav":
 		ext = ".wav"
-	} else if mimeType == "audio/ogg" {
+	case "audio/ogg":
 		ext = ".ogg"
-	} else if mimeType == "audio/mpeg" {
+	case "audio/mpeg":
 		ext = ".mp3"
 	}
 
