@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/services"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var participantService *services.ParticipantService
@@ -70,4 +72,37 @@ func GetParticipants(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(participants)
+}
+// UpdateParticipantName handles POST /events/{id}/participants/{userId}/name
+func UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
+	if len(parts) < 5 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	eventID := parts[1]
+	userID := parts[3]
+
+	var input struct {
+		DisplayName string `json:"displayName"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection("participants")
+	filter := bson.M{"eventId": eventID, "_id": userID}
+	update := bson.M{"$set": bson.M{"displayName": input.DisplayName}}
+
+	_, err := collection.UpdateOne(r.Context(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Name updated"})
 }

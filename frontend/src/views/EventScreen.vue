@@ -1,18 +1,27 @@
 <template>
-  <div class="event-screen">
+  <div class="event-screen" :class="'theme-' + theme">
     <div class="responsive-wrapper">
-      <div class="language-switcher-container">
-        <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
-          <option value="en">English</option>
-          <option value="ru">Русский</option>
-          <option value="ro">Română</option>
-        </select>
+      <!-- Theme & Language -->
+      <div class="top-controls">
+        <button @click="toggleTheme" class="theme-toggle" :title="$t('event.toggle_theme')">
+          {{ theme === 'bold' ? '🎨' : '🏗️' }}
+        </button>
+        <div class="language-switcher-container">
+          <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
+            <option value="en">EN</option>
+            <option value="ru">RU</option>
+            <option value="ro">RO</option>
+          </select>
+        </div>
       </div>
+
+      <!-- Error State -->
       <div v-if="!currentEvent" class="error-container">
         <p class="error-text">{{ $t('event.no_data') }}</p>
         <button class="back-button" @click="goToMain">{{ $t('event.go_back') }}</button>
       </div>
 
+      <!-- Module View -->
       <div v-else-if="selectedModule" class="module-view">
         <div class="module-header">
           <button class="back-link" @click="selectedModule = null">
@@ -29,14 +38,52 @@
         />
       </div>
 
+      <!-- Home Screen Content -->
       <div v-else class="content">
-        <div class="header">
-          <p class="status-text">{{ $t('event.connected_to') }}</p>
-          <p class="event-name">{{ currentEvent.name }}</p>
-          <p v-if="userName" class="welcome-text">{{ $t('event.welcome', { name: userName }) }}</p>
+        <!-- User Profile Header -->
+        <div class="user-profile">
+          <div class="user-main">
+            <div class="avatar">
+              {{ userName ? userName.charAt(0).toUpperCase() : '?' }}
+            </div>
+            <div class="user-details">
+              <h2 class="user-name">{{ userName || $t('event.guest') }}</h2>
+              <div v-if="participantStatus?.teamName" class="team-badge" :style="{ backgroundColor: participantStatus.teamColor }">
+                {{ participantStatus.teamName }}
+              </div>
+            </div>
+          </div>
+          <div v-if="participantStatus" class="points-badge">
+            <span class="points-value">{{ participantStatus.totalPoints || 0 }}</span>
+            <span class="points-label">PTS</span>
+          </div>
+        </div>
+
+        <!-- Event Name -->
+        <div class="event-header">
+          <p class="connected-label">{{ $t('event.connected_to') }}</p>
+          <h1 class="event-title">{{ currentEvent.name }}</h1>
         </div>
 
         <div class="list-container">
+          <!-- Dynamic Cards (Polling Content) -->
+          <div v-if="dynamicCards.length > 0" class="dynamic-section">
+            <div 
+              v-for="card in dynamicCards" 
+              :key="card.id" 
+              class="dynamic-card"
+              :class="card.type"
+              :style="{ borderLeftColor: card.color }"
+            >
+              <div class="card-icon">{{ card.icon }}</div>
+              <div class="card-body">
+                <h3 class="card-title">{{ card.title }}</h3>
+                <p class="card-text">{{ card.content }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Modules -->
           <template v-if="activeModules.length > 0">
             <p class="section-title">{{ $t('event.active_activities') }}</p>
             <div
@@ -45,30 +92,31 @@
               class="module-card"
               @click="selectModule(module)"
             >
-              <div class="icon-container">
-                <span class="module-icon">
+              <div class="module-icon-box">
+                <span class="module-emoji">
                   {{ module.type === 'form' ? '📝' : 
                      (module.type === 'quiz' ? '🎮' : 
                      (module.type === 'wrong_pictures' ? '🖼️' : '📊')) }}
                 </span>
               </div>
-              <div class="module-info">
-                <p class="module-title">{{ module.name }}</p>
-                <p class="module-subtitle">{{ $t('event.tap_to_start') }}</p>
+              <div class="module-main">
+                <p class="module-name">{{ module.name }}</p>
+                <p class="module-call">{{ $t('event.tap_to_start') }}</p>
               </div>
-              <span class="chevron">›</span>
+              <div class="module-arrow">→</div>
             </div>
           </template>
+
           <template v-else>
-            <div class="waiting-card">
-              <div class="loader"></div>
-              <p class="message">{{ $t('event.waiting_msg') }}</p>
-              <p class="sub-message">{{ $t('event.waiting_submsg') }}</p>
+            <div class="waiting-state">
+              <div class="spinner"></div>
+              <p class="wait-title">{{ $t('event.waiting_msg') }}</p>
+              <p class="wait-sub">{{ $t('event.waiting_submsg') }}</p>
             </div>
           </template>
         </div>
 
-        <button class="leave-button" @click="goToMain">
+        <button class="exit-button" @click="goToMain">
           {{ $t('event.leave_btn') }}
         </button>
       </div>
@@ -94,6 +142,13 @@ const changeLanguage = () => {
 
 const storedEvent = sessionStorage.getItem('currentEvent')
 const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : null)
+const theme = ref(localStorage.getItem('userTheme') || 'bold')
+
+const toggleTheme = () => {
+  theme.value = theme.value === 'bold' ? 'material' : 'bold'
+  localStorage.setItem('userTheme', theme.value)
+}
+
 // Check logic: if no currentEvent but we have ID in query, set ID to fetch
 if (!currentEvent.value) {
     const params = new URLSearchParams(window.location.search)
@@ -104,6 +159,8 @@ if (!currentEvent.value) {
 }
 
 const activeModules = ref([])
+const dynamicCards = ref([])
+const participantStatus = ref(null)
 const selectedModule = ref(null)
 let pollingInterval = null
 
@@ -111,10 +168,21 @@ const fetchEvent = async () => {
   if (!currentEvent.value?.id) return
   
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}`)
+    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}?userId=${userId.value}`)
     if (response.ok) {
       const data = await response.json()
       currentEvent.value = data
+      
+      // Update status and cards
+      participantStatus.value = data.participantStatus || null
+      dynamicCards.value = data.dynamicCards || []
+
+      // Update name if changed on backend
+      if (participantStatus.value?.displayName && participantStatus.value.displayName !== userName.value) {
+        setUserName(participantStatus.value.displayName)
+        userName.value = participantStatus.value.displayName
+      }
+
       if (data.modules) {
         const active = data.modules.filter(m => m.isActive)
         
@@ -175,6 +243,12 @@ const handleModuleComplete = (data) => {
     if (name) {
       setUserName(name)
       userName.value = name
+      // Sync name to server
+      fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/participants/${userId.value}/name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: name })
+      }).catch(e => console.error('Failed to sync name:', e))
     }
   }
   setTimeout(() => {
@@ -188,15 +262,49 @@ const goToMain = () => {
 }
 </script>
 
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+<style>
+:root {
+  --bg-primary: #20222c; 
+  --bg-secondary: #2a2d3d;
+  --surface-layer: #373b4d;
+  --accent: #8b8eff;
+  --text-main: #f8f8fb;
+  --text-dim: #b0b3c5;
+  --border-solid: #4d526b;
+  --gold: #fbbf24;
+  --radius-main: 20px;
+  --shadow-main: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
 
-* { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+.theme-material {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --surface-layer: #2c2c2c;
+  --accent: #bb86fc;
+  --text-main: #e1e1e1;
+  --text-dim: #9e9e9e;
+  --border-solid: #333333;
+  --gold: #03dac6; /* Using teal as secondary accent in material */
+  --radius-main: 8px; /* Material typically uses smaller radius for cards */
+  --shadow-main: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+</style>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+/* foundation variables moved to global style block above */
+
+* { 
+  font-family: 'Outfit', sans-serif; 
+  box-sizing: border-box; 
+  -webkit-tap-highlight-color: transparent;
+}
 
 .event-screen {
   height: 100vh;
   width: 100vw;
-  background: #0d0d0f;
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -209,31 +317,60 @@ const goToMain = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #0d0d0f;
+  background: var(--bg-primary);
   position: relative;
 }
 
-.language-switcher-container {
+.top-controls {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+.theme-toggle {
+  background: var(--surface-layer);
+  border: 1px solid var(--border-solid);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+}
+
+.language-switcher-container {
+  position: relative;
   z-index: 100;
 }
 
 .lang-select {
-  background: #1a1a1f;
-  color: #aaa;
-  border: 1px solid #2a2a35;
-  padding: 5px 10px;
-  border-radius: 8px;
-  font-size: 12px;
+  background: var(--surface-layer);
+  color: var(--text-dim);
+  border: 1px solid var(--border-solid);
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.2s, color 0.2s;
+  transition: all 0.2s;
 }
 
 .lang-select:hover {
-  border-color: #444;
+  border-color: var(--accent);
   color: #fff;
 }
 
@@ -242,8 +379,8 @@ const goToMain = () => {
     max-width: 480px;
     height: calc(100% - 40px);
     max-height: 850px;
-    border-radius: 28px;
-    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7), 0 0 0 1px #202028;
+    border-radius: 32px;
+    box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-solid);
     overflow: hidden;
   }
 }
@@ -253,302 +390,307 @@ const goToMain = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  flex: 1;
-  padding: 24px 20px 20px;
-  padding-top: 52px;
+  padding: 24px;
+  padding-top: 64px;
   overflow: hidden;
 }
 
-/* ── Header ── */
-.header {
-  margin-bottom: 28px;
+/* ── User Profile ── */
+.user-profile {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-solid);
+  border-radius: var(--radius-main);
+  padding: 16px;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  width: 100%;
-  flex-shrink: 0;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-main);
 }
 
-.status-text {
-  color: #555;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.event-name {
-  color: #fff;
-  font-size: 30px;
-  font-weight: 900;
-  text-align: center;
-  letter-spacing: -0.5px;
-  margin-bottom: 6px;
-  line-height: 1.1;
-}
-
-.welcome-text {
-  font-size: 15px;
-  font-weight: 600;
-  margin-top: 2px;
-  color: #6366f1;
-}
-
-/* ── List ── */
-.list-container {
-  width: 100%;
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 84px;
-  padding-right: 2px;
-}
-
-.list-container::-webkit-scrollbar { width: 4px; }
-.list-container::-webkit-scrollbar-track { background: transparent; }
-.list-container::-webkit-scrollbar-thumb {
-  background: #2a2a35;
-  border-radius: 4px;
-}
-
-.section-title {
-  color: #444;
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 14px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-/* ── Module card ── */
-.module-card {
-  background: #161619;
-  border-radius: 18px;
-  padding: 0;
-  margin-bottom: 12px;
+.user-main {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  border: 1px solid #2a2a35;
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-  overflow: hidden;
+  gap: 12px;
 }
 
-.module-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border-color: #6366f1;
-}
-
-.module-card:active {
-  transform: translateY(0);
-}
-
-/* Coloured left stripe */
-.module-card::before {
-  content: '';
-  display: block;
-  width: 4px;
-  align-self: stretch;
-  background: linear-gradient(180deg, #6366f1, #4f46e5);
-  flex-shrink: 0;
-}
-
-.icon-container {
-  width: 46px;
-  height: 46px;
+.avatar {
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
   border-radius: 12px;
-  background: #202028;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 14px 14px 14px 14px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.user-name {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.team-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  color: #fff;
+}
+
+.points-badge {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid var(--gold);
+  padding: 6px 14px;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.points-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.points-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+
+/* ── Event Header ── */
+.event-header {
+  margin-bottom: 32px;
+}
+
+.connected-label {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+
+.event-title {
+  color: #fff;
+  font-size: 34px;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+/* ── List Container ── */
+.list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.list-container::-webkit-scrollbar { width: 0; }
+
+.section-title {
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 0;
+}
+
+/* ── Dynamic Cards ── */
+.dynamic-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dynamic-card {
+  background: var(--surface-layer);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  border-left: 5px solid var(--accent);
+  box-shadow: var(--shadow-main);
+}
+
+.card-icon {
+  font-size: 24px;
   flex-shrink: 0;
 }
 
-.module-icon {
-  font-size: 22px;
-}
-
-.module-info {
-  flex: 1;
-  padding: 14px 0;
-}
-
-.module-title {
+.card-title {
   color: #fff;
   font-size: 16px;
   font-weight: 700;
-  margin-bottom: 3px;
+  margin: 0 0 4px 0;
 }
 
-.module-subtitle {
-  color: #6366f1;
-  font-size: 12px;
+.card-text {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Module Cards ── */
+.module-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-solid);
+  border-radius: var(--radius-main);
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-main);
+}
+
+.module-card:hover {
+  border-color: var(--accent);
+  transform: scale(1.02);
+  background: var(--surface-layer);
+}
+
+.module-icon-box {
+  width: 52px;
+  height: 52px;
+  background: var(--surface-layer);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border: 1px solid var(--border-solid);
+}
+
+.module-main {
+  flex: 1;
+}
+
+.module-name {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 2px 0;
+}
+
+.module-call {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.module-arrow {
+  color: var(--border-solid);
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: 0.2px;
 }
 
-.chevron {
-  color: #3a3a4a;
-  font-size: 22px;
-  margin-right: 16px;
-  transition: color 0.2s, transform 0.2s;
+.module-card:hover .module-arrow {
+  color: var(--accent);
+  transform: translateX(4px);
 }
 
-.module-card:hover .chevron {
-  color: #6366f1;
-  transform: translateX(2px);
-}
-
-/* ── Waiting card ── */
-.waiting-card {
-  background: #161619;
-  border-radius: 22px;
-  padding: 44px 32px;
-  width: 100%;
+/* ── Waiting State ── */
+.waiting-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border: 1px solid #2a2a35;
+  padding: 40px 0;
 }
 
-.loader {
-  width: 44px;
-  height: 44px;
-  border: 3px solid #2a2a35;
-  border-top-color: #6366f1;
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-solid);
+  border-top-color: var(--accent);
   border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-  margin-bottom: 22px;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.25);
+  animation: spin 1s infinite linear;
+  margin-bottom: 24px;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-.message {
+.wait-title {
   color: #fff;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
-  text-align: center;
-  margin-bottom: 8px;
+  margin: 0 0 8px 0;
 }
 
-.sub-message {
-  color: #555;
-  font-size: 13px;
+.wait-sub {
+  color: var(--text-dim);
+  font-size: 14px;
   text-align: center;
-  line-height: 1.5;
 }
 
-/* ── Leave button ── */
-.leave-button {
-  width: calc(100% - 40px);
+/* ── Buttons ── */
+.exit-button {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  padding: 15px 32px;
-  border-radius: 14px;
-  border: 1px solid #2a2a35;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #f87171;
-  font-size: 15px;
-  font-weight: 600;
-  background: #0d0d0f;
-  cursor: pointer;
-  z-index: 10;
-  transition: background 0.2s, border-color 0.2s;
-  box-shadow: 0 -16px 32px rgba(13, 13, 15, 0.9);
-}
-
-.leave-button:hover {
-  background: rgba(248, 113, 113, 0.07);
-  border-color: rgba(248, 113, 113, 0.3);
-}
-
-/* ── Error ── */
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 32px;
-}
-
-.error-text {
-  color: #f87171;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  background: var(--bg-primary);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 16px;
+  border-radius: 16px;
   font-size: 16px;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.back-button {
-  padding: 12px 24px;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  background: #161619;
-  border: 1px solid #2a2a35;
-  border-radius: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
-.back-button:hover {
-  border-color: #6366f1;
+.exit-button:hover {
+  background: rgba(239, 68, 68, 0.1);
 }
 
-/* ── Module view ── */
+/* ── Transitions ── */
 .module-view {
   width: 100%;
   height: 100%;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .module-header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
   padding: 16px;
-  width: 100%;
-  flex-shrink: 0;
-  z-index: 20;
-  border-bottom: 1px solid #1e1e26;
+  border-bottom: 1px solid var(--border-solid);
 }
 
 .back-link {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  color: #aaa;
-  font-size: 15px;
-  font-weight: 500;
   background: none;
   border: none;
-  padding: 8px 10px;
-  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: color 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .back-link:hover {
   color: #fff;
-  background: #1e1e26;
-}
-
-.back-arrow {
-  margin-right: 6px;
-  font-size: 18px;
 }
 </style>

@@ -15,6 +15,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+type ParticipantStatusResponse struct {
+	DisplayName string  `json:"displayName"`
+	TeamID      string  `json:"teamId,omitempty"`
+	TeamName    string  `json:"teamName,omitempty"`
+	TeamColor   string  `json:"teamColor,omitempty"`
+	TotalPoints float64 `json:"totalPoints"`
+}
+
+type EventWithStatus struct {
+	models.Event
+	ParticipantStatus *ParticipantStatusResponse `json:"participantStatus,omitempty"`
+	DynamicCards      []models.DynamicCard       `json:"dynamicCards,omitempty"`
+}
+
 // Generate a 6-digit random number string
 func generateID() string {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -106,6 +120,9 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	id := path[len(prefix):]
 
+	// Check for userId in query
+	userID := r.URL.Query().Get("userId")
+
 	collection := db.GetCollection("events")
 	var event models.Event
 	err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&event)
@@ -114,8 +131,68 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := EventWithStatus{
+		Event: event,
+	}
+
+	if userID != "" {
+		// Fetch participant info
+		partCollection := db.GetCollection("participants")
+		var participant models.Participant
+		err := partCollection.FindOne(context.Background(), bson.M{"eventId": id, "_id": userID}).Decode(&participant)
+		if err == nil {
+			status := &ParticipantStatusResponse{
+				DisplayName: participant.DisplayName,
+				TeamID:      participant.TeamID,
+			}
+
+			// Fetch team info if assigned
+			if participant.TeamID != "" {
+				teamCollection := db.GetCollection("teams")
+				var team models.Team
+				err := teamCollection.FindOne(context.Background(), bson.M{"_id": participant.TeamID}).Decode(&team)
+				if err == nil {
+					status.TeamName = team.Name
+					status.TeamColor = team.Color
+				}
+			}
+
+			// Fetch total points
+			scoreCollection := db.GetCollection("event_scores")
+			pipeline := []bson.M{
+				{"$match": bson.M{"eventId": id, "participantId": userID}},
+				{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$points"}}},
+			}
+			cursor, err := scoreCollection.Aggregate(context.Background(), pipeline)
+			if err == nil {
+				defer cursor.Close(context.Background())
+				if cursor.Next(context.Background()) {
+					var result struct {
+						Total float64 `bson:"total"`
+					}
+					if err := cursor.Decode(&result); err == nil {
+						status.TotalPoints = result.Total
+					}
+				}
+			}
+
+			response.ParticipantStatus = status
+		}
+	}
+
+	// Fetch dynamic cards
+	cardCollection := db.GetCollection("dynamic_cards")
+	cardCursor, err := cardCollection.Find(context.Background(), bson.M{"eventId": id, "isActive": true})
+	if err == nil {
+		defer cardCursor.Close(context.Background())
+		var cards []models.DynamicCard
+		if err := cardCursor.All(context.Background(), &cards); err == nil {
+			response.DynamicCards = cards
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(event)
+	json.NewEncoder(w).Encode(response)
 }
 
 func UpdateEvent(w http.ResponseWriter, r *http.Request) {

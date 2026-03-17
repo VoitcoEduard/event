@@ -283,6 +283,10 @@ func main() {
 				handlers.JoinEvent(w, r)
 				return
 			}
+			if strings.HasSuffix(r.URL.Path, "/name") && r.Method == "POST" {
+				handlers.UpdateParticipantName(w, r)
+				return
+			}
 			if r.Method == "GET" {
 				handlers.VerifyAuth(handlers.GetParticipants)(w, r)
 				return
