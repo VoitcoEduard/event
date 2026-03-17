@@ -211,7 +211,7 @@
                 module-id=""
                 @update-question="handleUpdateQuestion"
                 @remove-question="handleRemoveQuestion"
-                @add-question="handleAddQuestion"
+                @add-question="(type) => handleAddQuestion(type)"
                 @move-question="handleMoveQuestion"
                 class="editor-component"
             />
@@ -230,7 +230,7 @@
                 module-id=""
                 @update-question="handleUpdateQuestion"
                 @remove-question="handleRemoveQuestion"
-                @add-question="handleAddQuestion"
+                @add-question="(type) => handleAddQuestion(type)"
                 @move-question="handleMoveQuestion"
                 class="editor-component"
             />
@@ -539,21 +539,40 @@ const handleRemoveQuestion = (index) => {
     currentTemplate.value.questions.splice(index, 1)
 }
 
-const handleAddQuestion = () => {
+const handleAddQuestion = (type = 'classic') => {
     const isWrongPictures = currentTemplate.value.moduleType === 'wrong_pictures'
-    currentTemplate.value.questions.push({
+    const finalType = isWrongPictures ? 'wrong_pictures' : type
+    
+    const newQuestion = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        type: isWrongPictures ? 'wrong_pictures' : 'classic',
+        type: finalType,
         text: '',
-        answers: isWrongPictures ? [] : ['', '', '', ''],
+        answers: (finalType === 'wrong_pictures' || finalType === 'correct_picture') ? [] : ['', '', '', ''],
         correctIndex: 0,
-        timeLimit: isWrongPictures ? 45 : 20,
-        wrongPictureConfig: isWrongPictures ? {
-            targets: [],
-            tolerancePercent: 5,
-            maxPoints: 1000
-        } : null
-    })
+        timeLimit: finalType === 'wrong_pictures' ? 45 : 20,
+        explainTime: 5
+    }
+
+    // Add type-specific defaults
+    if (finalType === 'range') {
+        newQuestion.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
+        newQuestion.correctValue = 0
+    } else if (finalType === 'number') {
+        newQuestion.correctNumber = 0
+        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+    } else if (finalType === 'correct_picture') {
+        newQuestion.imageOptions = [
+            { id: Date.now().toString(), imageId: '', label: '' },
+            { id: (Date.now() + 1).toString(), imageId: '', label: '' }
+        ]
+    } else if (finalType === 'wrong_pictures') {
+        newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 5, maxPoints: 1000 }
+    } else if (finalType === 'true_false') {
+        newQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
+    }
+
+    currentTemplate.value.questions.push(newQuestion)
 }
 
 const handleMoveQuestion = (index, direction) => {

@@ -26,10 +26,16 @@
       </div>
       
       <div class="add-section">
-        <button class="add-btn" @click="emit('add-question')">
+        <button class="add-btn" @click="handleAddClick">
           {{ $t('quiz_editor.add_question') }}
         </button>
       </div>
+
+      <QuestionTypeSelector 
+        :visible="showTypeSelector"
+        @close="showTypeSelector = false"
+        @select="handleTypeSelect"
+      />
 
       <div style="height: 100px;"></div>
     </div>
@@ -37,8 +43,9 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits } from 'vue'
 import QuizQuestionEditor from './QuizQuestionEditor.vue'
+import QuestionTypeSelector from './QuestionTypeSelector.vue'
 
 const props = defineProps({
   questions: { type: Array, default: () => [] },
@@ -47,6 +54,17 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update-question', 'remove-question', 'add-question', 'move-question'])
+
+const showTypeSelector = ref(false)
+
+const handleAddClick = () => {
+  showTypeSelector.value = true
+}
+
+const handleTypeSelect = (type) => {
+  showTypeSelector.value = false
+  emit('add-question', type)
+}
 </script>
 
 <style scoped>

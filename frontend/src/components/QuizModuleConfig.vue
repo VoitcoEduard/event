@@ -34,7 +34,7 @@
             :module-id="module?.id || ''"
             @update-question="updateQuestion"
             @remove-question="removeQuestion"
-            @add-question="addQuestion"
+            @add-question="(type) => addQuestion(type)"
             @move-question="moveQuestion"
           />
 
@@ -265,15 +265,37 @@ const saveAsTemplate = async () => {
     }
 }
 
-const addQuestion = () => {
-  questions.value.push({
+const addQuestion = (type = 'classic') => {
+  const newQuestion = {
     id: Date.now().toString(),
+    type: type,
     text: '',
     answers: ['', '', '', ''],
     correctIndex: 0,
     timeLimit: 20,
     explainTime: 5
-  })
+  }
+
+  // Add type-specific defaults
+  if (type === 'range') {
+    newQuestion.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
+    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
+    newQuestion.correctValue = 0
+  } else if (type === 'number') {
+    newQuestion.correctNumber = 0
+    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+  } else if (type === 'correct_picture') {
+    newQuestion.imageOptions = [
+      { id: Date.now().toString(), imageId: '', label: '' },
+      { id: (Date.now() + 1).toString(), imageId: '', label: '' }
+    ]
+  } else if (type === 'wrong_pictures') {
+    newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 1000 }
+  } else if (type === 'true_false') {
+    newQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
+  }
+
+  questions.value.push(newQuestion)
 }
 
 const removeQuestion = (index) => {

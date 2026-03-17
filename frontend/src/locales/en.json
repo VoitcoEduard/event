@@ -243,6 +243,20 @@
         "wrong_pictures": "Wrong Pictures",
         "number": "Number"
       },
+      "type_descriptions": {
+        "classic": "Standard multiple choice question with four options and one correct answer.",
+        "multi_select": "Multiple choice question where players can and must select all correct answers to score.",
+        "true_false": "A simple question with only two options: True or False.",
+        "range": "Players use a slider to guess a value. Points are awarded based on how close they are to the target.",
+        "correct_picture": "Players must identify and select the correct image from a set of options.",
+        "wrong_pictures": "A visual challenge where players must find and click on specific targets within a single image.",
+        "number": "Players must input an exact numeric value. No time bonus applies."
+      },
+      "selector": {
+        "title": "Choose Question Type",
+        "cancel": "Cancel",
+        "description_hint": "Hover over a type to see what it does"
+      },
       "number": {
         "correct_answer": "Correct Answer",
         "points": "Points"
