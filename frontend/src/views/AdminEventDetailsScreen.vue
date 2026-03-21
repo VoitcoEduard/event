@@ -1160,12 +1160,12 @@ const copyProjectorLink = () => {
   color: #FFF;
 }
 
-.module-btn.bigscreen-btn {
+.module-btn.projector-btn {
   background-color: #FF9500;
   color: #FFF;
 }
 
-.module-btn.bigscreen-btn:hover {
+.module-btn.projector-btn:hover {
   background-color: #FFA830;
 }
 

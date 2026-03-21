@@ -81,8 +81,8 @@
       "no_modules": "Nu au fost adăugate module încă.",
       "configure": "Configurează",
       "admin": "Admin",
-      "push_to_big_screen": "Proiect",
-      "pushed_to_big_screen": "Trimis pe Proiector!",
+      "push_to_projector": "Proiect",
+      "pushed_to_projector": "Trimis pe Proiector!",
       "push_error": "Eroare la trimiterea pe Proiector",
       "data": "Date",
       "stop": "Stop",
@@ -95,7 +95,7 @@
       "form_option": "📝 Formular",
       "quiz_option": "🎮 Quiz",
       "teams_option": "👥 Echipe",
-      "big_screen": "🖥️ Proiector",
+      "projector": "🖥️ Proiector",
       "teams_config": {
         "title": "Configurare Modul Echipe",
         "split_method": "Metoda de Împărțire în Echipe",
@@ -111,7 +111,7 @@
         "persist_after_module": "Păstrează echipele după terminarea modulului"
       },
       "module_save": "Salvează Configurarea",
-      "close_big_screen": "❌ Închide Proiector",
+      "close_projector": "❌ Închide Proiector",
       "screen_manager": "🖥️ Manager Proiector",
       "toast": {
         "event_link_copied": "Link-ul evenimentului a fost copiat!",
@@ -123,7 +123,7 @@
   },
   "screen_manager": {
     "title": "Manager Proiector",
-    "open_big_screen": "🖥️ Deschide Proiector",
+    "open_projector": "🖥️ Deschide Proiector",
     "push_to_screen": "Afișează pe ecran",
     "welcome_slide": "Slide de Bun Venit",
     "show_qr": "Arată codul QR",
@@ -202,7 +202,7 @@
       "bg_music": "Muzică de Fundal",
       "none": "Niciuna",
       "audio_output": "Ieșire Audio",
-      "bigscreen_only": "Doar Proiector",
+      "projector_only": "Doar Proiector",
       "admin_only": "Doar Admin",
       "both": "Ambele"
     },
@@ -467,7 +467,7 @@
       }
     }
   },
-  "big_screen": {
+  "projector": {
     "no_screensaver": "Nicio заставка configurată",
     "screensaver_hint": "Cere admin-ului să configureze o imagine de заставка",
     "connecting": "Se conectează...",

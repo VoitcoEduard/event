@@ -14,7 +14,7 @@
            <div class="qr-placeholder">QR Code</div>
         </div>
         <div class="lobby-actions">
-            <button class="copy-link-btn" @click="copyBigScreenLink">
+            <button class="copy-link-btn" @click="copyProjectorLink">
                 {{ $t('quiz.host.copy_link') }}
             </button>
         </div>
@@ -107,7 +107,7 @@
 
         <!-- RIGHT COLUMN: Stacked Answer Cards -->
         <div class="answers-column">
-          <div v-if="isRange" class="range-bigscreen-view">
+          <div v-if="isRange" class="range-projector-view">
             <div class="sbs-label sbs-label-max">
               {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
             </div>
@@ -806,7 +806,7 @@ const exitQuiz = async () => {
 // Audio State
 const bgMusicPlayer = ref(null)
 const backgroundMusicUrl = ref('')
-const audioOutput = ref('bigscreen')
+const audioOutput = ref('projector')
 const showUnmuteButton = ref(false)
 const isMusicPlaying = ref(false)
 
@@ -858,7 +858,7 @@ const enableAudio = () => {
 const { success } = useToast()
 const { t } = useI18n()
 
-const copyBigScreenLink = () => {
+const copyProjectorLink = () => {
     const url = `${window.location.origin}/projector/${eventId}`
     navigator.clipboard.writeText(url)
     success(t('quiz.host.toast.link_copied'))
@@ -881,7 +881,7 @@ onMounted(async () => {
             }
             // Music Config
             backgroundMusicUrl.value = mod.data.backgroundMusicUrl || ''
-            audioOutput.value = mod.data.audioOutput || 'bigscreen'
+            audioOutput.value = mod.data.audioOutput || 'projector'
             manageAudioPlayback()
         }
     } catch (e) {
@@ -2864,8 +2864,8 @@ onUnmounted(() => {
     animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* ── Slider BigScreen View (question-active) ──────────────────── */
-.range-bigscreen-view {
+/* ── Slider Projector View (question-active) ──────────────────── */
+.range-projector-view {
   display: flex;
   flex-direction: column;
   align-items: center;

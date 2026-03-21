@@ -263,7 +263,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		client.send <- jsonMsg2
 		DebugLog("host:join: Sent state:update to host for module: %s", moduleID)
 
-	case "bigscreen:join":
+	case "projector:join":
 		// Payload: { "moduleId": "...", "eventId": "..." }
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
@@ -272,16 +272,16 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		moduleID, _ := data["moduleId"].(string)
 		eventID, _ := data["eventId"].(string)
 
-		DebugLog("bigscreen:join received for module: %s, event: %s", moduleID, eventID)
+		DebugLog("projector:join received for module: %s, event: %s", moduleID, eventID)
 
 		client.ModuleID = moduleID
 		client.EventID = eventID
-		client.IsBigScreen = true
+		client.IsProjector = true
 
 		if moduleID != "" {
 			// Ensure session exists (same logic as host)
 			if _, exists := h.sessions[moduleID]; !exists {
-				DebugLog("bigscreen:join: Creating new session for module: %s", moduleID)
+				DebugLog("projector:join: Creating new session for module: %s", moduleID)
 				h.sessions[moduleID] = &models.QuizSession{
 					ModuleID:      moduleID,
 					State:         "lobby",
@@ -291,7 +291,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				}
 			}
 
-			// Send current state to bigscreen via cmd:state (same as host)
+			// Send current state to projector via cmd:state (same as host)
 			jsonMsg, _ := json.Marshal(ServerMessage{
 				Type: "cmd:state",
 				Payload: map[string]interface{}{
@@ -308,19 +308,19 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			})
 			client.send <- jsonMsg2
 
-			// Send data:batch with questions to bigscreen
+			// Send data:batch with questions to projector
 			if len(h.sessions[moduleID].Batches) > 0 {
 				jsonMsg3, _ := json.Marshal(ServerMessage{
 					Type:    "data:batch",
 					Payload: h.sessions[moduleID].Batches[0],
 				})
 				client.send <- jsonMsg3
-				DebugLog("bigscreen:join: Sent data:batch to bigscreen for module: %s", moduleID)
+				DebugLog("projector:join: Sent data:batch to projector for module: %s", moduleID)
 			}
 
-			DebugLog("bigscreen:join: Sent state:update to bigscreen for module: %s", moduleID)
+			DebugLog("projector:join: Sent state:update to projector for module: %s", moduleID)
 		} else {
-			DebugLog("bigscreen:join: No module ID provided, connected to event %s", eventID)
+			DebugLog("projector:join: No module ID provided, connected to event %s", eventID)
 		}
 
 	case "host:start_quiz":
@@ -979,7 +979,7 @@ func (h *QuizHub) BroadcastScreenState(eventID string, state interface{}) {
 	}
 
 	for client := range h.clients {
-		if client.IsBigScreen && client.EventID == eventID {
+		if client.IsProjector && client.EventID == eventID {
 			select {
 			case client.send <- jsonMsg:
 			default:

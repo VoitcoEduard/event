@@ -81,8 +81,8 @@
       "no_modules": "No modules added yet.",
       "configure": "Configure",
       "admin": "Admin",
-      "push_to_big_screen": "Project",
-      "pushed_to_big_screen": "Pushed to Projector!",
+      "push_to_projector": "Project",
+      "pushed_to_projector": "Pushed to Projector!",
       "push_error": "Failed to push to Projector",
       "data": "Data",
       "stop": "Stop",
@@ -110,8 +110,8 @@
       "form_option": "📝 Form",
       "quiz_option": "🎮 Quiz",
       "teams_option": "👥 Teams",
-      "big_screen": "🖥️ Projector",
-      "close_big_screen": "❌ Close Projector",
+      "projector": "🖥️ Projector",
+      "close_projector": "❌ Close Projector",
       "screen_manager": "🖥️ Projector",
       "toast": {
         "event_link_copied": "Event link copied to clipboard!",
@@ -123,7 +123,7 @@
   },
   "screen_manager": {
     "title": "Projector",
-    "open_big_screen": "🖥️ Open Projector",
+    "open_projector": "🖥️ Open Projector",
     "push_to_screen": "Push to Screen",
     "welcome_slide": "Welcome Slide",
     "show_qr": "Show QR Code",
@@ -202,7 +202,7 @@
       "bg_music": "Background Music",
       "none": "None",
       "audio_output": "Audio Output",
-      "bigscreen_only": "Projector Only",
+      "projector_only": "Projector Only",
       "admin_only": "Admin Only",
       "both": "Both"
     },
@@ -467,7 +467,7 @@
       }
     }
   },
-  "big_screen": {
+  "projector": {
     "no_screensaver": "No screensaver configured",
     "screensaver_hint": "Ask admin to set up a screensaver image",
     "connecting": "Connecting...",

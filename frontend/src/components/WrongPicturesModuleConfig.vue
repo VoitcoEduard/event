@@ -104,7 +104,7 @@
             <div class="setting-item">
                 <label>{{ $t('quiz_config.settings.audio_output') }}</label>
                 <select v-model="audioOutput" class="setting-select">
-                    <option value="bigscreen">{{ $t('quiz_config.settings.bigscreen_only') }}</option>
+                    <option value="projector">{{ $t('quiz_config.settings.projector_only') }}</option>
                     <option value="admin">{{ $t('quiz_config.settings.admin_only') }}</option>
                     <option value="both">{{ $t('quiz_config.settings.both') }}</option>
                 </select>
@@ -178,7 +178,7 @@ const questions = ref([])
 const loading = ref(false)
 const tracks = ref([])
 const selectedMusicId = ref('')
-const audioOutput = ref('bigscreen')
+const audioOutput = ref('projector')
 
 const showLibraryModal = ref(false)
 const templates = ref([])
@@ -281,11 +281,11 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
          questions.value = []
      }
      selectedMusicId.value = mod.data.backgroundMusicId || ''
-     audioOutput.value = mod.data.audioOutput || 'bigscreen'
+     audioOutput.value = mod.data.audioOutput || 'projector'
   } else if (visible) {
     questions.value = []
     selectedMusicId.value = ''
-    audioOutput.value = 'bigscreen'
+    audioOutput.value = 'projector'
   }
   
   if (visible) {

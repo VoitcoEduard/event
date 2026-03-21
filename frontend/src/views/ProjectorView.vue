@@ -1,5 +1,5 @@
 <template>
-  <div class="big-screen">
+  <div class="projector-view">
     <div class="language-switcher-container">
       <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
         <option value="en">English</option>
@@ -37,16 +37,16 @@
     <!-- Connecting State -->
     <div v-else-if="displayMode === 'connecting'" class="connecting-container">
       <div class="loading-content">
-        <h1>{{ $t('big_screen.connecting') }}</h1>
+        <h1>{{ $t('projector.connecting') }}</h1>
         <div class="loader"></div>
       </div>
     </div>
 
     <!-- Error State -->
     <div v-else-if="displayMode === 'error'" class="error-container">
-      <h1>{{ $t('big_screen.conn_error') }}</h1>
+      <h1>{{ $t('projector.conn_error') }}</h1>
       <p>{{ errorMessage }}</p>
-      <button @click="retryConnection" class="retry-btn">{{ $t('big_screen.retry') }}</button>
+      <button @click="retryConnection" class="retry-btn">{{ $t('projector.retry') }}</button>
     </div>
 
     <!-- Quiz Display States -->
@@ -137,7 +137,7 @@
           </div>
 
           <div class="answers-column">
-            <div v-if="isRange" class="range-bigscreen-view">
+            <div v-if="isRange" class="range-projector-view">
               <!-- Min / Max labels -->
               <div class="sbs-label sbs-label-max">
                 {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
@@ -474,7 +474,7 @@
     
     <div v-if="showUnmuteButton" class="unmute-overlay">
         <button @click="enableAudio" class="unmute-btn">
-            {{ $t('big_screen.enable_sound') }}
+            {{ $t('projector.enable_sound') }}
         </button>
     </div>
   </div>
@@ -515,7 +515,7 @@ const errorMessage = ref('')
 // Audio State
 const bgMusicPlayer = ref(null)
 const backgroundMusicUrl = ref('')
-const audioOutput = ref('bigscreen')
+const audioOutput = ref('projector')
 const showUnmuteButton = ref(false)
 const isMusicPlaying = ref(false)
 
@@ -792,7 +792,7 @@ const startExplainTimer = (duration) => {
 
 const applyModuleConfig = (module) => {
   backgroundMusicUrl.value = module?.data?.backgroundMusicUrl || ''
-  audioOutput.value = module?.data?.audioOutput || 'bigscreen'
+  audioOutput.value = module?.data?.audioOutput || 'projector'
   if (Array.isArray(module?.data?.questions) && module.data.questions.length > 0) {
     questions.value = module.data.questions
   }
@@ -803,7 +803,7 @@ const manageAudioPlayback = async () => {
   const shouldPlay =
     displayMode.value === 'module' &&
     backgroundMusicUrl.value &&
-    (audioOutput.value === 'bigscreen' || audioOutput.value === 'both') &&
+    (audioOutput.value === 'projector' || audioOutput.value === 'both') &&
     (gameState.value === 'get-ready' || gameState.value === 'question-presenting' || gameState.value === 'question-active')
 
   const player = bgMusicPlayer.value
@@ -850,7 +850,7 @@ const resetModuleState = () => {
   displayedScores.value = {}
   revealCorrect.value = false
   backgroundMusicUrl.value = ''
-  audioOutput.value = 'bigscreen'
+  audioOutput.value = 'projector'
   manageAudioPlayback()
 }
 
@@ -885,7 +885,7 @@ const connectToModule = (module) => {
     if (payload.state === 'get-ready' || payload.state === 'question-active' || payload.state === 'question-presenting') {
       const player = bgMusicPlayer.value
       if (prevState !== 'get-ready' && prevState !== 'question-presenting' && prevState !== 'question-active') {
-        if (player && backgroundMusicUrl.value && (audioOutput.value === 'bigscreen' || audioOutput.value === 'both')) {
+        if (player && backgroundMusicUrl.value && (audioOutput.value === 'projector' || audioOutput.value === 'both')) {
           player.load()
           player.play().then(() => {
             isMusicPlaying.value = true
@@ -1026,7 +1026,7 @@ onUnmounted(() => {
 
 <style scoped>
 /* Newly added Slide Viewer mode */
-.slide-bigscreen-container {
+.slide-projector-container {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1073,7 +1073,7 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.big-screen {
+.projector-view {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -2742,8 +2742,8 @@ onUnmounted(() => {
     animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* ── Slider BigScreen View (question-active) ──────────────────── */
-.range-bigscreen-view {
+/* ── Slider Projector View (question-active) ──────────────────── */
+.range-projector-view {
   display: flex;
   flex-direction: column;
   align-items: center;

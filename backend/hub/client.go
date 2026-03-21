@@ -45,7 +45,7 @@ type Client struct {
 	EventID     string // The event ID this client is connected to (for big screen)
 	PlayerID    string // The player ID (if player)
 	IsHost      bool   // True if this client is the host
-	IsBigScreen bool   // True if this client is a big screen display
+	IsProjector bool   // True if this client is a projector display
 }
 
 // readPump pumps messages from the websocket connection to the hub.

@@ -81,8 +81,8 @@
       "no_modules": "Модули еще не добавлены.",
       "configure": "Настроить",
       "admin": "Админ",
-      "push_to_big_screen": "Проект",
-      "pushed_to_big_screen": "Отправлено на Проектор!",
+      "push_to_projector": "Проект",
+      "pushed_to_projector": "Отправлено на Проектор!",
       "push_error": "Ошибка отправки на Проектор",
       "data": "Данные",
       "stop": "Стоп",
@@ -95,7 +95,7 @@
       "form_option": "📝 Форма",
       "quiz_option": "🎮 Викторина",
       "teams_option": "👥 Команды",
-      "big_screen": "🖥️ Проектор",
+      "projector": "🖥️ Проектор",
       "teams_config": {
         "title": "Настройка модуля команд",
         "split_method": "Метод разделения на команды",
@@ -111,7 +111,7 @@
         "persist_after_module": "Сохранить команды после завершения модуля"
       },
       "module_save": "Сохранить настройки",
-      "close_big_screen": "❌ Закрыть Проектор",
+      "close_projector": "❌ Закрыть Проектор",
       "screen_manager": "🖥️ Управление Проектором",
       "toast": {
         "event_link_copied": "Ссылка на событие скопирована!",
@@ -123,7 +123,7 @@
   },
   "screen_manager": {
     "title": "Проектор",
-    "open_big_screen": "🖥️ Открыть Проектор",
+    "open_projector": "🖥️ Открыть Проектор",
     "push_to_screen": "Отправить на экран",
     "welcome_slide": "Приветственный слайд",
     "show_qr": "Показать QR-код",
@@ -202,7 +202,7 @@
       "bg_music": "Фоновая музыка",
       "none": "Нет",
       "audio_output": "Аудиовыход",
-      "bigscreen_only": "Только Проектор",
+      "projector_only": "Только Проектор",
       "admin_only": "Только Админ",
       "both": "Оба"
     },
@@ -467,7 +467,7 @@
       }
     }
   },
-  "big_screen": {
+  "projector": {
     "no_screensaver": "Заставка не настроена",
     "screensaver_hint": "Попросите администратора настроить изображение заставки",
     "connecting": "Подключение...",

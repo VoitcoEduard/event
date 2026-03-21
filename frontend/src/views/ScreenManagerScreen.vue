@@ -8,10 +8,10 @@
       <div class="header-right">
         <button 
           class="launch-btn" 
-          :class="{ 'close-btn': isBigScreenOpen }"
-          @click="isBigScreenOpen ? closeBigScreen() : openBigScreen()"
+          :class="{ 'close-btn': isProjectorOpen }"
+          @click="isProjectorOpen ? closeProjector() : openProjector()"
         >
-          {{ isBigScreenOpen ? $t('admin.details.close_big_screen') : $t('screen_manager.open_big_screen') }}
+          {{ isProjectorOpen ? $t('admin.details.close_projector') : $t('screen_manager.open_projector') }}
         </button>
         <button class="push-btn" @click="pushToScreen" :disabled="!activeSlide">
           Push Current Slide
@@ -216,8 +216,8 @@ const { success, error } = useToast()
 
 const eventId = route.params.id
 
-const bigscreenWindow = ref(null)
-const isBigScreenOpen = computed(() => bigscreenWindow.value && !bigscreenWindow.value.closed)
+const projectorWindow = ref(null)
+const isProjectorOpen = computed(() => projectorWindow.value && !projectorWindow.value.closed)
 
 const slides = ref([])
 const activeSlideId = ref(null)
@@ -533,18 +533,18 @@ const goBack = () => {
   router.push(`/admin/event/${eventId}`)
 }
 
-const openBigScreen = () => {
-  if (bigscreenWindow.value && !bigscreenWindow.value.closed) {
-    bigscreenWindow.value.focus()
+const openProjector = () => {
+  if (projectorWindow.value && !projectorWindow.value.closed) {
+    projectorWindow.value.focus()
   } else {
-    bigscreenWindow.value = window.open(`/bigscreen/${eventId}`, 'bigscreen', 'width=1200,height=800')
+    projectorWindow.value = window.open(`/projector/${eventId}`, 'projector', 'width=1200,height=800')
   }
 }
 
-const closeBigScreen = () => {
-  if (bigscreenWindow.value && !bigscreenWindow.value.closed) {
-    bigscreenWindow.value.close()
-    bigscreenWindow.value = null
+const closeProjector = () => {
+  if (projectorWindow.value && !projectorWindow.value.closed) {
+    projectorWindow.value.close()
+    projectorWindow.value = null
   }
 }
 
