@@ -48,5 +48,8 @@ func ConnectDB() {
 }
 
 func GetCollection(collectionName string) *mongo.Collection {
+	if Client == nil {
+		log.Fatalf("Database client not initialized. Ensure db.ConnectDB() is called and has finished before calling db.GetCollection. Attempted to get collection: %s", collectionName)
+	}
 	return Client.Database("eventdb").Collection(collectionName)
 }

@@ -22,10 +22,25 @@ var (
 	scoreEntryRepo  *database.ScoreEntryRepository
 )
 
-func init() {
-	teamRepo = database.NewTeamRepository()
-	participantRepo = database.NewParticipantRepository()
-	scoreEntryRepo = database.NewScoreEntryRepository()
+func getTeamRepo() *database.TeamRepository {
+	if teamRepo == nil {
+		teamRepo = database.NewTeamRepository()
+	}
+	return teamRepo
+}
+
+func getParticipantRepo() *database.ParticipantRepository {
+	if participantRepo == nil {
+		participantRepo = database.NewParticipantRepository()
+	}
+	return participantRepo
+}
+
+func getScoreEntryRepo() *database.ScoreEntryRepository {
+	if scoreEntryRepo == nil {
+		scoreEntryRepo = database.NewScoreEntryRepository()
+	}
+	return scoreEntryRepo
 }
 
 // TeamWithScore represents a team with its total score
@@ -43,7 +58,7 @@ func GetTeams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	teams, err := teamRepo.GetByEventSessionID(r.Context(), eventID)
+	teams, err := getTeamRepo().GetByEventSessionID(r.Context(), eventID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -52,7 +67,7 @@ func GetTeams(w http.ResponseWriter, r *http.Request) {
 	// Get scores for each team
 	teamsWithScores := make([]TeamWithScore, len(teams))
 	for i, team := range teams {
-		score, _ := scoreEntryRepo.GetTeamTotalScore(r.Context(), team.ID)
+		score, _ := getScoreEntryRepo().GetTeamTotalScore(r.Context(), team.ID)
 		teamsWithScores[i] = TeamWithScore{
 			Team:        team,
 			TotalScore:  score,
@@ -84,7 +99,7 @@ func SplitTeams(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all participants for this event
-	participants, err := participantRepo.GetByEventID(r.Context(), eventID)
+	participants, err := getParticipantRepo().GetByEventID(r.Context(), eventID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -96,8 +111,8 @@ func SplitTeams(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clear existing teams
-	teamRepo.DeleteBySessionID(r.Context(), eventID)
-	participantRepo.ClearTeamID(r.Context(), eventID)
+	getTeamRepo().DeleteBySessionID(r.Context(), eventID)
+	getParticipantRepo().ClearTeamID(r.Context(), eventID)
 
 	// Determine number of teams from team names array
 	numTeams := len(req.TeamNames)
@@ -149,7 +164,7 @@ func SplitTeams(w http.ResponseWriter, r *http.Request) {
 
 	// Save teams to database
 	for _, team := range teams {
-		if err := teamRepo.Create(r.Context(), team); err != nil {
+		if err := getTeamRepo().Create(r.Context(), team); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -158,7 +173,7 @@ func SplitTeams(w http.ResponseWriter, r *http.Request) {
 	// Update participant team assignments
 	for _, team := range teams {
 		for _, participantID := range team.MemberParticipantIDs {
-			participantRepo.UpdateTeamID(r.Context(), participantID, team.ID)
+			getParticipantRepo().UpdateTeamID(r.Context(), participantID, team.ID)
 		}
 	}
 
@@ -184,7 +199,7 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get participant to find current team
-	participant, err := participantRepo.GetByID(r.Context(), req.ParticipantID)
+	participant, err := getParticipantRepo().GetByID(r.Context(), req.ParticipantID)
 	if err != nil {
 		http.Error(w, "Participant not found", http.StatusNotFound)
 		return
@@ -192,15 +207,15 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 
 	// Remove from old team if exists
 	if participant.TeamID != "" {
-		teamRepo.RemoveMember(r.Context(), participant.TeamID, req.ParticipantID)
+		getTeamRepo().RemoveMember(r.Context(), participant.TeamID, req.ParticipantID)
 	}
 
 	// Add to new team
 	if req.TeamID != "" {
-		teamRepo.AddMember(r.Context(), req.TeamID, req.ParticipantID)
-		participantRepo.UpdateTeamID(r.Context(), req.ParticipantID, req.TeamID)
+		getTeamRepo().AddMember(r.Context(), req.TeamID, req.ParticipantID)
+		getParticipantRepo().UpdateTeamID(r.Context(), req.ParticipantID, req.TeamID)
 	} else {
-		participantRepo.ClearTeamID(r.Context(), eventID)
+		getParticipantRepo().ClearTeamID(r.Context(), eventID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -258,13 +273,13 @@ func AwardTeamPoints(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: time.Now(),
 	}
 
-	if err := scoreEntryRepo.Create(r.Context(), scoreEntry); err != nil {
+	if err := getScoreEntryRepo().Create(r.Context(), scoreEntry); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get updated team score
-	totalScore, _ := scoreEntryRepo.GetTeamTotalScore(r.Context(), teamID)
+	totalScore, _ := getScoreEntryRepo().GetTeamTotalScore(r.Context(), teamID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -282,10 +297,10 @@ func ResetTeams(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete all teams for this event
-	teamRepo.DeleteBySessionID(r.Context(), eventID)
+	getTeamRepo().DeleteBySessionID(r.Context(), eventID)
 
 	// Clear team assignments from all participants
-	participantRepo.ClearTeamID(r.Context(), eventID)
+	getParticipantRepo().ClearTeamID(r.Context(), eventID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
@@ -299,7 +314,7 @@ func GetTeamLeaderboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	teams, err := teamRepo.GetByEventSessionID(r.Context(), eventID)
+	teams, err := getTeamRepo().GetByEventSessionID(r.Context(), eventID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -313,7 +328,7 @@ func GetTeamLeaderboard(w http.ResponseWriter, r *http.Request) {
 	scoredTeams := make([]scoredTeam, len(teams))
 
 	for i, team := range teams {
-		score, _ := scoreEntryRepo.GetTeamTotalScore(r.Context(), team.ID)
+		score, _ := getScoreEntryRepo().GetTeamTotalScore(r.Context(), team.ID)
 		scoredTeams[i] = scoredTeam{
 			Team:  team,
 			Score: score,
@@ -388,7 +403,7 @@ func GetParticipantsForTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	participants, err := participantRepo.GetByTeamID(r.Context(), teamID)
+	participants, err := getParticipantRepo().GetByTeamID(r.Context(), teamID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -427,8 +442,8 @@ func SelfAssignTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add participant to team
-	teamRepo.AddMember(r.Context(), teamID, req.ParticipantID)
-	participantRepo.UpdateTeamID(r.Context(), req.ParticipantID, teamID)
+	getTeamRepo().AddMember(r.Context(), teamID, req.ParticipantID)
+	getParticipantRepo().UpdateTeamID(r.Context(), req.ParticipantID, teamID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
@@ -442,7 +457,7 @@ func GetEventParticipants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	participants, err := participantRepo.GetByEventID(r.Context(), eventID)
+	participants, err := getParticipantRepo().GetByEventID(r.Context(), eventID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
