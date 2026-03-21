@@ -12,6 +12,7 @@ class QuizWebSocket {
         this.userId = null // Store userId
         this.isHost = false
         this.isBigScreen = false
+        this.eventId = null
         this.intentionalDisconnect = false
     }
 
@@ -27,6 +28,7 @@ class QuizWebSocket {
         this.userId = getUserId()
         this.isHost = isHost
         this.isBigScreen = isBigScreen
+        this.eventId = eventId
         this.intentionalDisconnect = false
 
         // Determine WS URL.
@@ -104,9 +106,11 @@ class QuizWebSocket {
                 console.log(`Reconnecting in ${delay}ms... (Attempt ${this.reconnectAttempts + 1})`)
                 setTimeout(() => {
                     this.reconnectAttempts++
-                    this.connect(this.moduleId, this.nickname, this.isHost, this.isBigScreen)
+                    this.connect(this.moduleId, this.nickname, this.isHost, this.isBigScreen, this.eventId)
                 }, delay)
             }
+
+            this.dispatch('disconnect')
         }
 
         this.socket.onerror = (error) => {

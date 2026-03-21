@@ -9,6 +9,7 @@ import LoginScreen from '../views/LoginScreen.vue'
 import QuizHostScreen from '../views/QuizHostScreen.vue'
 import QuizPlayerScreen from '../views/QuizPlayerScreen.vue'
 import BigScreen from '../views/BigScreen.vue'
+import ProjectorView from '../views/ProjectorView.vue'
 import ScreenManagerScreen from '../views/ScreenManagerScreen.vue'
 
 import { isAuthenticated } from '../utils/index.js'
@@ -26,6 +27,7 @@ const routes = [
   { path: '/quiz/:eventId/:moduleId/player', name: 'quiz-player', component: QuizPlayerScreen },
   { path: '/wrong-pictures/:eventId/:moduleId/host', name: 'wrong-pictures-host', component: QuizHostScreen, meta: { requiresAuth: true } },
   { path: '/wrong-pictures/:eventId/:moduleId/player', name: 'wrong-pictures-player', component: QuizPlayerScreen },
+  { path: '/projector/:eventId', name: 'projector', component: ProjectorView },
   { path: '/bigscreen/:eventId/:moduleId', name: 'bigscreen', component: BigScreen },
   { path: '/bigscreen/:eventId', name: 'bigscreen-screensaver', component: BigScreen }
 ]

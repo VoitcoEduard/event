@@ -445,7 +445,7 @@
       "join_title": "Join the Quiz!",
       "game_pin": "Game PIN:",
       "qr_placeholder": "QR Code",
-      "copy_link": "🔗 Copy Big Screen Link",
+      "copy_link": "🔗 Copy Projector Link",
       "players": "Players",
       "start_btn": "Start Quiz",
       "skip_timer": "Skip Timer",
@@ -463,7 +463,7 @@
       "final_standings": "Final Standings",
       "enable_sound": "🔊 Enable Sound",
       "toast": {
-        "link_copied": "Big Screen link copied to clipboard!"
+        "link_copied": "Projector link copied to clipboard!"
       }
     }
   },

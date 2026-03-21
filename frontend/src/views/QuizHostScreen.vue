@@ -859,7 +859,7 @@ const { success } = useToast()
 const { t } = useI18n()
 
 const copyBigScreenLink = () => {
-    const url = `${window.location.origin}/bigscreen/${eventId}/${moduleId}`
+    const url = `${window.location.origin}/projector/${eventId}`
     navigator.clipboard.writeText(url)
     success(t('quiz.host.toast.link_copied'))
 }

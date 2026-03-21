@@ -21,7 +21,7 @@
           <button class="nav-button screen-manager-btn" @click="goToScreenManager">
             {{ $t('admin.details.screen_manager') }}
           </button>
-          <button class="nav-button copy-link-btn" @click="copyBigScreenLink" :title="$t('quiz.host.copy_link')">
+          <button class="nav-button copy-link-btn" @click="copyProjectorLink" :title="$t('quiz.host.copy_link')">
              🔗
           </button>
           <button class="nav-button library-btn" @click="goToLibrary">
@@ -125,14 +125,6 @@
                             @click="hostQuiz(module)"
                           >
                             {{ $t('admin.details.admin') }}
-                          </button>
-                          
-                          <button
-                            v-if="module.type === 'quiz' || module.type === 'wrong_pictures'"
-                            class="module-btn push-btn"
-                            @click="pushQuizToBigScreen(module)"
-                          >
-                            🖥️ {{ $t('admin.details.push_to_big_screen') }}
                           </button>
                           
                           <button
@@ -258,10 +250,6 @@ const screensaverPreview = ref('')
 const screensaverLoading = ref(false)
 const screensavers = ref([])
 const showLibrarySelector = ref(false)
-
-// BigScreen window reference
-const bigscreenWindow = ref(null)
-const isBigScreenOpen = computed(() => bigscreenWindow.value && !bigscreenWindow.value.closed)
 
 const { success, error, info } = useToast()
 
@@ -422,36 +410,6 @@ const hostQuiz = (module) => {
   }
 }
 
-const launchBigScreen = (module) => {
-  // Open big screen in a new window
-  const url = `/bigscreen/${currentEvent.value.id}/${module.id}`
-  bigscreenWindow.value = window.open(url, 'bigscreen', 'width=1200,height=800')
-}
-
-const pushQuizToBigScreen = async (module) => {
-  // Push the quiz to big screen without opening a new window
-  // This will send a screen state update to the big screen
-  try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screen-state`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({
-        currentView: 'quiz',
-        moduleId: module.id
-      })
-    })
-    
-    if (response.ok) {
-      success(t('admin.details.pushed_to_big_screen'))
-    } else {
-      error(t('admin.details.push_error'))
-    }
-  } catch (err) {
-    console.error('Error pushing to big screen:', err)
-    error(t('admin.details.push_error'))
-  }
-}
-
 const addModule = async () => {
   if (!newModuleName.value.trim()) {
     info(t('admin.details.messages.fill_fields'))
@@ -561,18 +519,8 @@ const goToScreenManager = () => {
   }
 }
 
-const copyBigScreenLink = () => {
-  let urlPart = ''
-  // Find the first quiz module (optional - bigscreen can work without quiz)
-  const quizModule = currentEvent.value?.modules?.find(m => m.type === 'quiz')
-  if (quizModule) {
-    urlPart = `/bigscreen/${currentEvent.value.id}/${quizModule.id}`
-  } else {
-    // Open bigscreen without quiz module - will show screensaver only
-    urlPart = `/bigscreen/${currentEvent.value.id}`
-  }
-  
-  const fullUrl = `${window.location.origin}${urlPart}`
+const copyProjectorLink = () => {
+  const fullUrl = `${window.location.origin}/projector/${currentEvent.value.id}`
   navigator.clipboard.writeText(fullUrl)
   success(t('quiz.host.toast.link_copied'))
 }

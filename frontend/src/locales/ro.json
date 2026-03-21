@@ -445,7 +445,7 @@
       "join_title": "Alătură-te la Quiz!",
       "game_pin": "PIN Joc:",
       "qr_placeholder": "Cod QR",
-      "copy_link": "🔗 Copiază Link Ecran Mare",
+      "copy_link": "🔗 Copiază Link Proiector",
       "players": "Jucători",
       "start_btn": "Începe Quiz-ul",
       "skip_timer": "Sări peste Timer",
@@ -463,7 +463,7 @@
       "final_standings": "Clasament Final",
       "enable_sound": "🔊 Activează Sunetul",
       "toast": {
-        "link_copied": "Link-ul Big Screen a fost copiat!"
+        "link_copied": "Link-ul proiectorului a fost copiat!"
       }
     }
   },
