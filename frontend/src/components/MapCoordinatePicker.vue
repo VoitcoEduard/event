@@ -97,9 +97,17 @@
 
       <div class="side-controls">
           <div class="zoom-controls">
-            <button @click="adjustZoom(1.2)">+</button>
-            <div class="zoom-divider"></div>
-            <button @click="adjustZoom(0.8)">−</button>
+            <button 
+              v-for="step in ZOOM_STEPS" 
+              :key="step"
+              :class="{ active: scale === step }"
+              @click="setZoomStep(step)"
+            >
+              {{ step }}x
+            </button>
+            <button @click="toggleZoom" class="toggle-btn">
+              {{ scale === 1 ? '🔍' : '🔎' }}
+            </button>
           </div>
       </div>
     </div>
@@ -128,6 +136,7 @@ const emit = defineEmits(['update:markers'])
 const container = ref(null)
 const imageElement = ref(null)
 const scale = ref(1)
+const ZOOM_STEPS = [1, 5]
 const translateX = ref(0)
 const translateY = ref(0)
 const localMarkers = ref([...props.initialMarkers])
@@ -145,7 +154,7 @@ const isMaxTargets = computed(() => localMarkers.value.length >= props.maxTarget
 
 const transformStyle = computed(() => ({
   transform: `translate(-50%, -50%) translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`,
-  transition: isDragging.value ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)'
+  transition: isDragging.value ? 'none' : 'transform 0.1s ease-out'
 }))
 
 const onImageLoad = () => {
@@ -199,12 +208,25 @@ const removeMarker = (index) => {
   emit('update:markers', localMarkers.value)
 }
 
-const adjustZoom = (factor) => {
-  const newScale = Math.min(Math.max(scale.value * factor, 1), 5)
-  scale.value = newScale
-  if (scale.value === 1) {
+const setZoomStep = (step) => {
+  const newStep = ZOOM_STEPS.includes(step) ? step : 1
+  scale.value = newStep
+  if (newStep === 1) {
     translateX.value = 0
     translateY.value = 0
+  }
+}
+
+const toggleZoom = () => {
+  setZoomStep(scale.value === 1 ? 5 : 1)
+}
+
+const adjustZoom = (direction) => {
+  // Toggle between 1x and 5x
+  if (scale.value === 1) {
+    setZoomStep(5)
+  } else {
+    setZoomStep(1)
   }
 }
 
@@ -230,9 +252,15 @@ const handleTouchStart = (e) => {
 const handleTouchMove = (e) => {
   if (e.touches.length === 2) {
     e.preventDefault()
+    // Pinch toggles between 1x and 5x based on distance
     const newDistance = getDistance(e.touches)
-    const newScale = (newDistance / initialDistance.value) * initialScale.value
-    scale.value = Math.min(Math.max(newScale, 1), 5)
+    const ratio = newDistance / initialDistance.value
+    // If pinching out (increasing), go to 5x; pinching in, go to 1x
+    if (ratio > 1.5 && scale.value === 1) {
+      setZoomStep(5)
+    } else if (ratio < 0.7 && scale.value === 5) {
+      setZoomStep(1)
+    }
   } else if (e.touches.length === 1 && isDragging.value) {
     e.preventDefault()
     const deltaX = e.touches[0].clientX - lastClientX.value
@@ -248,8 +276,8 @@ const handleTouchEnd = () => isDragging.value = false
 
 const handleWheel = (e) => {
   e.preventDefault()
-  const delta = e.deltaY > 0 ? 0.9 : 1.1
-  adjustZoom(delta)
+  // Toggle between 1x and 5x on wheel scroll
+  adjustZoom()
 }
 
 const handleMouseDown = (e) => {
@@ -586,27 +614,32 @@ const handleMouseUp = () => isDragging.value = false
   border-radius: 1rem;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  gap: 2px;
+  padding: 4px;
 }
 
 .zoom-controls button {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
   border: none;
-  color: white;
-  width: 44px;
-  height: 44px;
-  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.7);
+  width: 40px;
+  height: 26px;
+  font-size: 0.7rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.1s ease-out;
+  border-radius: 6px;
 }
 
 .zoom-controls button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
-.zoom-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 0 8px;
+.zoom-controls button.active {
+  background: #0A84FF;
+  color: white;
+  transform: scale(1.05);
 }
 
 .interaction-hint {

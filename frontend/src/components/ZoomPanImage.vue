@@ -13,6 +13,7 @@
   >
     <div 
       class="transform-wrapper"
+      ref="wrapper"
       :style="transformStyle"
     >
       <slot></slot>
@@ -24,8 +25,10 @@
 import { ref, computed } from 'vue'
 
 const container = ref(null)
+const wrapper = ref(null)
 
 const scale = ref(1)
+const ZOOM_STEPS = [1, 5]
 const translateX = ref(0)
 const translateY = ref(0)
 
@@ -38,10 +41,42 @@ const isDragging = ref(false)
 const lastClientX = ref(0)
 const lastClientY = ref(0)
 
+const setZoomStep = (step) => {
+  const newStep = ZOOM_STEPS.includes(step) ? step : 1
+  scale.value = newStep
+  if (newStep === 1) {
+    translateX.value = 0
+    translateY.value = 0
+  }
+}
+
+const clampTranslation = (tx, ty) => {
+  if (!container.value || !wrapper.value) return { tx, ty }
+  
+  const C = container.value.clientWidth
+  const H = container.value.clientHeight
+  const w = wrapper.value.clientWidth
+  const h = wrapper.value.clientHeight
+  
+  const V = w * scale.value
+  const Vh = h * scale.value
+  
+  // Math.max ensures that if the scaled dimension is smaller than the container,
+  // it doesn't allow panning in that direction (keeps it centered).
+  const boundX = Math.max(0, (V - C) / 2)
+  const boundY = Math.max(0, (Vh - H) / 2)
+  
+  return {
+    tx: Math.min(Math.max(tx, -boundX), boundX),
+    ty: Math.min(Math.max(ty, -boundY), boundY)
+  }
+}
+
 const transformStyle = computed(() => {
   return {
     transform: `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`,
-    transformOrigin: 'center center' // or dynamically based on pinch center
+    transformOrigin: 'center center',
+    transition: isDragging.value ? 'none' : 'transform 0.1s ease-out'
   }
 })
 
@@ -68,21 +103,22 @@ const handleTouchMove = (e) => {
   if (e.touches.length === 2) {
     e.preventDefault() // prevent standard pinch zoom
     const newDistance = getDistance(e.touches)
-    const newScale = (newDistance / initialDistance.value) * initialScale.value
-    scale.value = Math.min(Math.max(newScale, 1), 5) // clamp 1x to 5x
-    
-    // Auto-reset translation if returning to 1x
-    if (scale.value === 1) {
-      translateX.value = 0
-      translateY.value = 0
+    const ratio = newDistance / initialDistance.value
+    // Pinch out to 5x, pinch in to 1x
+    if (ratio > 1.5 && scale.value === 1) {
+      setZoomStep(5)
+    } else if (ratio < 0.7 && scale.value === 5) {
+      setZoomStep(1)
     }
   } else if (e.touches.length === 1 && isDragging.value && scale.value > 1) {
     e.preventDefault() // prevent scrolling
     const deltaX = e.touches[0].clientX - lastClientX.value
     const deltaY = e.touches[0].clientY - lastClientY.value
     
-    translateX.value += deltaX
-    translateY.value += deltaY
+    const { tx, ty } = clampTranslation(translateX.value + deltaX, translateY.value + deltaY)
+    
+    translateX.value = tx
+    translateY.value = ty
     
     lastClientX.value = e.touches[0].clientX
     lastClientY.value = e.touches[0].clientY
@@ -93,18 +129,14 @@ const handleTouchEnd = (e) => {
   isDragging.value = false
 }
 
-// Mouse wheel zoom
+// Mouse wheel zoom - toggles between 1x and 5x
 const handleWheel = (e) => {
-  // Only allow zooming over the image
   e.preventDefault()
-  
-  const delta = e.deltaY > 0 ? 0.9 : 1.1
-  const newScale = Math.min(Math.max(scale.value * delta, 1), 5)
-  
-  scale.value = newScale
+  // Toggle between 1x and 5x
   if (scale.value === 1) {
-    translateX.value = 0
-    translateY.value = 0
+    setZoomStep(5)
+  } else {
+    setZoomStep(1)
   }
 }
 
@@ -124,8 +156,10 @@ const handleMouseMove = (e) => {
     const deltaX = e.clientX - lastClientX.value
     const deltaY = e.clientY - lastClientY.value
     
-    translateX.value += deltaX
-    translateY.value += deltaY
+    const { tx, ty } = clampTranslation(translateX.value + deltaX, translateY.value + deltaY)
+    
+    translateX.value = tx
+    translateY.value = ty
     
     lastClientX.value = e.clientX
     lastClientY.value = e.clientY
