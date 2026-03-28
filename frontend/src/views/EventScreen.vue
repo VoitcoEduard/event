@@ -48,9 +48,6 @@
             </div>
             <div class="user-details">
               <h2 class="user-name">{{ userName || $t('event.guest') }}</h2>
-              <div v-if="participantStatus?.teamName" class="team-badge" :style="{ backgroundColor: participantStatus.teamColor }">
-                {{ participantStatus.teamName }}
-              </div>
             </div>
           </div>
           <div v-if="participantStatus" class="points-badge">
@@ -126,13 +123,14 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FormModule from '../components/FormModule.vue'
 import { API_BASE_URL, getUserId, getUserName, setUserName } from '../utils'
 
 const { locale } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const userId = ref(getUserId())
 const userName = ref(getUserName())
 
@@ -140,22 +138,16 @@ const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
 }
 
-const storedEvent = sessionStorage.getItem('currentEvent')
-const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : null)
+// Check for eventId in query params first (for teams/quiz direct routes)
+const params = new URLSearchParams(window.location.search)
+const queryEventId = params.get('id') || params.get('eventId')
+const storedEvent = queryEventId ? null : sessionStorage.getItem('currentEvent')
+const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : (queryEventId ? { id: queryEventId } : null))
 const theme = ref(localStorage.getItem('userTheme') || 'bold')
 
 const toggleTheme = () => {
   theme.value = theme.value === 'bold' ? 'material' : 'bold'
   localStorage.setItem('userTheme', theme.value)
-}
-
-// Check logic: if no currentEvent but we have ID in query, set ID to fetch
-if (!currentEvent.value) {
-    const params = new URLSearchParams(window.location.search)
-    const idParam = params.get('id')
-    if (idParam) {
-        currentEvent.value = { id: idParam }
-    }
 }
 
 const activeModules = ref([])
@@ -194,8 +186,17 @@ const fetchEvent = async () => {
           return true
         })
 
-        // Auto-redirect to mandatory uncompleted module if not already in a module
-        if (!selectedModule.value) {
+        // Check if we need to auto-select a module from route params (e.g., /teams/:eventId/:moduleId/player)
+        const routeModuleId = route.params.moduleId
+        if (routeModuleId && !selectedModule.value) {
+          const moduleToSelect = data.modules.find(m => m.id === routeModuleId)
+          if (moduleToSelect) {
+            selectedModule.value = moduleToSelect
+          }
+        }
+
+        // Auto-redirect to mandatory uncompleted module if not already in a module and no route module
+        if (!selectedModule.value && !routeModuleId) {
             const mandatoryModule = active.find(m => m.data?.mandatoryOnEntry && localStorage.getItem(`completed_module_${m.id}`) !== 'true')
             if (mandatoryModule) {
                selectModule(mandatoryModule)

@@ -10,7 +10,6 @@ const (
 	ModuleTypeForm          ModuleType = "form"
 	ModuleTypeQuiz          ModuleType = "quiz"
 	ModuleTypeWrongPictures ModuleType = "wrong_pictures"
-	ModuleTypeTeams         ModuleType = "teams"
 )
 
 type ModuleInputBinding struct {
@@ -44,15 +43,6 @@ type Module struct {
 	Inputs          []ModuleInputBinding     `json:"inputs,omitempty" bson:"inputs,omitempty"`
 	Outputs         []ModuleOutputDefinition `json:"outputs,omitempty" bson:"outputs,omitempty"`
 	ActivationRules []ActivationRule         `json:"activationRules,omitempty" bson:"activationRules,omitempty"`
-}
-
-// TeamsModuleConfig defines configuration for the teams module
-type TeamsModuleConfig struct {
-	SplitMethod        string   `json:"splitMethod" bson:"splitMethod"`               // "random", "self_assign", "manual"
-	TeamNames          []string `json:"teamNames" bson:"teamNames"`                   // Custom team names
-	TeamColors         []string `json:"teamColors" bson:"teamColors"`                 // Team colors for UI
-	PersistAfterModule bool     `json:"persistAfterModule" bson:"persistAfterModule"` // Keep teams after module ends
-	AllowSelfAssign    bool     `json:"allowSelfAssign" bson:"allowSelfAssign"`       // Allow participants to self-assign
 }
 
 type Template struct {

@@ -17,9 +17,6 @@ import (
 
 type ParticipantStatusResponse struct {
 	DisplayName string  `json:"displayName"`
-	TeamID      string  `json:"teamId,omitempty"`
-	TeamName    string  `json:"teamName,omitempty"`
-	TeamColor   string  `json:"teamColor,omitempty"`
 	TotalPoints float64 `json:"totalPoints"`
 }
 
@@ -143,18 +140,6 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			status := &ParticipantStatusResponse{
 				DisplayName: participant.DisplayName,
-				TeamID:      participant.TeamID,
-			}
-
-			// Fetch team info if assigned
-			if participant.TeamID != "" {
-				teamCollection := db.GetCollection("teams")
-				var team models.Team
-				err := teamCollection.FindOne(context.Background(), bson.M{"_id": participant.TeamID}).Decode(&team)
-				if err == nil {
-					status.TeamName = team.Name
-					status.TeamColor = team.Color
-				}
 			}
 
 			// Fetch total points

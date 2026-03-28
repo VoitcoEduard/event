@@ -177,15 +177,6 @@
       @update="fetchEventDetails"
     />
 
-    <TeamsModuleConfig
-      v-if="showConfigModal && selectedModule?.type === 'teams'"
-      :visible="showConfigModal && selectedModule?.type === 'teams'"
-      :module="selectedModule"
-      :event-id="currentEvent?.id"
-      @close="closeConfigModal"
-      @update="fetchEventDetails"
-    />
-
     <div v-if="showModuleModal" class="modal-overlay" @click.self="showModuleModal = false">
       <div class="add-module-container">
         <div class="add-module-header">
@@ -206,7 +197,6 @@
           <option value="form">{{ $t('admin.details.form_option') }}</option>
           <option value="quiz">{{ $t('admin.details.quiz_option') }}</option>
           <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
-          <option value="teams">{{ $t('admin.details.teams_option') }}</option>
         </select>
 
         <button class="add-module-button" @click="addModule">
@@ -226,7 +216,6 @@ import { useI18n } from 'vue-i18n'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QuizModuleConfig from '../components/QuizModuleConfig.vue'
 import WrongPicturesModuleConfig from '../components/WrongPicturesModuleConfig.vue'
-import TeamsModuleConfig from '../components/TeamsModuleConfig.vue'
 
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'

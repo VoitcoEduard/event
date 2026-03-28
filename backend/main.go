@@ -293,45 +293,6 @@ func main() {
 			}
 		}
 
-		// Team routes
-		if strings.Contains(r.URL.Path, "/teams") {
-			// GET /events/{id}/teams - get all teams
-			if strings.HasSuffix(r.URL.Path, "/teams") && r.Method == "GET" {
-				handlers.VerifyAuth(handlers.GetTeams)(w, r)
-				return
-			}
-			// POST /events/{id}/teams/split - split participants into teams
-			if strings.HasSuffix(r.URL.Path, "/teams/split") && r.Method == "POST" {
-				handlers.VerifyAuth(handlers.SplitTeams)(w, r)
-				return
-			}
-			// POST /events/{id}/teams/assign - assign participant to team
-			if strings.HasSuffix(r.URL.Path, "/teams/assign") && r.Method == "POST" {
-				handlers.VerifyAuth(handlers.AssignParticipant)(w, r)
-				return
-			}
-			// POST /events/{id}/teams/reset - reset teams
-			if strings.HasSuffix(r.URL.Path, "/teams/reset") && r.Method == "POST" {
-				handlers.VerifyAuth(handlers.ResetTeams)(w, r)
-				return
-			}
-			// GET /events/{id}/teams/leaderboard - get team leaderboard
-			if strings.HasSuffix(r.URL.Path, "/teams/leaderboard") && r.Method == "GET" {
-				handlers.VerifyAuth(handlers.GetTeamLeaderboard)(w, r)
-				return
-			}
-			// POST /events/{id}/teams/{teamId}/award - award points to team
-			if strings.Contains(r.URL.Path, "/teams/") && strings.Contains(r.URL.Path, "/award") && r.Method == "POST" {
-				handlers.VerifyAuth(handlers.AwardTeamPoints)(w, r)
-				return
-			}
-			// POST /events/{id}/teams/{teamId}/join - participant joins team (self-assign)
-			if strings.Contains(r.URL.Path, "/teams/") && strings.HasSuffix(r.URL.Path, "/join") && r.Method == "POST" {
-				handlers.SelfAssignTeam(w, r)
-				return
-			}
-		}
-
 		switch r.Method {
 		case "GET":
 			handlers.GetEvent(w, r)
