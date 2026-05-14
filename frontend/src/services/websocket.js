@@ -50,6 +50,7 @@ class QuizWebSocket {
             console.log('WebSocket Connected')
             this.isConnected = true
             this.reconnectAttempts = 0
+            this.dispatch('open')
 
             // Configure signal queue sender
             signalQueue.setSender((signal) => {

@@ -122,7 +122,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { teamsService } from '../services/teams'
 import { quizWS } from '../services/websocket'
-import { getUserId } from '../utils'
+import { getUserId, getAuthHeaders } from '../utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -148,7 +148,7 @@ const colorOptions = [
   '#8B5CF6', '#A855F7', '#D946EF', '#EC4899',
 ]
 
-const eventId = computed(() => route.params.eventId || route.query.eventId)
+const eventId = computed(() => route.params.id || route.query.eventId)
 const moduleId = computed(() => route.query.moduleId || '')
 const moduleName = computed(() => route.query.moduleName || '')
 
@@ -168,7 +168,9 @@ const loadData = async () => {
   try {
     const [teamsData, participantsData] = await Promise.all([
       teamsService.getTeams(eventId.value),
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/events/${eventId.value}/participants`).then(r => r.json())
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/events/${eventId.value}/participants`, {
+        headers: getAuthHeaders()
+      }).then(r => r.json())
     ])
     teams.value = teamsData
     participants.value = Array.isArray(participantsData) ? participantsData : []
@@ -275,8 +277,17 @@ const endTeams = () => {
 }
 
 const setupWebSocket = () => {
+  const onWSOpen = () => {
+    quizWS.send('teams:admin_join', { eventId: eventId.value })
+  }
+
   quizWS.connect(null, null, false, false, eventId.value)
-  quizWS.send('teams:admin_join', { eventId: eventId.value })
+
+  if (quizWS.isConnected) {
+    onWSOpen()
+  } else {
+    quizWS.on('open', onWSOpen)
+  }
 
   quizWS.on('teams:admin_joined', (data) => {
     connectedUsers.value++
@@ -299,6 +310,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  quizWS.off('open', onWSOpen)
   quizWS.off('teams:admin_joined')
   quizWS.off('team:created')
   quizWS.off('team:updated')

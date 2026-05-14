@@ -84,7 +84,7 @@ func main() {
 		}
 
 		// Team routes
-		if strings.Contains(r.URL.Path, "/teams/") {
+		if strings.Contains(r.URL.Path, "/teams") {
 			if strings.HasSuffix(r.URL.Path, "/teams/assign") && r.Method == "POST" {
 				handlers.VerifyAuth(handlers.AssignParticipant)(w, r)
 				return

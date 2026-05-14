@@ -37,7 +37,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { teamsService } from '../services/teams'
 import { quizWS } from '../services/websocket'
-import { getUserId } from '../utils'
+import { getUserId, getAuthHeaders } from '../utils'
 
 const router = useRouter()
 const route = useRoute()
@@ -45,7 +45,7 @@ const route = useRoute()
 const teams = ref([])
 const participants = ref([])
 const currentTeam = ref(null)
-const eventId = computed(() => route.query.eventId || route.params.eventId)
+const eventId = computed(() => route.query.eventId || route.params.id || route.params.eventId)
 
 const getMemberCount = (teamId) => {
   return participants.value.filter(p => p.teamId === teamId).length
@@ -56,7 +56,9 @@ const loadData = async () => {
     const userId = getUserId()
     const [teamsData, participantsData] = await Promise.all([
       teamsService.getTeams(eventId.value),
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/events/${eventId.value}/participants`).then(r => r.json())
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/events/${eventId.value}/participants`, {
+        headers: getAuthHeaders()
+      }).then(r => r.json())
     ])
     teams.value = teamsData
     participants.value = Array.isArray(participantsData) ? participantsData : []
