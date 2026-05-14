@@ -18,6 +18,7 @@
           </div>
         </div>
         <div class="header-right">
+          
           <button class="nav-button screen-manager-btn" @click="goToScreenManager">
             {{ $t('admin.details.screen_manager') }}
           </button>
@@ -197,6 +198,7 @@
           <option value="form">{{ $t('admin.details.form_option') }}</option>
           <option value="quiz">{{ $t('admin.details.quiz_option') }}</option>
           <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
+          <option value="teams">{{ $t('admin.details.teams_option') }}</option>
         </select>
 
         <button class="add-module-button" @click="addModule">
@@ -382,8 +384,12 @@ const copyLink = () => {
 }
 
 const configureModule = (module) => {
-  selectedModule.value = module
-  showConfigModal.value = true
+  if (module.type === 'teams') {
+    router.push(`/admin/event/${currentEvent.value.id}/teams?moduleId=${module.id}&moduleName=${encodeURIComponent(module.name)}`)
+  } else {
+    selectedModule.value = module
+    showConfigModal.value = true
+  }
 }
 
 const closeConfigModal = () => {
@@ -417,6 +423,7 @@ const addModule = async () => {
     })
 
     if (response.ok) {
+      const moduleData = await response.json()
       fetchEventDetails()
       showModuleModal.value = false
       newModuleName.value = ''
@@ -505,6 +512,12 @@ const goToDataView = () => {
 const goToScreenManager = () => {
   if (currentEvent.value?.id) {
     router.push(`/admin/event/${currentEvent.value.id}/screen-manager`)
+  }
+}
+
+const goToTeams = () => {
+  if (currentEvent.value?.id) {
+    router.push(`/admin/event/${currentEvent.value.id}/teams`)
   }
 }
 

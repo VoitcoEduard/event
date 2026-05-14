@@ -831,7 +831,30 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 	utils.DebugLog("GetModuleResponses: Fetching responses for EventID: %s, ModuleID: %s, Type: %s", eventID, moduleID, moduleType)
 
-	if moduleType == "quiz" || moduleType == "wrong_pictures" {
+	if moduleType == "teams" {
+		collection := db.GetCollection("team_results")
+		filter := bson.M{"eventId": eventID, "moduleId": moduleID}
+
+		cursor, err := collection.Find(context.Background(), filter)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.DebugLog("GetModuleResponses: Error finding team results: %v", err)
+			return
+		}
+		defer cursor.Close(context.Background())
+
+		var results []models.TeamResult
+		if err := cursor.All(context.Background(), &results); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.DebugLog("GetModuleResponses: Error decoding team results: %v", err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"responses": results})
+		utils.DebugLog("GetModuleResponses: Successfully returned %d team results", len(results))
+
+	} else if moduleType == "quiz" || moduleType == "wrong_pictures" {
 		collection := db.GetCollection("quiz_results")
 		filter := bson.M{"eventId": eventID, "moduleId": moduleID}
 

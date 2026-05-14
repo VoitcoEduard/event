@@ -46,6 +46,7 @@ type Client struct {
 	PlayerID    string // The player ID (if player)
 	IsHost      bool   // True if this client is the host
 	IsProjector bool   // True if this client is a projector display
+	IsTeamsAdmin bool  // True if this client is a teams admin
 }
 
 // readPump pumps messages from the websocket connection to the hub.

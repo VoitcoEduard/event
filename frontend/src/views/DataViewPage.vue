@@ -260,7 +260,7 @@ const fetchEventDetails = async () => {
     event.modules.forEach(m => {
       newTabs.push({
         id: m.id,
-        label: `${m.type === 'form' ? 'Form' : 'Quiz'}: ${m.name}`
+        label: `${m.type === 'form' ? 'Form' : m.type === 'quiz' ? 'Quiz' : m.type === 'teams' ? 'Teams' : m.type}: ${m.name}`
       });
     });
     tabs.value = newTabs;
@@ -339,10 +339,10 @@ const fetchUnifiedData = async () => {
   
   const userMap = new Map(); 
 
-  results.forEach(({ moduleId, type, responses }) => {
+results.forEach(({ moduleId, type, responses }) => {
     responses.forEach(res => {
       if (type === 'quiz') {
-        const quizResult = res; 
+        const quizResult = res;
         if (quizResult.players) {
            quizResult.players.forEach(p => {
              const userId = p.id;
@@ -351,7 +351,9 @@ const fetchUnifiedData = async () => {
              userEntry.scores[moduleId] = (userEntry.scores[moduleId] || 0) + p.score;
              if (!userEntry.name && p.nickname) userEntry.name = p.nickname;
            });
-        }
+         }
+       } else if (type === 'teams') {
+        // Teams module - no individual scores, just track team membership
       } else {
         const userId = res.userId;
         if (!userId) return;
@@ -388,6 +390,13 @@ const fetchUnifiedData = async () => {
         data: `scores.${m.id}`, 
         type: 'numeric',
         readOnly: false 
+      });
+    } else if (m.type === 'teams') {
+      // Teams module - display team membership in unified view
+      headers.push(`${m.name} (Team)`);
+      columns.push({ 
+        data: `team.${m.id}`, 
+        readOnly: true 
       });
     } else {
       const allKeys = new Set();
@@ -448,6 +457,42 @@ const fetchModuleData = async (moduleId) => {
     tableData.value = [];
     tableHeaders.value = [];
     tableColumns.value = [];
+    return;
+  }
+
+  const moduleDef = eventModules.value.find(m => m.id === moduleId);
+  const fieldLabels = getModuleFieldMapping(moduleDef);
+
+  if (moduleDef?.type === 'teams') {
+    const headers = ['Team Name', 'Color', 'Members'];
+    const displayColumns = [{ data: 'teamName' }, { data: 'color' }, { data: 'members' }];
+
+    const rows = [];
+    rawData.forEach(teamResult => {
+      if (teamResult.teams) {
+        teamResult.teams.forEach(team => {
+          rows.push({
+            teamName: team.name,
+            color: team.color,
+            members: team.members?.map(m => m.nickname).join(', ') || ''
+          });
+        });
+      }
+    });
+
+    tableHeaders.value = headers;
+    tableColumns.value = displayColumns;
+
+    if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
+      hotTableComponent.value.hotInstance.updateSettings({
+        colHeaders: headers,
+        columns: displayColumns,
+        data: rows,
+        readOnly: true
+      });
+    } else {
+      tableData.value = rows;
+    }
     return;
   }
 

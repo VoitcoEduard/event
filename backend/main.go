@@ -77,40 +77,48 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/templates", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w, r)
-		if r.Method == "OPTIONS" {
-			return
-		}
-		switch r.Method {
-		case "GET":
-			handlers.GetTemplates(w, r)
-		case "POST":
-			handlers.VerifyAuth(handlers.SaveTemplate)(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	http.HandleFunc("/templates/", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w, r)
-		if r.Method == "OPTIONS" {
-			return
-		}
-		if r.Method == "PUT" {
-			handlers.VerifyAuth(handlers.UpdateTemplate)(w, r)
-			return
-		}
-		if r.Method == "DELETE" {
-			handlers.VerifyAuth(handlers.DeleteTemplate)(w, r)
-			return
-		}
-	})
-
 	http.HandleFunc("/events/", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w, r)
 		if r.Method == "OPTIONS" {
 			return
+		}
+
+		// Team routes
+		if strings.Contains(r.URL.Path, "/teams/") {
+			if strings.HasSuffix(r.URL.Path, "/teams/assign") && r.Method == "POST" {
+				handlers.VerifyAuth(handlers.AssignParticipant)(w, r)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/teams/auto-assign") && r.Method == "POST" {
+				handlers.VerifyAuth(handlers.AutoAssignParticipants)(w, r)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/teams") && r.Method == "POST" {
+				handlers.VerifyAuth(handlers.CreateTeam)(w, r)
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/teams") && r.Method == "GET" {
+				handlers.VerifyAuth(handlers.GetTeams)(w, r)
+				return
+			}
+			pathParts := strings.Split(r.URL.Path, "/")
+			if len(pathParts) >= 6 && pathParts[len(pathParts)-2] == "teams" {
+				teamID := pathParts[len(pathParts)-1]
+				if r.Method == "PUT" {
+					handlers.VerifyAuth(func(w http.ResponseWriter, r *http.Request) {
+						r.URL.Path = "/events/" + pathParts[2] + "/teams/" + teamID
+						handlers.UpdateTeam(w, r)
+					})(w, r)
+					return
+				}
+				if r.Method == "DELETE" {
+					handlers.VerifyAuth(func(w http.ResponseWriter, r *http.Request) {
+						r.URL.Path = "/events/" + pathParts[2] + "/teams/" + teamID
+						handlers.DeleteTeam(w, r)
+					})(w, r)
+					return
+				}
+			}
 		}
 
 		// Session routes under events
@@ -473,7 +481,6 @@ func enableCors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization")
 
-	// Handle preflight OPTIONS request
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 	}

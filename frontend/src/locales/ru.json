@@ -94,6 +94,7 @@
       "module_type_label": "Тип модуля",
       "form_option": "📝 Форма",
       "quiz_option": "🎮 Викторина",
+      "teams_option": "👥 Команды",
       "projector": "🖥️ Проектор",
       "module_save": "Сохранить настройки",
       "close_projector": "❌ Закрыть Проектор",
@@ -460,7 +461,54 @@
     "retry": "Повторить",
     "enable_sound": "🔊 Нажмите, чтобы включить звук"
   },
+  "teams_admin": {
+    "title": "Управление командами",
+    "open": "Открыть команды",
+    "back_btn": "← Назад",
+    "teams_header": "Команды",
+    "participants_header": "Участники",
+    "unassigned_section": "Без команды",
+    "create_team": "Создать команду",
+    "edit_team": "Редактировать команду",
+    "delete_team": "Удалить команду",
+    "team_name_label": "Название команды",
+    "team_color_label": "Цвет команды",
+    "auto_assign": "Автораспределение",
+    "auto_assign_btn": "Автораспределение",
+    "assign_to_team": "Назначить команде",
+    "no_teams": "Команды еще не созданы",
+    "no_participants": "Участников пока нет",
+    "no_unassigned": "Все участники в командах",
+    "members_count": "Участников: {count}",
+    "confirm_delete": "Удалить эту команду?",
+    "confirm_delete_with_members": "В этой команде {count} участников. Они станут 'без команды'. Продолжить?",
+    "end_teams": "Завершить Команды",
+    "messages": {
+      "created": "Команда успешно создана",
+      "updated": "Команда успешно обновлена",
+      "deleted": "Команда успешно удалена",
+      "assigned": "Участник назначен в команду",
+      "auto_assign_complete": "Автораспределено участников: {count}"
+    },
+    "connected_users": "Подключено: {count}"
+  },
+  "team_selection": {
+    "title": "Выберите вашу команду",
+    "subtitle": "Выберите команду для присоединения",
+    "join_team": "Присоединиться",
+    "already_in_team": "Вы уже в команде",
+    "go_to_team": "Перейти в Мою команду"
+  },
+  "my_team": {
+    "title": "Моя команда",
+    "team_name": "Команда: {name}",
+    "members_count": "Участников: {count}",
+    "no_team": "Вы не в команде",
+    "go_back": "Назад",
+    "change_team": "Сменить команду"
+  },
   "common": {
+    "cancel": "Отмена",
     "loading": "Загрузка...",
     "data_btn": "📊 Данные"
   }

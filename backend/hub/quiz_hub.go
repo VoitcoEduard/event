@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -798,6 +799,88 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		DebugLog("host:reset_quiz received for module: %s", client.ModuleID)
 		h.resetSessionLocked(client.ModuleID)
 		DebugLog("host:reset_quiz completed for module: %s", client.ModuleID)
+
+	case "teams:admin_join":
+		data, ok := msg.Payload.(map[string]interface{})
+		if !ok {
+			return
+		}
+		eventID, _ := data["eventId"].(string)
+
+		DebugLog("teams:admin_join received for event: %s", eventID)
+
+		client.EventID = eventID
+		client.IsTeamsAdmin = true
+
+		jsonMsg, _ := json.Marshal(ServerMessage{
+			Type:    "teams:admin_joined",
+			Payload: map[string]interface{}{"eventId": eventID, "status": "connected"},
+		})
+		client.send <- jsonMsg
+
+	case "host:end_teams":
+		if !client.IsHost {
+			return
+		}
+		data, ok := msg.Payload.(map[string]interface{})
+		if !ok {
+			return
+		}
+		eventID, _ := data["eventId"].(string)
+		moduleID, _ := data["moduleId"].(string)
+		moduleName, _ := data["moduleName"].(string)
+
+		DebugLog("host:end_teams received for event: %s, module: %s", eventID, moduleID)
+
+		h.mu.Unlock()
+		result, err := h.saveTeamResults(eventID, moduleID, moduleName)
+		h.mu.Lock()
+
+		if err != nil {
+			log.Printf("Error saving team results for module %s: %v", moduleID, err)
+		}
+
+		jsonMsg, _ := json.Marshal(ServerMessage{
+			Type:    "teams:ended",
+			Payload: map[string]interface{}{"eventId": eventID, "moduleId": moduleID, "result": result},
+		})
+		h.BroadcastToTeamsAdmins(eventID, jsonMsg)
+
+	case "participant:join":
+		data, ok := msg.Payload.(map[string]interface{})
+		if !ok {
+			return
+		}
+		eventID, _ := data["eventId"].(string)
+		userID, _ := data["userId"].(string)
+		displayName, _ := data["displayName"].(string)
+
+		DebugLog("participant:join received for event: %s, user: %s", eventID, userID)
+
+		client.EventID = eventID
+		client.PlayerID = userID
+
+		if eventID != "" {
+			h.mu.Unlock()
+			teams, err := getTeamRepo().GetByEventID(context.TODO(), eventID)
+			h.mu.Lock()
+
+			if err == nil && len(teams) > 0 {
+				jsonMsg, _ := json.Marshal(ServerMessage{
+					Type:    "teams:available",
+					Payload: map[string]interface{}{"eventId": eventID, "teams": teams},
+				})
+				client.send <- jsonMsg
+			}
+		}
+
+		if userID != "" && displayName != "" {
+			jsonMsg, _ := json.Marshal(ServerMessage{
+				Type:    "participant:joined",
+				Payload: map[string]interface{}{"userId": userID, "displayName": displayName},
+			})
+			h.BroadcastToTeamsAdmins(eventID, jsonMsg)
+		}
 	}
 }
 
@@ -864,6 +947,15 @@ func (h *QuizHub) ResetSession(moduleID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.resetSessionLocked(moduleID)
+}
+
+var teamRepo *database.TeamRepository
+
+func getTeamRepo() *database.TeamRepository {
+	if teamRepo == nil {
+		teamRepo = database.NewTeamRepository()
+	}
+	return teamRepo
 }
 
 // resetSessionLocked is the internal method that assumes the lock is already held
@@ -955,6 +1047,68 @@ func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
 	return err
 }
 
+func (h *QuizHub) saveTeamResults(eventID, moduleID, moduleName string) (*models.TeamResult, error) {
+	teams, err := getTeamRepo().GetByEventID(context.TODO(), eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	participantsCol := db.GetCollection("participants")
+	var allParticipants []models.Participant
+	if err := participantsCol.FindOne(context.TODO(), bson.M{"eventId": eventID}); err != nil {
+		log.Printf("Error finding participants for event %s: %v", eventID, err)
+	}
+
+	cursor, err := participantsCol.Find(context.TODO(), bson.M{"eventId": eventID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	if err := cursor.All(context.TODO(), &allParticipants); err != nil {
+		return nil, err
+	}
+
+	participantMap := make(map[string]models.Participant)
+	for _, p := range allParticipants {
+		participantMap[p.ID] = p
+	}
+
+	var teamInfos []models.TeamInfo
+	for _, team := range teams {
+		var members []models.TeamMember
+for _, p := range allParticipants {
+		if p.TeamID == team.ID {
+			members = append(members, models.TeamMember{
+				ID:       p.ID,
+				Nickname: p.DisplayName,
+			})
+			}
+		}
+		teamInfos = append(teamInfos, models.TeamInfo{
+			ID:      team.ID,
+			Name:    team.Name,
+			Color:   team.Color,
+			Members: members,
+		})
+	}
+
+	result := &models.TeamResult{
+		EventID:    eventID,
+		ModuleID:   moduleID,
+		ModuleName: moduleName,
+		Teams:      teamInfos,
+	}
+
+	teamResultRepo := database.NewTeamResultRepository()
+	if err := teamResultRepo.Create(context.TODO(), result); err != nil {
+		return nil, err
+	}
+
+	log.Printf("Successfully saved team results for module %s with %d teams", moduleID, len(teamInfos))
+	return result, nil
+}
+
 func mustMarshal(v interface{}) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -980,6 +1134,52 @@ func (h *QuizHub) BroadcastScreenState(eventID string, state interface{}) {
 
 	for client := range h.clients {
 		if client.IsProjector && client.EventID == eventID {
+			select {
+			case client.send <- jsonMsg:
+			default:
+				close(client.send)
+				delete(h.clients, client)
+			}
+		}
+	}
+}
+
+// BroadcastToEvent broadcasts a message to all clients connected to a specific event
+func (h *QuizHub) BroadcastToEvent(eventID string, message interface{}) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	jsonMsg, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error marshalling broadcast message:", err)
+		return
+	}
+
+	for client := range h.clients {
+		if client.EventID == eventID {
+			select {
+			case client.send <- jsonMsg:
+			default:
+				close(client.send)
+				delete(h.clients, client)
+			}
+		}
+	}
+}
+
+// BroadcastToTeamsAdmins broadcasts to all admin clients for a specific event
+func (h *QuizHub) BroadcastToTeamsAdmins(eventID string, message interface{}) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	jsonMsg, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error marshalling broadcast message:", err)
+		return
+	}
+
+	for client := range h.clients {
+		if client.EventID == eventID && client.IsTeamsAdmin {
 			select {
 			case client.send <- jsonMsg:
 			default:

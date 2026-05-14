@@ -94,6 +94,7 @@
       "module_type_label": "Tip Modul",
       "form_option": "📝 Formular",
       "quiz_option": "🎮 Quiz",
+      "teams_option": "👥 Echipe",
       "projector": "🖥️ Proiector",
       "module_save": "Salvează Configurarea",
       "close_projector": "❌ Închide Proiector",
@@ -460,7 +461,54 @@
     "retry": "Reîncearcă",
     "enable_sound": "🔊 Click pentru a activa sunetul"
   },
+  "teams_admin": {
+    "title": "Gestionare Echipe",
+    "open": "Deschide Echipe",
+    "back_btn": "← Înapoi",
+    "teams_header": "Echipe",
+    "participants_header": "Participanți",
+    "unassigned_section": "Neatribuit",
+    "create_team": "Creare Echipa",
+    "edit_team": "Editare Echipa",
+    "delete_team": "Stergere Echipa",
+    "team_name_label": "Nume Echipa",
+    "team_color_label": "Culoare Echipa",
+    "auto_assign": "Atribuire Automată",
+    "auto_assign_btn": "Atribuire Automată",
+    "assign_to_team": "Atribuire la Echipa",
+    "no_teams": "Nu există echipe create",
+    "no_participants": "Nu există participanți",
+    "no_unassigned": "Toți participanții sunt atribuiți",
+    "members_count": "Membri: {count}",
+    "confirm_delete": "Sterge această echipă?",
+    "confirm_delete_with_members": "Această echipă are {count} membri. Vor deveni neatribuiți. Continuați?",
+    "end_teams": "Termină Echipe",
+    "messages": {
+      "created": "Echipa creată cu succes",
+      "updated": "Echipa actualizată cu succes",
+      "deleted": "Echipa ștearsă cu succes",
+      "assigned": "Participant atribuit echipei",
+      "auto_assign_complete": "Participanți atribuiți automat: {count}"
+    },
+    "connected_users": "Conectați: {count}"
+  },
+  "team_selection": {
+    "title": "Alegeți Echipa Voastră",
+    "subtitle": "Selectați o echipă pentru a vă alătura",
+    "join_team": "Alăturare Echipă",
+    "already_in_team": "Sunteți deja într-o echipă",
+    "go_to_team": "Mergi la Echipa Mea"
+  },
+  "my_team": {
+    "title": "Echipa Mea",
+    "team_name": "Echipa: {name}",
+    "members_count": "Membri: {count}",
+    "no_team": "Nu sunteți într-o echipă",
+    "go_back": "Înapoi",
+    "change_team": "Schimbă Echipa"
+  },
   "common": {
+    "cancel": "Anulează",
     "loading": "Încărcare...",
     "data_btn": "📊 Date"
   }

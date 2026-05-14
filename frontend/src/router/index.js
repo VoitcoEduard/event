@@ -11,6 +11,10 @@ import QuizPlayerScreen from '../views/QuizPlayerScreen.vue'
 import ProjectorView from '../views/ProjectorView.vue'
 import ScreenManagerScreen from '../views/ScreenManagerScreen.vue'
 
+import TeamsAdminScreen from '../views/TeamsAdminScreen.vue'
+import TeamSelectionScreen from '../views/TeamSelectionScreen.vue'
+import MyTeamScreen from '../views/MyTeamScreen.vue'
+
 import { isAuthenticated } from '../utils/index.js'
 
 const routes = [
@@ -20,13 +24,16 @@ const routes = [
   { path: '/admin', name: 'admin', component: AdminScreen, meta: { requiresAuth: true } },
   { path: '/admin/event/:id', name: 'admin-event-details', component: AdminEventDetailsScreen, meta: { requiresAuth: true } },
   { path: '/admin/event/:id/screen-manager', name: 'admin-screen-manager', component: ScreenManagerScreen, meta: { requiresAuth: true } },
+  { path: '/admin/event/:id/teams', name: 'teams-admin', component: TeamsAdminScreen, meta: { requiresAuth: true } },
   { path: '/data/library', name: 'data-library', component: DataLibraryScreen, meta: { requiresAuth: true } },
   { path: '/quiz/library', name: 'quiz-library', component: () => import('../views/QuizLibraryScreen.vue'), meta: { requiresAuth: true } },
   { path: '/quiz/:eventId/:moduleId/host', name: 'quiz-host', component: QuizHostScreen, meta: { requiresAuth: true } },
   { path: '/quiz/:eventId/:moduleId/player', name: 'quiz-player', component: QuizPlayerScreen },
   { path: '/wrong-pictures/:eventId/:moduleId/host', name: 'wrong-pictures-host', component: QuizHostScreen, meta: { requiresAuth: true } },
   { path: '/wrong-pictures/:eventId/:moduleId/player', name: 'wrong-pictures-player', component: QuizPlayerScreen },
-  { path: '/projector/:eventId', name: 'projector', component: ProjectorView }
+  { path: '/projector/:eventId', name: 'projector', component: ProjectorView },
+  { path: '/event/team-selection', name: 'team-selection', component: TeamSelectionScreen },
+  { path: '/event/my-team', name: 'my-team', component: MyTeamScreen }
 ]
 
 const router = createRouter({
