@@ -9,11 +9,41 @@ import (
 	"strings"
 	"time"
 
+	"github.com/user/go-expo-sample/backend/cache"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/utils" // New import
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+var (
+	// eventResponseCache serves GET /events/{id} responses. It is keyed per
+	// (event, user) because the payload includes the caller's participant status.
+	// Players poll this endpoint every 3s, so a 15s TTL turns ~33 reads/s at
+	// 100 players into a handful of cache misses.
+	eventResponseCache = cache.New(15 * time.Second)
+	// eventsListCache serves GET /events (admin event list).
+	eventsListCache = cache.New(2 * time.Second)
+)
+
+const eventsListCacheKey = "evt:list"
+
+func eventCacheKey(eventID, userID string) string {
+	return "evt:" + eventID + "|u:" + userID
+}
+
+// invalidateEventCache drops every cached response for an event (all users)
+// plus the global event list. Call after any write to the event document.
+func invalidateEventCache(eventID string) {
+	eventResponseCache.DeletePrefix("evt:" + eventID + "|")
+	eventsListCache.Delete(eventsListCacheKey)
+}
+
+// invalidateParticipantStatus drops the cached response for a single
+// participant of an event. Call after writes that only affect that user.
+func invalidateParticipantStatus(eventID, userID string) {
+	eventResponseCache.Delete(eventCacheKey(eventID, userID))
+}
 
 type ParticipantStatusResponse struct {
 	DisplayName string  `json:"displayName"`
@@ -81,6 +111,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	eventsListCache.Delete(eventsListCacheKey)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -89,6 +120,12 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetEvents(w http.ResponseWriter, r *http.Request) {
+	if cached, ok := eventsListCache.Get(eventsListCacheKey); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(cached)
+		return
+	}
+
 	collection := db.GetCollection("events")
 	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
@@ -103,8 +140,15 @@ func GetEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data, err := json.Marshal(events)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	eventsListCache.Set(eventsListCacheKey, data)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(events)
+	w.Write(data)
 }
 
 func GetEvent(w http.ResponseWriter, r *http.Request) {
@@ -119,6 +163,13 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Check for userId in query
 	userID := r.URL.Query().Get("userId")
+
+	cacheKey := eventCacheKey(id, userID)
+	if cached, ok := eventResponseCache.Get(cacheKey); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(cached)
+		return
+	}
 
 	collection := db.GetCollection("events")
 	var event models.Event
@@ -176,8 +227,15 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	data, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+	eventResponseCache.Set(cacheKey, data)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	w.Write(data)
 }
 
 func UpdateEvent(w http.ResponseWriter, r *http.Request) {
@@ -208,6 +266,7 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	invalidateEventCache(id)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Event updated"})
@@ -226,6 +285,7 @@ func DeleteEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	invalidateEventCache(id)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Event deleted"})
@@ -283,6 +343,7 @@ func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	invalidateEventCache(id)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Event status updated"})
@@ -338,6 +399,7 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	invalidateEventCache(id)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(module)
@@ -393,6 +455,7 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Event or Module not found", http.StatusNotFound)
 		return
 	}
+	invalidateEventCache(eventID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Module status updated"})
@@ -497,6 +560,7 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Event or Module not found", http.StatusNotFound)
 		return
 	}
+	invalidateEventCache(eventID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Module published/configured"})
@@ -665,6 +729,7 @@ func DeleteModule(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Event not found or module not found", http.StatusNotFound)
 		return
 	}
+	invalidateEventCache(eventID)
 
 	// Also delete any responses associated with this module?
 	// It's good practice to cleanup, but maybe optional. For now, let's leave responses.
@@ -728,6 +793,7 @@ func UpdateModule(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		invalidateEventCache(eventID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1078,6 +1144,7 @@ func UpdateScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	invalidateEventCache(id)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(input)
@@ -1166,6 +1233,7 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 		// Save them back immediately
 		update := bson.M{"$set": bson.M{"slides": slides}}
 		collection.UpdateOne(context.Background(), bson.M{"_id": eventID}, update)
+		invalidateEventCache(eventID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1202,6 +1270,7 @@ func SaveSlides(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	invalidateEventCache(eventID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(input)

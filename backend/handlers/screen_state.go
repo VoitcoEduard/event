@@ -113,6 +113,7 @@ func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	invalidateEventCache(id)
 
 	// Notify SSE subscribers
 	notifyScreenSubscribers(id, input)
