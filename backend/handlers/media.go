@@ -12,10 +12,22 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
+	"github.com/user/go-expo-sample/backend/cache"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/utils"
 )
+
+var (
+	// mediaMemoryCache stores recently served media items in RAM (up to 256MB)
+	// so 100 concurrent players fetching round images never hit disk or MongoDB.
+	mediaMemoryCache = cache.NewMediaCache(256 * 1024 * 1024)
+)
+
+// InvalidateMediaCache removes a media item from the in-memory cache.
+func InvalidateMediaCache(id string) {
+	mediaMemoryCache.Delete(id)
+}
 
 func parseMediaID(path string) (string, bool) {
 	prefix := "/media/"
@@ -131,6 +143,16 @@ func UploadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pre-populate RAM cache so subsequent player fetches never hit disk/DB
+	mediaMemoryCache.Set(mediaFile.ID.Hex(), cache.MediaItem{
+		ID:        mediaFile.ID.Hex(),
+		Filename:  mediaFile.Filename,
+		MimeType:  mediaFile.MimeType,
+		Data:      processedData,
+		CreatedAt: mediaFile.CreatedAt,
+		Size:      int64(len(processedData)),
+	})
+
 	response := models.MediaResponse{
 		ID:           mediaFile.ID.Hex(),
 		Filename:     mediaFile.Filename,
@@ -179,6 +201,18 @@ func ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 1. FAST PATH: Check RAM cache first
+	if item, found := mediaMemoryCache.Get(id); found {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		if item.MimeType != "" {
+			w.Header().Set("Content-Type", item.MimeType)
+		}
+		w.Header().Set("ETag", `"`+id+`"`)
+		http.ServeContent(w, r, item.Filename, item.CreatedAt, bytes.NewReader(item.Data))
+		return
+	}
+
+	// 2. SLOW PATH: Query MongoDB & GridFS
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		http.Error(w, "Invalid ID format", http.StatusBadRequest)
@@ -212,7 +246,21 @@ func ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	// 3. Save into RAM cache for all subsequent requests
+	mediaMemoryCache.Set(id, cache.MediaItem{
+		ID:        id,
+		Filename:  mediaFile.Filename,
+		MimeType:  mediaFile.MimeType,
+		Data:      data,
+		CreatedAt: mediaFile.CreatedAt,
+		Size:      int64(len(data)),
+	})
+
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	if mediaFile.MimeType != "" {
+		w.Header().Set("Content-Type", mediaFile.MimeType)
+	}
+	w.Header().Set("ETag", `"`+id+`"`)
 	// Use ServeContent to automatically support Range / chunked requests
 	http.ServeContent(w, r, mediaFile.Filename, mediaFile.CreatedAt, bytes.NewReader(data))
 }
@@ -223,6 +271,9 @@ func DeleteMedia(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ID required", http.StatusBadRequest)
 		return
 	}
+
+	// Invalidate RAM cache
+	mediaMemoryCache.Delete(id)
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -386,6 +437,16 @@ func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pre-populate RAM cache
+	mediaMemoryCache.Set(mediaFile.ID.Hex(), cache.MediaItem{
+		ID:        mediaFile.ID.Hex(),
+		Filename:  mediaFile.Filename,
+		MimeType:  mediaFile.MimeType,
+		Data:      processedData,
+		CreatedAt: mediaFile.CreatedAt,
+		Size:      int64(len(processedData)),
+	})
+
 	// Create screensaver entry
 	now := time.Now()
 	screensaver := models.Screensaver{
@@ -442,6 +503,9 @@ func DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Screensaver not found", http.StatusNotFound)
 		return
 	}
+
+	// Delete from RAM cache
+	mediaMemoryCache.Delete(screensaver.MediaID.Hex())
 
 	// Delete the associated media file
 	mediaCollection := db.GetCollection("media")

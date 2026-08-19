@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
+	"github.com/user/go-expo-sample/backend/cache"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 )
@@ -144,6 +145,16 @@ func CreateTrack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pre-populate RAM cache
+	mediaMemoryCache.Set(mediaFile.ID.Hex(), cache.MediaItem{
+		ID:        mediaFile.ID.Hex(),
+		Filename:  mediaFile.Filename,
+		MimeType:  mediaFile.MimeType,
+		Data:      data,
+		CreatedAt: mediaFile.CreatedAt,
+		Size:      int64(len(data)),
+	})
+
 	// Create track entry
 	track := models.Track{
 		ID:        primitive.NewObjectID(),
@@ -198,6 +209,9 @@ func DeleteTrack(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Track not found", http.StatusNotFound)
 		return
 	}
+
+	// Invalidate RAM cache
+	InvalidateMediaCache(track.MediaID.Hex())
 
 	// Delete the associated media file
 	mediaCollection := db.GetCollection("media")
