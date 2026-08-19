@@ -17,7 +17,7 @@
         :style="transformStyle"
       >
         <div class="image-wrapper" ref="imageElement">
-          <img :src="imageUrl" @load="onImageLoad" draggable="false" />
+          <img :src="imageUrl" @load="onImageLoad" draggable="false" decoding="async" />
           
           <!-- Dropped Markers -->
           <div 

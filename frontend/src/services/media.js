@@ -125,7 +125,9 @@ export async function deleteImage(imageId) {
  * @returns {Promise<Object>} - The media metadata
  */
 export async function getMediaInfo(imageId) {
-  const response = await fetch(`${API_BASE_URL}/media/${imageId}`)
+  const response = await fetch(`${API_BASE_URL}/media/${imageId}`, {
+    headers: { ...getAuthHeaders() }
+  })
 
   if (!response.ok) {
     throw new Error('Failed to get media info')
@@ -156,8 +158,11 @@ export async function getScreensavers() {
  * @returns {Promise<Object>} - The created screensaver object
  */
 export async function uploadScreensaver(file, name) {
+  // Convert to WebP before uploading for smaller file sizes (screensavers up to 1920px)
+  const processedFile = await convertToWebP(file, 1920, 0.85)
+
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('file', processedFile)
   formData.append('name', name || file.name)
 
   const response = await fetch(`${API_BASE_URL}/screensavers`, {

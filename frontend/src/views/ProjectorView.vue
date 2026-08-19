@@ -104,7 +104,7 @@
                 :key="idx"
                 class="cp-image-card"
               >
-                 <img :src="getImageUrl(option.imageId)" class="cp-image" />
+                 <img :src="getImageUrl(option.imageId)" class="cp-image" decoding="async" loading="eager" />
                  <div class="cp-number-badge">{{ idx + 1 }}</div>
               </div>
            </div>
@@ -119,7 +119,7 @@
              <h2>{{ currentQuestion.text }}</h2>
           </div>
           <div class="wp-image-container">
-             <img :src="questionImageUrl" class="wp-big-img" />
+             <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" />
           </div>
         </div>
 
@@ -127,7 +127,7 @@
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
-                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
                 <div class="image-overlay-gradient"></div>
               </div>
               <div class="question-text-overlay">
@@ -200,7 +200,7 @@
             <div v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
               <div v-if="isAnswerCorrect(idx)" class="cp-hero-frame">
                 <div class="cp-hero-glow"></div>
-                <img :src="getImageUrl(option.imageId)" class="cp-hero-img" />
+                <img :src="getImageUrl(option.imageId)" class="cp-hero-img" decoding="async" loading="eager" />
                 <div class="cp-hero-check">✓</div>
                 <div class="cp-hero-label">{{ currentQuestion.text }}</div>
               </div>
@@ -210,7 +210,7 @@
           <div class="cp-wrong-thumbnails">
             <template v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
               <div v-if="!isAnswerCorrect(idx)" class="cp-thumb-card">
-                <img :src="getImageUrl(option.imageId)" class="cp-thumb-img" />
+                <img :src="getImageUrl(option.imageId)" class="cp-thumb-img" decoding="async" loading="eager" />
                 <div class="cp-thumb-count">{{ answerCounts[idx] || 0 }}</div>
               </div>
             </template>
@@ -223,7 +223,7 @@
              <h2>{{ currentQuestion.text }}</h2>
           </div>
           <div class="wp-image-container">
-             <img :src="questionImageUrl" class="wp-big-img" />
+             <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" />
              
              <!-- Show the correct targets natively -->
              <div 
@@ -251,7 +251,7 @@
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
-                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
                 <div class="image-overlay-gradient"></div>
               </div>
               <div class="question-text-overlay">
@@ -305,7 +305,7 @@
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
-                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
                 <div class="image-overlay-gradient"></div>
               </div>
               <div class="question-text-overlay">
@@ -328,7 +328,7 @@
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
-                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" />
+                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" decoding="async" loading="eager" />
                 <div class="image-overlay-gradient"></div>
                 
                 <!-- DISTRIBUTION OVERLAY -->
@@ -488,6 +488,7 @@ import QRCodeVue from 'qrcode.vue'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
+import { preloader } from '../utils/imagePreload'
 
 const getScaledFontSize = (size) => {
   const ratio = window.innerWidth / 1920
@@ -605,6 +606,20 @@ watch(gameState, (newVal) => {
     
     // Manage Audio Playback based on state
     manageAudioPlayback()
+})
+
+// Preload questions whenever they are loaded or updated
+watch(questions, (newQuestions) => {
+  if (Array.isArray(newQuestions) && newQuestions.length > 0) {
+    preloader.preloadQuestions(newQuestions)
+  }
+}, { immediate: true })
+
+// Lookahead: Preload upcoming question immediately with high priority when index changes
+watch(currentQuestionIndex, (newIdx) => {
+  if (questions.value && questions.value[newIdx + 1]) {
+    preloader.preloadQuestion(questions.value[newIdx + 1])
+  }
 })
 
 const questionImageUrl = computed(() => {
@@ -851,6 +866,7 @@ const resetModuleState = () => {
   revealCorrect.value = false
   backgroundMusicUrl.value = ''
   audioOutput.value = 'projector'
+  preloader.clear()
   manageAudioPlayback()
 }
 
@@ -872,6 +888,18 @@ const connectToModule = (module) => {
   activeModuleId.value = module.id
   applyModuleConfig(module)
   displayMode.value = 'connecting'
+
+  // Preload wrong pictures metadata if applicable
+  if (module.type === 'wrong_pictures') {
+    fetch(`${API_BASE_URL}/events/${eventId}/modules/${module.id}/wrongpictures/preload`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (data?.questions?.length > 0) {
+          preloader.preloadQuestions(data.questions)
+        }
+      })
+      .catch(err => console.warn('Failed to fetch wrongpictures preload metadata:', err))
+  }
 
   quizWS.on('cmd:state', (payload) => {
     const prevState = gameState.value

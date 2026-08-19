@@ -190,8 +190,19 @@ func GetMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := models.MediaResponse{
+		ID:           mediaFile.ID.Hex(),
+		Filename:     mediaFile.Filename,
+		OriginalName: mediaFile.OriginalName,
+		MimeType:     mediaFile.MimeType,
+		Size:         mediaFile.Size,
+		Width:        mediaFile.Width,
+		Height:       mediaFile.Height,
+		URL:          "/media/" + mediaFile.ID.Hex() + "/file",
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(mediaFile)
+	json.NewEncoder(w).Encode(response)
 }
 
 func ServeMedia(w http.ResponseWriter, r *http.Request) {

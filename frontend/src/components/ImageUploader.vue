@@ -1,7 +1,7 @@
 <template>
   <div class="image-uploader">
     <div v-if="modelValue && !hidePreview" class="image-preview-container">
-      <img :src="imageUrl" :alt="altText" class="image-preview" />
+      <img :src="imageUrl" :alt="altText" class="image-preview" decoding="async" />
       <div class="image-actions">
         <button type="button" class="remove-btn" @click="removeImage" :disabled="disabled">
           {{ $t('image_uploader.remove') }}

@@ -114,7 +114,7 @@
                 <div v-else class="screensavers-grid">
                     <div v-for="screensaver in screensavers" :key="screensaver.id" class="screensaver-card">
                         <div class="screensaver-image-container">
-                            <img :src="screensaver.thumbnailUrl" :alt="screensaver.name" class="screensaver-thumbnail" />
+                            <img :src="screensaver.thumbnailUrl" :alt="screensaver.name" class="screensaver-thumbnail" decoding="async" loading="lazy" />
                         </div>
                         <div class="screensaver-info">
                             <h3 class="screensaver-name">{{ screensaver.name }}</h3>

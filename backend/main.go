@@ -422,15 +422,15 @@ func main() {
 				return
 			}
 		} else {
-			// /media/{id}
-			switch r.Method {
-			case "GET":
-				handlers.GetMedia(w, r)
-				return
-			case "DELETE":
-				handlers.VerifyAuth(handlers.DeleteMedia)(w, r)
-				return
-			}
+		// /media/{id}
+		switch r.Method {
+		case "GET":
+			handlers.VerifyAuth(handlers.GetMedia)(w, r)
+			return
+		case "DELETE":
+			handlers.VerifyAuth(handlers.DeleteMedia)(w, r)
+			return
+		}
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})

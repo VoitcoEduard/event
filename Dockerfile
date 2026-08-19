@@ -45,6 +45,9 @@ RUN if [ "$DEBUG_MODE" = "true" ]; then \
 # ────────────────────────────────────────────────────────────────────
 FROM --platform=linux/amd64 alpine:latest
 
+# Install libwebp-tools (cwebp) for WebP image processing
+RUN apk add --no-cache libwebp-tools
+
 WORKDIR /root/
 
 # Copy Go binary

@@ -1,7 +1,11 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
+	"image"
+	"image/color"
+	"image/png"
 	"testing"
 )
 
@@ -238,3 +242,69 @@ func TestSupportedImageTypes_HasExpectedFormats(t *testing.T) {
 		t.Errorf("got %d supported types, want %d", len(SupportedImageTypes), len(expected))
 	}
 }
+
+func TestProcessImage_ValidPNG(t *testing.T) {
+	// Create a simple 200x100 PNG
+	img := image.NewRGBA(image.Rect(0, 0, 200, 100))
+	for y := 0; y < 100; y++ {
+		for x := 0; x < 200; x++ {
+			img.Set(x, y, color.RGBA{R: 255, G: 0, B: 0, A: 255})
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("failed to encode test png: %v", err)
+	}
+
+	processedData, width, height, mimeType, err := ProcessImage(buf.Bytes())
+	if err != nil {
+		t.Fatalf("ProcessImage returned error: %v", err)
+	}
+
+	if len(processedData) == 0 {
+		t.Error("expected non-empty processed data")
+	}
+
+	if width != 200 || height != 100 {
+		t.Errorf("expected 200x100, got %dx%d", width, height)
+	}
+
+	// If conversion tool is available on machine, mimeType should be image/webp, otherwise fallback image/png
+	if mimeType != "image/webp" && mimeType != "image/png" {
+		t.Errorf("expected image/webp or image/png, got %s", mimeType)
+	}
+}
+
+func TestConvertToWebP_Resizing(t *testing.T) {
+	// Create a 2400x1200 PNG
+	img := image.NewRGBA(image.Rect(0, 0, 2400, 1200))
+	for y := 0; y < 1200; y++ {
+		for x := 0; x < 2400; x++ {
+			img.Set(x, y, color.RGBA{R: 0, G: 255, B: 0, A: 255})
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("failed to encode test png: %v", err)
+	}
+
+	webpData, err := ConvertToWebP(buf.Bytes(), 1200)
+	if err != nil {
+		t.Skipf("skipping ConvertToWebP test since no external tool available: %v", err)
+	}
+
+	w, h, err := GetImageDimensions(webpData)
+	if err != nil {
+		t.Fatalf("failed to get converted image dimensions: %v", err)
+	}
+
+	if w > 1200 {
+		t.Errorf("expected width <= 1200, got %d", w)
+	}
+	if h > 600 {
+		t.Errorf("expected height <= 600, got %d", h)
+	}
+}
+

@@ -19,6 +19,8 @@
             class="option-image"
             @load="onImageLoad"
             draggable="false"
+            decoding="async"
+            loading="eager"
           />
         </div>
       </div>

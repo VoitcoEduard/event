@@ -59,7 +59,7 @@
           @mouseup="onMouseUp"
           @mouseleave="onMouseUp"
         >
-          <img v-if="activeSlide?.backgroundImage" :src="getImageUrl(activeSlide.backgroundImage)" class="canvas-bg-image" />
+          <img v-if="activeSlide?.backgroundImage" :src="getImageUrl(activeSlide.backgroundImage)" class="canvas-bg-image" decoding="async" loading="eager" />
           
           <div
             v-for="element in activeSlideElements"
@@ -81,7 +81,7 @@
           >
             <div class="el-content">
               <div v-if="element.type === 'text'" class="el-text">{{ element.content || 'Text' }}</div>
-              <img v-else-if="element.type === 'image'" :src="getImageUrl(element.content)" class="el-image" />
+               <img v-else-if="element.type === 'image'" :src="getImageUrl(element.content)" class="el-image" decoding="async" loading="eager" />
               <div v-else-if="element.type === 'qr'" class="el-qr">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=example" class="el-image" />
               </div>
@@ -192,7 +192,7 @@
               class="screensaver-option"
               @click="handleImageSelect(s.mediaId || s.id)"
             >
-              <img :src="s.thumbnailUrl || getImageUrl(s.mediaId || s.id)" />
+               <img :src="s.thumbnailUrl || getImageUrl(s.mediaId || s.id)" decoding="async" loading="lazy" />
             </div>
           </div>
         </div>

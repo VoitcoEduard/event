@@ -66,7 +66,7 @@
                  :key="idx"
                  class="cp-host-card"
                >
-                  <img :src="getImageUrl(option.imageId)" class="cp-host-img" />
+                  <img :src="getImageUrl(option.imageId)" class="cp-host-img" decoding="async" loading="eager" />
                   <div class="cp-host-badge">{{ idx + 1 }}</div>
                </div>
           </div>
@@ -82,7 +82,7 @@
               <p class="wp-host-instruction">{{ currentQuestion.text }}</p>
           </div>
           <div class="wp-host-image-container">
-              <img :src="questionImageUrl" class="wp-host-big-img" />
+              <img :src="questionImageUrl" class="wp-host-big-img" decoding="async" loading="eager" />
           </div>
       </div>
 
@@ -93,7 +93,7 @@
             
             <!-- Image Background (if exists) -->
             <div v-if="questionImageUrl" class="question-image-container">
-               <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+               <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
                <div class="image-overlay-gradient"></div>
             </div>
 
@@ -170,7 +170,7 @@
              <div v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
                <div v-if="isAnswerCorrect(idx)" class="cp-host-hero-frame">
                  <div class="cp-host-hero-glow"></div>
-                 <img :src="getImageUrl(option.imageId)" class="cp-host-hero-img" />
+                 <img :src="getImageUrl(option.imageId)" class="cp-host-hero-img" decoding="async" loading="eager" />
                  <div class="cp-host-hero-check">✓</div>
                  <div class="cp-host-hero-label">{{ currentQuestion.text }}</div>
                </div>
@@ -180,7 +180,7 @@
            <div class="cp-host-wrong-thumbs">
              <template v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
                <div v-if="!isAnswerCorrect(idx)" class="cp-host-thumb-card">
-                 <img :src="getImageUrl(option.imageId)" class="cp-host-thumb-img" />
+                 <img :src="getImageUrl(option.imageId)" class="cp-host-thumb-img" decoding="async" loading="eager" />
                  <div class="cp-host-thumb-count">{{ answerCounts[idx] || 0 }}</div>
                </div>
              </template>
@@ -230,7 +230,7 @@
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
                 <div class="question-text-overlay">
@@ -262,7 +262,7 @@
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
                 <div class="question-text-overlay">
@@ -285,7 +285,7 @@
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                   
                   <!-- DISTRIBUTION OVERLAY -->
@@ -454,13 +454,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
+import { preloader } from '../utils/imagePreload'
 
 const route = useRoute()
 const router = useRouter()
@@ -491,8 +492,21 @@ const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pi
 const isNumber = computed(() => currentQuestion.value?.type === 'number')
 const revealCorrect = ref(false)
 
+// Preload questions whenever loaded
+watch(questions, (newQuestions) => {
+    if (Array.isArray(newQuestions) && newQuestions.length > 0) {
+        preloader.preloadQuestions(newQuestions)
+    }
+}, { immediate: true })
+
+// Lookahead: Preload next question immediately upon index change
+watch(currentQuestionIndex, (newIdx) => {
+    if (questions.value && questions.value[newIdx + 1]) {
+        preloader.preloadQuestion(questions.value[newIdx + 1])
+    }
+})
+
 // Watch gameState to trigger animation
-import { watch } from 'vue'
 watch(gameState, (newVal) => {
     if (newVal === 'results' && isRange.value) {
         revealCorrect.value = false

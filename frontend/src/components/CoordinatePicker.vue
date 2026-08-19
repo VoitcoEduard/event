@@ -5,7 +5,7 @@
       @click="handleImageClick"
       ref="imageContainer"
     >
-      <img v-if="imageUrl" :src="imageUrl" @load="onImageLoad" crossorigin="anonymous" />
+      <img v-if="imageUrl" :src="imageUrl" @load="onImageLoad" crossorigin="anonymous" decoding="async" />
       <div v-else class="loading-placeholder">Loading...</div>
       
       <!-- Existing targets shown as markers -->
