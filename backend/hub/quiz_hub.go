@@ -207,14 +207,19 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			Score:    0,
 		}
 
-		// Notify session state (cmd:state)
-		h.broadcastToSessionLocked(moduleID, ServerMessage{
+		// Send state directly to the newly joined player
+		if jsonMsg, err := json.Marshal(ServerMessage{
 			Type:    "cmd:state",
 			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
-		})
+		}); err == nil {
+			select {
+			case client.send <- jsonMsg:
+			default:
+			}
+		}
 
-		// Notify session update (state:update) to refresh player list for host
-		h.broadcastToSessionLocked(moduleID, ServerMessage{
+		// Notify session update (state:update) to refresh player list for host & projector only
+		h.broadcastToHostsAndProjectorsLocked(moduleID, ServerMessage{
 			Type:    "state:update",
 			Payload: session,
 		})
@@ -554,8 +559,8 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				}
 			}
 
-			// Send minimal sync message (answer counts for host histogram)
-			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			// Send minimal sync message (answer counts for host histogram and projector)
+			h.broadcastToHostsAndProjectorsLocked(session.ModuleID, ServerMessage{
 				Type: "sync:minimal",
 				Payload: map[string]interface{}{
 					"questionIndex": questionIndex,
@@ -893,6 +898,25 @@ func (h *QuizHub) broadcastToSessionLocked(moduleID string, message interface{})
 
 	for client := range h.clients {
 		if client.ModuleID == moduleID {
+			select {
+			case client.send <- jsonMsg:
+			default:
+				close(client.send)
+				delete(h.clients, client)
+			}
+		}
+	}
+}
+
+// Internal helper that broadcasts only to Host and Projector clients (assumes Lock is held)
+func (h *QuizHub) broadcastToHostsAndProjectorsLocked(moduleID string, message interface{}) {
+	jsonMsg, err := json.Marshal(message)
+	if err != nil {
+		return
+	}
+
+	for client := range h.clients {
+		if client.ModuleID == moduleID && (client.IsHost || client.IsProjector) {
 			select {
 			case client.send <- jsonMsg:
 			default:
