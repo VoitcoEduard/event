@@ -50,8 +50,6 @@ class QuizWebSocket {
             console.log('WebSocket Connected')
             this.isConnected = true
             this.reconnectAttempts = 0
-            this.dispatch('open')
-
             // Configure signal queue sender
             signalQueue.setSender((signal) => {
                 this.send('player:signal', signal)
@@ -78,6 +76,10 @@ class QuizWebSocket {
             }
 
             this.send(type, payload)
+            // Consumers can now safely send follow-up messages (such as
+            // player:reconnect) because the server has associated this socket
+            // with its player/session.
+            this.dispatch('open')
         }
 
         this.socket.onmessage = (event) => {

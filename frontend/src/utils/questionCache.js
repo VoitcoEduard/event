@@ -6,6 +6,13 @@ class QuestionCache {
 
     addBatch(batch) {
         console.log('[DEBUG] addBatch called with startIndex:', batch.startIndex, 'questions count:', batch.questions?.length)
+        // Retain enough questions for the whole quiz once batch metadata is
+        // known. Otherwise receiving batch N+1 evicts the question currently
+        // on screen from batch N before the player can answer it.
+        this.maxCacheSize = Math.max(
+            this.maxCacheSize,
+            (batch.totalBatches || 1) * (batch.questions?.length || 0)
+        )
         batch.questions.forEach((q, idx) => {
             const globalIndex = batch.startIndex + idx
             console.log('[DEBUG] Storing question at index:', globalIndex, '(startIndex:', batch.startIndex, '+ idx:', idx, ')')

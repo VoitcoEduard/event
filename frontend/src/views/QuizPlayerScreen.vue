@@ -298,7 +298,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { quizWS } from '../services/websocket'
@@ -323,7 +323,17 @@ const changeLanguage = () => {
 }
 
 // State machine
-const { state, transition, canTransition, questionCache: cache, currentQuestionIndex, score, streak, States } = useQuizStateMachine()
+const requestedBatchIndexes = new Set()
+const questionCacheVersion = ref(0)
+
+const requestBatch = (batchIndex) => {
+    if (!Number.isInteger(batchIndex) || batchIndex < 0 || requestedBatchIndexes.has(batchIndex)) return
+
+    requestedBatchIndexes.add(batchIndex)
+    quizWS.send('player:batch_request', { currentBatchIndex: batchIndex })
+}
+
+const { state, transition, canTransition, currentQuestionIndex, score, streak, States } = useQuizStateMachine({ requestBatch })
 
 // Local state
 const nickname = ref(getUserName())
@@ -382,6 +392,9 @@ const confirmSelection = () => {
 }
 
 const currentQuestion = computed(() => {
+    // QuestionCache is a plain class, so make cache mutations an explicit
+    // dependency for Vue's computed value.
+    questionCacheVersion.value
     return questionCache.get(currentQuestionIndex.value)
 })
 
@@ -451,6 +464,15 @@ const shapes = computed(() => {
         return ['✔️', '❌']
     }
     return ['▲', '◆', '●', '■']
+})
+
+watch(currentQuestion, (question) => {
+    if (!question) return
+
+    if (question.type === 'range' && selectedAnswer.value === null) {
+        rangeValue.value = question.rangeConfig?.minValue ?? 0
+    }
+    preloadImages(question)
 })
 
 // Actions
@@ -750,6 +772,8 @@ const startExplainTimer = (timeLimit) => {
 
 // WS & Logic
 onMounted(async () => {
+    let hasOpenedOnce = false
+
     // Auto-join if nickname exists
     if (nickname.value) {
         joinLobby()
@@ -774,7 +798,10 @@ onMounted(async () => {
             // Reset for new question
             selectedAnswer.value = null
             selectedIndices.value = []
-            rangeValue.value = questionCache.get(currentQuestionIndex.value)?.rangeConfig?.minValue || 0
+            const cachedQuestion = questionCache.get(currentQuestionIndex.value)
+            if (cachedQuestion?.type === 'range') {
+                rangeValue.value = cachedQuestion.rangeConfig?.minValue ?? 0
+            }
             hasSubmitted.value = false
             isCorrect.value = false
             currentPoints.value = 0
@@ -827,8 +854,11 @@ onMounted(async () => {
         if (batch.startIndex === 0) {
             console.log('[DEBUG] New quiz batch (startIndex=0) - clearing question cache before loading')
             questionCache.clear()
+            requestedBatchIndexes.clear()
         }
         questionCache.addBatch(batch)
+        requestedBatchIndexes.add(batch.batchIndex)
+        questionCacheVersion.value++
         console.log('[DEBUG] After addBatch, cache size:', questionCache.cache.size, 'keys:', [...questionCache.cache.keys()])
     })
 
@@ -840,9 +870,30 @@ onMounted(async () => {
     quizWS.on('sync:catchup', (payload) => {
         // Handle reconnection catchup
         console.log('Catchup sync:', payload)
-        if (payload.missedQuestions.length > 0) {
-            console.warn(`You missed ${payload.missedQuestions.length} questions`)
+        if (Number.isInteger(payload.currentQuestionIndex)) {
+            currentQuestionIndex.value = payload.currentQuestionIndex
         }
+        if (typeof payload.score === 'number') {
+            score.value = payload.score
+        }
+        const missedQuestions = payload.missedQuestions || []
+        if (missedQuestions.length > 0) {
+            console.warn(`You missed ${missedQuestions.length} questions`)
+        }
+        const batchesNeeded = payload.batchesNeeded || []
+        batchesNeeded.forEach(requestBatch)
+    })
+
+    quizWS.on('open', () => {
+        if (hasOpenedOnce) {
+            quizWS.send('player:reconnect', {
+                moduleId,
+                nickname: nickname.value,
+                lastKnownQuestionIndex: currentQuestionIndex.value,
+                lastKnownState: state.value,
+            })
+        }
+        hasOpenedOnce = true
     })
 
     quizWS.on('state:update', (session) => {

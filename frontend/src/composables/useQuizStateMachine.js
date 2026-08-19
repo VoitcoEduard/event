@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { quizWS } from '../services/websocket'
 
 // Define possible states
 const States = {
@@ -27,7 +28,7 @@ const transitions = {
     [States.BUFFERING]: [States.GET_READY, States.QUESTION_PRESENTING],
 }
 
-export function useQuizStateMachine() {
+export function useQuizStateMachine({ requestBatch = null } = {}) {
     const state = ref(States.LOBBY)
     const questionCache = ref(new Map())
     const currentQuestionIndex = ref(0)
@@ -81,14 +82,19 @@ export function useQuizStateMachine() {
     }
 
     function requestNextBatch() {
-        // Batch request logic to be implemented
-        console.log('Requesting next batch')
+        const batchIndex = Math.floor(currentQuestionIndex.value / 50)
+        const request = requestBatch || ((index) => {
+            quizWS.send('player:batch_request', { currentBatchIndex: index })
+        })
+
+        request(batchIndex)
     }
 
     return {
         state,
         transition,
         canTransition,
+        requestNextBatch,
         questionCache,
         currentQuestionIndex,
         score,

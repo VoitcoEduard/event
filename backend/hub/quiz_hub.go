@@ -200,11 +200,15 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			h.sessions[moduleID] = session
 		}
 
-		// Add player
-		session.Players[playerID] = &models.Player{
-			ID:       playerID,
-			Nickname: nickname,
-			Score:    0,
+		// Add a new player, or retain the score and history of a reconnecting one.
+		if player, exists := session.Players[playerID]; exists {
+			player.Nickname = nickname
+		} else {
+			session.Players[playerID] = &models.Player{
+				ID:       playerID,
+				Nickname: nickname,
+				Score:    0,
+			}
 		}
 
 		// Send state directly to the newly joined player
@@ -578,7 +582,8 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		if client.IsHost {
 			return
 		}
-		// Payload: { "currentBatchIndex": 0 }
+		// Payload: { "currentBatchIndex": 0 }. The index identifies the exact
+		// batch the client needs, rather than the batch after it.
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
 			return
@@ -590,11 +595,11 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		currentBatchIndex := int(currentBatchIndexFloat)
 
 		session := h.sessions[client.ModuleID]
-		if session != nil && currentBatchIndex+1 < len(session.Batches) {
-			// Send next batch
+		if session != nil && currentBatchIndex >= 0 && currentBatchIndex < len(session.Batches) {
+			// Send the requested batch.
 			client.send <- mustMarshal(ServerMessage{
 				Type:    "data:batch",
-				Payload: session.Batches[currentBatchIndex+1],
+				Payload: session.Batches[currentBatchIndex],
 			})
 		}
 
@@ -623,6 +628,14 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			})
 			return
 		}
+		player := session.Players[client.PlayerID]
+		if player == nil {
+			// Support clients that reconnect without a persistent user ID.
+			player = session.Players[nickname]
+		}
+		if player == nil {
+			return
+		}
 
 		// Calculate what user missed
 		currentIndex := session.CurrentIndex
@@ -632,9 +645,9 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			missedQuestions = append(missedQuestions, i)
 
 			// Mark as skipped (0 points, no answer)
-			if session.Players[nickname] != nil {
+			if player != nil {
 				session.PlayerSignals = append(session.PlayerSignals, models.PlayerSignal{
-					PlayerID:      nickname,
+					PlayerID:      player.ID,
 					QuestionIndex: i,
 					AnswerIndex:   -1, // -1 = no answer / skipped
 					ScoreEarned:   0,
@@ -667,7 +680,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 				"currentState":         session.State,
 				"currentQuestionIndex": currentIndex,
 				"missedQuestions":      missedQuestions,
-				"score":                session.Players[nickname].Score,
+				"score":                player.Score,
 				"isActive":             isActive,
 				"batchesNeeded":        batchesNeeded,
 			},
