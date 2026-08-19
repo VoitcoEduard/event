@@ -139,6 +139,9 @@ type QuizSession struct {
 	Players         map[string]*Player `json:"players" bson:"players"`
 	PlayerSignals   []PlayerSignal     `json:"playerSignals" bson:"playerSignals"` // All signals received
 	AnswerCounts    map[int]int        `json:"answerCounts" bson:"answerCounts"`   // answerIndex -> count
+	// AnsweredPlayerIDs tracks unique accepted answers for the active question.
+	// It is runtime-only; PlayerSignals remains the complete result history.
+	AnsweredPlayerIDs map[string]struct{} `json:"-" bson:"-"`
 	QuestionWindows []QuestionWindow   `json:"questionWindows" bson:"questionWindows"`
 	StartTime       int64              `json:"startTime" bson:"startTime"` // Unix timestamp for when the question started
 

@@ -371,6 +371,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			session.CurrentIndex = 0
 			session.PlayerSignals = []models.PlayerSignal{}
 			session.AnswerCounts = make(map[int]int)
+			session.AnsweredPlayerIDs = make(map[string]struct{})
 			session.Questions = questions // Assigned loaded questions
 			session.Batches = CalculateBatches(questions)
 			session.StartTime = time.Now().Unix() // Reset timer
@@ -555,13 +556,15 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 					client.ModuleID, questionIndex, status)
 			}
 
-			// Calculate actual answered count for THIS question only
-			answeredCount := 0
-			for _, signal := range session.PlayerSignals {
-				if signal.QuestionIndex == questionIndex {
-					answeredCount++
+			// Track unique players for the active question instead of scanning the
+			// complete answer history on every submission.
+			if status != "too_late" && questionIndex == session.CurrentIndex {
+				if session.AnsweredPlayerIDs == nil {
+					session.AnsweredPlayerIDs = make(map[string]struct{})
 				}
+				session.AnsweredPlayerIDs[client.PlayerID] = struct{}{}
 			}
+			answeredCount := len(session.AnsweredPlayerIDs)
 
 			// Send minimal sync message (answer counts for host histogram and projector)
 			h.broadcastToHostsAndProjectorsLocked(session.ModuleID, ServerMessage{
@@ -695,6 +698,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			// session.State = "question-active" // Will be set after delay
 			session.CurrentIndex++
 			session.AnswerCounts = make(map[int]int)
+			session.AnsweredPlayerIDs = make(map[string]struct{})
 			session.StartTime = time.Now().Unix()
 
 			// Create question window for new question
@@ -1014,6 +1018,7 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 	session.Players = make(map[string]*models.Player)
 	session.PlayerSignals = []models.PlayerSignal{}
 	session.AnswerCounts = make(map[int]int)
+	session.AnsweredPlayerIDs = make(map[string]struct{})
 	session.Questions = nil
 	session.Batches = nil
 	session.QuestionWindows = nil
