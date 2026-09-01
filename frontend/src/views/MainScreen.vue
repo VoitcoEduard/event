@@ -1,9 +1,7 @@
 <template>
-  <div class="main-screen">
-    <div class="bg-glow"></div>
-
+  <div class="main-screen brutalist">
     <div class="language-switcher">
-      <select v-model="$i18n.locale" @change="changeLanguage">
+      <select v-model="$i18n.locale" @change="changeLanguage" class="b-select">
         <option value="en">English</option>
         <option value="ru">Русский</option>
         <option value="ro">Română</option>
@@ -12,12 +10,14 @@
 
     <div class="content">
       <div class="brand">
-        <div class="brand-icon">⚡</div>
+        <div class="brand-icon-box">
+          <Zap :size="28" :stroke-width="2.5" />
+        </div>
         <h1 class="title">{{ $t('main.title') }}</h1>
         <p class="subtitle">{{ $t('main.subtitle') }}</p>
       </div>
 
-      <div class="card">
+      <div class="card b-card b-card-accent">
         <h2 class="card-title">{{ $t('main.connect_title') }}</h2>
         <p class="card-text">{{ $t('main.connect_desc') }}</p>
 
@@ -29,28 +29,31 @@
             pattern="[0-9]*"
             :placeholder="$t('main.pin_placeholder')"
             maxlength="6"
-            class="input"
+            class="input b-input"
             @input="handlePinInput"
           />
-          <div class="input-hint">{{ pin.length }}/6</div>
+          <div class="input-hint b-mono">{{ pin.length }}/6</div>
         </div>
 
-        <p v-if="error" class="error-text">
-          <span class="error-icon">⚠</span> {{ error }}
+        <p v-if="error" class="error-text b-mono">
+          {{ error }}
         </p>
 
         <button
-          class="connect-button"
+          class="connect-button b-btn b-btn-accent"
           @click="handleConnect"
           :disabled="loading"
           :class="{ 'is-loading': loading }"
         >
-          <span v-if="loading" class="loading-spinner"></span>
-          <span v-else class="btn-label">{{ $t('main.connect_btn') }} →</span>
+          <span v-if="loading" class="loading-blocks b-loader"><span></span><span></span><span></span></span>
+          <template v-else>
+            <span class="btn-label">{{ $t('main.connect_btn') }}</span>
+            <ArrowRight :size="18" :stroke-width="3" />
+          </template>
         </button>
       </div>
 
-      <button class="admin-link" @click="goToAdmin">
+      <button class="admin-link b-label" @click="goToAdmin">
         {{ $t('main.admin_link') }}
       </button>
     </div>
@@ -61,6 +64,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { Zap, ArrowRight } from 'lucide-vue-next'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -133,32 +137,19 @@ const goToAdmin = () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
-* { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
 .main-screen {
   min-height: 100vh;
-  background: #0d0d0f;
+  min-height: 100dvh;
+  background: var(--b-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
-}
-
-/* Subtle ambient glow — not overdone */
-.bg-glow {
-  position: absolute;
-  top: -200px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
+  padding: 20px;
 }
 
 .language-switcher {
@@ -166,23 +157,6 @@ const goToAdmin = () => {
   top: 20px;
   right: 20px;
   z-index: 10;
-}
-
-.language-switcher select {
-  background-color: #1a1a1f;
-  color: #aaa;
-  border: 1px solid #2a2a35;
-  padding: 7px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.language-switcher select:hover {
-  border-color: #444;
-  color: #fff;
 }
 
 .content {
@@ -203,61 +177,63 @@ const goToAdmin = () => {
   margin-bottom: 36px;
 }
 
-.brand-icon {
-  font-size: 40px;
-  margin-bottom: 14px;
-  filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.7));
-  animation: pulse-glow 2.5s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6)); }
-  50%       { filter: drop-shadow(0 0 22px rgba(99, 102, 241, 0.9)); }
+.brand-icon-box {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--b-bg);
+  border: var(--b-border-w) solid var(--b-text);
+  margin-bottom: 16px;
+  color: var(--b-accent-cyan);
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
 }
 
 .title {
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 900;
-  color: #fff;
-  margin-bottom: 6px;
+  color: var(--b-text);
+  margin-bottom: 8px;
   letter-spacing: -1px;
   text-align: center;
+  text-transform: uppercase;
 }
 
 .subtitle {
-  font-size: 12px;
-  color: #555;
-  font-weight: 600;
+  font-size: 11px;
+  color: var(--b-text-dim);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 0.25em;
   text-align: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* Card */
 .card {
-  background: #161619;
-  padding: 32px 28px;
-  border-radius: 24px;
+  background: var(--b-surface);
+  padding: 32px 24px;
   width: 100%;
-  border: 1px solid #2a2a35;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .card-title {
   font-size: 20px;
-  font-weight: 800;
-  color: #fff;
+  font-weight: 900;
+  color: var(--b-text);
   margin-bottom: 6px;
   text-align: center;
+  text-transform: uppercase;
+  letter-spacing: -0.3px;
 }
 
 .card-text {
-  font-size: 14px;
-  color: #666;
+  font-size: 13px;
+  color: var(--b-text-dim);
   text-align: center;
   margin-bottom: 28px;
   line-height: 1.6;
@@ -267,34 +243,14 @@ const goToAdmin = () => {
 .input-wrapper {
   position: relative;
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .input {
-  width: 100%;
-  background: #0d0d0f;
-  border-radius: 14px;
-  padding: 18px 16px;
-  font-size: 28px;
-  font-weight: 800;
   text-align: center;
   letter-spacing: 10px;
-  color: #fff;
-  border: 2px solid #2a2a35;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  caret-color: #6366f1;
-}
-
-.input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.input::placeholder {
-  color: #363640;
-  letter-spacing: 4px;
-  font-size: 20px;
+  font-size: 26px;
+  padding: 18px 16px;
 }
 
 .input-hint {
@@ -302,62 +258,27 @@ const goToAdmin = () => {
   bottom: -20px;
   right: 0;
   font-size: 11px;
-  color: #444;
-  font-weight: 600;
+  color: var(--b-text-faint);
+  font-weight: 700;
 }
 
 /* Error */
 .error-text {
-  color: #f87171;
-  font-size: 13px;
+  color: var(--b-accent-rose);
+  font-size: 12px;
   margin-top: 4px;
   margin-bottom: 16px;
   text-align: center;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.error-icon {
-  font-style: normal;
+  font-weight: 700;
+  border: var(--b-border-w) solid var(--b-accent-rose);
+  padding: 8px 12px;
+  width: 100%;
 }
 
 /* Connect Button */
 .connect-button {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  padding: 17px;
-  border-radius: 14px;
   width: 100%;
-  color: white;
-  font-size: 16px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
   margin-top: 8px;
-}
-
-.connect-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 28px rgba(99, 102, 241, 0.5);
-}
-
-.connect-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.connect-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-label {
-  letter-spacing: 0.3px;
 }
 
 /* Admin link */
@@ -365,28 +286,24 @@ const goToAdmin = () => {
   padding: 12px 20px;
   background: none;
   border: none;
-  color: #444;
-  font-size: 13px;
-  font-weight: 500;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .admin-link:hover {
-  color: #888;
+  color: var(--b-text);
 }
 
-/* Spinner */
-.loading-spinner {
-  width: 22px;
-  height: 22px;
-  border: 2.5px solid rgba(255, 255, 255, 0.25);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+/* Loading blocks */
+.loading-blocks span {
+  width: 8px;
+  height: 8px;
+  background: #000;
+  animation-name: b-loader-pulse-dark;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes b-loader-pulse-dark {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  50%      { opacity: 0.3; transform: translateY(-4px); }
 }
 </style>

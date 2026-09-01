@@ -1,13 +1,10 @@
 <template>
-  <div class="event-screen" :class="'theme-' + theme">
+  <div class="event-screen brutalist">
     <div class="responsive-wrapper">
-      <!-- Theme & Language -->
+      <!-- Language -->
       <div class="top-controls">
-        <button @click="toggleTheme" class="theme-toggle" :title="$t('event.toggle_theme')">
-          {{ theme === 'bold' ? '🎨' : '🏗️' }}
-        </button>
         <div class="language-switcher-container">
-          <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
+          <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select b-select">
             <option value="en">EN</option>
             <option value="ru">RU</option>
             <option value="ro">RO</option>
@@ -18,14 +15,14 @@
       <!-- Error State -->
       <div v-if="!currentEvent" class="error-container">
         <p class="error-text">{{ $t('event.no_data') }}</p>
-        <button class="back-button" @click="goToMain">{{ $t('event.go_back') }}</button>
+        <button class="back-button b-btn" @click="goToMain">{{ $t('event.go_back') }}</button>
       </div>
 
       <!-- Module View -->
       <div v-else-if="selectedModule" class="module-view">
         <div class="module-header">
           <button class="back-link" @click="selectedModule = null">
-            <span class="back-arrow">←</span>
+            <ArrowLeft :size="16" :stroke-width="2.5" />
             <span>{{ $t('event.back_to_event') }}</span>
           </button>
         </div>
@@ -41,16 +38,16 @@
       <!-- Home Screen Content -->
       <div v-else class="content">
         <!-- User Profile Header -->
-        <div class="user-profile">
+        <div class="user-profile b-panel">
           <div class="user-main">
-            <div class="avatar">
+            <div class="avatar b-mono">
               {{ userName ? userName.charAt(0).toUpperCase() : '?' }}
             </div>
             <div class="user-details">
               <h2 class="user-name">{{ userName || $t('event.guest') }}</h2>
             </div>
           </div>
-          <div v-if="participantStatus" class="points-badge">
+          <div v-if="participantStatus" class="points-badge b-badge b-badge-lime">
             <span class="points-value">{{ participantStatus.totalPoints || 0 }}</span>
             <span class="points-label">PTS</span>
           </div>
@@ -58,21 +55,23 @@
 
         <!-- Event Name -->
         <div class="event-header">
-          <p class="connected-label">{{ $t('event.connected_to') }}</p>
+          <p class="connected-label b-label">{{ $t('event.connected_to') }}</p>
           <h1 class="event-title">{{ currentEvent.name }}</h1>
         </div>
 
         <div class="list-container">
           <!-- Dynamic Cards (Polling Content) -->
           <div v-if="dynamicCards.length > 0" class="dynamic-section">
-            <div 
-              v-for="card in dynamicCards" 
-              :key="card.id" 
+            <div
+              v-for="card in dynamicCards"
+              :key="card.id"
               class="dynamic-card"
               :class="card.type"
               :style="{ borderLeftColor: card.color }"
             >
-              <div class="card-icon">{{ card.icon }}</div>
+              <div class="card-icon">
+                <component :is="moduleIcon('poll')" :size="20" :stroke-width="2.5" />
+              </div>
               <div class="card-body">
                 <h3 class="card-title">{{ card.title }}</h3>
                 <p class="card-text">{{ card.content }}</p>
@@ -82,38 +81,36 @@
 
           <!-- Active Modules -->
           <template v-if="activeModules.length > 0">
-            <p class="section-title">{{ $t('event.active_activities') }}</p>
+            <p class="section-title b-label">{{ $t('event.active_activities') }}</p>
             <div
               v-for="module in activeModules"
               :key="module.id"
-              class="module-card"
+              class="module-card b-card"
               @click="selectModule(module)"
             >
-              <div class="module-icon-box">
-                <span class="module-emoji">
-                  {{ module.type === 'form' ? '📝' : 
-                     (module.type === 'quiz' ? '🎮' : 
-                     (module.type === 'wrong_pictures' ? '🖼️' : '📊')) }}
-                </span>
+              <div class="module-icon-box b-icon-box" :class="'accent-' + (module.type === 'form' ? 'cyan' : module.type === 'quiz' ? 'fuchsia' : module.type === 'wrong_pictures' ? 'amber' : 'lime')">
+                <component :is="moduleIcon(module.type)" :size="24" :stroke-width="2.5" />
               </div>
               <div class="module-main">
                 <p class="module-name">{{ module.name }}</p>
-                <p class="module-call">{{ $t('event.tap_to_start') }}</p>
+                <p class="module-call b-mono">{{ $t('event.tap_to_start') }}</p>
               </div>
-              <div class="module-arrow">→</div>
+              <div class="module-arrow">
+                <ChevronRight :size="20" :stroke-width="2.5" />
+              </div>
             </div>
           </template>
 
           <template v-else>
             <div class="waiting-state">
-              <div class="spinner"></div>
+              <div class="loader-blocks b-loader"><span></span><span></span><span></span><span></span><span></span></div>
               <p class="wait-title">{{ $t('event.waiting_msg') }}</p>
               <p class="wait-sub">{{ $t('event.waiting_submsg') }}</p>
             </div>
           </template>
         </div>
 
-        <button class="exit-button" @click="goToMain">
+        <button class="exit-button b-btn" @click="goToMain">
           {{ $t('event.leave_btn') }}
         </button>
       </div>
@@ -126,6 +123,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FormModule from '../components/FormModule.vue'
+import { FileText, Gamepad2, Image, BarChart3, ChevronRight, ArrowLeft } from 'lucide-vue-next'
 import { API_BASE_URL, getUserId, getUserName, setUserName } from '../utils'
 
 const { locale } = useI18n()
@@ -143,11 +141,12 @@ const params = new URLSearchParams(window.location.search)
 const queryEventId = params.get('id') || params.get('eventId')
 const storedEvent = queryEventId ? null : sessionStorage.getItem('currentEvent')
 const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : (queryEventId ? { id: queryEventId } : null))
-const theme = ref(localStorage.getItem('userTheme') || 'bold')
 
-const toggleTheme = () => {
-  theme.value = theme.value === 'bold' ? 'material' : 'bold'
-  localStorage.setItem('userTheme', theme.value)
+const moduleIcon = (type) => {
+  if (type === 'form') return FileText
+  if (type === 'quiz') return Gamepad2
+  if (type === 'wrong_pictures') return Image
+  return BarChart3
 }
 
 const activeModules = ref([])
@@ -158,13 +157,13 @@ let pollingInterval = null
 
 const fetchEvent = async () => {
   if (!currentEvent.value?.id) return
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}?userId=${userId.value}`)
     if (response.ok) {
       const data = await response.json()
       currentEvent.value = data
-      
+
       // Update status and cards
       participantStatus.value = data.participantStatus || null
       dynamicCards.value = data.dynamicCards || []
@@ -177,7 +176,7 @@ const fetchEvent = async () => {
 
       if (data.modules) {
         const active = data.modules.filter(m => m.isActive)
-        
+
         // Filter out completed modules that should be hidden
         activeModules.value = active.filter(m => {
           if (m.data?.hideAfterCompletion) {
@@ -263,49 +262,14 @@ const goToMain = () => {
 }
 </script>
 
-<style>
-:root {
-  --bg-primary: #20222c; 
-  --bg-secondary: #2a2d3d;
-  --surface-layer: #373b4d;
-  --accent: #8b8eff;
-  --text-main: #f8f8fb;
-  --text-dim: #b0b3c5;
-  --border-solid: #4d526b;
-  --gold: #fbbf24;
-  --radius-main: 20px;
-  --shadow-main: 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
-.theme-material {
-  --bg-primary: #121212;
-  --bg-secondary: #1e1e1e;
-  --surface-layer: #2c2c2c;
-  --accent: #bb86fc;
-  --text-main: #e1e1e1;
-  --text-dim: #9e9e9e;
-  --border-solid: #333333;
-  --gold: #03dac6; /* Using teal as secondary accent in material */
-  --radius-main: 8px; /* Material typically uses smaller radius for cards */
-  --shadow-main: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-</style>
-
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
-
-/* foundation variables moved to global style block above */
-
-* { 
-  font-family: 'Outfit', sans-serif; 
-  box-sizing: border-box; 
-  -webkit-tap-highlight-color: transparent;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
 .event-screen {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
-  background: var(--bg-primary);
+  background: var(--b-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -318,71 +282,30 @@ const goToMain = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--b-bg);
   position: relative;
 }
 
 .top-controls {
   position: absolute;
   top: 20px;
-  left: 20px;
   right: 20px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  z-index: 100;
-}
-
-.theme-toggle {
-  background: var(--surface-layer);
-  border: 1px solid var(--border-solid);
-  color: #fff;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 18px;
-  transition: all 0.2s;
-}
-
-.theme-toggle:hover {
-  border-color: var(--accent);
-}
-
-.language-switcher-container {
-  position: relative;
   z-index: 100;
 }
 
 .lang-select {
-  background: var(--surface-layer);
-  color: var(--text-dim);
-  border: 1px solid var(--border-solid);
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.lang-select:hover {
-  border-color: var(--accent);
-  color: #fff;
+  position: relative;
+  z-index: 100;
 }
 
 @media (min-width: 500px) {
   .responsive-wrapper {
     max-width: 480px;
-    height: calc(100% - 40px);
+    height: 100%;
     max-height: 850px;
-    border-radius: 32px;
-    box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-solid);
-    overflow: hidden;
+    border: var(--b-border-w) solid var(--b-border);
   }
 }
 
@@ -398,15 +321,10 @@ const goToMain = () => {
 
 /* ── User Profile ── */
 .user-profile {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-solid);
-  border-radius: var(--radius-main);
-  padding: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  box-shadow: var(--shadow-main);
 }
 
 .user-main {
@@ -418,56 +336,37 @@ const goToMain = () => {
 .avatar {
   width: 44px;
   height: 44px;
-  background: var(--accent);
-  border-radius: 12px;
+  background: var(--b-bg);
+  border: var(--b-border-w) solid var(--b-accent-cyan);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  font-weight: 800;
-  color: #fff;
+  font-weight: 700;
+  color: var(--b-accent-cyan);
 }
 
 .user-name {
-  color: #fff;
+  color: var(--b-text);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
   line-height: 1.2;
 }
 
-.team-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 6px;
-  text-transform: uppercase;
-  margin-top: 4px;
-  color: #fff;
-}
-
 .points-badge {
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid var(--gold);
-  padding: 6px 14px;
-  border-radius: 14px;
-  text-align: center;
+  padding: 8px 14px;
+  flex-direction: column;
+  gap: 0;
 }
 
 .points-value {
-  display: block;
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--gold);
-  line-height: 1;
+  font-size: 16px;
+  line-height: 1.2;
 }
 
 .points-label {
   font-size: 9px;
-  font-weight: 800;
-  color: var(--gold);
-  letter-spacing: 1px;
 }
 
 /* ── Event Header ── */
@@ -476,21 +375,17 @@ const goToMain = () => {
 }
 
 .connected-label {
-  color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .event-title {
-  color: #fff;
-  font-size: 34px;
+  color: var(--b-text);
+  font-size: 32px;
   font-weight: 900;
   margin: 0;
   letter-spacing: -1px;
   line-height: 1;
+  text-transform: uppercase;
 }
 
 /* ── List Container ── */
@@ -506,11 +401,6 @@ const goToMain = () => {
 .list-container::-webkit-scrollbar { width: 0; }
 
 .section-title {
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 2px;
   margin: 0;
 }
 
@@ -522,91 +412,94 @@ const goToMain = () => {
 }
 
 .dynamic-card {
-  background: var(--surface-layer);
-  border-radius: 12px;
+  background: var(--b-surface);
+  border: var(--b-border-w) solid var(--b-border);
+  border-left: 4px solid var(--b-accent-cyan);
   padding: 16px;
   display: flex;
   gap: 16px;
-  border-left: 5px solid var(--accent);
-  box-shadow: var(--shadow-main);
 }
 
 .card-icon {
-  font-size: 24px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--b-border-w) solid var(--b-border);
+  color: var(--b-text-dim);
 }
 
 .card-title {
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
+  color: var(--b-text);
+  font-size: 15px;
+  font-weight: 800;
   margin: 0 0 4px 0;
+  text-transform: uppercase;
 }
 
 .card-text {
-  color: var(--text-dim);
-  font-size: 14px;
+  color: var(--b-text-dim);
+  font-size: 13px;
   margin: 0;
   line-height: 1.4;
 }
 
 /* ── Module Cards ── */
 .module-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-solid);
-  border-radius: var(--radius-main);
   padding: 18px;
   display: flex;
   align-items: center;
   gap: 16px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-main);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-border);
 }
 
 .module-card:hover {
-  border-color: var(--accent);
-  transform: scale(1.02);
-  background: var(--surface-layer);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--b-accent-cyan);
 }
 
-.module-icon-box {
-  width: 52px;
-  height: 52px;
-  background: var(--surface-layer);
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  border: 1px solid var(--border-solid);
+.module-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--b-accent-cyan);
 }
+
+.module-icon-box.accent-cyan    { color: var(--b-accent-cyan);    border-color: var(--b-accent-cyan); }
+.module-icon-box.accent-fuchsia { color: var(--b-accent-fuchsia); border-color: var(--b-accent-fuchsia); }
+.module-icon-box.accent-amber   { color: var(--b-accent-amber);   border-color: var(--b-accent-amber); }
+.module-icon-box.accent-lime    { color: var(--b-accent-lime);    border-color: var(--b-accent-lime); }
 
 .module-main {
   flex: 1;
+  min-width: 0;
 }
 
 .module-name {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 2px 0;
+  color: var(--b-text);
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0 0 4px 0;
 }
 
 .module-call {
-  color: var(--accent);
-  font-size: 13px;
+  color: var(--b-text-dim);
+  font-size: 11px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin: 0;
 }
 
 .module-arrow {
-  color: var(--border-solid);
-  font-size: 20px;
-  font-weight: 600;
+  color: var(--b-text-faint);
+  flex-shrink: 0;
 }
 
 .module-card:hover .module-arrow {
-  color: var(--accent);
+  color: var(--b-accent-cyan);
   transform: translateX(4px);
 }
 
@@ -618,30 +511,21 @@ const goToMain = () => {
   padding: 40px 0;
 }
 
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--border-solid);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 1s infinite linear;
+.loader-blocks {
   margin-bottom: 24px;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
 .wait-title {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
+  color: var(--b-text);
+  font-size: 16px;
+  font-weight: 800;
   margin: 0 0 8px 0;
+  text-transform: uppercase;
 }
 
 .wait-sub {
-  color: var(--text-dim);
-  font-size: 14px;
+  color: var(--b-text-dim);
+  font-size: 13px;
   text-align: center;
 }
 
@@ -651,19 +535,18 @@ const goToMain = () => {
   bottom: 24px;
   left: 24px;
   right: 24px;
-  background: var(--bg-primary);
-  border: 1px solid #ef4444;
-  color: #ef4444;
-  padding: 16px;
-  border-radius: 16px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
+  background: var(--b-bg);
+  border: var(--b-border-w) solid var(--b-accent-rose);
+  color: var(--b-accent-rose);
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-rose);
 }
 
-.exit-button:hover {
-  background: rgba(239, 68, 68, 0.1);
+.exit-button:hover:not(:disabled) {
+  box-shadow: 6px 6px 0 0 var(--b-accent-rose);
+}
+
+.exit-button:active:not(:disabled) {
+  box-shadow: 1px 1px 0 0 var(--b-accent-rose);
 }
 
 /* ── Transitions ── */
@@ -676,22 +559,24 @@ const goToMain = () => {
 
 .module-header {
   padding: 16px;
-  border-bottom: 1px solid var(--border-solid);
+  border-bottom: var(--b-border-w) solid var(--b-border);
 }
 
 .back-link {
   background: none;
   border: none;
-  color: var(--text-dim);
-  font-size: 15px;
-  font-weight: 700;
+  color: var(--b-text-dim);
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .back-link:hover {
-  color: #fff;
+  color: var(--b-text);
 }
 </style>

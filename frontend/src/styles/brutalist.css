@@ -1,0 +1,274 @@
+/* ============================================================
+   Neo-Brutalist design system — player flow only.
+   Scope: rules are inert unless an ancestor carries `.brutalist`.
+   ============================================================ */
+
+/* ---- Design tokens ---- */
+.brutalist {
+  --b-bg: #0a0a0a;          /* neutral-950 */
+  --b-surface: #171717;     /* neutral-900 */
+  --b-border: #262626;      /* neutral-800 */
+  --b-text: #fafafa;        /* neutral-50 */
+  --b-text-dim: #737373;    /* neutral-500 */
+  --b-text-faint: #404040;  /* neutral-700 */
+
+  --b-accent-cyan: #22d3ee;
+  --b-accent-fuchsia: #e879f9;
+  --b-accent-lime: #a3e635;
+  --b-accent-amber: #fbbf24;
+  --b-accent-rose: #fb7185;
+  --b-accent-indigo: #818cf8;
+
+  --b-radius: 0;
+  --b-border-w: 2px;
+  --b-offset: 4px;
+
+  background: var(--b-bg);
+  color: var(--b-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.brutalist *,
+.brutalist *::before,
+.brutalist *::after {
+  box-sizing: border-box;
+}
+
+.brutalist ::selection {
+  background: var(--b-accent-cyan);
+  color: #000;
+}
+
+/* ---- Typography helpers ---- */
+.b-mono {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.b-label {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--b-text-dim);
+}
+
+/* ---- Card ---- */
+.b-card {
+  background: var(--b-surface);
+  border: var(--b-border-w) solid var(--b-text);
+  border-radius: var(--b-radius);
+  padding: 28px 24px;
+  position: relative;
+}
+
+.b-card-accent {
+  border-color: var(--b-accent-cyan);
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
+}
+
+/* ---- Panel (lower-emphasis container) ---- */
+.b-panel {
+  background: var(--b-surface);
+  border: var(--b-border-w) solid var(--b-border);
+  border-radius: var(--b-radius);
+  padding: 16px;
+}
+
+/* ---- Buttons ---- */
+.b-btn {
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  background: var(--b-surface);
+  color: var(--b-text);
+  border: var(--b-border-w) solid var(--b-text);
+  border-radius: var(--b-radius);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-border);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.b-btn:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--b-text);
+}
+
+.b-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--b-text);
+}
+
+.b-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Accent-filled primary button: colored bg, black text, accent shadow */
+.b-btn-accent {
+  background: var(--b-accent-cyan);
+  color: #000;
+  border-color: var(--b-text);
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
+}
+
+.b-btn-accent:hover:not(:disabled) {
+  box-shadow: 6px 6px 0 0 var(--b-accent-cyan);
+}
+
+.b-btn-accent:active:not(:disabled) {
+  box-shadow: 1px 1px 0 0 var(--b-accent-cyan);
+}
+
+/* ---- Badge ---- */
+.b-badge {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--b-accent-lime);
+  border: var(--b-border-w) solid var(--b-accent-lime);
+  border-radius: var(--b-radius);
+}
+
+.b-badge-cyan    { color: var(--b-accent-cyan);    border-color: var(--b-accent-cyan); }
+.b-badge-fuchsia { color: var(--b-accent-fuchsia); border-color: var(--b-accent-fuchsia); }
+.b-badge-lime    { color: var(--b-accent-lime);    border-color: var(--b-accent-lime); }
+.b-badge-amber   { color: var(--b-accent-amber);   border-color: var(--b-accent-amber); }
+.b-badge-rose    { color: var(--b-accent-rose);    border-color: var(--b-accent-rose); }
+.b-badge-indigo  { color: var(--b-accent-indigo);  border-color: var(--b-accent-indigo); }
+
+/* ---- Input ---- */
+.b-input {
+  width: 100%;
+  background: var(--b-bg);
+  color: var(--b-text);
+  border: var(--b-border-w) solid var(--b-border);
+  border-radius: var(--b-radius);
+  padding: 16px;
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  outline: none;
+  caret-color: var(--b-accent-cyan);
+  transition: border-color 0.1s ease, box-shadow 0.1s ease;
+}
+
+.b-input::placeholder {
+  color: var(--b-text-faint);
+  font-weight: 500;
+}
+
+.b-input:focus {
+  border-color: var(--b-accent-cyan);
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
+}
+
+.b-input:disabled {
+  opacity: 0.4;
+}
+
+/* ---- Progress block (segmented) ---- */
+.b-progress-block {
+  width: 14px;
+  height: 14px;
+  background: var(--b-surface);
+  border: var(--b-border-w) solid var(--b-border);
+  border-radius: var(--b-radius);
+  flex-shrink: 0;
+}
+
+.b-progress-block.done {
+  background: var(--b-progress-accent, var(--b-accent-fuchsia));
+  border-color: var(--b-progress-accent, var(--b-accent-fuchsia));
+}
+
+.b-progress-block.current {
+  border-color: var(--b-progress-accent, var(--b-accent-fuchsia));
+  animation: b-block-pulse 1s ease-in-out infinite;
+}
+
+@keyframes b-block-pulse {
+  0%, 100% { background: var(--b-progress-accent, var(--b-accent-fuchsia)); opacity: 1; }
+  50%      { background: transparent; opacity: 0.55; }
+}
+
+/* ---- Offset shadow accents (apply to any bordered element) ---- */
+.b-shadow-cyan    { box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan); }
+.b-shadow-fuchsia { box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-fuchsia); }
+.b-shadow-lime    { box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime); }
+.b-shadow-amber   { box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-amber); }
+.b-shadow-rose    { box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-rose); }
+.b-shadow-indigo  { box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-indigo); }
+
+/* ---- Icon box (bordered square for lucide icons) ---- */
+.b-icon-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--b-bg);
+  border: var(--b-border-w) solid var(--b-text);
+  border-radius: var(--b-radius);
+  color: var(--b-accent-cyan);
+}
+
+/* ---- Select ---- */
+.b-select {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--b-bg);
+  color: var(--b-text-dim);
+  border: var(--b-border-w) solid var(--b-border);
+  border-radius: var(--b-radius);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+}
+
+.b-select:focus {
+  border-color: var(--b-accent-cyan);
+  color: var(--b-text);
+}
+
+/* ---- Hard-edged pulsing blocks loader ---- */
+.b-loader {
+  display: flex;
+  gap: 6px;
+}
+
+.b-loader span {
+  width: 12px;
+  height: 12px;
+  background: var(--b-loader-accent, var(--b-accent-cyan));
+  border-radius: 0;
+  animation: b-loader-pulse 1.2s ease-in-out infinite;
+}
+
+.b-loader span:nth-child(2) { animation-delay: 0.15s; }
+.b-loader span:nth-child(3) { animation-delay: 0.3s; }
+.b-loader span:nth-child(4) { animation-delay: 0.45s; }
+.b-loader span:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes b-loader-pulse {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  50%      { opacity: 0.25; transform: translateY(-6px); }
+}
