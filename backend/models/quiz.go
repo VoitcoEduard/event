@@ -11,7 +11,7 @@ type QuizQuestion struct {
 	CorrectIndex       int                 `json:"correctIndex" bson:"correctIndex"`
 	CorrectIndices     []int               `json:"correctIndices" bson:"correctIndices"` // For multi_select
 	CorrectValue       float64             `json:"correctValue" bson:"correctValue"`     // For range
-	RangeConfig        RangeConfig         `json:"rangeConfig" bson:"rangeConfig"`     // For range
+	RangeConfig        RangeConfig         `json:"rangeConfig" bson:"rangeConfig"`       // For range
 	ScoringConfig      ScoringConfig       `json:"scoringConfig" bson:"scoringConfig"`   // For range
 	TimeLimit          int                 `json:"timeLimit" bson:"timeLimit"`           // seconds
 	ExplainTime        int                 `json:"explainTime" bson:"explainTime"`       // seconds for explanation before question starts
@@ -57,7 +57,7 @@ type WrongPictureConfig struct {
 }
 
 const (
-	QuestionTypeClassic = "classic"
+	QuestionTypeClassic        = "classic"
 	QuestionTypeTrueFalse      = "true_false"
 	QuestionTypeMultiSelect    = "multi_select"
 	QuestionTypeRange          = "range"
@@ -132,18 +132,18 @@ type QuestionBatch struct {
 
 // Quiz state - potentially transient or persisted separately
 type QuizSession struct {
-	EventID         string             `json:"eventId" bson:"eventId"`
-	ModuleID        string             `json:"moduleId" bson:"moduleId"`
-	CurrentIndex    int                `json:"currentIndex" bson:"currentIndex"`
-	State           string             `json:"state" bson:"state"` // "lobby", "question", "results", "finished"
-	Players         map[string]*Player `json:"players" bson:"players"`
-	PlayerSignals   []PlayerSignal     `json:"playerSignals" bson:"playerSignals"` // All signals received
-	AnswerCounts    map[int]int        `json:"answerCounts" bson:"answerCounts"`   // answerIndex -> count
+	EventID       string             `json:"eventId" bson:"eventId"`
+	ModuleID      string             `json:"moduleId" bson:"moduleId"`
+	CurrentIndex  int                `json:"currentIndex" bson:"currentIndex"`
+	State         string             `json:"state" bson:"state"` // "lobby", "question", "results", "finished"
+	Players       map[string]*Player `json:"players" bson:"players"`
+	PlayerSignals []PlayerSignal     `json:"playerSignals" bson:"playerSignals"` // All signals received
+	AnswerCounts  map[int]int        `json:"answerCounts" bson:"answerCounts"`   // answerIndex -> count
 	// AnsweredPlayerIDs tracks unique accepted answers for the active question.
 	// It is runtime-only; PlayerSignals remains the complete result history.
 	AnsweredPlayerIDs map[string]struct{} `json:"-" bson:"-"`
-	QuestionWindows []QuestionWindow   `json:"questionWindows" bson:"questionWindows"`
-	StartTime       int64              `json:"startTime" bson:"startTime"` // Unix timestamp for when the question started
+	QuestionWindows   []QuestionWindow    `json:"questionWindows" bson:"questionWindows"`
+	StartTime         int64               `json:"startTime" bson:"startTime"` // Unix timestamp for when the question started
 
 	// Batch management
 	Batches []QuestionBatch `json:"-" bson:"-"`

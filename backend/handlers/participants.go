@@ -73,6 +73,7 @@ func GetParticipants(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(participants)
 }
+
 // UpdateParticipantName handles POST /events/{id}/participants/{userId}/name
 func UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path

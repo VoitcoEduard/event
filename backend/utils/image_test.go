@@ -307,4 +307,3 @@ func TestConvertToWebP_Resizing(t *testing.T) {
 		t.Errorf("expected height <= 600, got %d", h)
 	}
 }
-
