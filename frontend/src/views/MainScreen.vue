@@ -184,7 +184,7 @@ const goToAdmin = () => {
   align-items: center;
   justify-content: center;
   background: var(--b-bg);
-  border: var(--b-border-w) solid var(--b-text);
+  border: var(--b-border-w) solid var(--b-border-strong);
   margin-bottom: 16px;
   color: var(--b-accent-cyan);
   box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
@@ -298,11 +298,11 @@ const goToAdmin = () => {
 .loading-blocks span {
   width: 8px;
   height: 8px;
-  background: #000;
-  animation-name: b-loader-pulse-dark;
+  background: #fff;
+  animation-name: b-loader-pulse-light;
 }
 
-@keyframes b-loader-pulse-dark {
+@keyframes b-loader-pulse-light {
   0%, 100% { opacity: 1; transform: translateY(0); }
   50%      { opacity: 0.3; transform: translateY(-4px); }
 }

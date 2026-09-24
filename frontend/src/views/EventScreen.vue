@@ -305,7 +305,7 @@ const goToMain = () => {
     max-width: 480px;
     height: 100%;
     max-height: 850px;
-    border: var(--b-border-w) solid var(--b-border);
+    border: var(--b-border-w) solid var(--b-border-strong);
   }
 }
 
@@ -413,7 +413,7 @@ const goToMain = () => {
 
 .dynamic-card {
   background: var(--b-surface);
-  border: var(--b-border-w) solid var(--b-border);
+  border: var(--b-border-w) solid var(--b-border-strong);
   border-left: 4px solid var(--b-accent-cyan);
   padding: 16px;
   display: flex;
@@ -427,7 +427,7 @@ const goToMain = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: var(--b-border-w) solid var(--b-border);
+  border: var(--b-border-w) solid var(--b-border-strong);
   color: var(--b-text-dim);
 }
 

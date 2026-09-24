@@ -11,6 +11,7 @@ Adapt the React "ГЕО АТЛАС" example design to our Vue 3 player-facing fl
 | Fidelity | **Full neo-brutalist** — removes rounded corners, soft glows, and the EventScreen theme toggle. |
 | Icons | **`lucide-vue-next`** (replaces emoji in player flow). |
 | Mobile | **Port `visualViewport` height-tracking** to a Vue composable so footer buttons clear the virtual keyboard. |
+| Theme | **Light "paper" theme** (update 2026-09-01): warm off-white bg, white surfaces, muted stone outlines, desaturated accent palette. Accent-filled elements use white text/icons. |
 
 ## Hard constraints (do not break)
 
@@ -21,11 +22,14 @@ Adapt the React "ГЕО АТЛАС" example design to our Vue 3 player-facing fl
 ## Design tokens (to define in `src/styles/brutalist.css`)
 
 ```
---b-bg: #0a0a0a (neutral-950)      --b-surface: #171717 (neutral-900)
---b-border: #262626 (neutral-800)  --b-text: #fafafa
---b-accent-cyan / -fuchsia / -lime / -amber / -rose / -indigo
-shadow: 4px 4px 0 0 <accent>       border: 2px solid
-radius: 0                          fonts: Inter (body) + monospace (badges/labels)
+--b-bg: #f6f5f2 (warm paper)        --b-surface: #ffffff
+--b-border: #e7e5e4 (stone-200, hairlines)
+--b-border-strong: #44403c (stone-700, hard outlines)
+--b-text: #1c1917                   --b-text-dim: #57534e
+--b-accent-cyan #0891b2 / -fuchsia #c026d3 / -lime #65a30d /
+--b-accent-amber #d97706 / -rose #e11d48 / -indigo #4f46e5
+shadow: 4px 4px 0 0 <accent|border-strong>   border: 2px solid
+radius: 0    fonts: Inter (body) + monospace (badges/labels)
 ```
 
 Utility classes: `.b-card`, `.b-btn`, `.b-btn-accent`, `.b-badge`, `.b-input`, `.b-panel`, `.b-progress-block`, `.b-shadow-<accent>`.

@@ -1240,7 +1240,7 @@ onUnmounted(() => {
     width: 100%;
     text-align: left;
     background: var(--b-surface);
-    border: var(--b-border-w) solid var(--b-border);
+    border: var(--b-border-w) solid var(--b-border-strong);
     padding: 14px 16px;
     cursor: pointer;
     font-family: inherit;
@@ -1260,7 +1260,7 @@ onUnmounted(() => {
 .answer-btn.selected {
     border-color: var(--b-accent-fuchsia);
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-fuchsia);
-    background: rgba(232, 121, 249, 0.1);
+    background: color-mix(in srgb, var(--b-accent-fuchsia) 12%, transparent);
 }
 
 .answer-btn.dimmed {
@@ -1270,13 +1270,13 @@ onUnmounted(() => {
 .answer-btn.tf-true.selected {
     border-color: var(--b-accent-cyan);
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
-    background: rgba(34, 211, 238, 0.1);
+    background: color-mix(in srgb, var(--b-accent-cyan) 12%, transparent);
 }
 
 .answer-btn.tf-false.selected {
     border-color: var(--b-accent-rose);
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-rose);
-    background: rgba(251, 113, 133, 0.1);
+    background: color-mix(in srgb, var(--b-accent-rose) 12%, transparent);
 }
 
 .letter-badge {
@@ -1285,7 +1285,7 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: var(--b-border-w) solid var(--b-border);
+    border: var(--b-border-w) solid var(--b-border-strong);
     background: var(--b-bg);
     font-size: 14px;
     font-weight: 700;
@@ -1342,9 +1342,9 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: var(--b-border-w) solid var(--b-border);
+    border: var(--b-border-w) solid var(--b-border-strong);
     background: var(--b-bg);
-    color: #000;
+    color: #fff;
     flex-shrink: 0;
     transition: background 0.1s ease, border-color 0.1s ease;
 }
@@ -1371,7 +1371,7 @@ onUnmounted(() => {
 
 .submit-btn {
     background: var(--b-accent-fuchsia);
-    color: #000;
+    color: #fff;
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-fuchsia);
     min-width: 200px;
 }
@@ -1449,7 +1449,7 @@ onUnmounted(() => {
     align-items: center;
     justify-content: center;
     background: var(--b-bg);
-    border: var(--b-border-w) solid var(--b-text);
+    border: var(--b-border-w) solid var(--b-border-strong);
 }
 
 .result-container.result-correct .result-icon-box {
@@ -1535,7 +1535,7 @@ onUnmounted(() => {
     align-items: center;
     justify-content: center;
     background: var(--b-bg);
-    border: var(--b-border-w) solid var(--b-text);
+    border: var(--b-border-w) solid var(--b-border-strong);
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime);
 }
 
@@ -1594,7 +1594,7 @@ onUnmounted(() => {
     align-items: center;
     justify-content: center;
     background: var(--b-bg);
-    border: var(--b-border-w) solid var(--b-text);
+    border: var(--b-border-w) solid var(--b-border-strong);
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime);
 }
 
@@ -1612,7 +1612,7 @@ onUnmounted(() => {
 
 .restart-btn {
     background: var(--b-accent-lime);
-    color: #000;
+    color: #fff;
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime);
 }
 
@@ -1670,7 +1670,7 @@ onUnmounted(() => {
     left: 0;
     width: 100%;
     height: 6px;
-    background: var(--b-border);
+    background: var(--b-border-strong);
 }
 
 .timer-progress {
@@ -1726,8 +1726,8 @@ onUnmounted(() => {
 
 .submit-selection-btn.active {
     background: var(--q-accent, var(--b-accent-amber));
-    color: #000;
-    border-color: var(--b-text);
+    color: #fff;
+    border-color: var(--b-border-strong);
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--q-accent, var(--b-accent-amber));
 }
 
@@ -1808,8 +1808,8 @@ onUnmounted(() => {
 .range-container :deep(.thumb) {
     border-radius: 0;
     background: var(--q-accent, var(--b-accent-indigo));
-    border: var(--b-border-w) solid var(--b-text);
-    box-shadow: 3px 3px 0 0 var(--b-text);
+    border: var(--b-border-w) solid var(--b-border-strong);
+    box-shadow: 3px 3px 0 0 var(--b-border-strong);
 }
 
 .range-container :deep(.thumb-lines span) {
@@ -1856,7 +1856,7 @@ onUnmounted(() => {
     width: 100%;
     max-width: 320px;
     background: var(--b-accent-indigo);
-    color: #000;
+    color: #fff;
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-indigo);
     flex-shrink: 0;
 }
@@ -1931,7 +1931,7 @@ onUnmounted(() => {
 .number-submit-btn {
     width: 100%;
     background: var(--b-accent-indigo);
-    color: #000;
+    color: #fff;
     box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-indigo);
 }
 

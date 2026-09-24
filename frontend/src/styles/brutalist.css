@@ -1,23 +1,25 @@
 /* ============================================================
    Neo-Brutalist design system — player flow only.
-   Scope: rules are inert unless an ancestor carries `.brutalist`.
+   Light (paper) theme. Scope: rules are inert unless an
+   ancestor carries `.brutalist`.
    ============================================================ */
 
 /* ---- Design tokens ---- */
 .brutalist {
-  --b-bg: #0a0a0a;          /* neutral-950 */
-  --b-surface: #171717;     /* neutral-900 */
-  --b-border: #262626;      /* neutral-800 */
-  --b-text: #fafafa;        /* neutral-50 */
-  --b-text-dim: #737373;    /* neutral-500 */
-  --b-text-faint: #404040;  /* neutral-700 */
+  --b-bg: #f6f5f2;           /* warm paper */
+  --b-surface: #ffffff;      /* card white */
+  --b-border: #e7e5e4;       /* stone-200 — subtle hairlines */
+  --b-border-strong: #44403c; /* stone-700 — hard outlines */
+  --b-text: #1c1917;         /* stone-900 */
+  --b-text-dim: #57534e;     /* stone-600 */
+  --b-text-faint: #a8a29e;   /* stone-400 */
 
-  --b-accent-cyan: #22d3ee;
-  --b-accent-fuchsia: #e879f9;
-  --b-accent-lime: #a3e635;
-  --b-accent-amber: #fbbf24;
-  --b-accent-rose: #fb7185;
-  --b-accent-indigo: #818cf8;
+  --b-accent-cyan: #0891b2;
+  --b-accent-fuchsia: #c026d3;
+  --b-accent-lime: #65a30d;
+  --b-accent-amber: #d97706;
+  --b-accent-rose: #e11d48;
+  --b-accent-indigo: #4f46e5;
 
   --b-radius: 0;
   --b-border-w: 2px;
@@ -25,7 +27,6 @@
 
   background: var(--b-bg);
   color: var(--b-text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .brutalist *,
@@ -56,7 +57,7 @@
 /* ---- Card ---- */
 .b-card {
   background: var(--b-surface);
-  border: var(--b-border-w) solid var(--b-text);
+  border: var(--b-border-w) solid var(--b-border-strong);
   border-radius: var(--b-radius);
   padding: 28px 24px;
   position: relative;
@@ -85,7 +86,7 @@
   padding: 16px 24px;
   background: var(--b-surface);
   color: var(--b-text);
-  border: var(--b-border-w) solid var(--b-text);
+  border: var(--b-border-w) solid var(--b-border-strong);
   border-radius: var(--b-radius);
   font-size: 15px;
   font-weight: 800;
@@ -93,18 +94,18 @@
   letter-spacing: 0.1em;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
-  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-border);
+  box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-border-strong);
   -webkit-tap-highlight-color: transparent;
 }
 
 .b-btn:hover:not(:disabled) {
   transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 0 var(--b-text);
+  box-shadow: 6px 6px 0 0 var(--b-border-strong);
 }
 
 .b-btn:active:not(:disabled) {
   transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 0 var(--b-text);
+  box-shadow: 1px 1px 0 0 var(--b-border-strong);
 }
 
 .b-btn:disabled {
@@ -115,8 +116,8 @@
 /* Accent-filled primary button: colored bg, black text, accent shadow */
 .b-btn-accent {
   background: var(--b-accent-cyan);
-  color: #000;
-  border-color: var(--b-text);
+  color: #fff;
+  border-color: var(--b-border-strong);
   box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
 }
 
@@ -224,7 +225,7 @@
   justify-content: center;
   flex-shrink: 0;
   background: var(--b-bg);
-  border: var(--b-border-w) solid var(--b-text);
+  border: var(--b-border-w) solid var(--b-border-strong);
   border-radius: var(--b-radius);
   color: var(--b-accent-cyan);
 }
