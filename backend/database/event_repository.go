@@ -10,11 +10,17 @@ import (
 )
 
 type EventRepository struct {
-	collection *mongo.Collection
+	collection   *mongo.Collection
+	participants *mongo.Collection
+	scores       *mongo.Collection
+	cards        *mongo.Collection
 }
 
 func NewEventRepository() *EventRepository {
-	return &EventRepository{collection: db.GetCollection("events")}
+	return &EventRepository{
+		collection: db.GetCollection("events"), participants: db.GetCollection("participants"),
+		scores: db.GetCollection("event_scores"), cards: db.GetCollection("dynamic_cards"),
+	}
 }
 
 func (r *EventRepository) Create(ctx context.Context, event *models.Event) error {
@@ -71,4 +77,51 @@ func (r *EventRepository) Delete(ctx context.Context, id string) error {
 func (r *EventRepository) SetStatus(ctx context.Context, id string, active bool) error {
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"isActive": active}})
 	return err
+}
+
+func (r *EventRepository) SetScreensaver(ctx context.Context, id string, config models.ScreensaverConfig) error {
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"screensaverConfig": config}})
+	return err
+}
+
+func (r *EventRepository) SetSlides(ctx context.Context, id string, slides []models.Slide) error {
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"slides": slides}})
+	return err
+}
+
+func (r *EventRepository) ParticipantStatus(ctx context.Context, eventID, userID string) (*models.Participant, float64, error) {
+	var participant models.Participant
+	if err := r.participants.FindOne(ctx, bson.M{"eventId": eventID, "_id": userID}).Decode(&participant); err != nil {
+		return nil, 0, err
+	}
+	pipeline := []bson.M{
+		{"$match": bson.M{"eventId": eventID, "participantId": userID}},
+		{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$points"}}},
+	}
+	cursor, err := r.scores.Aggregate(ctx, pipeline)
+	if err != nil {
+		return &participant, 0, nil
+	}
+	defer cursor.Close(ctx)
+	if !cursor.Next(ctx) {
+		return &participant, 0, nil
+	}
+	var score struct {
+		Total float64 `bson:"total"`
+	}
+	if err := cursor.Decode(&score); err != nil {
+		return &participant, 0, nil
+	}
+	return &participant, score.Total, nil
+}
+
+func (r *EventRepository) ActiveCards(ctx context.Context, eventID string) ([]models.DynamicCard, error) {
+	cursor, err := r.cards.Find(ctx, bson.M{"eventId": eventID, "isActive": true})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	var cards []models.DynamicCard
+	err = cursor.All(ctx, &cards)
+	return cards, err
 }

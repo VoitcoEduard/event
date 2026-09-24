@@ -1,13 +1,10 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/utils"
-	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 )
 
@@ -74,7 +71,8 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := services.NewEventService().Get(r.Context(), id)
+	eventService := services.NewEventService()
+	event, err := eventService.Get(r.Context(), id)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
@@ -85,47 +83,15 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userID != "" {
-		// Fetch participant info
-		partCollection := db.GetCollection("participants")
-		var participant models.Participant
-		err := partCollection.FindOne(context.Background(), bson.M{"eventId": id, "_id": userID}).Decode(&participant)
+		participant, points, err := eventService.ParticipantStatus(r.Context(), id, userID)
 		if err == nil {
-			status := &ParticipantStatusResponse{
-				DisplayName: participant.DisplayName,
+			response.ParticipantStatus = &ParticipantStatusResponse{
+				DisplayName: participant.DisplayName, TotalPoints: points,
 			}
-
-			// Fetch total points
-			scoreCollection := db.GetCollection("event_scores")
-			pipeline := []bson.M{
-				{"$match": bson.M{"eventId": id, "participantId": userID}},
-				{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$points"}}},
-			}
-			cursor, err := scoreCollection.Aggregate(context.Background(), pipeline)
-			if err == nil {
-				defer cursor.Close(context.Background())
-				if cursor.Next(context.Background()) {
-					var result struct {
-						Total float64 `bson:"total"`
-					}
-					if err := cursor.Decode(&result); err == nil {
-						status.TotalPoints = result.Total
-					}
-				}
-			}
-
-			response.ParticipantStatus = status
 		}
 	}
-
-	// Fetch dynamic cards
-	cardCollection := db.GetCollection("dynamic_cards")
-	cardCursor, err := cardCollection.Find(context.Background(), bson.M{"eventId": id, "isActive": true})
-	if err == nil {
-		defer cardCursor.Close(context.Background())
-		var cards []models.DynamicCard
-		if err := cardCursor.All(context.Background(), &cards); err == nil {
-			response.DynamicCards = cards
-		}
+	if cards, err := eventService.ActiveCards(r.Context(), id); err == nil {
+		response.DynamicCards = cards
 	}
 
 	data, err := json.Marshal(response)

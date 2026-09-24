@@ -4,6 +4,7 @@ package services
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,5 +58,31 @@ func TestEventPINMigrationAndLookup(t *testing.T) {
 	legacy, err := service.FindByPIN(ctx, "123456")
 	if err != nil || legacy.ID != "123456" {
 		t.Fatalf("legacy PIN lookup = %+v, %v", legacy, err)
+	}
+
+	slides, err := service.GetSlides(ctx, event.ID)
+	if err != nil || len(slides) == 0 || !strings.Contains(slides[0].Elements[0].Content, "?pin="+event.Pin) {
+		t.Fatalf("default slides do not use the join PIN: %+v, %v", slides, err)
+	}
+
+	modules := NewModuleService()
+	module := &models.Module{Name: "Round", Type: "quiz"}
+	if err := modules.Add(ctx, event.ID, module); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := uuid.Parse(module.ID); err != nil {
+		t.Fatalf("module ID %q is not a UUID: %v", module.ID, err)
+	}
+	if found, err := modules.SetActive(ctx, event.ID, module.ID, true); err != nil || !found {
+		t.Fatalf("set active = %v, %v", found, err)
+	}
+	if found, err := modules.Publish(ctx, event.ID, module.ID, map[string]any{"questions": []any{}}); err != nil || !found {
+		t.Fatalf("publish = %v, %v", found, err)
+	}
+	if loaded, err := modules.Get(ctx, event.ID, module.ID); err != nil || !loaded.IsActive {
+		t.Fatalf("loaded module = %+v, %v", loaded, err)
+	}
+	if found, err := modules.Delete(ctx, event.ID, module.ID); err != nil || !found {
+		t.Fatalf("delete = %v, %v", found, err)
 	}
 }
