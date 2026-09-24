@@ -9,8 +9,8 @@ version: '3.8'
 services:
 
   app:
-    # Pre-built AMD64 image from GitLab registry (frontend + backend bundled)
-    image: registry.gitlab.com/octiov.ed-group/nas-deploy/event_v2:latest
+    # Use an authenticated release image pinned by tag or digest.
+    image: ${APP_IMAGE:?Set the authenticated release image}
     container_name: go_server_app
     restart: always
     pull_policy: always
@@ -20,8 +20,13 @@ services:
       PORT: 8080
       # Point to your separate MongoDB container.
       # Replace "mongo" with the actual container name or IP if on a different network.
-      MONGO_URI: mongodb://mongo:27017
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD} # set in .env or Portainer env vars
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
+      MONGO_DB_NAME: ${MONGO_DB_NAME:?Set the production database name}
+      APP_ENV: production
+      AUTH_MODE: google
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set the HTTPS public origin}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set Google OAuth client ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?Set Google OAuth client secret}
     ports:
       - "8080:8080"
     networks:

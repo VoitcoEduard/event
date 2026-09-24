@@ -220,7 +220,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 
 const { t } = useI18n()
@@ -329,7 +329,7 @@ const deleteTemplate = async (id, name) => {
   if (!confirm(t('library.actions.delete_confirm', { name: name }))) return
   
   try {
-    const response = await fetch(`${API_BASE_URL}/templates/${id}`, { method: 'DELETE' })
+    const response = await fetch(`${API_BASE_URL}/templates/${id}`, { method: 'DELETE', headers: getAuthHeaders() })
     if (response.ok) {
       fetchTemplates()
     } else {
@@ -909,4 +909,3 @@ const handleSubmit = async () => {
   to { transform: rotate(360deg); }
 }
 </style>
-

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
@@ -76,6 +78,7 @@ func Min(a, b int) int {
 // QuizHub maintains the set of active clients and broadcasts messages to the
 // clients.
 type QuizHub struct {
+	authService *auth.Service
 	// Registered clients.
 	clients map[*Client]bool
 
@@ -84,6 +87,18 @@ type QuizHub struct {
 
 	// Mutex for thread-safe access
 	mu sync.RWMutex
+}
+
+func (h *QuizHub) SetAuthService(service *auth.Service) { h.authService = service }
+
+func (h *QuizHub) AdminActive(token string) bool {
+	if h.authService == nil || token == "" {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, user, err := h.authService.Store.Resolve(ctx, token)
+	return err == nil && user.Status == "active" && (user.Role == "admin" || user.Role == "owner")
 }
 
 func NewQuizHub() *QuizHub {
@@ -151,6 +166,14 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		log.Println("Error unmarshalling message:", err)
 		return
 	}
+	// Resolve against MongoDB before taking the hub lock. A client-provided role
+	// or an earlier host join never authorizes a later privileged message.
+	if strings.HasPrefix(msg.Type, "host:") || msg.Type == "teams:admin_join" {
+		if !h.AdminActive(client.AdminToken) {
+			client.Reject()
+			return
+		}
+	}
 
 	// Lock for state updates
 	h.mu.Lock()
@@ -158,6 +181,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 
 	switch msg.Type {
 	case "player:join":
+		client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
 		// Payload: { "moduleId": "...", "nickname": "..." }
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
@@ -229,6 +253,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		})
 
 	case "host:join":
+		client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
 		// Payload: { "moduleId": "..." }
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
@@ -274,6 +299,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		DebugLog("host:join: Sent state:update to host for module: %s", moduleID)
 
 	case "projector:join":
+		client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
 		// Payload: { "moduleId": "...", "eventId": "..." }
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
@@ -823,6 +849,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		DebugLog("host:reset_quiz completed for module: %s", client.ModuleID)
 
 	case "teams:admin_join":
+		client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
 			return
@@ -869,6 +896,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		h.BroadcastToTeamsAdmins(eventID, jsonMsg)
 
 	case "participant:join":
+		client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
 			return
@@ -1119,12 +1147,12 @@ func (h *QuizHub) saveTeamResults(eventID, moduleID, moduleName string) (*models
 	var teamInfos []models.TeamInfo
 	for _, team := range teams {
 		var members []models.TeamMember
-for _, p := range allParticipants {
-		if p.TeamID == team.ID {
-			members = append(members, models.TeamMember{
-				ID:       p.ID,
-				Nickname: p.DisplayName,
-			})
+		for _, p := range allParticipants {
+			if p.TeamID == team.ID {
+				members = append(members, models.TeamMember{
+					ID:       p.ID,
+					Nickname: p.DisplayName,
+				})
 			}
 		}
 		teamInfos = append(teamInfos, models.TeamInfo{

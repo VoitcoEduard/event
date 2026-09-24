@@ -44,9 +44,11 @@ class QuizWebSocket {
             this.socket.close()
         }
 
-        this.socket = new WebSocket(wsUrl)
+        const socket = new WebSocket(wsUrl)
+        this.socket = socket
 
-        this.socket.onopen = () => {
+        socket.onopen = () => {
+            if (this.socket !== socket) return
             console.log('WebSocket Connected')
             this.isConnected = true
             this.reconnectAttempts = 0
@@ -82,7 +84,8 @@ class QuizWebSocket {
             this.dispatch('open')
         }
 
-        this.socket.onmessage = (event) => {
+        socket.onmessage = (event) => {
+            if (this.socket !== socket) return
             const messages = event.data.split('\n').filter(msg => msg.trim())
             messages.forEach(messageStr => {
                 try {
@@ -94,10 +97,17 @@ class QuizWebSocket {
             })
         }
 
-        this.socket.onclose = () => {
+        socket.onclose = (event) => {
+            if (this.socket !== socket) return
             console.log('WebSocket Disconnected')
             this.isConnected = false
             signalQueue.onDisconnect()
+			if (event.code === 1008) {
+				this.intentionalDisconnect = true
+				this.dispatch('auth:required')
+				window.location.assign('/login')
+				return
+			}
 
             if (!this.intentionalDisconnect && this.reconnectAttempts < 5) {
                 const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 5000)
@@ -111,7 +121,8 @@ class QuizWebSocket {
             this.dispatch('disconnect')
         }
 
-        this.socket.onerror = (error) => {
+        socket.onerror = (error) => {
+            if (this.socket !== socket) return
             console.error('WebSocket Error:', error)
         }
     }

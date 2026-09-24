@@ -1,4 +1,21 @@
 {
+  "auth": {
+    "googleSignIn": "Continue with Google",
+    "googleSubtitle": "Sign in to request administrator access",
+    "loading": "Loading sign-in options…",
+    "pendingTitle": "Access pending",
+    "pendingMessage": "An owner needs to approve your administrator access.",
+    "checkAgain": "Check again",
+    "signOut": "Sign out",
+    "manageUsers": "Administrators",
+    "backToAdmin": "Back to admin",
+    "approve": "Approve",
+    "disable": "Disable",
+    "loadMore": "Load more",
+    "disabled": "Your administrator access is disabled.",
+    "cancelled": "Google sign-in was cancelled.",
+    "unavailable": "The request failed. Please try again."
+  },
   "main": {
     "title": "Hello",
     "subtitle": "Minimalist Design",

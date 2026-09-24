@@ -11,6 +11,8 @@
       <h1 class="header-title">{{ $t('admin.title') }}</h1>
       <div class="header-actions">
           <button class="library-btn" @click="goToLibrary">{{ $t('admin.library_btn') }}</button>
+		  <RouterLink v-if="session.user?.role === 'owner'" class="library-btn" to="/admin/users">{{ $t('auth.manageUsers') }}</RouterLink>
+		  <button class="library-btn" @click="leave">{{ $t('auth.signOut') }}</button>
       </div>
       <p class="header-subtitle">{{ $t('admin.subtitle') }}</p>
     </div>
@@ -105,10 +107,13 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
+import { session, signOut } from '../session'
 import { useToast } from '../composables/useToast'
 
 const { t, locale } = useI18n()
 const router = useRouter()
+
+async function leave() { await signOut(); router.push('/login') }
 const events = ref([])
 const name = ref('')
 const description = ref('')

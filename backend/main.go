@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
 	"github.com/user/go-expo-sample/backend/hub"
@@ -18,13 +22,35 @@ type Response struct {
 
 func main() {
 	utils.DebugLog("Starting server initialization...")
+	if len(os.Args) > 1 {
+		if err := runAuthCommand(os.Args[1:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	config, err := auth.ConfigFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Connect to MongoDB
 	db.ConnectDB()
 	db.InitGridFS()
+	store := auth.Store{DB: db.Database()}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := store.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("authentication indexes: %v", err)
+	}
+	authService, err := auth.NewService(ctx, config, store)
+	if err != nil {
+		log.Fatal(err)
+	}
+	handlers.SetAuthService(authService)
 
 	// Initialize QuizHub
 	quizHub := hub.NewQuizHub()
+	quizHub.SetAuthService(authService)
 	go quizHub.Run()
 
 	// Inject QuizHub into handlers
@@ -35,18 +61,7 @@ func main() {
 		hub.ServeWs(quizHub, w, r)
 	})
 
-	// Auth endpoint (public)
-	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w, r)
-		if r.Method == "OPTIONS" {
-			return
-		}
-		if r.Method == "POST" {
-			handlers.Login(w, r)
-			return
-		}
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
+	authService.Register(http.DefaultServeMux)
 
 	// Register Handlers
 	http.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
@@ -201,6 +216,16 @@ func main() {
 			return
 		}
 
+		// Specific module writes must be routed before the generic module PUT.
+		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/responses/") && r.Method == "PUT" {
+			handlers.VerifyAuth(handlers.UpdateModuleResponse)(w, r)
+			return
+		}
+		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/quiz-scores/") && r.Method == "PUT" {
+			handlers.VerifyAuth(handlers.UpdateQuizScore)(w, r)
+			return
+		}
+
 		// Update Module (including background music settings)
 		if strings.Contains(r.URL.Path, "/modules/") && r.Method == "PUT" {
 			handlers.VerifyAuth(handlers.UpdateModule)(w, r)
@@ -218,18 +243,6 @@ func main() {
 				handlers.VerifyAuth(handlers.AddModule)(w, r)
 				return
 			}
-		}
-
-		// Update Module Response
-		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/responses/") && r.Method == "PUT" {
-			handlers.VerifyAuth(handlers.UpdateModuleResponse)(w, r)
-			return
-		}
-
-		// Update Quiz Score
-		if strings.Contains(r.URL.Path, "/modules/") && strings.Contains(r.URL.Path, "/quiz-scores/") && r.Method == "PUT" {
-			handlers.VerifyAuth(handlers.UpdateQuizScore)(w, r)
-			return
 		}
 
 		// Check for /status suffix (event status)
@@ -422,15 +435,15 @@ func main() {
 				return
 			}
 		} else {
-		// /media/{id}
-		switch r.Method {
-		case "GET":
-			handlers.VerifyAuth(handlers.GetMedia)(w, r)
-			return
-		case "DELETE":
-			handlers.VerifyAuth(handlers.DeleteMedia)(w, r)
-			return
-		}
+			// /media/{id}
+			switch r.Method {
+			case "GET":
+				handlers.VerifyAuth(handlers.GetMedia)(w, r)
+				return
+			case "DELETE":
+				handlers.VerifyAuth(handlers.DeleteMedia)(w, r)
+				return
+			}
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
@@ -477,11 +490,5 @@ func main() {
 }
 
 func enableCors(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-	}
+	// The application uses same-origin requests, including in local development.
 }

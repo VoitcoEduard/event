@@ -1,0 +1,14 @@
+services:
+  app:
+    image: ${DEV_IMAGE:?Set the development image}
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      APP_ENV: development
+      AUTH_MODE: dev
+      PUBLIC_BASE_URL: ${DEV_PUBLIC_BASE_URL:?Set the development public origin}
+      DEV_ADMIN_PASSWORD: ${DEV_ADMIN_PASSWORD:?Set a development password}
+      MONGO_URI: ${DEV_MONGO_URI:?Set the development MongoDB URI}
+      MONGO_DB_NAME: ${DEV_MONGO_DB_NAME:-event_dev}
+    ports:
+      - "8082:8080"

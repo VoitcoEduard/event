@@ -15,12 +15,14 @@ import TeamsAdminScreen from '../views/TeamsAdminScreen.vue'
 import TeamSelectionScreen from '../views/TeamSelectionScreen.vue'
 import MyTeamScreen from '../views/MyTeamScreen.vue'
 
-import { isAuthenticated } from '../utils/index.js'
+import { loadSession, session } from '../session.js'
 
 const routes = [
   { path: '/', name: 'main', component: MainScreen },
   { path: '/event', name: 'event', component: EventScreen },
   { path: '/login', name: 'login', component: LoginScreen },
+	{ path: '/pending', name: 'pending', component: () => import('../views/PendingAccessScreen.vue') },
+	{ path: '/admin/users', name: 'admin-users', component: () => import('../views/AdminUsersScreen.vue'), meta: { requiresOwner: true } },
   { path: '/admin', name: 'admin', component: AdminScreen, meta: { requiresAuth: true } },
   { path: '/admin/event/:id', name: 'admin-event-details', component: AdminEventDetailsScreen, meta: { requiresAuth: true } },
   { path: '/admin/event/:id/screen-manager', name: 'admin-screen-manager', component: ScreenManagerScreen, meta: { requiresAuth: true } },
@@ -41,12 +43,19 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
-  if (to.meta.requiresAuth && !isAuthenticated()) {
-    next({ name: 'login' })
-  } else {
-    next()
-  }
+router.beforeEach(async (to) => {
+	if (!to.meta.requiresAuth && !to.meta.requiresOwner && to.name !== 'pending') return true
+	try {
+		await loadSession(true)
+	} catch {
+		return { name: 'login' }
+	}
+	if (!session.user) return { name: 'login' }
+	if (session.user.status === 'pending') return to.name === 'pending' ? true : { name: 'pending' }
+	if (session.user.status !== 'active') return { name: 'login', query: { error: 'disabled' } }
+	if (to.meta.requiresOwner && session.user.role !== 'owner') return { name: 'admin' }
+	if (to.name === 'pending') return { name: 'admin' }
+	return true
 })
 
 export default router

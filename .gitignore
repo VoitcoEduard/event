@@ -5,6 +5,8 @@
 backend/server
 backend/server_debug
 backend/main
+backend/.go/
+backend/.cache/
 
 # Node / frontend
 frontend/node_modules

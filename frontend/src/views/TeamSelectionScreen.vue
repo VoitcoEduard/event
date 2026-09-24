@@ -56,7 +56,7 @@ const loadData = async () => {
     const userId = getUserId()
     const [teamsData, participantsData] = await Promise.all([
       teamsService.getTeams(eventId.value),
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/events/${eventId.value}/participants`, {
+      fetch(`${import.meta.env.VITE_API_URL || ''}/events/${eventId.value}/participants`, {
         headers: getAuthHeaders()
       }).then(r => r.json())
     ])

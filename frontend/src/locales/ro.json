@@ -1,4 +1,21 @@
 {
+  "auth": {
+    "googleSignIn": "Continuă cu Google",
+    "googleSubtitle": "Conectează-te pentru a solicita acces de administrator",
+    "loading": "Se încarcă opțiunile de conectare…",
+    "pendingTitle": "Acces în așteptare",
+    "pendingMessage": "Un proprietar trebuie să aprobe accesul de administrator.",
+    "checkAgain": "Verifică din nou",
+    "signOut": "Deconectare",
+    "manageUsers": "Administratori",
+    "backToAdmin": "Înapoi la administrare",
+    "approve": "Aprobă",
+    "disable": "Dezactivează",
+    "loadMore": "Încarcă mai mult",
+    "disabled": "Accesul de administrator este dezactivat.",
+    "cancelled": "Conectarea cu Google a fost anulată.",
+    "unavailable": "Cererea a eșuat. Încearcă din nou."
+  },
   "main": {
     "title": "Salut",
     "subtitle": "Design Minimalist",

@@ -1,4 +1,6 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
+import { session, signOut } from '../session'
+
+export const API_BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 export const getUserId = () => {
   let userId = localStorage.getItem('userId')
@@ -20,15 +22,14 @@ export const setUserName = (name) => {
 // --- Auth helpers ---
 
 export const getAuthHeaders = () => {
-  const token = localStorage.getItem('adminToken')
-  return token ? { Authorization: `Bearer ${token}` } : {}
+	return session.csrfToken ? { 'X-CSRF-Token': session.csrfToken } : {}
 }
 
 export const isAuthenticated = () => {
-  return !!localStorage.getItem('adminToken')
+	return session.user?.status === 'active'
 }
 
-export const logout = (router) => {
-  localStorage.removeItem('adminToken')
-  if (router) router.push('/login')
+export const logout = async (router) => {
+	await signOut()
+	if (router) router.push('/login')
 }

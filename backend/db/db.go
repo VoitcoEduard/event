@@ -59,7 +59,15 @@ func GetCollection(collectionName string) *mongo.Collection {
 	if Client == nil {
 		log.Fatalf("Database client not initialized. Ensure db.ConnectDB() is called and has finished before calling db.GetCollection. Attempted to get collection: %s", collectionName)
 	}
-	return Client.Database("eventdb").Collection(collectionName)
+	return Database().Collection(collectionName)
+}
+
+func Database() *mongo.Database {
+	name := os.Getenv("MONGO_DB_NAME")
+	if name == "" {
+		name = "eventdb"
+	}
+	return Client.Database(name)
 }
 
 // EnsureIndexes creates all required indexes across collections to avoid full-collection scans (COLLSCAN)

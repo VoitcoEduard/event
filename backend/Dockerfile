@@ -8,7 +8,7 @@ ENV GOMODCACHE=/root/.cache/go-mod
 # Build argument for debug mode (default: false for production)
 ARG DEBUG_MODE=false
 
-COPY go.mod ./
+COPY go.mod go.sum ./
 
 RUN go mod download
 
@@ -22,6 +22,8 @@ RUN if [ "$DEBUG_MODE" = "true" ]; then \
     fi
 
 FROM --platform=linux/amd64 alpine:latest
+
+RUN apk add --no-cache ca-certificates libwebp-tools
 
 WORKDIR /root/
 

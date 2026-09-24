@@ -22,9 +22,11 @@
         </svg>
       </div>
       <h1 class="login-title">{{ $t('login.title') }}</h1>
-      <p class="login-subtitle">{{ $t('login.subtitle') }}</p>
+	  <p class="login-subtitle">{{ mode === 'google' ? $t('auth.googleSubtitle') : $t('login.subtitle') }}</p>
+	  <p v-if="error" class="error-msg">{{ error }}</p>
 
-      <form @submit.prevent="handleLogin" class="login-form">
+		<a v-if="mode === 'google'" class="login-btn" href="/auth/google/start">{{ $t('auth.googleSignIn') }}</a>
+		<form v-else-if="mode === 'dev'" @submit.prevent="handleLogin" class="login-form">
         <div class="input-group">
           <label for="password">{{ $t('login.password_label') }}</label>
           <input
@@ -40,22 +42,22 @@
           </button>
         </div>
 
-        <p v-if="error" class="error-msg">{{ error }}</p>
-
         <button type="submit" class="login-btn" :disabled="loading || !password">
           <span v-if="loading" class="spinner"></span>
           <span v-else>{{ $t('login.signin_btn') }}</span>
         </button>
-      </form>
+		</form>
+		<p v-if="!mode && !error">{{ $t('auth.loading') }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { API_BASE_URL } from '../utils/index.js'
+import { loadAuthMode, loadSession } from '../session.js'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -63,6 +65,14 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+const mode = ref(null)
+
+onMounted(async () => {
+	localStorage.removeItem('adminToken')
+	if (new URLSearchParams(window.location.search).get('error') === 'disabled') error.value = t('auth.disabled')
+	if (new URLSearchParams(window.location.search).get('error') === 'cancelled') error.value = t('auth.cancelled')
+	try { mode.value = await loadAuthMode() } catch { error.value = t('login.errors.failed') }
+})
 
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
@@ -72,7 +82,7 @@ async function handleLogin() {
   error.value = ''
   loading.value = true
   try {
-    const res = await fetch(`${API_BASE_URL}/login`, {
+    const res = await fetch(`${API_BASE_URL}/auth/dev/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: password.value })
@@ -81,8 +91,7 @@ async function handleLogin() {
       error.value = t('login.errors.incorrect')
       return
     }
-    const data = await res.json()
-    localStorage.setItem('adminToken', data.token)
+		await loadSession(true)
     router.push('/admin')
   } catch (e) {
     error.value = t('login.errors.failed')
@@ -235,6 +244,9 @@ async function handleLogin() {
   border: none;
   border-radius: 10px;
   color: #fff;
+  text-decoration: none;
+  text-align: center;
+  justify-content: center;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 600;

@@ -1,12 +1,13 @@
+# syntax=docker/dockerfile:1
 # ────────────────────────────────────────────────────────────────────
 # Stage 1 – Build the Vue frontend
 # ────────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY frontend/ ./
 
@@ -19,7 +20,7 @@ RUN VITE_API_URL="" npm run build
 # ────────────────────────────────────────────────────────────────────
 # Stage 2 – Build the Go backend (AMD64 for Asustor NAS)
 # ────────────────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 golang:alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:alpine AS backend-builder
 
 WORKDIR /app/backend
 
@@ -29,14 +30,16 @@ ENV GOMODCACHE=/root/.cache/go-mod
 ARG DEBUG_MODE=false
 
 COPY backend/go.mod backend/go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/root/.cache/go-mod go mod download
 
 COPY backend/ ./
 
-RUN if [ "$DEBUG_MODE" = "true" ]; then \
+RUN --mount=type=cache,target=/root/.cache/go-mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    if [ "$DEBUG_MODE" = "true" ]; then \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags debug -o server .; \
     else \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server .; \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o server .; \
     fi
 
 
@@ -46,7 +49,7 @@ RUN if [ "$DEBUG_MODE" = "true" ]; then \
 FROM --platform=linux/amd64 alpine:latest
 
 # Install libwebp-tools (cwebp) for WebP image processing
-RUN apk add --no-cache libwebp-tools
+RUN apk add --no-cache libwebp-tools ca-certificates
 
 WORKDIR /root/
 

@@ -27,7 +27,11 @@ services:
     environment:
       PORT: 8080
       MONGO_URI: mongodb://mongo:27017
-      ADMIN_PASSWORD: dev_password # safe to use a weak password locally
+      MONGO_DB_NAME: event_dev
+      APP_ENV: development
+      AUTH_MODE: dev
+      PUBLIC_BASE_URL: http://localhost:8081
+      DEV_ADMIN_PASSWORD: ${DEV_ADMIN_PASSWORD:?Set a development password in .env}
     ports:
       - "8080:8080"
     depends_on:
@@ -45,6 +49,8 @@ services:
       dockerfile: Dockerfile
     container_name: go_server_frontend_dev
     restart: unless-stopped
+    environment:
+      VITE_BACKEND_TARGET: http://app:8080
     ports:
       - "8081:8081" # Vite dev server
     volumes:

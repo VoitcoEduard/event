@@ -1,0 +1,7 @@
+.go
+.cache
+server
+server_debug
+main
+*.md
+.DS_Store

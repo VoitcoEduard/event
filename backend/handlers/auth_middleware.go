@@ -1,23 +1,22 @@
 package handlers
 
 import (
+	"github.com/user/go-expo-sample/backend/auth"
 	"net/http"
-	"strings"
 )
 
-const adminToken = "valid-admin-token"
+var authService *auth.Service
+
+func SetAuthService(service *auth.Service) { authService = service }
 
 // VerifyAuth is a middleware that checks for a valid Bearer token.
 func VerifyAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		if authService == nil {
+			http.Error(w, "Authentication unavailable", http.StatusServiceUnavailable)
 			return
 		}
-		token := strings.TrimPrefix(authHeader, "Bearer ")
-		if token != adminToken {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		if _, _, ok := authService.Authorize(w, r, false); !ok {
 			return
 		}
 		next(w, r)

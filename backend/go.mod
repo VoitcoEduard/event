@@ -3,12 +3,15 @@ module github.com/user/go-expo-sample/backend
 go 1.25.0
 
 require (
+	github.com/coreos/go-oidc/v3 v3.21.0
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/testcontainers/testcontainers-go v0.41.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.41.0
 	go.mongodb.org/mongo-driver v1.17.9
 	golang.org/x/image v0.36.0
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (

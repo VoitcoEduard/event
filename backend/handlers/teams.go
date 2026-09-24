@@ -29,9 +29,6 @@ func generateTeamID() string {
 }
 
 func enableCors(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 	}
@@ -253,9 +250,9 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":      "Participant assigned to team",
+		"message":     "Participant assigned to team",
 		"participant": participant,
-		"team":         team,
+		"team":        team,
 	})
 }
 
@@ -300,9 +297,9 @@ func AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
 	if len(unassigned) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":        "No unassigned participants",
-			"teams":          teams,
-			"assignedCount":  0,
+			"message":       "No unassigned participants",
+			"teams":         teams,
+			"assignedCount": 0,
 		})
 		return
 	}
@@ -323,17 +320,17 @@ func AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
 	}
 
 	BroadcastTeamUpdate(eventID, "team:auto_assigned", map[string]interface{}{
-		"teams":          teams,
-		"participants":   unassigned,
-		"assignedCount":  len(unassigned),
+		"teams":         teams,
+		"participants":  unassigned,
+		"assignedCount": len(unassigned),
 	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":        "Auto-assignment complete",
-		"assignedCount":  len(unassigned),
-		"teams":          teams,
-		"participants":   unassigned,
+		"message":       "Auto-assignment complete",
+		"assignedCount": len(unassigned),
+		"teams":         teams,
+		"participants":  unassigned,
 	})
 }
 

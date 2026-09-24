@@ -14,7 +14,7 @@ func InitGridFS() {
 		log.Fatal("MongoDB client is not initialized. Call ConnectDB() first.")
 	}
 
-	db := Client.Database("eventdb")
+	db := Database()
 
 	bucket, err := gridfs.NewBucket(db, options.GridFSBucket())
 	if err != nil {
