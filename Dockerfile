@@ -18,7 +18,7 @@ RUN VITE_API_URL="" npm run build
 
 
 # ────────────────────────────────────────────────────────────────────
-# Stage 2 – Build the Go backend (AMD64 for Asustor NAS)
+# Stage 2 – Build the Go backend for the requested image platform
 # ────────────────────────────────────────────────────────────────────
 FROM --platform=$BUILDPLATFORM golang:alpine AS backend-builder
 
@@ -28,6 +28,7 @@ ENV GOCACHE=/root/.cache/go-build
 ENV GOMODCACHE=/root/.cache/go-mod
 
 ARG DEBUG_MODE=false
+ARG TARGETARCH
 
 COPY backend/go.mod backend/go.sum ./
 RUN --mount=type=cache,target=/root/.cache/go-mod go mod download
@@ -37,16 +38,16 @@ COPY backend/ ./
 RUN --mount=type=cache,target=/root/.cache/go-mod \
     --mount=type=cache,target=/root/.cache/go-build \
     if [ "$DEBUG_MODE" = "true" ]; then \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags debug -o server .; \
+    CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -tags debug -o server .; \
     else \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o server .; \
+    CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o server .; \
     fi
 
 
 # ────────────────────────────────────────────────────────────────────
 # Stage 3 – Minimal final image
 # ────────────────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 alpine:latest
+FROM alpine:latest
 
 # Install libwebp-tools (cwebp) for WebP image processing
 RUN apk add --no-cache libwebp-tools ca-certificates

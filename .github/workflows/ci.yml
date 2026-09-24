@@ -18,6 +18,8 @@ jobs:
           cache-dependency-path: backend/go.sum
       - name: Test
         run: go test -short ./...
+      - name: Event PIN integration test
+        run: go test -tags integration -run TestEventPINMigrationAndLookup ./services
       - name: Vet
         run: go vet ./...
       - name: Format lint

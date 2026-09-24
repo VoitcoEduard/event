@@ -19,7 +19,7 @@ func registerRoutes(mux *http.ServeMux, quizHub *hub.QuizHub) {
 		handler http.HandlerFunc
 		admin   bool
 	}{
-		{"GET /events", handlers.GetEvents, false},
+		{"GET /events", handlers.GetEvents, true},
 		{"POST /events", handlers.CreateEvent, true},
 		{"POST /events/connect", handlers.ConnectToEvent, false},
 		{"GET /events/{eventID}", handlers.GetEvent, false},
