@@ -3,10 +3,11 @@ package hub
 import (
 	"context"
 	"encoding/json"
-	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/services"
+	"fmt"
 	"log"
 	"time"
+
+	"github.com/user/go-expo-sample/backend/models"
 )
 
 func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
@@ -57,35 +58,31 @@ func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 }
 
 func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
-	if !client.IsHost {
+	h.mu.RLock()
+	isHost, moduleID := client.IsHost, client.ModuleID
+	h.mu.RUnlock()
+	if !isHost {
 		return
 	}
-	// Load questions from DB (outside lock ideally, but here we are in lock)
-	h.mu.Unlock()
-
-	var questions []models.QuizQuestion
-
-	// Find event containing this module
-	event, err := services.NewEventService().GetByModule(context.TODO(), client.ModuleID)
-	if err == nil {
-		for _, mod := range event.Modules {
-			if mod.ID == client.ModuleID {
-				// Extract questions
-				dataBytes, _ := json.Marshal(mod.Data)
-				var qData models.QuizModuleData
-				json.Unmarshal(dataBytes, &qData)
-				questions = qData.Questions
-				break
-			}
-		}
-	} else {
-		log.Println("Error finding event for module:", client.ModuleID, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	event, err := h.eventByModule(ctx, moduleID)
+	if err != nil || event == nil {
+		log.Printf("Error finding event for module %s: %v", moduleID, err)
+		return
+	}
+	questions, err := questionsForModule(event, moduleID)
+	if err != nil {
+		log.Printf("Cannot start quiz for module %s: %v", moduleID, err)
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if !client.IsHost || client.ModuleID != moduleID {
+		return
 	}
 
-	h.mu.Lock()
-
-	// Re-fetch session in case it changed while unlocked (unlikely for start_quiz but good practice)
-	session := h.sessions[client.ModuleID]
+	session := h.sessions[moduleID]
 	if session != nil {
 		session.EventID = event.ID // Ensure EventID is set
 		session.State = "question-presenting"
@@ -99,16 +96,14 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		// session.Players = make(map[string]*models.Player) // REMOVED: Do not reset players, keep lobby players
 
 		// Create question window for first question
-		if len(questions) > 0 {
-			qWindow := models.QuestionWindow{
-				QuestionIndex: int64(session.CurrentIndex),
-				StartTime:     session.StartTime,
-				EndTime:       session.StartTime + int64(questions[0].TimeLimit),
-				GraceEndTime:  session.StartTime + int64(questions[0].TimeLimit) + GracePeriodSeconds,
-				State:         "active",
-			}
-			session.QuestionWindows = []models.QuestionWindow{qWindow}
+		qWindow := models.QuestionWindow{
+			QuestionIndex: int64(session.CurrentIndex),
+			StartTime:     session.StartTime,
+			EndTime:       session.StartTime + int64(questions[0].TimeLimit),
+			GraceEndTime:  session.StartTime + int64(questions[0].TimeLimit) + GracePeriodSeconds,
+			State:         "active",
 		}
+		session.QuestionWindows = []models.QuestionWindow{qWindow}
 
 		// Send first batch to clients
 		if len(session.Batches) > 0 {
@@ -151,8 +146,29 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
 				})
 			}
-		}(client.ModuleID, session.CurrentIndex, explainTime)
+		}(moduleID, session.CurrentIndex, explainTime)
 	}
+}
+
+func questionsForModule(event *models.Event, moduleID string) ([]models.QuizQuestion, error) {
+	for _, mod := range event.Modules {
+		if mod.ID != moduleID {
+			continue
+		}
+		data, err := json.Marshal(mod.Data)
+		if err != nil {
+			return nil, err
+		}
+		var quiz models.QuizModuleData
+		if err := json.Unmarshal(data, &quiz); err != nil {
+			return nil, err
+		}
+		if len(quiz.Questions) == 0 {
+			return nil, fmt.Errorf("no questions")
+		}
+		return quiz.Questions, nil
+	}
+	return nil, fmt.Errorf("module not found in event")
 }
 
 func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {

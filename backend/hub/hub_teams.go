@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"time"
+
+	"github.com/user/go-expo-sample/backend/models"
 )
 
 func (h *QuizHub) processTeamsAdminJoin(client *Client, msg ClientMessage) {
@@ -27,7 +30,10 @@ func (h *QuizHub) processTeamsAdminJoin(client *Client, msg ClientMessage) {
 }
 
 func (h *QuizHub) processHostEndTeams(client *Client, msg ClientMessage) {
-	if !client.IsHost {
+	h.mu.RLock()
+	isHost := client.IsHost
+	h.mu.RUnlock()
+	if !isHost {
 		return
 	}
 	data, ok := msg.Payload.(map[string]interface{})
@@ -40,25 +46,25 @@ func (h *QuizHub) processHostEndTeams(client *Client, msg ClientMessage) {
 
 	DebugLog("host:end_teams received for event: %s, module: %s", eventID, moduleID)
 
-	h.mu.Unlock()
-	result, err := h.saveTeamResults(eventID, moduleID, moduleName)
-	h.mu.Lock()
+	result, err := h.saveTeams(eventID, moduleID, moduleName)
 
 	if err != nil {
 		log.Printf("Error saving team results for module %s: %v", moduleID, err)
 	}
 
-	jsonMsg, _ := json.Marshal(ServerMessage{
+	message := ServerMessage{
 		Type:    "teams:ended",
 		Payload: map[string]interface{}{"eventId": eventID, "moduleId": moduleID, "result": result},
-	})
-	h.BroadcastToTeamsAdmins(eventID, jsonMsg)
+	}
+	h.BroadcastToTeamsAdmins(eventID, message)
 }
 
 func (h *QuizHub) processParticipantJoin(client *Client, msg ClientMessage) {
-	client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
 		return
 	}
 	eventID, _ := data["eventId"].(string)
@@ -67,28 +73,34 @@ func (h *QuizHub) processParticipantJoin(client *Client, msg ClientMessage) {
 
 	DebugLog("participant:join received for event: %s, user: %s", eventID, userID)
 
-	client.EventID = eventID
-	client.PlayerID = userID
-
+	var teamsAvailable []models.Team
 	if eventID != "" {
-		h.mu.Unlock()
-		teams, err := getTeamRepo().GetByEventID(context.TODO(), eventID)
-		h.mu.Lock()
-
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		teams, err := h.teamsByEvent(ctx, eventID)
 		if err == nil && len(teams) > 0 {
-			jsonMsg, _ := json.Marshal(ServerMessage{
-				Type:    "teams:available",
-				Payload: map[string]interface{}{"eventId": eventID, "teams": teams},
-			})
-			client.send <- jsonMsg
+			teamsAvailable = teams
 		}
 	}
 
-	if userID != "" && displayName != "" {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
+	client.EventID = eventID
+	client.PlayerID = userID
+	if len(teamsAvailable) > 0 {
 		jsonMsg, _ := json.Marshal(ServerMessage{
+			Type:    "teams:available",
+			Payload: map[string]interface{}{"eventId": eventID, "teams": teamsAvailable},
+		})
+		client.send <- jsonMsg
+	}
+
+	if userID != "" && displayName != "" {
+		message := ServerMessage{
 			Type:    "participant:joined",
 			Payload: map[string]interface{}{"userId": userID, "displayName": displayName},
-		})
-		h.BroadcastToTeamsAdmins(eventID, jsonMsg)
+		}
+		h.broadcastToTeamsAdminsLocked(eventID, message)
 	}
 }

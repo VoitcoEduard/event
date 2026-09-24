@@ -77,7 +77,10 @@ func Min(a, b int) int {
 // QuizHub maintains the set of active clients and broadcasts messages to the
 // clients.
 type QuizHub struct {
-	authService *auth.Service
+	authService   *auth.Service
+	eventByModule func(context.Context, string) (*models.Event, error)
+	teamsByEvent  func(context.Context, string) ([]models.Team, error)
+	saveTeams     func(string, string, string) (*models.TeamResult, error)
 	// Registered clients.
 	clients map[*Client]bool
 
@@ -101,10 +104,18 @@ func (h *QuizHub) AdminActive(token string) bool {
 }
 
 func NewQuizHub() *QuizHub {
-	return &QuizHub{
+	h := &QuizHub{
 		clients:  make(map[*Client]bool),
 		sessions: make(map[string]*models.QuizSession),
 	}
+	h.eventByModule = func(ctx context.Context, moduleID string) (*models.Event, error) {
+		return services.NewEventService().GetByModule(ctx, moduleID)
+	}
+	h.teamsByEvent = func(ctx context.Context, eventID string) ([]models.Team, error) {
+		return database.NewTeamRepository().GetByEventID(ctx, eventID)
+	}
+	h.saveTeams = h.saveTeamResults
+	return h
 }
 
 func (h *QuizHub) Run() {
@@ -145,8 +156,8 @@ func (h *QuizHub) Unregister(client *Client) {
 
 // Helper to broadcast to specific session
 func (h *QuizHub) BroadcastToSession(moduleID string, message interface{}) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	// Serialize message
 	jsonMsg, err := json.Marshal(message)
@@ -182,6 +193,19 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 			return
 		}
 	}
+	// These handlers perform database I/O and acquire the hub lock only when
+	// reading or changing in-memory state.
+	switch msg.Type {
+	case "host:start_quiz":
+		h.processHostStartQuiz(client, msg)
+		return
+	case "host:end_teams":
+		h.processHostEndTeams(client, msg)
+		return
+	case "participant:join":
+		h.processParticipantJoin(client, msg)
+		return
+	}
 
 	// Lock for state updates
 	h.mu.Lock()
@@ -194,8 +218,6 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		h.processHostJoin(client, msg)
 	case "projector:join":
 		h.processProjectorJoin(client, msg)
-	case "host:start_quiz":
-		h.processHostStartQuiz(client, msg)
 	case "player:signal":
 		h.processPlayerSignal(client, msg)
 	case "player:batch_request":
@@ -214,10 +236,6 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		h.processHostResetQuiz(client, msg)
 	case "teams:admin_join":
 		h.processTeamsAdminJoin(client, msg)
-	case "host:end_teams":
-		h.processHostEndTeams(client, msg)
-	case "participant:join":
-		h.processParticipantJoin(client, msg)
 	}
 }
 
@@ -305,15 +323,6 @@ func (h *QuizHub) ResetSession(moduleID string) {
 	h.resetSessionLocked(moduleID)
 }
 
-var teamRepo *database.TeamRepository
-
-func getTeamRepo() *database.TeamRepository {
-	if teamRepo == nil {
-		teamRepo = database.NewTeamRepository()
-	}
-	return teamRepo
-}
-
 // resetSessionLocked is the internal method that assumes the lock is already held
 // Use this when calling from within ProcessMessage (which already holds the lock)
 func (h *QuizHub) resetSessionLocked(moduleID string) {
@@ -372,8 +381,8 @@ func mustMarshal(v interface{}) []byte {
 
 // BroadcastScreenState broadcasts the screen state update to Big Screens connected to a specific event
 func (h *QuizHub) BroadcastScreenState(eventID string, state interface{}) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	jsonMsg, err := json.Marshal(ServerMessage{
 		Type:    "screen:state_update",
@@ -398,8 +407,8 @@ func (h *QuizHub) BroadcastScreenState(eventID string, state interface{}) {
 
 // BroadcastToEvent broadcasts a message to all clients connected to a specific event
 func (h *QuizHub) BroadcastToEvent(eventID string, message interface{}) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
@@ -421,9 +430,12 @@ func (h *QuizHub) BroadcastToEvent(eventID string, message interface{}) {
 
 // BroadcastToTeamsAdmins broadcasts to all admin clients for a specific event
 func (h *QuizHub) BroadcastToTeamsAdmins(eventID string, message interface{}) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.broadcastToTeamsAdminsLocked(eventID, message)
+}
 
+func (h *QuizHub) broadcastToTeamsAdminsLocked(eventID string, message interface{}) {
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
 		log.Println("Error marshalling broadcast message:", err)
