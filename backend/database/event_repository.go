@@ -39,6 +39,12 @@ func (r *EventRepository) Get(ctx context.Context, id string) (*models.Event, er
 	return &event, err
 }
 
+func (r *EventRepository) GetByModule(ctx context.Context, moduleID string) (*models.Event, error) {
+	var event models.Event
+	err := r.collection.FindOne(ctx, bson.M{"modules.id": moduleID}).Decode(&event)
+	return &event, err
+}
+
 func (r *EventRepository) List(ctx context.Context) ([]models.Event, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{})
 	if err != nil {

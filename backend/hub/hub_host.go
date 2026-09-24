@@ -3,9 +3,8 @@ package hub
 import (
 	"context"
 	"encoding/json"
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/user/go-expo-sample/backend/services"
 	"log"
 	"time"
 )
@@ -64,12 +63,10 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 	// Load questions from DB (outside lock ideally, but here we are in lock)
 	h.mu.Unlock()
 
-	collection := db.GetCollection("events")
-	var event models.Event
 	var questions []models.QuizQuestion
 
 	// Find event containing this module
-	err := collection.FindOne(context.TODO(), bson.M{"modules.id": client.ModuleID}).Decode(&event)
+	event, err := services.NewEventService().GetByModule(context.TODO(), client.ModuleID)
 	if err == nil {
 		for _, mod := range event.Modules {
 			if mod.ID == client.ModuleID {

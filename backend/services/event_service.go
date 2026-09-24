@@ -74,6 +74,10 @@ func (s *EventService) Get(ctx context.Context, id string) (*models.Event, error
 	return s.Repo.Get(ctx, id)
 }
 
+func (s *EventService) GetByModule(ctx context.Context, moduleID string) (*models.Event, error) {
+	return s.Repo.GetByModule(ctx, moduleID)
+}
+
 func (s *EventService) FindByPIN(ctx context.Context, pin string) (*models.Event, error) {
 	return s.Repo.FindByPIN(ctx, pin)
 }

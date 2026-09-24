@@ -10,9 +10,8 @@ import (
 
 	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/database"
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/user/go-expo-sample/backend/services"
 )
 
 const (
@@ -349,122 +348,17 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 	DebugLog("resetSessionLocked: Reset complete for module: %s, broadcast sent", moduleID)
 }
 
-// saveQuizResults persists the current session state to the database
+// saveQuizResults persists the current session state through the quiz service.
 func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
-	// Robustness: Ensure EventID is present
-	if session.EventID == "" {
-		collection := db.GetCollection("events")
-		var event models.Event
-		err := collection.FindOne(context.TODO(), bson.M{"modules.id": session.ModuleID}).Decode(&event)
-		if err == nil {
-			session.EventID = event.ID
-			DebugLog("saveQuizResults: Resolved missing EventID %s for module %s", event.ID, session.ModuleID)
-		} else {
-			log.Printf("[ERROR] saveQuizResults: Could not resolve EventID for module %s: %v", session.ModuleID, err)
-		}
-	}
-
-	var playerResults []models.PlayerResult
-	for _, p := range session.Players {
-		playerResults = append(playerResults, models.PlayerResult{
-			ID:       p.ID,
-			Nickname: p.Nickname,
-			Score:    p.Score,
-		})
-	}
-
-	var signalResults []models.SignalResult
-	for _, s := range session.PlayerSignals {
-		signalResults = append(signalResults, models.SignalResult{
-			PlayerID:      s.PlayerID,
-			QuestionIndex: s.QuestionIndex,
-			AnswerValue:   s.AnswerValue,
-			ScoreEarned:   s.ScoreEarned,
-			TimeSpent:     s.TimeSpent,
-			Guesses:       s.Guesses,
-		})
-	}
-
-	result := models.QuizResult{
-		EventID:       session.EventID,
-		ModuleID:      session.ModuleID,
-		FinishedAt:    time.Now(),
-		Players:       playerResults,
-		PlayerSignals: signalResults,
-	}
-
-	DebugLog("saveQuizResults: Saving result for EventID=%s, ModuleID=%s, Players=%d, Signals=%d",
-		result.EventID, result.ModuleID, len(result.Players), len(result.PlayerSignals))
-
-	collection := db.GetCollection("quiz_results")
-	_, err := collection.InsertOne(context.TODO(), result)
-	if err == nil {
-		log.Printf("Successfully saved quiz results for module %s with %d players and %d signals",
-			session.ModuleID, len(playerResults), len(signalResults))
-	}
-	return err
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return services.NewQuizResultService().SaveQuiz(ctx, session)
 }
 
 func (h *QuizHub) saveTeamResults(eventID, moduleID, moduleName string) (*models.TeamResult, error) {
-	teams, err := getTeamRepo().GetByEventID(context.TODO(), eventID)
-	if err != nil {
-		return nil, err
-	}
-
-	participantsCol := db.GetCollection("participants")
-	var allParticipants []models.Participant
-	if err := participantsCol.FindOne(context.TODO(), bson.M{"eventId": eventID}); err != nil {
-		log.Printf("Error finding participants for event %s: %v", eventID, err)
-	}
-
-	cursor, err := participantsCol.Find(context.TODO(), bson.M{"eventId": eventID})
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(context.TODO())
-
-	if err := cursor.All(context.TODO(), &allParticipants); err != nil {
-		return nil, err
-	}
-
-	participantMap := make(map[string]models.Participant)
-	for _, p := range allParticipants {
-		participantMap[p.ID] = p
-	}
-
-	var teamInfos []models.TeamInfo
-	for _, team := range teams {
-		var members []models.TeamMember
-		for _, p := range allParticipants {
-			if p.TeamID == team.ID {
-				members = append(members, models.TeamMember{
-					ID:       p.ID,
-					Nickname: p.DisplayName,
-				})
-			}
-		}
-		teamInfos = append(teamInfos, models.TeamInfo{
-			ID:      team.ID,
-			Name:    team.Name,
-			Color:   team.Color,
-			Members: members,
-		})
-	}
-
-	result := &models.TeamResult{
-		EventID:    eventID,
-		ModuleID:   moduleID,
-		ModuleName: moduleName,
-		Teams:      teamInfos,
-	}
-
-	teamResultRepo := database.NewTeamResultRepository()
-	if err := teamResultRepo.Create(context.TODO(), result); err != nil {
-		return nil, err
-	}
-
-	log.Printf("Successfully saved team results for module %s with %d teams", moduleID, len(teamInfos))
-	return result, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return services.NewQuizResultService().SaveTeams(ctx, eventID, moduleID, moduleName)
 }
 
 func mustMarshal(v interface{}) []byte {
