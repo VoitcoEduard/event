@@ -12,7 +12,6 @@
   "dependencies": {
     "@handsontable/vue3": "^16.2.0",
     "handsontable": "^16.2.0",
-    "lucide-vue-next": "^1.0.0",
     "qrcode.vue": "^3.8.0",
     "vue": "^3.4.0",
     "vue-i18n": "^11.2.8",

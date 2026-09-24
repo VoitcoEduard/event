@@ -1,7 +1,9 @@
 <template>
-  <div class="quiz-player-screen brutalist" :style="shellStyle">
+  <div class="quiz-player-screen">
+    <div class="bg-layer"></div>
+
     <div class="language-switcher-container">
-      <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select b-select">
+      <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
         <option value="en">English</option>
         <option value="ru">Русский</option>
         <option value="ro">Română</option>
@@ -10,39 +12,36 @@
 
     <!-- NICKNAME ENTRY (Pre-Lobby) -->
     <div v-if="state === States.LOBBY && !joined" class="state-container name-entry-container">
-      <h1 class="logo b-mono">{{ $t('quiz.player.logo') }}</h1>
-      <div class="card b-card b-card-accent">
-        <div class="input-row">
-          <input
-            v-model="nickname"
-            :placeholder="$t('quiz.player.nickname_placeholder')"
-            class="nickname-input b-input"
-            @keyup.enter="joinLobby"
-          />
-          <button v-if="nickname.trim()" class="confirm-btn b-btn b-btn-accent" @click="joinLobby">
-            <CornerDownLeft :size="20" :stroke-width="3" />
-          </button>
-        </div>
-        <p class="enter-hint b-label">{{ $t('quiz.player.press_enter') }}</p>
+      <h1 class="logo">{{ $t('quiz.player.logo') }}</h1>
+      <div class="card">
+        <input
+          v-model="nickname"
+          :placeholder="$t('quiz.player.nickname_placeholder')"
+          class="nickname-input"
+          @keyup.enter="joinLobby"
+        />
+        <button class="join-btn" @click="joinLobby" :disabled="!nickname.trim()">
+          {{ $t('quiz.player.join_btn') }}
+        </button>
       </div>
     </div>
 
     <!-- LOBBY STATE -->
     <div v-else-if="state === States.LOBBY && joined" class="state-container lobby-container">
-      <div class="lobby-content b-card b-card-accent">
+      <div class="lobby-content">
         <h2 class="waiting-text">{{ $t('quiz.player.you_are_in') }}</h2>
-        <div class="nickname-badge b-badge b-badge-cyan b-mono">{{ nickname }}</div>
+        <div class="nickname-display">{{ nickname }}</div>
         <p class="status-msg">{{ $t('quiz.player.see_name') }}</p>
-        <div class="loader-blocks b-loader"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="loader"></div>
       </div>
     </div>
 
     <!-- GET READY / PRESENTING STATE -->
     <div v-else-if="state === States.GET_READY || state === States.QUESTION_PRESENTING" class="state-container get-ready-container">
       <div class="ready-content">
-        <h1 class="ready-title">{{ $t('quiz.player.get_ready') }}</h1>
-        <div v-if="explainTimeRemaining > 0" class="explain-timer b-mono">{{ explainTimeRemaining }}</div>
-        <div v-else class="loader-blocks b-loader"><span></span><span></span><span></span><span></span><span></span></div>
+        <h1>{{ $t('quiz.player.get_ready') }}</h1>
+        <div v-if="explainTimeRemaining > 0" class="explain-timer">{{ explainTimeRemaining }}</div>
+        <div v-else class="loader"></div>
       </div>
     </div>
 
@@ -52,17 +51,7 @@
       class="state-container correct-picture-container"
     >
       <div class="question-header-area">
-        <div class="progress-row">
-          <div class="q-number b-mono">{{ currentQuestionIndex + 1 }}</div>
-          <div v-if="totalQuestions > 1" class="progress-blocks">
-            <div
-              v-for="i in totalQuestions"
-              :key="i"
-              class="b-progress-block"
-              :class="{ done: i - 1 < currentQuestionIndex, current: i - 1 === currentQuestionIndex }"
-            ></div>
-          </div>
-        </div>
+        <div class="question-number-badge">{{ currentQuestionIndex + 1 }}</div>
         <h2 class="question-text">{{ currentQuestion?.text }}</h2>
         <div class="timer-bar">
           <div class="timer-progress" :style="{ width: (timeRemaining / (currentQuestion?.timeLimit || 20)) * 100 + '%' }"></div>
@@ -88,7 +77,7 @@
         >
           <span v-if="!hasPreselection">{{ $t('quiz.player.swipe_to_view') }}</span>
           <span v-else-if="isSubmitting">
-            <span class="mini-blocks"><span></span><span></span><span></span></span>
+            <span class="spinner-small"></span>
             {{ $t('quiz.player.submitting') }}
           </span>
           <span v-else>{{ $t('quiz.player.select_item') }}</span>
@@ -102,17 +91,7 @@
       class="state-container wrong-pictures-container"
     >
       <div class="question-header-area">
-        <div class="progress-row">
-          <div class="q-number b-mono">{{ currentQuestionIndex + 1 }}</div>
-          <div v-if="totalQuestions > 1" class="progress-blocks">
-            <div
-              v-for="i in totalQuestions"
-              :key="i"
-              class="b-progress-block"
-              :class="{ done: i - 1 < currentQuestionIndex, current: i - 1 === currentQuestionIndex }"
-            ></div>
-          </div>
-        </div>
+        <div class="question-number-badge">{{ currentQuestionIndex + 1 }}</div>
         <h2 class="question-text">{{ currentQuestion?.text }}</h2>
         <div class="timer-bar">
           <div class="timer-progress" :style="{ width: (timeRemaining / (currentQuestion?.timeLimit || 20)) * 100 + '%' }"></div>
@@ -142,7 +121,7 @@
           {{ $t('quiz.player.submit_btn') }}
         </button>
         <button v-else class="submit-selection-btn active">
-          {{ isCorrect ? Math.round(currentPoints) + ' ' + $t('quiz.player.points') : '0 ' + $t('quiz.player.points') }}
+          {{ isCorrect ? Math.round(currentPoints) + ' Points' : '0 Points' }}
         </button>
       </div>
     </div>
@@ -152,20 +131,12 @@
       v-else-if="state === States.QUESTION_ACTIVE && isRange"
       class="state-container range-container"
     >
-      <div class="progress-row">
-        <div class="q-number b-mono">{{ currentQuestionIndex + 1 }}</div>
-        <div v-if="totalQuestions > 1" class="progress-blocks">
-          <div
-            v-for="i in totalQuestions"
-            :key="i"
-            class="b-progress-block"
-            :class="{ done: i - 1 < currentQuestionIndex, current: i - 1 === currentQuestionIndex }"
-          ></div>
-        </div>
+      <div class="question-info">
+        <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
       </div>
 
       <div class="range-question-content">
-        <div class="range-holder">
+        <div class="range-wrapper">
           <RangeComponent
             :min="currentQuestion?.rangeConfig?.minValue"
             :max="currentQuestion?.rangeConfig?.maxValue"
@@ -177,12 +148,11 @@
         </div>
 
         <button
-          class="range-submit-btn b-btn"
+          class="range-submit-btn"
           :disabled="hasSubmitted"
           @click="submitRangeAnswer"
         >
-          <Check v-if="hasSubmitted" :size="20" :stroke-width="3" />
-          <span v-else>{{ $t('quiz.player.submit_btn') }}</span>
+          {{ hasSubmitted ? '✓' : $t('quiz.player.submit_btn') }}
         </button>
       </div>
     </div>
@@ -192,16 +162,8 @@
       v-else-if="state === States.QUESTION_ACTIVE && isNumber"
       class="state-container number-container"
     >
-      <div class="progress-row">
-        <div class="q-number b-mono">{{ currentQuestionIndex + 1 }}</div>
-        <div v-if="totalQuestions > 1" class="progress-blocks">
-          <div
-            v-for="i in totalQuestions"
-            :key="i"
-            class="b-progress-block"
-            :class="{ done: i - 1 < currentQuestionIndex, current: i - 1 === currentQuestionIndex }"
-          ></div>
-        </div>
+      <div class="question-info">
+        <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
       </div>
 
       <div class="number-question-content">
@@ -211,7 +173,7 @@
             inputmode="numeric"
             pattern="[0-9]*"
             v-model.number="numberValue"
-            class="number-answer-input b-input"
+            class="number-answer-input"
             :placeholder="$t('quiz.player.enter_number')"
             :disabled="hasSubmitted"
             @keyup.enter="submitNumberAnswer"
@@ -219,65 +181,55 @@
         </div>
 
         <button
-          class="number-submit-btn b-btn"
+          class="number-submit-btn"
           :class="{ 'active': numberValue !== null && numberValue !== '' }"
           :disabled="hasSubmitted || numberValue === null || numberValue === ''"
           @click="submitNumberAnswer"
         >
-          <Check v-if="hasSubmitted" :size="20" :stroke-width="3" />
-          <span v-else>{{ $t('quiz.player.submit_btn') }}</span>
+          {{ hasSubmitted ? '✓' : $t('quiz.player.submit_btn') }}
         </button>
       </div>
     </div>
 
     <!-- QUESTION/ANSWER STATE (Generic/Multiple Choice) -->
     <div v-else-if="state === States.QUESTION_ACTIVE" class="state-container question-container">
-      <div class="progress-row">
-        <div class="q-number b-mono">{{ currentQuestionIndex + 1 }}</div>
-        <div v-if="totalQuestions > 1" class="progress-blocks">
-          <div
-            v-for="i in totalQuestions"
-            :key="i"
-            class="b-progress-block"
-            :class="{ done: i - 1 < currentQuestionIndex, current: i - 1 === currentQuestionIndex }"
-          ></div>
-        </div>
+      <div class="question-info">
+         <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
       </div>
 
       <!-- Multi-select mode hint -->
-      <div v-if="isMultiSelect" class="multi-hint b-badge b-badge-amber">
-        <ListChecks :size="14" :stroke-width="2.5" />
-        <span>{{ $t('quiz.player.select_multiple') }}</span>
+      <div v-if="isMultiSelect" class="multi-hint-pill">
+        <span class="multi-hint-icon">☑</span>
+        <span>{{ $t('quiz.player.select_multiple', 'Select all that apply') }}</span>
       </div>
 
-      <div class="answer-grid" :class="{ 'true-false-grid': isTrueFalse }">
+      <div class="answer-grid" :class="{ 'true-false-grid': isTrueFalse, 'multi-select-grid': isMultiSelect }">
          <button
             v-for="(shape, idx) in shapes"
             :key="idx"
             class="answer-btn"
             :class="[
-                isTrueFalse ? (idx === 0 ? 'tf-true' : 'tf-false') : '',
+                isTrueFalse ? (idx === 0 ? 'color-true' : 'color-false') : 'color-' + idx,
+                isMultiSelect ? 'multi-btn' : '',
                 { 'selected': isSelected(idx), 'dimmed': hasSelected && !isSelected(idx) && !isMultiSelect, 'has-text': currentQuestion?.answers?.[idx] }
             ]"
             @click="handleAnswerClick(idx)"
             :disabled="hasSubmitted"
          >
-            <span class="letter-badge b-mono">{{ letterLabels[idx] }}</span>
-            <span class="answer-main">
-               <Check v-if="isTrueFalse && idx === 0" class="tf-icon" :size="26" :stroke-width="3" />
-               <X v-else-if="isTrueFalse" class="tf-icon" :size="26" :stroke-width="3" />
-               <span v-else-if="!currentQuestion?.answers?.[idx]" class="shape-glyph">{{ shape }}</span>
-               <span v-if="isTrueFalse" class="tf-label b-mono">{{ idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false') }}</span>
+            <!-- Multi-select checkbox corner indicator -->
+            <div v-if="isMultiSelect" class="ms-checkbox" :class="{ 'ms-checked': isSelected(idx) }">
+              <span v-if="isSelected(idx)">✓</span>
+            </div>
+            <div class="answer-btn-layout" :class="{ 'row-layout': isTrueFalse }">
+               <span class="shape-icon">{{ shape }}</span>
+               <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false') }}</span>
                <span v-else-if="currentQuestion?.answers?.[idx]" class="answer-text">{{ currentQuestion.answers[idx] }}</span>
-            </span>
-            <span class="opt-checkbox" :class="{ 'is-checked': isSelected(idx) }">
-              <Check v-if="isSelected(idx)" :size="14" :stroke-width="3.5" />
-            </span>
+            </div>
          </button>
       </div>
 
       <div v-if="isMultiSelect && !hasSubmitted" class="action-bar">
-          <button class="submit-btn b-btn" @click="submitMultiSelect" :disabled="selectedIndices.length === 0">
+          <button class="submit-btn" @click="submitMultiSelect" :disabled="selectedIndices.length === 0">
               {{ $t('quiz.player.submit_btn') }}
           </button>
       </div>
@@ -285,81 +237,61 @@
 
     <!-- ANSWER SUBMITTED (Waiting) -->
     <div v-else-if="state === States.ANSWERED" class="state-container answered-container">
-       <div class="answered-content b-card">
-          <div class="loader-blocks b-loader"><span></span><span></span><span></span><span></span><span></span></div>
-          <h2 class="answered-title">{{ $t('quiz.player.submitted') }}</h2>
-          <p class="answered-sub">{{ $t('quiz.player.waiting_others') }}</p>
+       <div class="answered-content">
+          <div class="spinner"></div>
+          <h2>{{ $t('quiz.player.submitted') }}</h2>
+          <p>{{ $t('quiz.player.waiting_others') }}</p>
        </div>
     </div>
 
     <!-- RESULT STATE -->
-    <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'result-correct' : 'result-wrong'">
-       <div class="result-content b-card">
-          <div class="result-icon-box">
-            <Check v-if="isCorrect" :size="40" :stroke-width="3.5" />
-            <X v-else :size="40" :stroke-width="3.5" />
-          </div>
-          <span class="verdict-badge b-badge" :class="isCorrect ? 'b-badge-lime' : 'b-badge-rose'">
-            {{ isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}
-          </span>
+    <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
+       <div class="result-content">
+          <div class="result-icon" :class="isCorrect ? 'icon-correct' : 'icon-wrong'">{{ isCorrect ? '✅' : '❌' }}</div>
+          <h1 class="result-title">{{ isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}</h1>
 
           <div class="score-summary">
-             <div class="score-delta b-mono" v-if="isCorrect">
+             <div class="score-delta" v-if="isCorrect">
                <span class="plus-sign">+</span>{{ currentPoints.toLocaleString() }}
              </div>
-             <div class="score-delta wrong-delta b-label" v-else>{{ $t('quiz.player.incorrect') }}</div>
-             <div class="streak-badge b-badge b-badge-amber" v-if="streak > 2">
-               <Flame :size="14" :stroke-width="2.5" />
-               {{ $t('quiz.player.streak', { streak: streak }) }}
+             <div class="score-delta wrong-delta" v-else>{{ $t('quiz.player.incorrect') }}</div>
+             <div class="streak-badge" v-if="streak > 2">
+               🔥 {{ $t('quiz.player.streak', { streak: streak }) }}
              </div>
           </div>
 
        </div>
-       <div class="footer-score b-badge b-mono">
+       <div class="footer-score">
           {{ $t('quiz.player.total_score', { score: score.toLocaleString() }) }}
        </div>
     </div>
 
     <!-- LEADERBOARD STATE -->
     <div v-else-if="state === States.LEADERBOARD" class="state-container player-leaderboard-container">
-       <div class="player-leaderboard-content b-card b-shadow-lime">
-          <div class="leaderboard-icon-box b-icon-box">
-            <Trophy :size="32" :stroke-width="2.5" />
-          </div>
-          <h2 class="leaderboard-title b-label">{{ $t('quiz.player.leaderboard') }}</h2>
-          <div class="rank-square b-mono">
+       <div class="player-leaderboard-content">
+          <div class="leaderboard-icon">🏆</div>
+          <h2 class="leaderboard-title">{{ $t('quiz.player.leaderboard', 'Leaderboard') }}</h2>
+          <div class="rank-badge-large">
              <span class="rank-num">{{ rank }}</span>
+             <span class="rank-label">{{ $t('quiz.player.place') }}</span>
           </div>
-          <span class="rank-label b-label">{{ $t('quiz.player.place') }}</span>
-          <div class="score-display b-badge b-badge-lime b-mono">
-             {{ score.toLocaleString() }} {{ $t('quiz.player.points') }}
+          <div class="score-display">
+             {{ score.toLocaleString() }} {{ $t('quiz.player.points', 'Points') }}
           </div>
        </div>
     </div>
 
     <!-- FINISHED STATE -->
     <div v-else-if="state === States.FINISHED" class="state-container finished-container">
-       <div class="finished-content b-card b-shadow-lime">
-          <div class="done-icon-box b-icon-box">
-            <Check :size="32" :stroke-width="3" />
-          </div>
-          <h1 class="finished-title">{{ $t('quiz.player.quiz_over') }}</h1>
-          <div class="final-rank-square b-mono">
+       <div class="finished-content">
+          <h1>{{ $t('quiz.player.quiz_over') }}</h1>
+          <div class="final-rank-badge">
              <span class="rank-num">{{ rank }}</span>
+             <span class="rank-label">{{ $t('quiz.player.place') }}</span>
           </div>
-          <span class="rank-label b-label">{{ $t('quiz.player.place') }}</span>
-          <p class="final-score b-badge b-badge-lime b-mono">{{ $t('quiz.player.final_score', { score: score }) }}</p>
+          <p class="final-score">{{ $t('quiz.player.final_score', { score: score }) }}</p>
        </div>
-       <div class="finished-actions">
-          <button class="restart-btn b-btn" @click="restartQuiz">
-            <RotateCcw :size="18" :stroke-width="2.5" />
-            {{ $t('quiz.player.play_again') }}
-          </button>
-          <button class="exit-btn b-btn" @click="goHome">
-            <LogOut :size="18" :stroke-width="2.5" />
-            {{ $t('quiz.player.exit_btn') }}
-          </button>
-       </div>
+       <button class="exit-btn" @click="goHome">{{ $t('quiz.player.exit_btn') }}</button>
     </div>
 
   </div>
@@ -374,8 +306,6 @@ import { useQuizStateMachine } from '../composables/useQuizStateMachine'
 import RangeComponent from '../components/RangeComponent.vue'
 import HorizontalCarousel from '../components/HorizontalCarousel.vue'
 import MapCoordinatePicker from '../components/MapCoordinatePicker.vue'
-import { Check, X, CornerDownLeft, ListChecks, Flame, Trophy, RotateCcw, LogOut } from 'lucide-vue-next'
-import { useVisualViewportHeight } from '../composables/useVisualViewportHeight'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
@@ -391,9 +321,6 @@ const moduleId = route.params.moduleId
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
 }
-
-// Visual viewport tracking — keeps submit/confirm buttons above the virtual keyboard
-const { viewportHeight, isMobileViewport } = useVisualViewportHeight()
 
 // State machine
 const requestedBatchIndexes = new Set()
@@ -421,7 +348,6 @@ const rank = ref(0)
 const timeRemaining = ref(5)
 const explainTimeRemaining = ref(0)
 const numberValue = ref(null)
-const totalQuestions = ref(0)
 
 // Correct Picture specific state
 const preselectedIndex = ref(0)
@@ -540,30 +466,6 @@ const shapes = computed(() => {
     return ['▲', '◆', '●', '■']
 })
 
-const letterLabels = ['А', 'Б', 'В', 'Г']
-
-// Per-context accent color: default=fuchsia, correct-picture=amber,
-// wrong-pictures=rose, range/number=indigo, lobby/name=cyan, results/finish=lime
-const accentColor = computed(() => {
-    if (state.value === States.LOBBY) return 'var(--b-accent-cyan)'
-    if (state.value === States.QUESTION_ACTIVE) {
-        if (isCorrectPicture.value) return 'var(--b-accent-amber)'
-        if (isWrongPictures.value) return 'var(--b-accent-rose)'
-        if (isRange.value || isNumber.value) return 'var(--b-accent-indigo)'
-        return 'var(--b-accent-fuchsia)'
-    }
-    if (state.value === States.RESULTS || state.value === States.LEADERBOARD || state.value === States.FINISHED) return 'var(--b-accent-lime)'
-    return 'var(--b-accent-fuchsia)'
-})
-
-const shellStyle = computed(() => {
-    const style = { '--q-accent': accentColor.value }
-    if (isMobileViewport.value && viewportHeight.value) {
-        style.height = viewportHeight.value
-    }
-    return style
-})
-
 watch(currentQuestion, (question) => {
     if (!question) return
 
@@ -578,10 +480,6 @@ const joinLobby = () => {
     if (!nickname.value.trim()) return
     quizWS.connect(moduleId, nickname.value, false)
     joined.value = true
-}
-
-const restartQuiz = () => {
-    window.location.reload()
 }
 
 const handleAnswerClick = (idx) => {
@@ -957,12 +855,10 @@ onMounted(async () => {
             console.log('[DEBUG] New quiz batch (startIndex=0) - clearing question cache before loading')
             questionCache.clear()
             requestedBatchIndexes.clear()
-            totalQuestions.value = 0
         }
         questionCache.addBatch(batch)
         requestedBatchIndexes.add(batch.batchIndex)
         questionCacheVersion.value++
-        totalQuestions.value = Math.max(totalQuestions.value, batch.startIndex + (batch.questions?.length || 0))
         console.log('[DEBUG] After addBatch, cache size:', questionCache.cache.size, 'keys:', [...questionCache.cache.keys()])
     })
 
@@ -1030,20 +926,25 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
-
 .quiz-player-screen {
     width: 100vw;
     height: 100vh;
-    height: 100dvh;
-    background-color: var(--b-bg);
-    color: var(--b-text);
+    height: 100dvh; /* dynamic viewport height - accounts for mobile browser bars */
+    background-color: #46178F; /* Standard Kahoot-like purple */
+    color: white;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
-    --b-progress-accent: var(--q-accent, var(--b-accent-fuchsia));
-    --b-loader-accent: var(--q-accent, var(--b-accent-cyan));
+    font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+}
+
+.bg-layer {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 100%);
+    z-index: 0;
 }
 
 .language-switcher-container {
@@ -1051,6 +952,17 @@ onUnmounted(() => {
     top: 10px;
     right: 10px;
     z-index: 100;
+}
+
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
 }
 
 .state-container {
@@ -1061,883 +973,872 @@ onUnmounted(() => {
     align-items: center;
     width: 100%;
     overflow: hidden;
-    min-height: 0;
-    padding-top: 56px; /* clear the language switcher */
+    box-sizing: border-box;
+    min-height: 0; /* allows flex children to shrink below their content size */
+    padding-top: 56px; /* clear the language switcher (top: 10px + ~30px height + buffer) */
 }
 
-/* ── Shared question header pieces ─────────────────────────── */
-.progress-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 0 16px;
-    flex-shrink: 0;
-}
-
-.q-number {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--b-bg);
-    border: var(--b-border-w) solid var(--q-accent, var(--b-accent-fuchsia));
-    color: var(--q-accent, var(--b-accent-fuchsia));
-    font-size: 14px;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-.progress-blocks {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
-}
-
-/* ── NAME ENTRY ────────────────────────────────────────────── */
+/* NAME ENTRY */
 .name-entry-container {
     justify-content: center;
     padding: 20px;
 }
 
 .logo {
-    font-size: 2.6rem;
-    font-weight: 700;
+    font-size: 3rem;
+    font-weight: 900;
     margin-bottom: 40px;
-    text-transform: uppercase;
-    letter-spacing: -1px;
-    color: var(--b-text);
-    text-shadow: 3px 3px 0 var(--b-accent-cyan);
+    text-shadow: 2px 2px 0px #000;
 }
 
 .card {
+    background: white;
+    padding: 20px;
+    border-radius: 4px;
     width: 100%;
-    max-width: 420px;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-}
-
-.input-row {
-    display: flex;
     gap: 10px;
-    align-items: stretch;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .nickname-input {
-    flex: 1;
-    min-width: 0;
-}
-
-.confirm-btn {
-    padding: 0 18px;
-    flex-shrink: 0;
-}
-
-.enter-hint {
-    margin: 0;
+    padding: 15px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    font-size: 1.2rem;
     text-align: center;
+    font-weight: bold;
 }
 
-/* ── LOBBY ─────────────────────────────────────────────────── */
+.join-btn {
+    background-color: #333;
+    color: white;
+    padding: 15px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+.join-btn:disabled { opacity: 0.5; }
+
+/* LOBBY */
 .lobby-container {
     justify-content: center;
-    padding: 20px;
-}
-
-.lobby-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
     text-align: center;
-    width: 100%;
-    max-width: 400px;
 }
 
-.waiting-text {
-    font-size: 1.4rem;
+.nickname-display {
+    font-size: 2.5rem;
     font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: -0.3px;
-    margin: 0;
+    margin: 20px 0;
 }
 
-.nickname-badge {
-    font-size: 18px;
-    padding: 10px 18px;
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
 }
 
-.status-msg {
-    color: var(--b-text-dim);
-    font-size: 13px;
-    margin: 0;
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.loader {
+    width: 60px;
+    height: 60px;
+    border: 6px solid rgba(255,255,255,0.3);
+    border-top: 6px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 30px auto;
 }
 
-.loader-blocks {
-    margin-top: 8px;
-}
-
-/* ── GET READY ─────────────────────────────────────────────── */
+/* GET READY */
 .get-ready-container {
     justify-content: center;
+    background-color: #FF3B30; /* Red alert for ready */
 }
+.ready-content h1 { font-size: 2rem; margin-bottom: 20px; }
+.countdown { font-size: 5rem; font-weight: 900; }
 
-.ready-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-}
-
-.ready-title {
-    font-size: 2.2rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: -1px;
-    margin: 0;
-    text-align: center;
-    text-shadow: 3px 3px 0 var(--q-accent, var(--b-accent-fuchsia));
-}
-
-.explain-timer {
-    font-size: 4.5rem;
-    font-weight: 700;
-    color: var(--q-accent, var(--b-accent-fuchsia));
-    border: var(--b-border-w) solid var(--q-accent, var(--b-accent-fuchsia));
-    padding: 8px 28px;
-    line-height: 1;
-}
-
-/* ── QUESTION (generic / multi-choice) ─────────────────────── */
+/* QUESTION */
 .question-container {
+    justify-content: flex-end; /* Buttons at bottom usually */
+    padding-bottom: env(safe-area-inset-bottom, 10px);
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
-    gap: 12px;
 }
 
-.multi-hint {
+.question-info {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: white;
+    color: black;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    z-index: 2;
+}
+
+/* ── Multi-select hint pill ─────────────────────────────────── */
+.multi-hint-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 214, 10, 0.18);
+    border: 1.5px solid rgba(255, 214, 10, 0.55);
+    color: #FFD60A;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+    animation: pill-pulse 2.5s ease-in-out infinite;
     flex-shrink: 0;
 }
+.multi-hint-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+@keyframes pill-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 10, 0); }
+    50%       { box-shadow: 0 0 10px 3px rgba(255, 214, 10, 0.25); }
+}
 
+/* ── Answer grid ────────────────────────────────────────────── */
 .answer-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
     width: 100%;
-    padding: 0 12px 12px;
+    padding: 8px;
+    box-sizing: border-box;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
 }
 
 .answer-btn {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    text-align: left;
-    background: var(--b-surface);
-    border: var(--b-border-w) solid var(--b-border-strong);
-    padding: 14px 16px;
-    cursor: pointer;
-    font-family: inherit;
-    color: var(--b-text);
-    transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease, background 0.1s ease;
-    flex-shrink: 0;
-}
-
-.answer-btn:active:not(:disabled) {
-    transform: translate(2px, 2px);
-}
-
-.answer-btn:disabled {
-    cursor: default;
-}
-
-.answer-btn.selected {
-    border-color: var(--b-accent-fuchsia);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-fuchsia);
-    background: color-mix(in srgb, var(--b-accent-fuchsia) 12%, transparent);
-}
-
-.answer-btn.dimmed {
-    opacity: 0.4;
-}
-
-.answer-btn.tf-true.selected {
-    border-color: var(--b-accent-cyan);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-cyan);
-    background: color-mix(in srgb, var(--b-accent-cyan) 12%, transparent);
-}
-
-.answer-btn.tf-false.selected {
-    border-color: var(--b-accent-rose);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-rose);
-    background: color-mix(in srgb, var(--b-accent-rose) 12%, transparent);
-}
-
-.letter-badge {
-    width: 34px;
-    height: 34px;
+    border: none;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: var(--b-border-w) solid var(--b-border-strong);
-    background: var(--b-bg);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--b-text-dim);
-    flex-shrink: 0;
+    font-size: 3rem;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s, opacity 0.15s;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    min-height: 0;
+    padding: 0;
+    position: relative;
 }
 
-.answer-btn.selected .letter-badge {
-    border-color: var(--b-accent-fuchsia);
-    color: var(--b-accent-fuchsia);
+/* ── Multi-select button style ──────────────────────────────── */
+/* Rounded + outlined feel — distinctly different from flat single-choice */
+.answer-btn.multi-btn {
+    border-radius: 14px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2), inset 0 0 0 0 transparent;
+    opacity: 0.82;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.1s;
+}
+.answer-btn.multi-btn.selected {
+    border-color: #fff;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 0 0 3px rgba(255,255,255,0.4);
+    opacity: 1;
+    transform: translateY(-2px);
 }
 
-.answer-btn.tf-true.selected .letter-badge { border-color: var(--b-accent-cyan); color: var(--b-accent-cyan); }
-.answer-btn.tf-false.selected .letter-badge { border-color: var(--b-accent-rose); color: var(--b-accent-rose); }
-
-.answer-main {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-}
-
-.tf-icon {
-    color: var(--b-accent-cyan);
-    flex-shrink: 0;
-}
-
-.tf-false .tf-icon {
-    color: var(--b-accent-rose);
-}
-
-.tf-label {
-    font-size: 1.3rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.shape-glyph {
-    font-size: 1.8rem;
-    line-height: 1;
-}
-
-.answer-text {
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.3;
-    word-break: break-word;
-}
-
-.opt-checkbox {
+/* ── Checkbox corner indicator ──────────────────────────────── */
+.ms-checkbox {
+    position: absolute;
+    top: 8px;
+    right: 8px;
     width: 22px;
     height: 22px;
+    border-radius: 6px;
+    border: 2.5px solid rgba(255,255,255,0.55);
+    background: rgba(0,0,0,0.25);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: var(--b-border-w) solid var(--b-border-strong);
-    background: var(--b-bg);
-    color: #fff;
-    flex-shrink: 0;
-    transition: background 0.1s ease, border-color 0.1s ease;
+    font-size: 13px;
+    font-weight: 900;
+    color: #000;
+    transition: background 0.15s, border-color 0.15s;
+    z-index: 2;
+    line-height: 1;
+}
+.ms-checkbox.ms-checked {
+    background: #fff;
+    border-color: #fff;
+    color: #000;
 }
 
-.opt-checkbox.is-checked {
-    background: var(--b-accent-fuchsia);
-    border-color: var(--b-accent-fuchsia);
-}
-
-.answer-btn.tf-true .opt-checkbox.is-checked { background: var(--b-accent-cyan); border-color: var(--b-accent-cyan); }
-.answer-btn.tf-false .opt-checkbox.is-checked { background: var(--b-accent-rose); border-color: var(--b-accent-rose); }
-
-.true-false-grid {
-    justify-content: center;
-}
-
-.action-bar {
-    width: 100%;
-    padding: 8px 16px 16px;
-    display: flex;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.submit-btn {
-    background: var(--b-accent-fuchsia);
-    color: #fff;
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-fuchsia);
-    min-width: 200px;
-}
-
-.submit-btn:hover:not(:disabled) { box-shadow: 6px 6px 0 0 var(--b-accent-fuchsia); }
-.submit-btn:active:not(:disabled) { box-shadow: 1px 1px 0 0 var(--b-accent-fuchsia); }
-
-/* ── ANSWERED ──────────────────────────────────────────────── */
-.answered-container {
-    justify-content: center;
-    padding: 20px;
-}
-
-.answered-content {
+.answer-btn-layout {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    text-align: center;
+    justify-content: center;
     width: 100%;
-    max-width: 400px;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    gap: 8px;
+}
+.answer-btn-layout.row-layout {
+    flex-direction: row;
+}
+.answer-btn.has-text {
+    font-size: 1.8rem;
 }
 
-.answered-title {
-    font-size: 1.3rem;
+.answer-text {
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
+.answer-btn:active { transform: translateY(4px); box-shadow: none; }
+.answer-btn.multi-btn.selected:active { transform: translateY(2px); }
+
+.color-0 { background-color: #FF3B30; }
+.color-1 { background-color: #0A84FF; }
+.color-2 { background-color: #FFD60A; }
+.color-3 { background-color: #32D74B; }
+
+.dimmed { opacity: 0.45; }
+
+.true-false-grid {
+    grid-template-columns: 1fr;
+    flex: 1;
+}
+
+.color-true { background-color: #0A84FF; }
+.color-false { background-color: #FF3B30; }
+
+.tf-label {
+    margin-left: 10px;
+    font-size: 2rem;
     font-weight: 900;
-    text-transform: uppercase;
-    margin: 0;
 }
 
-.answered-sub {
-    color: var(--b-text-dim);
-    font-size: 13px;
-    margin: 0;
+/* ANSWERED */
+.answered-container {
+    justify-content: center;
+    text-align: center;
+    background-color: #0A84FF;
 }
 
-/* ── RESULT ────────────────────────────────────────────────── */
+/* RESULT */
 .result-container {
     justify-content: center;
     align-items: center;
+    text-align: center;
     padding: 20px;
-    gap: 20px;
+    gap: 0;
 }
+.bg-correct { background: linear-gradient(160deg, #1a5c2e 0%, #145c2e 50%, #0e3d1e 100%); }
+.bg-wrong { background: linear-gradient(160deg, #5c1a1a 0%, #4a0f0f 50%, #2d0808 100%); }
 
 .result-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    animation: b-reveal 0.25s ease-out both;
-}
-
-@keyframes b-reveal {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.result-container.result-correct .result-content {
-    border-color: var(--b-accent-lime);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime);
-}
-
-.result-container.result-wrong .result-content {
-    border-color: var(--b-accent-rose);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-rose);
-}
-
-.result-icon-box {
-    width: 72px;
-    height: 72px;
-    display: flex;
-    align-items: center;
+    gap: 16px;
+    flex: 1;
     justify-content: center;
-    background: var(--b-bg);
-    border: var(--b-border-w) solid var(--b-border-strong);
+    animation: resultReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.result-container.result-correct .result-icon-box {
-    color: var(--b-accent-lime);
-    border-color: var(--b-accent-lime);
+@keyframes resultReveal {
+    from { opacity: 0; transform: scale(0.7) translateY(30px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.result-container.result-wrong .result-icon-box {
-    color: var(--b-accent-rose);
-    border-color: var(--b-accent-rose);
+.result-icon {
+    font-size: 5rem;
+    line-height: 1;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
+    animation: iconBounce 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.icon-correct { animation: iconBounce 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.icon-wrong   { animation: iconShake 0.5s 0.2s ease both; }
+
+@keyframes iconBounce {
+    from { transform: scale(0) rotate(-15deg); }
+    to   { transform: scale(1) rotate(0deg); }
+}
+@keyframes iconShake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-12px); }
+    40% { transform: translateX(12px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(8px); }
 }
 
-.verdict-badge {
-    font-size: 13px;
-    padding: 8px 16px;
+.result-title {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    animation: fadeSlideUp 0.4s 0.3s ease both;
+}
+
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .score-summary {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    animation: fadeSlideUp 0.4s 0.45s ease both;
 }
 
 .score-delta {
-    font-size: 2.8rem;
-    font-weight: 700;
-    color: var(--b-accent-amber);
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #FFDF00;
+    text-shadow: 0 2px 16px rgba(255,220,0,0.4);
+    letter-spacing: -1px;
     line-height: 1;
 }
-
 .score-delta .plus-sign {
-    font-size: 2rem;
+    font-size: 2.5rem;
+    margin-right: 2px;
 }
-
 .wrong-delta {
-    color: var(--b-text-dim);
-    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    font-size: 1.2rem;
+    font-weight: 600;
 }
 
 .streak-badge {
-    font-size: 12px;
+    background: rgba(255,150,0,0.25);
+    border: 1px solid rgba(255,150,0,0.5);
+    color: #FFAA00;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.rank-chip {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    animation: fadeSlideUp 0.4s 0.6s ease both;
 }
 
 .footer-score {
-    font-size: 13px;
-    padding: 10px 18px;
+    padding: 12px 24px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    animation: fadeSlideUp 0.4s 0.75s ease both;
 }
 
-/* ── LEADERBOARD ───────────────────────────────────────────── */
+/* FINISHED */
+.finished-container {
+    justify-content: center;
+    text-align: center;
+}
+
+.final-rank-badge {
+    background: #FFD700; /* Gold */
+    color: black;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 30px auto;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-20px);}
+    60% {transform: translateY(-10px);}
+}
+
+.rank-num { font-size: 4rem; font-weight: 900; line-height: 1; }
+.rank-label { font-size: 1rem; font-weight: 600; text-transform: uppercase; }
+
+.exit-btn {
+    margin-top: 40px;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid white;
+    color: white;
+    padding: 10px 30px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* PLAYER LEADERBOARD STATE */
 .player-leaderboard-container {
     justify-content: center;
-    padding: 20px;
+    background: linear-gradient(135deg, #46178F, #2A0D5D);
+    text-align: center;
 }
 
 .player-leaderboard-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    animation: b-reveal 0.25s ease-out both;
+    gap: 20px;
+    animation: fadeSlideUp 0.5s ease both;
 }
 
-.leaderboard-icon-box {
-    width: 56px;
-    height: 56px;
-    color: var(--b-accent-lime);
-    border-color: var(--b-accent-lime);
+.leaderboard-icon {
+    font-size: 5rem;
+    animation: iconBounce 1s infinite alternate;
 }
 
 .leaderboard-title {
-    margin: 0;
-    font-size: 12px;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #FFDF00;
+    text-shadow: 0 4px 12px rgba(255, 223, 0, 0.4);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
-.rank-square {
-    width: 120px;
-    height: 120px;
+.rank-badge-large {
+    background: linear-gradient(135deg, #FFD700, #FDB931);
+    color: #1a1a2e;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--b-bg);
-    border: var(--b-border-w) solid var(--b-border-strong);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime);
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4), inset 0 -5px 15px rgba(0,0,0,0.2);
+    border: 6px solid rgba(255,255,255,0.2);
+    animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.rank-num {
-    font-size: 3.5rem;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.rank-label {
-    margin-top: -6px;
+@keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
 .score-display {
-    font-size: 14px;
-    padding: 10px 18px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: rgba(0,0,0,0.3);
+    padding: 12px 30px;
+    border-radius: 30px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
-/* ── FINISHED ──────────────────────────────────────────────── */
-.finished-container {
-    justify-content: center;
-    padding: 20px;
-    gap: 24px;
+.answer-btn.selected {
+    border: 8px solid white;
+    transform: scale(0.98);
 }
 
-.finished-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    animation: b-reveal 0.25s ease-out both;
-}
-
-.done-icon-box {
-    width: 56px;
-    height: 56px;
-    color: var(--b-accent-lime);
-    border-color: var(--b-accent-lime);
-}
-
-.finished-title {
-    font-size: 1.6rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: -0.5px;
-    margin: 0;
-}
-
-.final-rank-square {
-    width: 100px;
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--b-bg);
-    border: var(--b-border-w) solid var(--b-border-strong);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime);
-}
-
-.final-score {
-    margin: 0;
-    font-size: 13px;
-}
-
-.finished-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.restart-btn {
-    background: var(--b-accent-lime);
-    color: #fff;
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-lime);
-}
-
-.restart-btn:hover:not(:disabled) { box-shadow: 6px 6px 0 0 var(--b-accent-lime); }
-.restart-btn:active:not(:disabled) { box-shadow: 1px 1px 0 0 var(--b-accent-lime); }
-
-.exit-btn {
-    color: var(--b-accent-rose);
-    border-color: var(--b-accent-rose);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-rose);
-}
-
-.exit-btn:hover:not(:disabled) { box-shadow: 6px 6px 0 0 var(--b-accent-rose); }
-.exit-btn:active:not(:disabled) { box-shadow: 1px 1px 0 0 var(--b-accent-rose); }
-
-/* ── CORRECT PICTURE ───────────────────────────────────────── */
-.correct-picture-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    justify-content: space-between;
-    background: var(--b-bg);
-}
-
-.question-header-area {
-    flex: 0 0 auto;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    background: var(--b-bg);
-    border-bottom: var(--b-border-w) solid var(--b-border);
-    padding: 56px 0 18px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.question-text {
-    font-size: 1rem;
-    font-weight: 800;
-    text-align: center;
-    margin: 0;
-    line-height: 1.3;
-    padding: 0 16px;
-    max-width: 560px;
-}
-
-.timer-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 6px;
-    background: var(--b-border-strong);
-}
-
-.timer-progress {
-    height: 100%;
-    background: var(--q-accent, var(--b-accent-fuchsia));
-    transition: width 0.1s linear;
-}
-
-.carousel-zone {
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.action-area {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 100;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--b-bg);
-    border-top: var(--b-border-w) solid var(--b-border);
-}
-
-.submit-selection-btn {
-    background: var(--b-surface);
-    color: var(--b-text-dim);
-    border: var(--b-border-w) solid var(--b-border);
-    padding: 14px 28px;
-    font-size: 1rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-family: inherit;
-    width: auto;
-    min-width: 220px;
-    max-width: 320px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    cursor: pointer;
-    transition: box-shadow 0.1s ease, border-color 0.1s ease, background 0.1s ease, color 0.1s ease;
-}
-
-.submit-selection-btn.active {
-    background: var(--q-accent, var(--b-accent-amber));
-    color: #fff;
-    border-color: var(--b-border-strong);
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--q-accent, var(--b-accent-amber));
-}
-
-.submit-selection-btn:active:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 0 var(--q-accent, var(--b-accent-amber));
-}
-
-.submit-selection-btn:disabled:not(.active) {
+.answer-btn.dimmed {
     opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.checkmark-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    color: #4cd964;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+}
+
+.action-bar {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.submit-btn {
+    background: #FFD700;
+    color: black;
+    font-weight: 900;
+    font-size: 1.5rem;
+    padding: 15px 40px;
+    border-radius: 50px;
+    border: none;
+    box-shadow: 0 4px 0 #b39700;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.submit-btn:active {
+    transform: translateY(4px);
+    box-shadow: none;
+}
+.submit-btn:disabled {
+    background: #ccc;
+    box-shadow: none;
     cursor: not-allowed;
 }
 
-.mini-blocks {
-    display: inline-flex;
-    gap: 3px;
+@media (max-width: 600px) {
+    .answer-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 6px;
+    }
+    .answer-btn {
+        font-size: 2.5rem;
+    }
+    .action-bar {
+        padding: 10px;
+    }
 }
 
-.mini-blocks span {
-    width: 6px;
-    height: 6px;
-    background: currentColor;
-    animation: mini-pulse 1s ease-in-out infinite;
-}
-
-.mini-blocks span:nth-child(2) { animation-delay: 0.15s; }
-.mini-blocks span:nth-child(3) { animation-delay: 0.3s; }
-
-@keyframes mini-pulse {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.2; }
-}
-
-/* ── RANGE ─────────────────────────────────────────────────── */
 .range-container {
-    justify-content: flex-start;
-    padding: 0 0 20px;
-    gap: 12px;
+  justify-content: center;
+  padding: 20px;
+  padding-top: 64px; /* extra clearance for slider — most collision-prone */
 }
 
-.range-container .progress-row {
-    padding-top: 8px;
+/* CORRECT PICTURE STYLES */
+.correct-picture-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
+  background: #1C1C1E;
+}
+
+.question-header-area {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: absolute; /* Float over the top */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+}
+
+.question-number-badge {
+  background: rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.question-text {
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.timer-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+}
+
+.timer-progress {
+  height: 100%;
+  background: #32D74B;
+  transition: width 0.1s linear;
+}
+
+.carousel-zone {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.action-area {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+}
+
+.submit-selection-btn {
+  background: rgba(58, 58, 60, 0.8); /* Semi-transparent base */
+  backdrop-filter: blur(10px);
+  color: #8E8E93;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px 28px;
+  border-radius: 20px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  width: auto; /* Don't take full width */
+  min-width: 200px;
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.submit-selection-btn.active {
+  background: #32D74B;
+  color: white;
+  box-shadow: 0 4px 20px rgba(50, 215, 75, 0.4);
+  transform: translateY(-2px);
+}
+
+.submit-selection-btn:active {
+  transform: translateY(1px);
+}
+
+.submit-selection-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .range-question-content {
-    width: 100%;
-    max-width: 480px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-    min-height: 0;
-    padding: 8px 16px 16px;
-    gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  padding: 8px 16px 16px;
+  box-sizing: border-box;
+  gap: 12px;
 }
 
 .range-wrapper {
-    width: 100%;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    justify-content: center;
-}
-
-/* Hard-edged overrides for RangeComponent internals (component file untouched) */
-.range-container :deep(.track-bar) {
-    width: 10px;
-    background: var(--b-border);
-    border-radius: 0;
-    border: var(--b-border-w) solid var(--b-border);
-}
-
-.range-container :deep(.track-fill) {
-    background: var(--q-accent, var(--b-accent-indigo));
-    border-radius: 0;
-}
-
-.range-container :deep(.thumb) {
-    border-radius: 0;
-    background: var(--q-accent, var(--b-accent-indigo));
-    border: var(--b-border-w) solid var(--b-border-strong);
-    box-shadow: 3px 3px 0 0 var(--b-border-strong);
-}
-
-.range-container :deep(.thumb-lines span) {
-    background: rgba(0, 0, 0, 0.55);
-    border-radius: 0;
-}
-
-.range-container :deep(.value-num) {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    text-shadow: none;
-}
-
-.range-container :deep(.scroll-zone) {
-    border-radius: 0;
-    background: var(--b-surface);
-    border: var(--b-border-w) solid var(--b-border);
-}
-
-.range-container :deep(.scroll-zone.hint) {
-    border-color: var(--q-accent, var(--b-accent-indigo));
-    animation: none;
-}
-
-.range-container :deep(.scroll-zone.active) {
-    border-color: var(--q-accent, var(--b-accent-indigo));
-    animation: none;
-}
-
-.range-container :deep(.arrow) {
-    color: var(--q-accent, var(--b-accent-indigo));
-    filter: none;
-}
-
-.range-container :deep(.notch),
-.range-container :deep(.tick-mark) {
-    border-radius: 0;
-}
-
-.range-container :deep(.correct-tag) {
-    border-radius: 0;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .range-submit-btn {
-    width: 100%;
-    max-width: 320px;
-    background: var(--b-accent-indigo);
-    color: #fff;
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-indigo);
-    flex-shrink: 0;
+  width: 100%;
+  max-width: 320px;
+  padding: 16px 0;
+  background: white;
+  color: #1a1a2e;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.25);
 }
-
-.range-submit-btn:hover:not(:disabled) { box-shadow: 6px 6px 0 0 var(--b-accent-indigo); }
-.range-submit-btn:active:not(:disabled) { box-shadow: 1px 1px 0 0 var(--b-accent-indigo); }
+.range-submit-btn:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
 .range-submit-btn:disabled {
-    opacity: 0.4;
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 
-/* ── WRONG PICTURES ────────────────────────────────────────── */
+/* WRONG PICTURES STYLES */
 .wrong-pictures-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    width: 100%;
-    justify-content: flex-start;
-    background: var(--b-bg);
-    overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Full viewport height */
+  width: 100%;
+  justify-content: flex-start;
+  background: #000;
+  overflow: hidden;
 }
 
 .wp-interactive-zone-modern {
-    flex: 1;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-    background: var(--b-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
+  flex: 1;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Remove padding to maximize space */
+  padding: 0;
 }
 
-/* ── NUMBER ────────────────────────────────────────────────── */
+.wp-image-wrapper {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.wp-main-img {
+  max-width: 100vw;
+  max-height: 65vh; /* leave room for header and footer */
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* NUMBER QUESTION STYLES */
 .number-container {
-    justify-content: center;
-    padding: 20px;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
 .number-question-content {
-    width: 100%;
-    max-width: 400px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    align-items: center;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
 }
 
 .number-input-wrapper {
-    width: 100%;
+  width: 100%;
 }
 
 .number-answer-input {
-    text-align: center;
-    font-size: 2.4rem;
-    padding: 20px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 .number-answer-input:focus {
-    border-color: var(--q-accent, var(--b-accent-indigo));
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--q-accent, var(--b-accent-indigo));
+  border-color: #0A84FF;
+  background: rgba(10, 132, 255, 0.1);
+  box-shadow: 0 0 20px rgba(10, 132, 255, 0.2);
 }
 
+.number-answer-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+/* Hide number input spinners */
 .number-answer-input::-webkit-outer-spin-button,
 .number-answer-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .number-submit-btn {
-    width: 100%;
-    background: var(--b-accent-indigo);
-    color: #fff;
-    box-shadow: var(--b-offset) var(--b-offset) 0 0 var(--b-accent-indigo);
+  width: 100%;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1.2rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.number-submit-btn:hover:not(:disabled) { box-shadow: 6px 6px 0 0 var(--b-accent-indigo); }
-.number-submit-btn:active:not(:disabled) { box-shadow: 1px 1px 0 0 var(--b-accent-indigo); }
-.number-submit-btn:disabled {
-    opacity: 0.4;
+.number-submit-btn.active {
+  background: #32D74B;
+  color: white;
+  border-color: #32D74B;
+  box-shadow: 0 8px 16px rgba(50, 215, 75, 0.3);
+}
+
+.number-submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.config-note {
+  font-size: 12px;
+  color: #8E8E93;
+  margin-top: 10px;
+  text-align: center;
 }
 </style>
