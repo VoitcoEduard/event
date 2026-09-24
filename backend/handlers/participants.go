@@ -36,7 +36,7 @@ func JoinEvent(w http.ResponseWriter, r *http.Request) {
 		Profile     map[string]any `json:"profile"`
 	}
 
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -89,7 +89,7 @@ func UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
 		DisplayName string `json:"displayName"`
 	}
 
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}

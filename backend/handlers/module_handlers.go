@@ -16,7 +16,7 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 		Name string         `json:"name"`
 		Data map[string]any `json:"data"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -35,7 +35,7 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		IsActive bool `json:"isActive"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -58,7 +58,7 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -79,7 +79,7 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 
 func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 	var response models.Response
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&response); err != nil {
+	if err := decodeJSON(w, r, &response); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -112,7 +112,7 @@ func UpdateModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -160,7 +160,7 @@ func UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -181,7 +181,7 @@ func UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Score int `json:"score"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}

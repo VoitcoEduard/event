@@ -38,7 +38,7 @@ func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 	moduleID := parts[4]
 
 	var questions []models.QuizQuestion
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&questions); err != nil {
+	if err := decodeJSON(w, r, &questions); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}

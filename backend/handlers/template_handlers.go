@@ -10,7 +10,7 @@ import (
 
 func SaveTemplate(w http.ResponseWriter, r *http.Request) {
 	var template models.Template
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&template); err != nil {
+	if err := decodeJSON(w, r, &template); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -75,7 +75,7 @@ func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 	id := path[len(prefix):]
 
 	var template models.Template
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&template); err != nil {
+	if err := decodeJSON(w, r, &template); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}

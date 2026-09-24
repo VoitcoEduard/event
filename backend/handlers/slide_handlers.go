@@ -23,7 +23,7 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 func SaveSlides(w http.ResponseWriter, r *http.Request) {
 	eventID := r.PathValue("eventID")
 	var input []models.Slide
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}

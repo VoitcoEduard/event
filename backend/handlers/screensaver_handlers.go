@@ -22,7 +22,7 @@ func GetScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 func UpdateScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("eventID")
 	var input models.ScreensaverConfig
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}

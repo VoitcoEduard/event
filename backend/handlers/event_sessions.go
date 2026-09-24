@@ -32,7 +32,7 @@ func CreateSession(w http.ResponseWriter, r *http.Request) {
 		ModuleOrder []string `json:"moduleOrder"`
 	}
 
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -84,7 +84,7 @@ func UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
 		Status models.EventSessionStatus `json:"status"`
 	}
 
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -113,7 +113,7 @@ func AdvanceSessionModule(w http.ResponseWriter, r *http.Request) {
 		ActiveModuleID string `json:"activeModuleId"`
 	}
 
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}

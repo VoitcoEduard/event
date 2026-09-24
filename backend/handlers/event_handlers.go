@@ -10,7 +10,7 @@ import (
 
 func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var event models.Event
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&event); err != nil {
+	if err := decodeJSON(w, r, &event); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -115,7 +115,7 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var event models.Event
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&event); err != nil {
+	if err := decodeJSON(w, r, &event); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -151,7 +151,7 @@ func ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Pin string `json:"pin"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -186,7 +186,7 @@ func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		IsActive bool `json:"isActive"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
