@@ -49,6 +49,23 @@ test('login mode is loaded from backend configuration', async () => {
   finally { global.fetch = original }
 })
 
+test('invalid auth configuration fails without caching a mode and can be retried', async () => {
+  session.mode = null
+  const original = global.fetch
+  try {
+    for (const data of [{ message: 'Hello from Go Backend!' }, { mode: 'unknown' }, null]) {
+      global.fetch = async () => new Response(JSON.stringify(data), { status: 200 })
+      await assert.rejects(loadAuthMode(), /Authentication configuration unavailable/)
+      assert.equal(session.mode, null)
+    }
+    global.fetch = async () => new Response(JSON.stringify({ mode: 'dev' }), { status: 200 })
+    assert.equal(await loadAuthMode(), 'dev')
+  } finally {
+    global.fetch = original
+    session.mode = null
+  }
+})
+
 test('pending account becomes active after owner approval', async () => {
   const original = global.fetch
   let status = 'pending'

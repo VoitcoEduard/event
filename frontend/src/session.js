@@ -30,7 +30,11 @@ export async function loadAuthMode() {
   if (session.mode) return session.mode
   const response = await fetch('/auth/config', { cache: 'no-store' })
   if (!response.ok) throw new Error('Authentication configuration unavailable')
-  session.mode = (await response.json()).mode
+  const data = await response.json()
+  if (data?.mode !== 'dev' && data?.mode !== 'google') {
+    throw new Error('Authentication configuration unavailable')
+  }
+  session.mode = data.mode
   return session.mode
 }
 
