@@ -59,15 +59,16 @@ func mimeToExtension(mimeType string) string {
 }
 
 func UploadMedia(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
 	err := r.ParseMultipartForm(32 << 20)
 	if err != nil {
-		http.Error(w, "Failed to parse multipart form: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to get file from form: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
@@ -77,19 +78,19 @@ func UploadMedia(w http.ResponseWriter, r *http.Request) {
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	_, err = utils.ValidateImage(data)
 	if err != nil {
-		http.Error(w, "Invalid image: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	processedData, width, height, mimeType, err := utils.ProcessImage(data)
 	if err != nil {
-		http.Error(w, "Failed to process image: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -105,14 +106,14 @@ func UploadMedia(w http.ResponseWriter, r *http.Request) {
 
 	uploadStream, err := bucket.OpenUploadStream(filename)
 	if err != nil {
-		http.Error(w, "Failed to open upload stream: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	defer uploadStream.Close()
 
 	_, err = uploadStream.Write(processedData)
 	if err != nil {
-		http.Error(w, "Failed to write file to GridFS: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -139,7 +140,7 @@ func UploadMedia(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("media")
 	_, err = collection.InsertOne(context.Background(), mediaFile)
 	if err != nil {
-		http.Error(w, "Failed to save media metadata: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -304,14 +305,14 @@ func DeleteMedia(w http.ResponseWriter, r *http.Request) {
 	if bucket != nil {
 		err = bucket.Delete(mediaFile.GridFSID)
 		if err != nil {
-			http.Error(w, "Failed to delete file from storage: "+err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			return
 		}
 	}
 
 	_, err = collection.DeleteOne(context.Background(), bson.M{"_id": objectID})
 	if err != nil {
-		http.Error(w, "Failed to delete media metadata: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -357,16 +358,17 @@ func GetScreensavers(w http.ResponseWriter, r *http.Request) {
 // URL: /screensavers
 func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 	// Parse multipart form
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
 	err := r.ParseMultipartForm(32 << 20)
 	if err != nil {
-		http.Error(w, "Failed to parse multipart form: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	// Get the file
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to get file from form: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
@@ -380,21 +382,21 @@ func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 	// Read file data
 	data, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	// Validate image
 	_, err = utils.ValidateImage(data)
 	if err != nil {
-		http.Error(w, "Invalid image: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	// Process image (resize, optimize)
 	processedData, width, height, mimeType, err := utils.ProcessImage(data)
 	if err != nil {
-		http.Error(w, "Failed to process image: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -411,14 +413,14 @@ func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 
 	uploadStream, err := bucket.OpenUploadStream(filename)
 	if err != nil {
-		http.Error(w, "Failed to open upload stream: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	defer uploadStream.Close()
 
 	_, err = uploadStream.Write(processedData)
 	if err != nil {
-		http.Error(w, "Failed to write file to GridFS: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -444,7 +446,7 @@ func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 	mediaCollection := db.GetCollection("media")
 	_, err = mediaCollection.InsertOne(context.Background(), mediaFile)
 	if err != nil {
-		http.Error(w, "Failed to save media metadata: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -472,7 +474,7 @@ func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 	screensaverCollection := db.GetCollection("screensavers")
 	_, err = screensaverCollection.InsertOne(context.Background(), screensaver)
 	if err != nil {
-		http.Error(w, "Failed to save screensaver: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -535,7 +537,7 @@ func DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
 	// Delete screensaver
 	_, err = screensaverCollection.DeleteOne(context.Background(), bson.M{"_id": objectID})
 	if err != nil {
-		http.Error(w, "Failed to delete screensaver: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 

@@ -54,16 +54,17 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 // URL: /tracks
 func CreateTrack(w http.ResponseWriter, r *http.Request) {
 	// Parse multipart form
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
 	err := r.ParseMultipartForm(32 << 20) // 32MB max
 	if err != nil {
-		http.Error(w, "Failed to parse multipart form: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	// Get the file
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to get file from form: "+err.Error(), http.StatusBadRequest)
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
@@ -77,7 +78,7 @@ func CreateTrack(w http.ResponseWriter, r *http.Request) {
 	// Read file data
 	data, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -108,14 +109,14 @@ func CreateTrack(w http.ResponseWriter, r *http.Request) {
 
 	uploadStream, err := bucket.OpenUploadStream(filename)
 	if err != nil {
-		http.Error(w, "Failed to open upload stream: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	defer uploadStream.Close()
 
 	_, err = uploadStream.Write(data)
 	if err != nil {
-		http.Error(w, "Failed to write file to GridFS: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -141,7 +142,7 @@ func CreateTrack(w http.ResponseWriter, r *http.Request) {
 	mediaCollection := db.GetCollection("media")
 	_, err = mediaCollection.InsertOne(context.Background(), mediaFile)
 	if err != nil {
-		http.Error(w, "Failed to save media metadata: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -167,7 +168,7 @@ func CreateTrack(w http.ResponseWriter, r *http.Request) {
 	trackCollection := db.GetCollection("tracks")
 	_, err = trackCollection.InsertOne(context.Background(), track)
 	if err != nil {
-		http.Error(w, "Failed to save track: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -230,7 +231,7 @@ func DeleteTrack(w http.ResponseWriter, r *http.Request) {
 	// Delete track
 	_, err = trackCollection.DeleteOne(context.Background(), bson.M{"_id": objectID})
 	if err != nil {
-		http.Error(w, "Failed to delete track: "+err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 

@@ -3,8 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -56,20 +54,14 @@ type EventWithStatus struct {
 	DynamicCards      []models.DynamicCard       `json:"dynamicCards,omitempty"`
 }
 
-// Generate a 6-digit random number string
-func generateID() string {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return fmt.Sprintf("%06d", r.Intn(1000000))
-}
-
 func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var event models.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&event); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	event.ID = generateID()
+	event.ID = utils.NewID()
 	event.IsActive = false // Default to inactive
 	event.CreatedAt = time.Now()
 
@@ -83,7 +75,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	event.Modules = []models.Module{
 		{
-			ID:       generateID(),
+			ID:       utils.NewID(),
 			Type:     "form",
 			Name:     "Welcome",
 			IsActive: true,
@@ -108,7 +100,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("events")
 	_, err := collection.InsertOne(context.Background(), event)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	eventsListCache.Delete(eventsListCacheKey)
@@ -129,20 +121,20 @@ func GetEvents(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("events")
 	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(context.Background())
 
 	events := []models.Event{}
 	if err := cursor.All(context.Background(), &events); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	data, err := json.Marshal(events)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	eventsListCache.Set(eventsListCacheKey, data)
@@ -248,8 +240,8 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var event models.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&event); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -263,7 +255,7 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(id)
@@ -282,7 +274,7 @@ func DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("events")
 	_, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(id)
@@ -295,8 +287,8 @@ func ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Pin string `json:"pin"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -332,15 +324,15 @@ func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		IsActive bool `json:"isActive"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	collection := db.GetCollection("events")
 	_, err := collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": bson.M{"isActive": input.IsActive}})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(id)
@@ -366,14 +358,14 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 		Name string         `json:"name"`
 		Data map[string]any `json:"data"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	// Create the module with proper type conversion
 	module := models.Module{
-		ID:       generateID(),
+		ID:       utils.NewID(),
 		Type:     models.ModuleType(input.Type),
 		Name:     input.Name,
 		IsActive: false,
@@ -396,7 +388,7 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(id)
@@ -437,8 +429,8 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		IsActive bool `json:"isActive"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -448,7 +440,7 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	if result.MatchedCount == 0 {
@@ -463,8 +455,8 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 
 func SaveTemplate(w http.ResponseWriter, r *http.Request) {
 	var template models.Template
-	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&template); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -473,13 +465,13 @@ func SaveTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	template.ID = generateID() // Simple ID, or use UUID in real app
+	template.ID = utils.NewID()
 	template.CreatedAt = time.Now()
 
 	collection := db.GetCollection("templates")
 	_, err := collection.InsertOne(context.Background(), template)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -492,14 +484,14 @@ func GetTemplates(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("templates")
 	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(context.Background())
 
 	templates := make([]models.Template, 0)
 	if err := cursor.All(context.Background(), &templates); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -537,8 +529,8 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"` // Final configuration data
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -553,7 +545,7 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	if result.MatchedCount == 0 {
@@ -593,8 +585,8 @@ func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 	moduleID := parts[3]
 
 	var response models.Response
-	if err := json.NewDecoder(r.Body).Decode(&response); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&response); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -605,7 +597,7 @@ func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("responses")
 	_, err := collection.InsertOne(context.Background(), response)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -628,7 +620,7 @@ func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("templates")
 	_, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -647,8 +639,8 @@ func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 	id := path[len(prefix):]
 
 	var template models.Template
-	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&template); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -665,7 +657,7 @@ func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -721,7 +713,7 @@ func DeleteModule(w http.ResponseWriter, r *http.Request) {
 
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -772,8 +764,8 @@ func UpdateModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -790,7 +782,7 @@ func UpdateModule(w http.ResponseWriter, r *http.Request) {
 		update := bson.M{"$set": updateSet}
 		_, err := collection.UpdateOne(context.Background(), filter, update)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			return
 		}
 		invalidateEventCache(eventID)
@@ -903,7 +895,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 		cursor, err := collection.Find(context.Background(), filter)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			utils.DebugLog("GetModuleResponses: Error finding team results: %v", err)
 			return
 		}
@@ -911,7 +903,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 		var results []models.TeamResult
 		if err := cursor.All(context.Background(), &results); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			utils.DebugLog("GetModuleResponses: Error decoding team results: %v", err)
 			return
 		}
@@ -926,7 +918,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 		cursor, err := collection.Find(context.Background(), filter)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			utils.DebugLog("GetModuleResponses: Error finding quiz results: %v", err)
 			return
 		}
@@ -934,7 +926,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 		var results []models.QuizResult
 		if err := cursor.All(context.Background(), &results); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			utils.DebugLog("GetModuleResponses: Error decoding quiz results: %v", err)
 			return
 		}
@@ -950,7 +942,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 		cursor, err := collection.Find(context.Background(), filter)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			utils.DebugLog("GetModuleResponses: Error finding responses: %v", err)
 			return
 		}
@@ -958,7 +950,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 
 		var responses []models.Response
 		if err := cursor.All(context.Background(), &responses); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeRequestError(w, err, http.StatusInternalServerError)
 			utils.DebugLog("GetModuleResponses: Error decoding responses: %v", err)
 			return
 		}
@@ -999,8 +991,8 @@ func UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -1020,7 +1012,7 @@ func UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		// Try ObjectID if string failed? Or assume user passed correct ID.
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		utils.DebugLog("[UnifiedViewUpdate] Error updating response %s: %v", responseID, err)
 		return
 	}
@@ -1068,8 +1060,8 @@ func UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Score int `json:"score"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -1082,7 +1074,7 @@ func UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		utils.DebugLog("[UnifiedViewUpdate] Error updating quiz score for user %s: %v", userID, err)
 		return
 	}
@@ -1130,8 +1122,8 @@ func UpdateScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 	id = strings.TrimSuffix(id, "/screensaver")
 
 	var input models.ScreensaverConfig
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -1141,7 +1133,7 @@ func UpdateScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(id)
@@ -1175,13 +1167,13 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 		// Initialize default slides
 		slides = []models.Slide{
 			{
-				ID:              generateID(),
+				ID:              utils.NewID(),
 				Type:            "welcome",
 				Name:            "Welcome",
 				BackgroundColor: "#1A1A1D",
 				Elements: []models.CanvasElement{
 					{
-						ID:      generateID(),
+						ID:      utils.NewID(),
 						Type:    "qr",
 						X:       15,
 						Y:       25,
@@ -1190,7 +1182,7 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 						Content: joinUrl,
 					},
 					{
-						ID:        generateID(),
+						ID:        utils.NewID(),
 						Type:      "text",
 						X:         45,
 						Y:         25,
@@ -1202,7 +1194,7 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 						TextAlign: "left",
 					},
 					{
-						ID:        generateID(),
+						ID:        utils.NewID(),
 						Type:      "text",
 						X:         45,
 						Y:         50,
@@ -1214,7 +1206,7 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 						TextAlign: "left",
 					},
 					{
-						ID:        generateID(),
+						ID:        utils.NewID(),
 						Type:      "text",
 						X:         45,
 						Y:         65,
@@ -1227,7 +1219,7 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			{ID: generateID(), Type: "screensaver", Name: "Screensaver", BackgroundColor: "#000000"},
+			{ID: utils.NewID(), Type: "screensaver", Name: "Screensaver", BackgroundColor: "#000000"},
 		}
 
 		// Save them back immediately
@@ -1251,14 +1243,14 @@ func SaveSlides(w http.ResponseWriter, r *http.Request) {
 	eventID := parts[2]
 
 	var input []models.Slide
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	for i := range input {
 		if input[i].ID == "" {
-			input[i].ID = generateID()
+			input[i].ID = utils.NewID()
 		}
 	}
 
@@ -1267,7 +1259,7 @@ func SaveSlides(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(context.Background(), bson.M{"_id": eventID}, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(eventID)

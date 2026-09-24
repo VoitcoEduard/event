@@ -49,7 +49,7 @@ func GetTeams(w http.ResponseWriter, r *http.Request) {
 
 	teams, err := getTeamRepo().GetByEventID(r.Context(), eventID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -78,8 +78,8 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 		Name  string `json:"name"`
 		Color string `json:"color"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -101,7 +101,7 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := getTeamRepo().Create(r.Context(), team); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -130,8 +130,8 @@ func UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		Name  string `json:"name"`
 		Color string `json:"color"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -149,7 +149,7 @@ func UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := getTeamRepo().Update(r.Context(), team); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -180,7 +180,7 @@ func DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := getTeamRepo().Delete(r.Context(), teamID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -209,8 +209,8 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 		ParticipantID string `json:"participantId"`
 		TeamID        string `json:"teamId"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -231,7 +231,7 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 
 	result, err := collection.UpdateOne(r.Context(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -271,7 +271,7 @@ func AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
 
 	teams, err := getTeamRepo().GetByEventID(r.Context(), eventID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -283,14 +283,14 @@ func AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("participants")
 	cursor, err := collection.Find(r.Context(), bson.M{"eventId": eventID, "teamId": ""})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(r.Context())
 
 	var unassigned []models.Participant
 	if err := cursor.All(r.Context(), &unassigned); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 

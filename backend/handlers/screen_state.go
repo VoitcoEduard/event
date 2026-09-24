@@ -95,8 +95,8 @@ func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	id := path[len(prefix) : len(path)-len(suffix)]
 
 	var input models.ScreenState
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -110,7 +110,7 @@ func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(context.Background(), bson.M{"_id": id}, update, opts)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(id)

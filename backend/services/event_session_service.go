@@ -7,6 +7,7 @@ import (
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/utils"
 )
 
 type EventSessionService struct {
@@ -25,7 +26,7 @@ func (s *EventSessionService) CreateSession(ctx context.Context, eventID string,
 	}
 
 	session := &models.EventSession{
-		ID:             generateID(), // Reusing generateID() from participant_service.go
+		ID:             utils.NewID(),
 		EventID:        eventID,
 		Status:         models.EventSessionStatusWaiting,
 		ModuleOrder:    moduleOrder,

@@ -38,8 +38,8 @@ func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 	moduleID := parts[4]
 
 	var questions []models.QuizQuestion
-	if err := json.NewDecoder(r.Body).Decode(&questions); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&questions); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -60,7 +60,7 @@ func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateEventCache(eventID)

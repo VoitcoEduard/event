@@ -3,11 +3,12 @@ package services
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/utils"
 )
 
 // =============================================================================
@@ -80,7 +81,7 @@ type TestableParticipantService struct {
 
 func (s *TestableParticipantService) JoinEvent(ctx context.Context, eventID, joinKey, displayName string, profile map[string]any) (*models.Participant, error) {
 	participant := &models.Participant{
-		ID:             generateID(),
+		ID:             utils.NewID(),
 		EventID:        eventID,
 		JoinKey:        joinKey,
 		DisplayName:    displayName,
@@ -166,32 +167,24 @@ func TestNormalizeName(t *testing.T) {
 }
 
 // =============================================================================
-// generateID tests
+// ID generation tests
 // =============================================================================
 
-func TestGenerateID(t *testing.T) {
-	t.Run("returns 6 digit string", func(t *testing.T) {
-		id := generateID()
-		if len(id) != 6 {
-			t.Errorf("generateID() returned %d digits, want 6", len(id))
-		}
-	})
-
-	t.Run("returns only digits", func(t *testing.T) {
-		id := generateID()
-		for _, c := range id {
-			if c < '0' || c > '9' {
-				t.Errorf("generateID() contains non-digit %c", c)
-			}
+func TestNewID(t *testing.T) {
+	t.Run("returns UUID", func(t *testing.T) {
+		id := utils.NewID()
+		parsed, err := uuid.Parse(id)
+		if err != nil || parsed.Version() != 4 {
+			t.Errorf("NewID() = %q, want version 4 UUID", id)
 		}
 	})
 
 	t.Run("generates different IDs", func(t *testing.T) {
 		ids := make(map[string]bool)
 		for i := 0; i < 100; i++ {
-			id := generateID()
+			id := utils.NewID()
 			if ids[id] {
-				t.Logf("Warning: duplicate ID generated: %s", id)
+				t.Fatalf("duplicate ID generated: %s", id)
 			}
 			ids[id] = true
 		}
@@ -228,8 +221,8 @@ func TestJoinEvent(t *testing.T) {
 				if p == nil {
 					t.Fatal("expected participant, got nil")
 				}
-				if len(p.ID) != 6 {
-					t.Errorf("ID length = %d, want 6", len(p.ID))
+				if _, parseErr := uuid.Parse(p.ID); parseErr != nil {
+					t.Errorf("ID = %q, want UUID", p.ID)
 				}
 				if p.EventID != "event-123" {
 					t.Errorf("EventID = %q, want %q", p.EventID, "event-123")
@@ -473,11 +466,7 @@ func TestJoinEvent_And_GetParticipantsByEvent(t *testing.T) {
 	// Verify IDs are valid and unique
 	ids := make(map[string]bool)
 	for _, p := range participants {
-		if !strings.HasPrefix(p.ID, "0") && !strings.HasPrefix(p.ID, "1") &&
-			!strings.HasPrefix(p.ID, "2") && !strings.HasPrefix(p.ID, "3") &&
-			!strings.HasPrefix(p.ID, "4") && !strings.HasPrefix(p.ID, "5") &&
-			!strings.HasPrefix(p.ID, "6") && !strings.HasPrefix(p.ID, "7") &&
-			!strings.HasPrefix(p.ID, "8") && !strings.HasPrefix(p.ID, "9") {
+		if _, err := uuid.Parse(p.ID); err != nil {
 			t.Errorf("invalid ID format: %s", p.ID)
 		}
 		if ids[p.ID] {

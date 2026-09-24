@@ -36,15 +36,15 @@ func JoinEvent(w http.ResponseWriter, r *http.Request) {
 		Profile     map[string]any `json:"profile"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	svc := getParticipantService()
 	participant, err := svc.JoinEvent(r.Context(), eventID, input.JoinKey, input.DisplayName, input.Profile)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -66,7 +66,7 @@ func GetParticipants(w http.ResponseWriter, r *http.Request) {
 	svc := getParticipantService()
 	participants, err := svc.GetParticipantsByEvent(r.Context(), eventID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -89,8 +89,8 @@ func UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
 		DisplayName string `json:"displayName"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -100,7 +100,7 @@ func UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
 
 	_, err := collection.UpdateOne(r.Context(), filter, update)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 	invalidateParticipantStatus(eventID, userID)

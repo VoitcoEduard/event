@@ -32,15 +32,15 @@ func CreateSession(w http.ResponseWriter, r *http.Request) {
 		ModuleOrder []string `json:"moduleOrder"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	svc := getEventSessionService()
 	session, err := svc.CreateSession(r.Context(), eventID, input.ModuleOrder)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -84,14 +84,14 @@ func UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
 		Status models.EventSessionStatus `json:"status"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	svc := getEventSessionService()
 	if err := svc.UpdateSessionStatus(r.Context(), sessionID, input.Status); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -113,14 +113,14 @@ func AdvanceSessionModule(w http.ResponseWriter, r *http.Request) {
 		ActiveModuleID string `json:"activeModuleId"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&input); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	svc := getEventSessionService()
 	if err := svc.AdvanceSessionModule(r.Context(), sessionID, input.ActiveModuleID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 

@@ -2,13 +2,12 @@ package services
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/utils"
 )
 
 type ParticipantService struct {
@@ -21,18 +20,13 @@ func NewParticipantService() *ParticipantService {
 	}
 }
 
-func generateID() string {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return fmt.Sprintf("%06d", r.Intn(1000000))
-}
-
 func normalizeName(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
 
 func (s *ParticipantService) JoinEvent(ctx context.Context, eventID, joinKey, displayName string, profile map[string]any) (*models.Participant, error) {
 	participant := &models.Participant{
-		ID:             generateID(),
+		ID:             utils.NewID(),
 		EventID:        eventID,
 		JoinKey:        joinKey,
 		DisplayName:    displayName,

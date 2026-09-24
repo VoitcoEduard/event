@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/utils"
 )
 
 // =============================================================================
@@ -102,7 +104,7 @@ func (s *TestableEventSessionService) CreateSession(ctx context.Context, eventID
 	}
 
 	session := &models.EventSession{
-		ID:             generateID(),
+		ID:             utils.NewID(),
 		EventID:        eventID,
 		Status:         models.EventSessionStatusWaiting,
 		ModuleOrder:    moduleOrder,
@@ -179,8 +181,8 @@ func TestCreateSession(t *testing.T) {
 				if s == nil {
 					t.Fatal("expected session, got nil")
 				}
-				if len(s.ID) != 6 {
-					t.Errorf("ID length = %d, want 6", len(s.ID))
+				if _, parseErr := uuid.Parse(s.ID); parseErr != nil {
+					t.Errorf("ID = %q, want UUID", s.ID)
 				}
 				if s.EventID != "event-123" {
 					t.Errorf("EventID = %q, want %q", s.EventID, "event-123")
