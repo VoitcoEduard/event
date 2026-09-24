@@ -51,13 +51,17 @@ FROM --platform=linux/amd64 alpine:latest
 # Install libwebp-tools (cwebp) for WebP image processing
 RUN apk add --no-cache libwebp-tools ca-certificates
 
-WORKDIR /root/
+RUN addgroup -S app && adduser -S -G app app
+
+WORKDIR /app
 
 # Copy Go binary
-COPY --from=backend-builder /app/backend/server ./server
+COPY --chown=app:app --from=backend-builder /app/backend/server ./server
 
 # Copy built Vue app into ./dist  (Go serves this on "/")
-COPY --from=frontend-builder /app/frontend/dist ./dist
+COPY --chown=app:app --from=frontend-builder /app/frontend/dist ./dist
+
+USER app
 
 EXPOSE 8080
 

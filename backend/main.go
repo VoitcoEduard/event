@@ -3,10 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/user/go-expo-sample/backend/auth"
@@ -21,16 +25,24 @@ type Response struct {
 }
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	if err := run(); err != nil {
+		slog.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	utils.DebugLog("Starting server initialization...")
 	if len(os.Args) > 1 {
 		if err := runAuthCommand(os.Args[1:]); err != nil {
-			log.Fatal(err)
+			return err
 		}
-		return
+		return nil
 	}
 	config, err := auth.ConfigFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Connect to MongoDB
@@ -40,18 +52,17 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := store.EnsureIndexes(ctx); err != nil {
-		log.Fatalf("authentication indexes: %v", err)
+		return fmt.Errorf("authentication indexes: %w", err)
 	}
 	authService, err := auth.NewService(ctx, config, store)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	handlers.SetAuthService(authService)
 
 	// Initialize QuizHub
 	quizHub := hub.NewQuizHub()
 	quizHub.SetAuthService(authService)
-	go quizHub.Run()
 
 	// Inject QuizHub into handlers
 	handlers.SetQuizHub(quizHub)
@@ -95,11 +106,38 @@ func main() {
 		}
 	}
 
-	port := ":8080"
-	utils.DebugLog("Server listening on %s", port)
-	if err := http.ListenAndServe(port, appHandler(mux, spaHandler)); err != nil {
-		utils.DebugLog("Server failed: %v", err) // Use utils.DebugLog here
+	server := &http.Server{
+		Addr:              ":8080",
+		Handler:           appHandler(mux, spaHandler),
+		ReadHeaderTimeout: 10 * time.Second,
 	}
+	serverErrors := make(chan error, 1)
+	go func() { serverErrors <- server.ListenAndServe() }()
+	slog.Info("server listening", "address", server.Addr)
+
+	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	var serveErr error
+	select {
+	case err := <-serverErrors:
+		serveErr = err
+	case <-signalCtx.Done():
+	}
+	stop()
+	slog.Info("shutting down")
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancelShutdown()
+	if serveErr == nil {
+		serveErr = server.Shutdown(shutdownCtx)
+	}
+	quizHub.Shutdown()
+	if disconnectErr := db.Client.Disconnect(shutdownCtx); disconnectErr != nil {
+		slog.Error("database disconnect failed", "error", disconnectErr)
+	}
+	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+		return serveErr
+	}
+	return nil
 }
 
 func appHandler(api, spa http.Handler) http.Handler {

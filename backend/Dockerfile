@@ -25,9 +25,13 @@ FROM --platform=linux/amd64 alpine:latest
 
 RUN apk add --no-cache ca-certificates libwebp-tools
 
-WORKDIR /root/
+RUN addgroup -S app && adduser -S -G app app
 
-COPY --from=builder /app/main .
+WORKDIR /app
+
+COPY --chown=app:app --from=builder /app/main .
+
+USER app
 
 EXPOSE 8080
 

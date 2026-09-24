@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
 func writeRequestError(w http.ResponseWriter, err error, status int) {
-	log.Printf("request failed (%d): %v", status, err)
+	slog.Error("request failed", "status", status, "error", err)
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
 		http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)

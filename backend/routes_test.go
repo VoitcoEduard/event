@@ -36,3 +36,25 @@ func TestRoutePatterns(t *testing.T) {
 		t.Fatalf("unsupported method status = %d, want 405", w.Code)
 	}
 }
+
+func TestAppHandlerKeepsAPIErrorsOutOfSPA(t *testing.T) {
+	api := http.NewServeMux()
+	api.HandleFunc("GET /events", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	spa := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	app := appHandler(api, spa)
+	for _, tt := range []struct {
+		method, path string
+		want         int
+	}{
+		{http.MethodGet, "/events", http.StatusNoContent},
+		{http.MethodPost, "/events", http.StatusMethodNotAllowed},
+		{http.MethodGet, "/events/missing", http.StatusNotFound},
+		{http.MethodGet, "/admin", http.StatusOK},
+	} {
+		w := httptest.NewRecorder()
+		app.ServeHTTP(w, httptest.NewRequest(tt.method, tt.path, nil))
+		if w.Code != tt.want {
+			t.Errorf("%s %s: status = %d, want %d", tt.method, tt.path, w.Code, tt.want)
+		}
+	}
+}

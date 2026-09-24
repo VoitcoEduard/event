@@ -113,6 +113,15 @@ func (h *QuizHub) Run() {
 	// We switched to Mutex based approach for easier state management
 }
 
+// Shutdown closes upgraded connections, which http.Server.Shutdown does not own.
+func (h *QuizHub) Shutdown() {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for client := range h.clients {
+		_ = client.conn.Close()
+	}
+}
+
 func (h *QuizHub) Register(client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

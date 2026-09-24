@@ -2,8 +2,8 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -34,19 +34,19 @@ func ConnectDB() {
 
 		client, err := mongo.Connect(ctx, clientOptions)
 		if err != nil {
-			fmt.Printf("Failed to create client (attempt %d/5): %v\n", i+1, err)
+			slog.Warn("database client creation failed", "attempt", i+1, "error", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
 		// Ping the primary
 		if err := client.Ping(ctx, nil); err != nil {
-			fmt.Printf("Failed to ping DB (attempt %d/5): %v\n", i+1, err)
+			slog.Warn("database ping failed", "attempt", i+1, "error", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
-		fmt.Println("Connected to MongoDB!")
+		slog.Info("connected to database")
 		Client = client
 		EnsureIndexes()
 		return
@@ -139,7 +139,7 @@ func EnsureIndexes() {
 		coll := GetCollection(collName)
 		_, err := coll.Indexes().CreateMany(ctx, modelsList)
 		if err != nil {
-			fmt.Printf("Warning: failed to create indexes on %s: %v\n", collName, err)
+			slog.Warn("failed to create indexes", "collection", collName, "error", err)
 		}
 	}
 	// Earlier releases created a non-unique pin_1 index. Replace it so two
@@ -153,5 +153,5 @@ func EnsureIndexes() {
 	if err != nil {
 		log.Fatalf("cannot ensure unique event PIN index: %v", err)
 	}
-	fmt.Println("MongoDB indexes successfully ensured.")
+	slog.Info("database indexes ensured")
 }
