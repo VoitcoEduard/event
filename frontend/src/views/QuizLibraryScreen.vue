@@ -244,7 +244,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { API_BASE_URL, getAuthHeaders } from '../utils'
+import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from '../components/QuizEditor.vue'
 import FormEditor from '../components/FormEditor.vue'
@@ -286,7 +286,7 @@ const fetchTemplates = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/templates`)
     if (response.ok) {
-        const data = await response.json()
+        const data = normalizeTemplates(await response.json())
         // Ensure legacy templates have a type (default to quiz if missing, based on data structure)
         templates.value = data.map(t => ({
             ...t,
@@ -509,6 +509,12 @@ const saveTemplate = async () => {
     })
 
     if (response.ok) {
+      const result = await response.json()
+      const saved = method === 'POST' ? response.status === 201 && !!result?.id : result?.message === 'Template updated'
+      if (!saved) {
+        error('Failed to save template')
+        return
+      }
       success('Template saved successfully')
       showEditor.value = false
       fetchTemplates()

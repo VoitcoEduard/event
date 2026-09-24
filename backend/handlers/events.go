@@ -497,7 +497,7 @@ func GetTemplates(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cursor.Close(context.Background())
 
-	var templates []models.Template
+	templates := make([]models.Template, 0)
 	if err := cursor.All(context.Background(), &templates); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

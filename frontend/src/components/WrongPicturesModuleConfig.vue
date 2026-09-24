@@ -158,7 +158,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { API_BASE_URL, getAuthHeaders } from '../utils'
+import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
 import { getTracks } from '../services/media'
 import ImageUploader from './ImageUploader.vue'
@@ -189,7 +189,7 @@ const fetchTemplates = async () => {
     try {
         const res = await fetch(`${API_BASE_URL}/templates`)
         if(res.ok) {
-            const data = await res.json()
+            const data = normalizeTemplates(await res.json())
             templates.value = data.filter(t => t.moduleType === 'wrong_pictures')
         }
     } catch(e) {

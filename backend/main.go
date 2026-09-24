@@ -407,6 +407,29 @@ func main() {
 		}
 	})
 
+	// Reusable templates for the quiz, form, and slide libraries.
+	http.HandleFunc("/templates", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetTemplates(w, r)
+		case http.MethodPost:
+			handlers.VerifyAuth(handlers.SaveTemplate)(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/templates/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			handlers.VerifyAuth(handlers.UpdateTemplate)(w, r)
+		case http.MethodDelete:
+			handlers.VerifyAuth(handlers.DeleteTemplate)(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Media upload route
 	http.HandleFunc("/media/upload", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w, r)

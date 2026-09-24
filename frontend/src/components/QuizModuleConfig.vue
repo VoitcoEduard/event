@@ -106,7 +106,7 @@
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { API_BASE_URL, getAuthHeaders } from '../utils'
+import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from './QuizEditor.vue'
 import { getTracks } from '../services/media'
@@ -138,7 +138,7 @@ const fetchTemplates = async () => {
     try {
         const res = await fetch(`${API_BASE_URL}/templates`)
         if(res.ok) {
-            const data = await res.json()
+            const data = normalizeTemplates(await res.json())
             templates.value = data.filter(t => t.moduleType === 'quiz' || (!t.moduleType && t.data?.questions))
         }
     } catch(e) {

@@ -101,7 +101,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { API_BASE_URL, getAuthHeaders } from '../utils'
+import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
 import FormEditor from './FormEditor.vue'
 
@@ -184,7 +184,7 @@ const fetchTemplates = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/templates`)
     if (response.ok) {
-      const data = await response.json()
+      const data = normalizeTemplates(await response.json())
       // Filter for form templates
       templates.value = data.filter(t => t.moduleType === 'form' || (!t.moduleType && !t.data?.questions))
     }
