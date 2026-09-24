@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
-	"time"
 )
 
 func CreateEvent(w http.ResponseWriter, r *http.Request) {
@@ -18,45 +18,7 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event.ID = utils.NewID()
-	event.IsActive = false // Default to inactive
-	event.CreatedAt = time.Now()
-
-	welcomeLabel := "What is your name?"
-	switch event.Language {
-	case "ru":
-		welcomeLabel = "Как вас зовут?"
-	case "ro":
-		welcomeLabel = "Cum te numești?"
-	}
-
-	event.Modules = []models.Module{
-		{
-			ID:       utils.NewID(),
-			Type:     "form",
-			Name:     "Welcome",
-			IsActive: true,
-			Data: map[string]any{
-				"mandatoryOnEntry":    true,
-				"hideAfterCompletion": true,
-				"timeline": []map[string]any{
-					{
-						"id":   "step_welcome_name",
-						"type": "field",
-						"data": map[string]any{
-							"label":        welcomeLabel,
-							"fieldType":    "text",
-							"compactLabel": "name",
-						},
-					},
-				},
-			},
-		},
-	}
-
-	collection := db.GetCollection("events")
-	_, err := collection.InsertOne(context.Background(), event)
-	if err != nil {
+	if err := services.NewEventService().Create(r.Context(), &event); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -75,16 +37,8 @@ func GetEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("events")
-	cursor, err := collection.Find(context.Background(), bson.M{})
+	events, err := services.NewEventService().List(r.Context())
 	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.Background())
-
-	events := []models.Event{}
-	if err := cursor.All(context.Background(), &events); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -120,16 +74,14 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("events")
-	var event models.Event
-	err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&event)
+	event, err := services.NewEventService().Get(r.Context(), id)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
 	}
 
 	response := EventWithStatus{
-		Event: event,
+		Event: *event,
 	}
 
 	if userID != "" {
@@ -202,16 +154,7 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("events")
-	filter := bson.M{"_id": id}
-	update := bson.M{"$set": bson.M{
-		"name":        event.Name,
-		"description": event.Description,
-		"language":    event.Language,
-	}}
-
-	_, err := collection.UpdateOne(context.Background(), filter, update)
-	if err != nil {
+	if err := services.NewEventService().Update(r.Context(), id, &event); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -228,9 +171,7 @@ func DeleteEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("events")
-	_, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
-	if err != nil {
+	if err := services.NewEventService().Delete(r.Context(), id); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -249,9 +190,7 @@ func ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("events")
-	var event models.Event
-	err := collection.FindOne(context.Background(), bson.M{"_id": input.Pin}).Decode(&event)
+	event, err := services.NewEventService().FindByPIN(r.Context(), input.Pin)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
@@ -286,9 +225,7 @@ func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("events")
-	_, err := collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": bson.M{"isActive": input.IsActive}})
-	if err != nil {
+	if err := services.NewEventService().SetStatus(r.Context(), id, input.IsActive); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}

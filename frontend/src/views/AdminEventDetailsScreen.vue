@@ -59,7 +59,7 @@
           <div class="info-group">
             <p class="label">{{ $t('admin.details.pin_code') }}</p>
             <div class="pin-display">
-              <span class="pin-text">{{ currentEvent?.id }}</span>
+              <span class="pin-text">{{ currentEvent?.pin || currentEvent?.id }}</span>
             </div>
           </div>
 
@@ -253,7 +253,7 @@ currentEvent.value = storedEvent ? JSON.parse(storedEvent) : null
 
 const qrCodeValue = computed(() => {
   return currentEvent.value 
-    ? `${window.location.origin}/?pin=${currentEvent.value.id}`
+    ? `${window.location.origin}/?pin=${currentEvent.value.pin || currentEvent.value.id}`
     : ''
 })
 
@@ -375,7 +375,7 @@ const toggleStatus = async () => {
 }
 
 const getShareLink = () => {
-  return `${window.location.origin}/?pin=${currentEvent.value.id}`
+  return `${window.location.origin}/?pin=${currentEvent.value.pin || currentEvent.value.id}`
 }
 
 const copyLink = () => {

@@ -77,7 +77,6 @@ func EnsureIndexes() {
 
 	indexes := map[string][]mongo.IndexModel{
 		"events": {
-			{Keys: bson.D{{Key: "pin", Value: 1}}},
 			{Keys: bson.D{{Key: "modules.id", Value: 1}}},
 			{Keys: bson.D{{Key: "createdAt", Value: -1}}},
 		},
@@ -142,6 +141,17 @@ func EnsureIndexes() {
 		if err != nil {
 			fmt.Printf("Warning: failed to create indexes on %s: %v\n", collName, err)
 		}
+	}
+	// Earlier releases created a non-unique pin_1 index. Replace it so two
+	// concurrently created events cannot expose the same join code.
+	events := GetCollection("events")
+	_, _ = events.Indexes().DropOne(ctx, "pin_1")
+	_, err := events.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "pin", Value: 1}},
+		Options: options.Index().SetName("pin_unique").SetUnique(true).SetSparse(true),
+	})
+	if err != nil {
+		log.Fatalf("cannot ensure unique event PIN index: %v", err)
 	}
 	fmt.Println("MongoDB indexes successfully ensured.")
 }

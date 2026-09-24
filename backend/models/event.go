@@ -106,6 +106,7 @@ type EventScoringPolicy struct {
 
 type Event struct {
 	ID                string              `json:"id" bson:"_id"`
+	Pin               string              `json:"pin,omitempty" bson:"pin,omitempty"`
 	Name              string              `json:"name" bson:"name"`
 	Description       string              `json:"description" bson:"description"`
 	Language          string              `json:"language" bson:"language"`

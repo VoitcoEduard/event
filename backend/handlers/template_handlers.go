@@ -1,14 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
-	"github.com/user/go-expo-sample/backend/db"
-	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/utils"
-	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
-	"time"
+
+	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/services"
 )
 
 func SaveTemplate(w http.ResponseWriter, r *http.Request) {
@@ -23,11 +20,7 @@ func SaveTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	template.ID = utils.NewID()
-	template.CreatedAt = time.Now()
-
-	collection := db.GetCollection("templates")
-	_, err := collection.InsertOne(context.Background(), template)
+	err := services.NewTemplateService().Create(r.Context(), &template)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -39,16 +32,8 @@ func SaveTemplate(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTemplates(w http.ResponseWriter, r *http.Request) {
-	collection := db.GetCollection("templates")
-	cursor, err := collection.Find(context.Background(), bson.M{})
+	templates, err := services.NewTemplateService().List(r.Context())
 	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.Background())
-
-	templates := make([]models.Template, 0)
-	if err := cursor.All(context.Background(), &templates); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -69,8 +54,7 @@ func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 	id := path[len(prefix):]
 
-	collection := db.GetCollection("templates")
-	_, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
+	err := services.NewTemplateService().Delete(r.Context(), id)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -96,18 +80,7 @@ func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("templates")
-	filter := bson.M{"_id": id}
-	update := bson.M{
-		"$set": bson.M{
-			"name":        template.Name,
-			"description": template.Description,
-			"data":        template.Data,
-			"moduleType":  template.ModuleType,
-		},
-	}
-
-	_, err := collection.UpdateOne(context.Background(), filter, update)
+	err := services.NewTemplateService().Update(r.Context(), id, &template)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return

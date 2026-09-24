@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -21,11 +21,6 @@ func getTeamRepo() *database.TeamRepository {
 		teamRepo = database.NewTeamRepository()
 	}
 	return teamRepo
-}
-
-func generateTeamID() string {
-	r := time.Now().UnixNano() % 1000000
-	return fmt.Sprintf("%06d", r)
 }
 
 func enableCors(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +88,7 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	team := &models.Team{
-		ID:        generateTeamID(),
+		ID:        utils.NewID(),
 		EventID:   eventID,
 		Name:      input.Name,
 		Color:     input.Color,
