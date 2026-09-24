@@ -1,0 +1,297 @@
+package hub
+
+import (
+	"context"
+	"encoding/json"
+	"github.com/user/go-expo-sample/backend/db"
+	"github.com/user/go-expo-sample/backend/models"
+	"go.mongodb.org/mongo-driver/bson"
+	"log"
+	"time"
+)
+
+func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
+	client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
+	// Payload: { "moduleId": "..." }
+	data, ok := msg.Payload.(map[string]interface{})
+	if !ok {
+		return
+	}
+	moduleID, _ := data["moduleId"].(string)
+
+	DebugLog("host:join received for module: %s", moduleID)
+
+	client.ModuleID = moduleID
+	client.IsHost = true
+
+	// Ensure session exists
+	if _, exists := h.sessions[moduleID]; !exists {
+		DebugLog("host:join: Creating new session for module: %s", moduleID)
+		h.sessions[moduleID] = &models.QuizSession{
+			ModuleID:      moduleID,
+			State:         "lobby",
+			Players:       make(map[string]*models.Player),
+			PlayerSignals: []models.PlayerSignal{},
+			AnswerCounts:  make(map[int]int),
+		}
+	} else {
+		DebugLog("host:join: Session exists for module: %s, state: %s, players: %d", moduleID, h.sessions[moduleID].State, len(h.sessions[moduleID].Players))
+	}
+
+	// Send current state to host via cmd:state (new protocol)
+	jsonMsg, _ := json.Marshal(ServerMessage{
+		Type: "cmd:state",
+		Payload: map[string]interface{}{
+			"state":        h.sessions[moduleID].State,
+			"currentIndex": h.sessions[moduleID].CurrentIndex,
+		},
+	})
+	client.send <- jsonMsg
+
+	// Also send full session data via state:update (for player list)
+	jsonMsg2, _ := json.Marshal(ServerMessage{
+		Type:    "state:update",
+		Payload: h.sessions[moduleID],
+	})
+	client.send <- jsonMsg2
+	DebugLog("host:join: Sent state:update to host for module: %s", moduleID)
+}
+
+func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
+	if !client.IsHost {
+		return
+	}
+	// Load questions from DB (outside lock ideally, but here we are in lock)
+	h.mu.Unlock()
+
+	collection := db.GetCollection("events")
+	var event models.Event
+	var questions []models.QuizQuestion
+
+	// Find event containing this module
+	err := collection.FindOne(context.TODO(), bson.M{"modules.id": client.ModuleID}).Decode(&event)
+	if err == nil {
+		for _, mod := range event.Modules {
+			if mod.ID == client.ModuleID {
+				// Extract questions
+				dataBytes, _ := json.Marshal(mod.Data)
+				var qData models.QuizModuleData
+				json.Unmarshal(dataBytes, &qData)
+				questions = qData.Questions
+				break
+			}
+		}
+	} else {
+		log.Println("Error finding event for module:", client.ModuleID, err)
+	}
+
+	h.mu.Lock()
+
+	// Re-fetch session in case it changed while unlocked (unlikely for start_quiz but good practice)
+	session := h.sessions[client.ModuleID]
+	if session != nil {
+		session.EventID = event.ID // Ensure EventID is set
+		session.State = "question-presenting"
+		session.CurrentIndex = 0
+		session.PlayerSignals = []models.PlayerSignal{}
+		session.AnswerCounts = make(map[int]int)
+		session.AnsweredPlayerIDs = make(map[string]struct{})
+		session.Questions = questions // Assigned loaded questions
+		session.Batches = CalculateBatches(questions)
+		session.StartTime = time.Now().Unix() // Reset timer
+		// session.Players = make(map[string]*models.Player) // REMOVED: Do not reset players, keep lobby players
+
+		// Create question window for first question
+		if len(questions) > 0 {
+			qWindow := models.QuestionWindow{
+				QuestionIndex: int64(session.CurrentIndex),
+				StartTime:     session.StartTime,
+				EndTime:       session.StartTime + int64(questions[0].TimeLimit),
+				GraceEndTime:  session.StartTime + int64(questions[0].TimeLimit) + GracePeriodSeconds,
+				State:         "active",
+			}
+			session.QuestionWindows = []models.QuestionWindow{qWindow}
+		}
+
+		// Send first batch to clients
+		if len(session.Batches) > 0 {
+			h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
+				Type:    "data:batch",
+				Payload: session.Batches[0],
+			})
+		}
+
+		// Notify state change - send 'question-presenting' for presentation
+		explainTime := session.Questions[session.CurrentIndex].ExplainTime
+		if explainTime == 0 {
+			explainTime = 5 // default
+		}
+		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
+			Type:    "cmd:state",
+			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
+		})
+
+		// Auto-transition to question-active after explainTime seconds
+		go func(modID string, idx int, delay int) {
+			time.Sleep(time.Duration(delay) * time.Second)
+			h.mu.Lock()
+			defer h.mu.Unlock()
+
+			sess := h.sessions[modID]
+			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" {
+				sess.State = "question-active"
+				sess.StartTime = time.Now().Unix()
+
+				// Update the QuestionWindow start time to now
+				if idx < len(sess.QuestionWindows) {
+					sess.QuestionWindows[idx].StartTime = sess.StartTime
+					sess.QuestionWindows[idx].EndTime = sess.StartTime + int64(sess.Questions[idx].TimeLimit)
+					sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
+				}
+
+				h.broadcastToSessionLocked(modID, ServerMessage{
+					Type:    "cmd:state",
+					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
+				})
+			}
+		}(client.ModuleID, session.CurrentIndex, explainTime)
+	}
+}
+
+func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
+	if !client.IsHost {
+		return
+	}
+	session := h.sessions[client.ModuleID]
+	if session != nil {
+		// session.State = "question-active" // Will be set after delay
+		session.CurrentIndex++
+		session.AnswerCounts = make(map[int]int)
+		session.AnsweredPlayerIDs = make(map[string]struct{})
+		session.StartTime = time.Now().Unix()
+
+		// Create question window for new question
+		if session.CurrentIndex < len(session.Questions) {
+			qWindow := models.QuestionWindow{
+				QuestionIndex: int64(session.CurrentIndex),
+				StartTime:     session.StartTime,
+				EndTime:       session.StartTime + int64(session.Questions[session.CurrentIndex].TimeLimit),
+				GraceEndTime:  session.StartTime + int64(session.Questions[session.CurrentIndex].TimeLimit) + GracePeriodSeconds,
+				State:         "active",
+			}
+			session.QuestionWindows = append(session.QuestionWindows, qWindow)
+		}
+
+		// Notify state change - send 'question-presenting' first
+		session.State = "question-presenting"
+		explainTime := session.Questions[session.CurrentIndex].ExplainTime
+		if explainTime == 0 {
+			explainTime = 5 // default
+		}
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type:    "cmd:state",
+			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
+		})
+
+		// Auto-transition to question-active after explainTime seconds
+		go func(modID string, idx int, delay int) {
+			time.Sleep(time.Duration(delay) * time.Second)
+			h.mu.Lock()
+			defer h.mu.Unlock()
+
+			sess := h.sessions[modID]
+			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" {
+				sess.State = "question-active"
+				sess.StartTime = time.Now().Unix()
+
+				// Update the QuestionWindow start time to now
+				if idx < len(sess.QuestionWindows) {
+					sess.QuestionWindows[idx].StartTime = sess.StartTime
+					sess.QuestionWindows[idx].EndTime = sess.StartTime + int64(sess.Questions[idx].TimeLimit)
+					sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
+				}
+
+				h.broadcastToSessionLocked(modID, ServerMessage{
+					Type:    "cmd:state",
+					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
+				})
+			}
+		}(client.ModuleID, session.CurrentIndex, explainTime)
+	}
+}
+
+func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
+	if !client.IsHost {
+		return
+	}
+	session := h.sessions[client.ModuleID]
+	if session != nil {
+		session.State = "results"
+
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type:    "cmd:state",
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+		})
+
+		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES/ANSWERS
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type:    "state:update",
+			Payload: session,
+		})
+	}
+}
+
+func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) {
+	if !client.IsHost {
+		return
+	}
+	session := h.sessions[client.ModuleID]
+	if session != nil {
+		session.State = "leaderboard"
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type:    "cmd:state",
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+		})
+
+		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type:    "state:update",
+			Payload: session,
+		})
+	}
+}
+
+func (h *QuizHub) processHostEndQuiz(client *Client, msg ClientMessage) {
+	if !client.IsHost {
+		return
+	}
+	session := h.sessions[client.ModuleID]
+	if session != nil {
+		// Save results to DB
+		if err := h.saveQuizResults(session); err != nil {
+			log.Printf("Error saving quiz results for module %s: %v", client.ModuleID, err)
+		}
+
+		session.State = "finished"
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type:    "cmd:state",
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+		})
+
+		// BROADCAST FULL STATE SO PLAYERS GET FINAL SCORES/RANKS
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type:    "state:update",
+			Payload: session,
+		})
+	}
+}
+
+func (h *QuizHub) processHostResetQuiz(client *Client, msg ClientMessage) {
+	if !client.IsHost {
+		DebugLog("host:reset_quiz rejected - not a host")
+		return
+	}
+	DebugLog("host:reset_quiz received for module: %s", client.ModuleID)
+	h.resetSessionLocked(client.ModuleID)
+	DebugLog("host:reset_quiz completed for module: %s", client.ModuleID)
+}
