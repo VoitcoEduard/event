@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ImageUploader from './ImageUploader.vue'
 

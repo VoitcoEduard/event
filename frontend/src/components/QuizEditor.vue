@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref } from 'vue'
 import QuizQuestionEditor from './QuizQuestionEditor.vue'
 import QuestionTypeSelector from './QuestionTypeSelector.vue'
 

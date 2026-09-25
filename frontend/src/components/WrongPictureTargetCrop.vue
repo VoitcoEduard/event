@@ -11,10 +11,12 @@
         decoding="async"
         loading="eager"
         draggable="false"
+        @load="onImageLoad"
       />
 
       <div
         v-if="showMarker"
+        :key="targetNumber"
         class="wrong-picture-target-crop__marker"
         :style="markerStyle"
         aria-hidden="true"
@@ -34,7 +36,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { getTargetZoom } from '../utils/wrongPictureGeometry'
 
 const props = defineProps({
   imageUrl: {
@@ -73,9 +76,15 @@ const radius = computed(() => {
   return Math.min(50, number)
 })
 
-// Keep the configured target at a consistent size in the crop. Smaller targets
-// receive a larger zoom while very large targets are only mildly magnified.
-const zoom = computed(() => Math.min(12, Math.max(1.5, 0.7 / (2 * radius.value))))
+const imageAspectRatio = ref(1)
+watch(() => props.imageUrl, () => { imageAspectRatio.value = 1 })
+const onImageLoad = (event) => {
+  const image = event.target
+  if (image.naturalWidth && image.naturalHeight) {
+    imageAspectRatio.value = image.naturalWidth / image.naturalHeight
+  }
+}
+const zoom = computed(() => getTargetZoom(radius.value, imageAspectRatio.value))
 
 const imageLayerStyle = computed(() => ({
   width: `${zoom.value * 100}%`,

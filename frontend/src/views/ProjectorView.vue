@@ -239,7 +239,6 @@
 
             <WrongPictureTargetCrop
               v-if="questionImageUrl && activeWrongPictureTarget && wpResultMode === 'targets' && revealCorrect"
-              :key="wpResultTargetIndex"
               class="wp-result-target-crop"
               :image-url="questionImageUrl"
               :target="activeWrongPictureTarget"
@@ -249,9 +248,10 @@
 
             <div
               v-else-if="questionImageUrl && wrongPictureTargets.length && wpResultMode === 'overview'"
-              class="wp-image-container wp-result-overview"
+              class="wp-result-overview"
+              :style="wrongPictureOverviewSize"
             >
-              <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" />
+              <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" @load="onWrongPictureImageLoad" />
               <div
                 v-for="(target, idx) in wrongPictureTargets"
                 :key="target.id || idx"
@@ -269,8 +269,8 @@
               </div>
             </div>
 
-            <div v-else-if="questionImageUrl" class="wp-image-container wp-result-overview">
-              <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" />
+            <div v-else-if="questionImageUrl" class="wp-result-overview" :style="wrongPictureOverviewSize">
+              <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" @load="onWrongPictureImageLoad" />
             </div>
           </div>
         </div>
@@ -520,6 +520,7 @@ import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
 import { preloader } from '../utils/imagePreload'
 import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
+import { getOverviewSize } from '../utils/wrongPictureGeometry'
 
 const getScaledFontSize = (size) => {
   const ratio = window.innerWidth / 1920
@@ -582,6 +583,14 @@ const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pi
 const isNumber = computed(() => currentQuestion.value?.type === 'number')
 const revealCorrect = ref(false)
 const wrongPictureTargets = computed(() => currentQuestion.value?.wrongPictureConfig?.targets || [])
+const wrongPictureAspectRatio = ref(1)
+const wrongPictureOverviewSize = computed(() => getOverviewSize(wrongPictureAspectRatio.value))
+const onWrongPictureImageLoad = (event) => {
+  const image = event.target
+  if (image.naturalWidth && image.naturalHeight) {
+    wrongPictureAspectRatio.value = image.naturalWidth / image.naturalHeight
+  }
+}
 const wpResultTargetIndex = ref(0)
 const wpResultMode = ref('targets')
 const activeWrongPictureTarget = computed(() => wrongPictureTargets.value[wpResultTargetIndex.value])
@@ -699,6 +708,7 @@ const questionImageUrl = computed(() => {
   const imageId = currentQuestion.value?.imageId
   return imageId ? getImageUrl(imageId) : null
 })
+watch(questionImageUrl, () => { wrongPictureAspectRatio.value = 1 })
 
 const questionFontSize = computed(() => {
   const text = currentQuestion.value?.text || ''
