@@ -66,7 +66,8 @@ func TestReproDuplicateSignalsAccumulateScore(t *testing.T) {
 	}
 }
 
-// Bug 3: grace-period answers are still awarded points (AcceptanceResult.Scored is ignored).
+// Bug 3 (FIXED A3): grace-period answers count for statistics but earn no
+// points — AcceptanceResult.Scored is honoured.
 func TestReproGracePeriodStillScores(t *testing.T) {
 	h, c := newSignalHub(t)
 	h.mu.Lock()
@@ -80,11 +81,14 @@ func TestReproGracePeriodStillScores(t *testing.T) {
 	if sig.Status != "grace_period" {
 		t.Fatalf("status = %q", sig.Status)
 	}
-	// BUG: AcceptanceResult.Scored is false for the grace period, but the hub
-	// only checks `status != "too_late"`, so late answers are still paid.
-	// When fixed: this must become `got != 0`.
-	if got := h.sessions["m1"].Players["p1"].Score; got != 1000 {
-		t.Fatalf("grace-period score = %d, expected the buggy 1000", got)
+	if got := h.sessions["m1"].Players["p1"].Score; got != 0 {
+		t.Fatalf("grace-period signal scored: %d, want 0", got)
+	}
+	if sig.ScoreEarned != 0 {
+		t.Fatalf("grace-period history ScoreEarned = %d, want 0", sig.ScoreEarned)
+	}
+	if got := h.sessions["m1"].AnswerCounts[1]; got != 1 {
+		t.Fatalf("grace-period answer missing from stats: counts = %v", h.sessions["m1"].AnswerCounts)
 	}
 }
 

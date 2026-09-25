@@ -167,18 +167,27 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			}
 		}
 
-		// Check if signal is within acceptance window
-		var status string = "on_time"
+		// Check if signal is within acceptance window.
+		// A3: honour AcceptanceResult.Scored — grace-period answers count
+		// for statistics (Valid) but earn no points (Scored == false).
+		acceptance := AcceptanceResult{Valid: true, Scored: true, Reason: "on_time"}
+		status := acceptance.Reason
 		if questionIndex < len(session.QuestionWindows) {
 			qWindow := session.QuestionWindows[questionIndex]
-			result := CanAcceptSignal(qWindow, time.Now().Unix())
-			status = result.Reason
+			acceptance = CanAcceptSignal(qWindow, time.Now().Unix())
+			status = acceptance.Reason
 			DebugLog("player:signal - QuestionWindow check: index=%d, startTime=%d, endTime=%d, graceEndTime=%d, now=%d, status=%s",
 				questionIndex, qWindow.StartTime, qWindow.EndTime, qWindow.GraceEndTime, time.Now().Unix(), status)
 		} else {
 			DebugLog("player:signal - No QuestionWindow for index %d (windows count: %d)", questionIndex, len(session.QuestionWindows))
 		}
 
+		// Store the points actually awarded, not the client claim, so the
+		// history and persisted results stay consistent with balances.
+		awarded := scoreEarned
+		if !acceptance.Scored {
+			awarded = 0
+		}
 		// Create and store signal
 		signal := models.PlayerSignal{
 			PlayerID:      client.PlayerID,
@@ -186,7 +195,7 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			AnswerIndices: answerIndices,
 			AnswerValue:   answerValue,
 			Guesses:       guesses,
-			ScoreEarned:   scoreEarned,
+			ScoreEarned:   awarded,
 			TimeSpent:     timeSpent,
 			Timestamp:     time.Now().Unix(),
 			Status:        status,
@@ -201,19 +210,27 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 
 		session.PlayerSignals = append(session.PlayerSignals, signal)
 
-		// Update answer counts for statistics
-		if status != "too_late" {
+		// Update answer counts for statistics (Valid) and score (Scored)
+		// as two separate gates.
+		if acceptance.Valid {
 			for _, ansIdx := range answerIndices {
 				session.AnswerCounts[ansIdx]++
 			}
 
-			// UPDATE PLAYER SCORE
-			if player, exists := session.Players[client.PlayerID]; exists {
-				player.Score += scoreEarned
+			// UPDATE PLAYER SCORE — only when inside the scoring window.
+			if acceptance.Scored {
+				if player, exists := session.Players[client.PlayerID]; exists {
+					player.Score += scoreEarned
+				}
 			}
 
-			log.Printf("Answer counted for module %s: Question %d, Answers %v. Total answers received/updated.",
-				client.ModuleID, questionIndex, answerIndices)
+			if acceptance.Scored {
+				log.Printf("Answer counted for module %s: Question %d, Answers %v. Total answers received/updated.",
+					client.ModuleID, questionIndex, answerIndices)
+			} else {
+				log.Printf("Answer counted without score (grace_period) for module %s: Question %d, Answers %v.",
+					client.ModuleID, questionIndex, answerIndices)
+			}
 		} else {
 			log.Printf("Answer rejected (too_late) for module %s: Question %d, Status %s",
 				client.ModuleID, questionIndex, status)
@@ -221,7 +238,7 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 
 		// Track unique players for the active question instead of scanning the
 		// complete answer history on every submission.
-		if status != "too_late" && questionIndex == session.CurrentIndex {
+		if acceptance.Valid && questionIndex == session.CurrentIndex {
 			if session.AnsweredPlayerIDs == nil {
 				session.AnsweredPlayerIDs = make(map[string]struct{})
 			}
