@@ -612,13 +612,7 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	qi := -1
-	if v := q.Get("questionIndex"); v != "" {
-		var parsed int
-		if _, err := json.Number(v).Int64(); err == nil {
-			// parse via Sscanf fallback
-			_, _ = parsed, err
-		}
-		// simple atoi
+	if v := q.Get("questionIndex"); v != "" && v != "-1" {
 		qi = atoi(v)
 	}
 	filter := q.Get("filter")

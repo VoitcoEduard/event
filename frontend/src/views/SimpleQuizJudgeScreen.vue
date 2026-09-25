@@ -22,7 +22,7 @@
       <div v-for="p in progress" :key="p.questionIndex" class="prog-card" :class="{ active: p.questionIndex === currentIdx }">
         <strong>Q{{ p.questionIndex + 1 }}</strong>
         <span>{{ p.received }} {{ $t('simple_quiz.judge.received') }} · {{ p.graded }} {{ $t('simple_quiz.judge.graded') }} · {{ p.ungraded }} {{ $t('simple_quiz.judge.ungraded') }} · {{ p.reviewLater }} {{ $t('simple_quiz.judge.review') }}</span>
-        <button class="link-btn" @click="questionFilter = p.questionIndex; currentIdx = p.questionIndex">open</button>
+        <button class="link-btn" @click="questionFilter = p.questionIndex">open</button>
       </div>
     </div>
 

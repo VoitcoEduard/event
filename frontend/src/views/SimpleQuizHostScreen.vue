@@ -2,7 +2,7 @@
   <div class="quiz-host-screen">
     <div class="bg-layer"></div>
 
-    <div v-if="stateStatus === 'inactive' || !launched" class="state-container lobby-container">
+    <div v-if="stateStatus === 'inactive' || !launched || stateStatus === 'lobby'" class="state-container lobby-container">
       <div class="lobby-header">
         <h1 class="game-title">{{ $t('simple_quiz.host.join_title') }}</h1>
         <div class="pin-display">
@@ -22,8 +22,9 @@
         </div>
       </div>
       <p v-if="error" class="host-error">{{ error }}</p>
-      <div class="lobby-footer">
-        <button class="start-btn" @click="doLaunch">{{ $t('simple_quiz.host.start') }}</button>
+      <div class="lobby-footer" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button v-if="!launched || stateStatus === 'inactive'" class="start-btn" @click="doLaunch">{{ $t('simple_quiz.host.start') }}</button>
+        <button v-else class="start-btn" @click="doOpen">{{ $t('simple_quiz.host.open') }} (Q{{ currentIndex + 1 }})</button>
       </div>
     </div>
 
@@ -128,7 +129,7 @@ const currentQuestion = computed(() => questions.value[currentIndex.value] || nu
 const currentImage = computed(() => currentQuestion.value?.imageId ? getImageUrl(currentQuestion.value.imageId) : null)
 const revealedAnswer = computed(() => {
   if (!allowReveal.value || !revealed.value[currentIndex.value]) return ''
-  return currentQuestion.value?.correctAnswer || currentQuestion.value?.text && '' || ''
+  return currentQuestion.value?.correctAnswer || ''
 })
 
 const judgeUrl = computed(() => judgeToken.value ? `${window.location.origin}/simple-quiz/${eventId}/${moduleId}/judge?token=${encodeURIComponent(judgeToken.value)}` : '')
