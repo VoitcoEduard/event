@@ -320,6 +320,7 @@ import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
 import { getImageUrl } from '../services/media'
 import { calculateTotalScore } from '../utils/wrongPicturesScoring'
+import { calculateChoiceScore } from '../utils/choiceScoring'
 
 const { locale } = useI18n()
 const router = useRouter()
@@ -764,10 +765,14 @@ const validateAndScore = (answerData) => {
     const timeSpent = timeLimit - timeRemaining.value // Use actual time limit
 
     if (isCorrectAnswer) {
-        // Time-based scoring: 1000 points for instant answer, 500 points for half time, 250 points for almost time up
-        const baseScore = Math.max(250, 1000 - (timeSpent * (750 / timeLimit))) // Adjusted formula
-        const streakBonus = Math.min(streak.value * 100, 500) // Max 500 bonus for 5+ streak
-        currentPoints.value = Math.floor(baseScore + streakBonus)
+        // A7: time-decayed scoring honours the admin-configured maxPoints
+        // (instant answer = maxPoints, timer expiry = 25% of maxPoints).
+        currentPoints.value = calculateChoiceScore({
+            maxPoints: question.scoringConfig?.maxPoints,
+            timeLimit,
+            timeSpent,
+            streak: streak.value,
+        })
         score.value += currentPoints.value
         streak.value++
     } else {

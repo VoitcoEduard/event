@@ -320,9 +320,11 @@ const localQuestion = reactive({
       unit: '',
       decimalPlaces: 0
   },
+  // A7: default maxPoints is 100 for range, 1000 for every other
+  // scoringConfig-based type, so the Points field matches game scoring.
   scoringConfig: props.question.scoringConfig || {
       mode: 'symmetric',
-      maxPoints: 100,
+      maxPoints: props.question.type === 'range' ? 100 : 1000,
       tolerance: 10,
       partialPercent: 0
   },
@@ -380,7 +382,7 @@ watch(() => props.question, (newVal) => {
           ...newVal,
           type: newVal.type || 'classic',
           rangeConfig: newVal.rangeConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
-          scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 },
+          scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: newVal.type === 'range' ? 100 : 1000, tolerance: 10, partialPercent: 0 },
           explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 5,
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
           correctNumber: newVal.correctNumber !== undefined ? newVal.correctNumber : 0,
@@ -403,6 +405,12 @@ const handleTypeChange = () => {
     if (localQuestion.type === 'true_false') {
         localQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
         if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
+        // A7: choice scoring reads scoringConfig.maxPoints.
+        if (!localQuestion.scoringConfig) {
+            localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+        } else if (!localQuestion.scoringConfig.maxPoints) {
+            localQuestion.scoringConfig.maxPoints = 1000
+        }
     } else if (localQuestion.type === 'range') {
         // Ensure defaults are set
         if (!localQuestion.rangeConfig.maxValue) localQuestion.rangeConfig.maxValue = 100
@@ -417,6 +425,12 @@ const handleTypeChange = () => {
                 { id: (Date.now() + 1).toString(), imageId: '', label: '' }
             ]
         }
+        // A7: choice scoring reads scoringConfig.maxPoints, so it must exist.
+        if (!localQuestion.scoringConfig) {
+            localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+        } else if (!localQuestion.scoringConfig.maxPoints) {
+            localQuestion.scoringConfig.maxPoints = 1000
+        }
     } else if (localQuestion.type === 'wrong_pictures') {
         if (!localQuestion.wrongPictureConfig) {
              localQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 1000 }
@@ -425,6 +439,15 @@ const handleTypeChange = () => {
         // Reset to empty if switching back from T/F
         if (localQuestion.answers[0] === 'True' && localQuestion.answers[1] === 'False') {
              localQuestion.answers = ['', '', '', '']
+        }
+        // A7: classic / true_false / multi_select score from
+        // scoringConfig.maxPoints, so backfill it when missing.
+        if (['classic', 'true_false', 'multi_select'].includes(localQuestion.type)) {
+            if (!localQuestion.scoringConfig) {
+                localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+            } else if (!localQuestion.scoringConfig.maxPoints) {
+                localQuestion.scoringConfig.maxPoints = 1000
+            }
         }
     }
 
