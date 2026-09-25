@@ -39,9 +39,11 @@ export function calculateGuessScore(guess, target, tolerancePercent, maxPoints, 
 }
 
 // Calculate total score for all guesses
-// New scoring: Each correct guess (within tolerance of ANY target) scores maxPoints
-// No need to match to specific targets - just count correct guesses
-// This allows user to guess any number of markers without knowing target count
+// One-to-one matching: each target can be claimed by a single guess (the
+// nearest qualifying unused one), so stacking pins on the same spot cannot
+// multiply the score. A question is worth config.maxPoints in total, split
+// across its targets as integer shares (leftover points go to the earliest
+// claims, so a fully solved question pays exactly maxPoints).
 export function calculateTotalScore(guesses, targets, config, aspectRatio) {
     let totalScore = 0;
     const scoredGuesses = [];
@@ -66,15 +68,17 @@ export function calculateTotalScore(guesses, targets, config, aspectRatio) {
         };
     }
 
-    const maxPointsPerGuess = config.maxPoints;
+    const targetCount = targets.length;
+    const basePoints = Math.floor(config.maxPoints / targetCount);
+    let remainder = config.maxPoints - basePoints * targetCount;
+    const usedTargetIds = new Set();
 
     for (const guess of guesses) {
-        let isCorrect = false;
-        let matchedTargetId = null;
         let bestDistance = Infinity;
-        let bestMatchDistance = Infinity;
+        let matchedTarget = null;
+        let matchedDistance = Infinity;
 
-        // Check if this guess is within tolerance of ANY target
+        // Check if this guess is within tolerance of any unclaimed target
         for (const target of targets) {
             const distance = calculateDistance(
                 guess.xPercent,
@@ -88,23 +92,31 @@ export function calculateTotalScore(guesses, targets, config, aspectRatio) {
                 bestDistance = distance;
             }
 
-            if (distance <= target.radius + config.tolerancePercent && distance < bestMatchDistance) {
-                isCorrect = true;
-                matchedTargetId = target.id;
-                bestMatchDistance = distance;
+            if (usedTargetIds.has(target.id)) continue;
+
+            if (distance <= target.radius + config.tolerancePercent && distance < matchedDistance) {
+                matchedTarget = target;
+                matchedDistance = distance;
             }
         }
 
-        if (isCorrect) {
-            // Each correct guess scores maxPoints
-            totalScore += maxPointsPerGuess;
+        if (matchedTarget) {
+            // Claim the target so later pins on the same spot score nothing
+            usedTargetIds.add(matchedTarget.id);
+            let points = basePoints;
+            if (remainder > 0) {
+                points += 1;
+                remainder -= 1;
+            }
+            const scoreEarned = calculateGuessScore(guess, matchedTarget, config.tolerancePercent, points, aspect);
+            totalScore += scoreEarned;
 
             scoredGuesses.push({
                 ...guess,
-                targetId: matchedTargetId,
+                targetId: matchedTarget.id,
                 distance: bestDistance,
                 isCorrect: true,
-                scoreEarned: maxPointsPerGuess
+                scoreEarned
             });
         } else {
             // Incorrect guess - no match within tolerance

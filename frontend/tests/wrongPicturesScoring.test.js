@@ -34,10 +34,10 @@ test('marks each submitted guess and records its score', () => {
     target('second', 90, 10, 5)
   ], config)
 
-  assert.equal(result.totalScore, 100)
+  assert.equal(result.totalScore, 50)
   assert.equal(result.scoredGuesses[0].isCorrect, true)
   assert.equal(result.scoredGuesses[0].targetId, 'first')
-  assert.equal(result.scoredGuesses[0].scoreEarned, 100)
+  assert.equal(result.scoredGuesses[0].scoreEarned, 50)
 
   assert.equal(result.scoredGuesses[1].isCorrect, false)
   assert.equal(result.scoredGuesses[1].targetId, null)
@@ -53,17 +53,52 @@ test('uses the closest accepted target when accepted areas overlap', () => {
   ], { tolerancePercent: 0, maxPoints: 50 })
 
   assert.equal(result.scoredGuesses[0].targetId, 'closer')
-  assert.equal(result.totalScore, 50)
+  assert.equal(result.scoredGuesses[0].scoreEarned, 25)
+  assert.equal(result.totalScore, 25)
 })
 
-test('allows multiple correct guesses for the same target', () => {
+test('counts each target only once, no matter how many pins stack on it', () => {
   const result = calculateTotalScore([
     { xPercent: 49, yPercent: 50, isPlaced: true },
     { xPercent: 51, yPercent: 50, isPlaced: true }
   ], [target('one', 50, 50, 5)], config)
 
-  assert.equal(result.totalScore, 200)
-  assert.equal(result.scoredGuesses.filter((guess) => guess.isCorrect).length, 2)
+  assert.equal(result.totalScore, 100)
+  assert.equal(result.scoredGuesses[0].isCorrect, true)
+  assert.equal(result.scoredGuesses[0].targetId, 'one')
+  assert.equal(result.scoredGuesses[0].scoreEarned, 100)
+
+  assert.equal(result.scoredGuesses[1].isCorrect, false)
+  assert.equal(result.scoredGuesses[1].targetId, null)
+  assert.equal(result.scoredGuesses[1].scoreEarned, 0)
+})
+
+test('stacked pins on one target cannot exceed the question value', () => {
+  const result = calculateTotalScore([
+    { xPercent: 50, yPercent: 50 },
+    { xPercent: 50.5, yPercent: 50 },
+    { xPercent: 49.5, yPercent: 50 },
+    { xPercent: 50, yPercent: 50.5 }
+  ], [target('one', 50, 50, 5)], { tolerancePercent: 5, maxPoints: 1000 })
+
+  assert.equal(result.totalScore, 1000)
+  assert.equal(result.scoredGuesses.filter((guess) => guess.isCorrect).length, 1)
+})
+
+test('a fully solved question pays exactly maxPoints split across targets', () => {
+  const result = calculateTotalScore([
+    { xPercent: 10, yPercent: 10 },
+    { xPercent: 50, yPercent: 50 },
+    { xPercent: 90, yPercent: 90 }
+  ], [
+    target('a', 10, 10, 5),
+    target('b', 50, 50, 5),
+    target('c', 90, 90, 5)
+  ], { tolerancePercent: 2, maxPoints: 1000 })
+
+  assert.equal(result.totalScore, 1000)
+  assert.equal(result.scoredGuesses.reduce((sum, guess) => sum + guess.scoreEarned, 0), 1000)
+  assert.ok(result.scoredGuesses.every((guess) => guess.isCorrect))
 })
 
 test('handles no targets and empty guesses', () => {
