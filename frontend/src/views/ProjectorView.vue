@@ -220,28 +220,58 @@
         <!-- WRONG PICTURES RESULTS -->
         <div v-else-if="isWrongPictures" class="wrong-picture-results">
           <div class="question-text-overlay-wp">
-             <h2>{{ currentQuestion.text }}</h2>
+            <h2>{{ currentQuestion.text }}</h2>
           </div>
-          <div class="wp-image-container">
-             <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" />
-             
-             <!-- Show the correct targets natively -->
-             <div 
-               v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
-               :key="idx" 
-               class="wp-target-area"
-               :class="{ 'wp-target-reveal': revealCorrect }"
-               :style="{
-                 left: target.xPercent + '%',
-                 top: target.yPercent + '%',
-                 width: (target.radius * 2) + '%',
-                 height: (target.radius * 2) + '%',
-                 transform: 'translate(-50%, -50%)'
-               }"
-             >
-               <div class="wp-target-pulse"></div>
-               <div class="wp-target-label">{{ target.label }}</div>
-             </div>
+
+          <div class="wp-result-stage">
+            <div v-if="wrongPictureTargets.length" class="wp-result-progress" aria-label="Answer progress">
+              <span
+                v-for="(target, idx) in wrongPictureTargets"
+                :key="target.id || idx"
+                :class="{
+                  'is-active': wpResultMode === 'targets' && idx === wpResultTargetIndex,
+                  'is-complete': wpResultMode === 'overview' || idx < wpResultTargetIndex
+                }"
+              >
+                {{ idx + 1 }}
+              </span>
+            </div>
+
+            <WrongPictureTargetCrop
+              v-if="questionImageUrl && activeWrongPictureTarget && wpResultMode === 'targets' && revealCorrect"
+              :key="wpResultTargetIndex"
+              class="wp-result-target-crop"
+              :image-url="questionImageUrl"
+              :target="activeWrongPictureTarget"
+              :target-number="wpResultTargetIndex + 1"
+              :label="activeWrongPictureTarget.label"
+            />
+
+            <div
+              v-else-if="questionImageUrl && wrongPictureTargets.length && wpResultMode === 'overview'"
+              class="wp-image-container wp-result-overview"
+            >
+              <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" />
+              <div
+                v-for="(target, idx) in wrongPictureTargets"
+                :key="target.id || idx"
+                class="wp-target-area"
+                :class="{ 'wp-target-reveal': revealCorrect }"
+                :style="{
+                  left: `${target.xPercent}%`,
+                  top: `${target.yPercent}%`,
+                  width: `${target.radius * 2}%`,
+                  height: `${target.radius * 2}%`
+                }"
+              >
+                <div class="wp-target-pulse"></div>
+                <div class="wp-target-label">{{ target.label || idx + 1 }}</div>
+              </div>
+            </div>
+
+            <div v-else-if="questionImageUrl" class="wp-image-container wp-result-overview">
+              <img :src="questionImageUrl" class="wp-big-img" decoding="async" loading="eager" />
+            </div>
           </div>
         </div>
 
@@ -489,6 +519,7 @@ import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
 import { preloader } from '../utils/imagePreload'
+import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
 
 const getScaledFontSize = (size) => {
   const ratio = window.innerWidth / 1920
@@ -550,15 +581,54 @@ const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct
 const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
 const isNumber = computed(() => currentQuestion.value?.type === 'number')
 const revealCorrect = ref(false)
+const wrongPictureTargets = computed(() => currentQuestion.value?.wrongPictureConfig?.targets || [])
+const wpResultTargetIndex = ref(0)
+const wpResultMode = ref('targets')
+const activeWrongPictureTarget = computed(() => wrongPictureTargets.value[wpResultTargetIndex.value])
+let wrongPicturesResultTimers = []
+
+const clearWrongPicturesResultTimers = () => {
+  wrongPicturesResultTimers.forEach(clearTimeout)
+  wrongPicturesResultTimers = []
+}
+
+const startWrongPicturesResultSequence = () => {
+  clearWrongPicturesResultTimers()
+  revealCorrect.value = false
+  wpResultTargetIndex.value = 0
+  wpResultMode.value = 'targets'
+
+  if (!wrongPictureTargets.value.length) return
+
+  const focusDuration = 2800
+  wrongPicturesResultTimers.push(setTimeout(() => {
+    revealCorrect.value = true
+
+    wrongPictureTargets.value.forEach((_, index) => {
+      wrongPicturesResultTimers.push(setTimeout(() => {
+        if (index === wrongPictureTargets.value.length - 1) {
+          wpResultMode.value = 'overview'
+        } else {
+          wpResultTargetIndex.value = index + 1
+        }
+      }, focusDuration * (index + 1)))
+    })
+  }, 300))
+}
 
 // Watch gameState to trigger animation
 watch(gameState, (newVal) => {
     if (newVal === 'results') {
         revealCorrect.value = false
-        setTimeout(() => {
+        if (isWrongPictures.value) {
+          startWrongPicturesResultSequence()
+        } else {
+          setTimeout(() => {
             revealCorrect.value = true
-        }, 1500)
+          }, 1500)
+        }
     } else {
+        clearWrongPicturesResultTimers()
         revealCorrect.value = false
     }
 
@@ -619,6 +689,9 @@ watch(questions, (newQuestions) => {
 watch(currentQuestionIndex, (newIdx) => {
   if (questions.value && questions.value[newIdx + 1]) {
     preloader.preloadQuestion(questions.value[newIdx + 1])
+  }
+  if (gameState.value === 'results' && isWrongPictures.value) {
+    startWrongPicturesResultSequence()
   }
 })
 
@@ -1044,6 +1117,7 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(timerInterval)
   clearInterval(explainTimerInterval)
+  clearWrongPicturesResultTimers()
   if (pollingInterval) {
     clearInterval(pollingInterval)
   }

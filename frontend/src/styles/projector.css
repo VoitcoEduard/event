@@ -1987,6 +1987,66 @@
   text-shadow: 2px 4px 12px rgba(0,0,0,0.8);
 }
 
+.wp-result-stage {
+  position: relative;
+  width: min(72vw, 68vh);
+  max-width: 100%;
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+
+.wp-result-progress {
+  position: absolute;
+  z-index: 5;
+  top: -44px;
+  left: 50%;
+  display: flex;
+  gap: 10px;
+  transform: translateX(-50%);
+}
+
+.wp-result-progress span {
+  display: flex;
+  width: 34px;
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgb(255 255 255 / 38%);
+  border-radius: 50%;
+  background: rgb(20 20 24 / 86%);
+  color: rgb(255 255 255 / 62%);
+  font-size: 1rem;
+  font-weight: 850;
+  transition: all 300ms ease;
+}
+
+.wp-result-progress span.is-active,
+.wp-result-progress span.is-complete {
+  border-color: #32d74b;
+  background: #32d74b;
+  color: #0b160b;
+  box-shadow: 0 0 18px rgb(50 215 75 / 52%);
+}
+
+.wp-result-target-crop,
+.wp-result-overview {
+  width: 100%;
+  height: 100%;
+}
+
+.wp-result-overview {
+  max-width: none;
+  max-height: none;
+}
+
+.wp-result-overview .wp-big-img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+}
+
 .wp-image-container {
   position: relative;
   max-width: 90%;

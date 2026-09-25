@@ -197,17 +197,11 @@
                       :key="'crop-' + idx"
                       class="wp-magnified-crop-card"
                     >
-                        <div class="wp-crop-container square">
-                            <div 
-                                class="wp-crop-image" 
-                                :style="{ 
-                                    backgroundImage: `url(${questionImageUrl})`,
-                                    backgroundPosition: `${target.xPercent}% ${target.yPercent}%`,
-                                    backgroundSize: `${100 / (target.radius * 0.15)}%` 
-                                }"
-                            ></div>
-                            <div class="wp-crop-badge">{{ idx + 1 }}</div>
-                        </div>
+                        <WrongPictureTargetCrop
+                            :image-url="questionImageUrl"
+                            :target="target"
+                            :target-number="idx + 1"
+                        />
                     </div>
                 </div>
 
@@ -462,6 +456,7 @@ import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
 import { preloader } from '../utils/imagePreload'
+import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
 
 const route = useRoute()
 const router = useRouter()
