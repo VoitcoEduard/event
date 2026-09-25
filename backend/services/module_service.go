@@ -77,8 +77,8 @@ func (s *ModuleService) Responses(ctx context.Context, eventID, moduleID string)
 	return s.Repo.FormResponses(ctx, eventID, moduleID)
 }
 
-func (s *ModuleService) UpdateResponse(ctx context.Context, responseID string, data map[string]any) (bool, error) {
-	return s.Repo.UpdateResponse(ctx, responseID, data)
+func (s *ModuleService) UpdateResponse(ctx context.Context, eventID, moduleID, responseID string, data map[string]any) (bool, error) {
+	return s.Repo.UpdateResponse(ctx, eventID, moduleID, responseID, data)
 }
 
 func (s *ModuleService) UpdateScore(ctx context.Context, eventID, moduleID, userID string, score int) (bool, error) {

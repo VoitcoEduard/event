@@ -164,7 +164,7 @@ func (h *Handler) UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	found, err := h.deps.Modules.UpdateResponse(r.Context(), r.PathValue("responseID"), input.Data)
+	found, err := h.deps.Modules.UpdateResponse(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"), r.PathValue("responseID"), input.Data)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -179,13 +179,17 @@ func (h *Handler) UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Score int `json:"score"`
+		Score *int `json:"score"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	found, err := h.deps.Modules.UpdateScore(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"), r.PathValue("userID"), input.Score)
+	if input.Score == nil {
+		http.Error(w, "Score is required", 400)
+		return
+	}
+	found, err := h.deps.Modules.UpdateScore(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"), r.PathValue("userID"), *input.Score)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -196,4 +200,5 @@ func (h *Handler) UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Score updated"})
+	invalidateEventCache(r.PathValue("eventID"))
 }

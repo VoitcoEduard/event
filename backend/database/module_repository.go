@@ -6,7 +6,9 @@ import (
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type ModuleRepository struct {
@@ -100,14 +102,31 @@ func (r *ModuleRepository) FormResponses(ctx context.Context, eventID, moduleID 
 	return results, err
 }
 
-func (r *ModuleRepository) UpdateResponse(ctx context.Context, responseID string, data map[string]any) (bool, error) {
-	result, err := r.responses.UpdateOne(ctx, bson.M{"_id": responseID}, bson.M{"$set": bson.M{"data": data}})
+func (r *ModuleRepository) UpdateResponse(ctx context.Context, eventID, moduleID, responseID string, data map[string]any) (bool, error) {
+	ids := bson.A{responseID}
+	if id, err := primitive.ObjectIDFromHex(responseID); err == nil {
+		ids = append(ids, id)
+	}
+	result, err := r.responses.UpdateOne(ctx, bson.M{"_id": bson.M{"$in": ids}, "eventId": eventID, "moduleId": moduleID}, bson.M{"$set": bson.M{"data": data}})
 	return err == nil && result.MatchedCount > 0, err
 }
 
 func (r *ModuleRepository) UpdateScore(ctx context.Context, eventID, moduleID, userID string, score int) (bool, error) {
+	// Select the latest run for the entire module, even if this player only
+	// appeared in an older run. Never silently edit historical results.
+	var latest struct {
+		ID any `bson:"_id"`
+	}
+	err := r.quizResults.FindOne(ctx, bson.M{"eventId": eventID, "moduleId": moduleID},
+		options.FindOne().SetSort(bson.D{{Key: "finishedAt", Value: -1}, {Key: "_id", Value: -1}})).Decode(&latest)
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
 	result, err := r.quizResults.UpdateOne(ctx,
-		bson.M{"eventId": eventID, "moduleId": moduleID, "players.id": userID},
+		bson.M{"_id": latest.ID, "players.id": userID},
 		bson.M{"$set": bson.M{"players.$.score": score}})
 	return err == nil && result.MatchedCount > 0, err
 }

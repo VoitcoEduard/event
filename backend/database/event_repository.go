@@ -94,25 +94,11 @@ func (r *EventRepository) ParticipantStatus(ctx context.Context, eventID, userID
 	if err := r.participants.FindOne(ctx, bson.M{"eventId": eventID, "_id": userID}).Decode(&participant); err != nil {
 		return nil, 0, err
 	}
-	pipeline := []bson.M{
-		{"$match": bson.M{"eventId": eventID, "participantId": userID}},
-		{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$points"}}},
-	}
-	cursor, err := r.scores.Aggregate(ctx, pipeline)
+	scores, err := LoadEventScores(ctx, eventID)
 	if err != nil {
-		return &participant, 0, nil
+		return &participant, 0, err
 	}
-	defer cursor.Close(ctx)
-	if !cursor.Next(ctx) {
-		return &participant, 0, nil
-	}
-	var score struct {
-		Total float64 `bson:"total"`
-	}
-	if err := cursor.Decode(&score); err != nil {
-		return &participant, 0, nil
-	}
-	return &participant, score.Total, nil
+	return &participant, scores.PlayerTotal(userID), nil
 }
 
 func (r *EventRepository) ActiveCards(ctx context.Context, eventID string) ([]models.DynamicCard, error) {
