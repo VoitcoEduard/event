@@ -5,10 +5,9 @@ import (
 	"net/http"
 
 	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/services"
 )
 
-func SaveTemplate(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SaveTemplate(w http.ResponseWriter, r *http.Request) {
 	var template models.Template
 	if err := decodeJSON(w, r, &template); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
@@ -20,7 +19,7 @@ func SaveTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := services.NewTemplateService().Create(r.Context(), &template)
+	err := h.deps.Templates.Create(r.Context(), &template)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -31,8 +30,8 @@ func SaveTemplate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(template)
 }
 
-func GetTemplates(w http.ResponseWriter, r *http.Request) {
-	templates, err := services.NewTemplateService().List(r.Context())
+func (h *Handler) GetTemplates(w http.ResponseWriter, r *http.Request) {
+	templates, err := h.deps.Templates.List(r.Context())
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -44,7 +43,7 @@ func GetTemplates(w http.ResponseWriter, r *http.Request) {
 
 // PublishModule finalizes configuration and makes it ready (conceptually "creates table")
 
-func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL: /templates/{id}
 	path := r.URL.Path
 	prefix := "/templates/"
@@ -54,7 +53,7 @@ func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 	id := path[len(prefix):]
 
-	err := services.NewTemplateService().Delete(r.Context(), id)
+	err := h.deps.Templates.Delete(r.Context(), id)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -64,7 +63,7 @@ func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Template deleted"})
 }
 
-func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL: /templates/{id}
 	path := r.URL.Path
 	prefix := "/templates/"
@@ -80,7 +79,7 @@ func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := services.NewTemplateService().Update(r.Context(), id, &template)
+	err := h.deps.Templates.Update(r.Context(), id, &template)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return

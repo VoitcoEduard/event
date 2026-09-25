@@ -52,7 +52,7 @@ func removeScreenSubscriber(eventID string, ch chan models.ScreenState) {
 }
 
 // GetScreenState handles GET /events/{eventId}/screen-state
-func GetScreenState(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetScreenState(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	prefix := "/events/"
 	suffix := "/screen-state"
@@ -83,7 +83,7 @@ func GetScreenState(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateScreenState handles PUT /events/{eventId}/screen-state
-func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	prefix := "/events/"
 	suffix := "/screen-state"
@@ -118,8 +118,8 @@ func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	notifyScreenSubscribers(id, input)
 
 	// Notify WS subscribers (Big Screen)
-	if quizHub != nil {
-		quizHub.BroadcastScreenState(id, input)
+	if h.deps.QuizHub != nil {
+		h.deps.QuizHub.BroadcastScreenState(id, input)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -127,7 +127,7 @@ func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 }
 
 // ScreenStream handles GET /events/{eventId}/screen-stream for SSE
-func ScreenStream(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
 	// Parse eventID from URL
 	path := r.URL.Path
 	parts := strings.Split(path, "/")

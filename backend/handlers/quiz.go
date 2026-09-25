@@ -13,17 +13,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var (
-	quizHub *hub.QuizHub
-)
-
-func SetQuizHub(h *hub.QuizHub) {
-	quizHub = h
-}
-
 // UpdateQuizQuestions - PUT /events/{id}/modules/{moduleId}/quiz/questions
-func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
-	if quizHub == nil {
+func (h *Handler) UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
+	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -69,8 +61,8 @@ func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetQuizState - GET /events/{id}/modules/{moduleId}/quiz/state
-func GetQuizState(w http.ResponseWriter, r *http.Request) {
-	if quizHub == nil {
+func (h *Handler) GetQuizState(w http.ResponseWriter, r *http.Request) {
+	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -82,7 +74,7 @@ func GetQuizState(w http.ResponseWriter, r *http.Request) {
 	}
 	moduleID := parts[4]
 
-	session := quizHub.GetSession(moduleID)
+	session := h.deps.QuizHub.GetSession(moduleID)
 	if session == nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(models.QuizSession{State: "inactive"})
@@ -94,8 +86,8 @@ func GetQuizState(w http.ResponseWriter, r *http.Request) {
 }
 
 // StartQuiz - POST /events/{id}/modules/{moduleId}/quiz/start
-func StartQuiz(w http.ResponseWriter, r *http.Request) {
-	if quizHub == nil {
+func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
+	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -109,7 +101,7 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 	moduleID := parts[4]
 
 	// Create session if not exists
-	quizHub.CreateSession(moduleID, eventID)
+	h.deps.QuizHub.CreateSession(moduleID, eventID)
 
 	// Load questions from DB
 	collection := db.GetCollection("events")
@@ -136,7 +128,7 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update session state - reset players and signals when starting new quiz
-	quizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
+	h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
 		s.State = "question"
 		s.CurrentIndex = 0
 		s.PlayerSignals = []models.PlayerSignal{}
@@ -162,12 +154,12 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	// Retrieve updated session to return
-	json.NewEncoder(w).Encode(quizHub.GetSession(moduleID))
+	json.NewEncoder(w).Encode(h.deps.QuizHub.GetSession(moduleID))
 }
 
 // NextQuestion - POST /events/{id}/modules/{moduleId}/quiz/next
-func NextQuestion(w http.ResponseWriter, r *http.Request) {
-	if quizHub == nil {
+func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
+	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -179,13 +171,13 @@ func NextQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 	moduleID := parts[4]
 
-	session := quizHub.GetSession(moduleID)
+	session := h.deps.QuizHub.GetSession(moduleID)
 	if session == nil {
 		http.Error(w, "Quiz not active", http.StatusBadRequest)
 		return
 	}
 
-	quizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
+	h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
 		s.CurrentIndex++
 		s.State = "question"
 		s.AnswerCounts = make(map[int]int)
@@ -205,12 +197,12 @@ func NextQuestion(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(quizHub.GetSession(moduleID))
+	json.NewEncoder(w).Encode(h.deps.QuizHub.GetSession(moduleID))
 }
 
 // GetQuizResults - GET /events/{id}/modules/{moduleId}/quiz/results
-func GetQuizResults(w http.ResponseWriter, r *http.Request) {
-	if quizHub == nil {
+func (h *Handler) GetQuizResults(w http.ResponseWriter, r *http.Request) {
+	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -222,7 +214,7 @@ func GetQuizResults(w http.ResponseWriter, r *http.Request) {
 	}
 	moduleID := parts[4]
 
-	session := quizHub.GetSession(moduleID)
+	session := h.deps.QuizHub.GetSession(moduleID)
 	if session == nil {
 		http.Error(w, "No active session", http.StatusNotFound)
 		return
@@ -233,8 +225,8 @@ func GetQuizResults(w http.ResponseWriter, r *http.Request) {
 }
 
 // ResetQuiz - POST /events/{id}/modules/{moduleId}/quiz/reset
-func ResetQuiz(w http.ResponseWriter, r *http.Request) {
-	if quizHub == nil {
+func (h *Handler) ResetQuiz(w http.ResponseWriter, r *http.Request) {
+	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -247,7 +239,7 @@ func ResetQuiz(w http.ResponseWriter, r *http.Request) {
 	moduleID := parts[4]
 
 	// Reset the session
-	quizHub.ResetSession(moduleID)
+	h.deps.QuizHub.ResetSession(moduleID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Quiz session reset"})

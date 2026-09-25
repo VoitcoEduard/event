@@ -35,9 +35,8 @@ func TestWebSocketAdminCannotBeSelfAssigned(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hub := NewQuizHub()
 	service := &auth.Service{Store: store, Config: auth.Config{Mode: "dev", Environment: "development"}}
-	hub.SetAuthService(service)
+	hub := NewQuizHub(Dependencies{AuthService: service})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { ServeWs(hub, w, r) }))
 	defer server.Close()
 	service.Config.BaseURL = server.URL

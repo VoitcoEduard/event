@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func AddModule(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AddModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Type string         `json:"type"`
 		Name string         `json:"name"`
@@ -22,7 +22,7 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 	}
 	module := models.Module{Type: models.ModuleType(input.Type), Name: input.Name, Data: input.Data}
 	eventID := r.PathValue("eventID")
-	if err := services.NewModuleService().Add(r.Context(), eventID, &module); err != nil {
+	if err := h.deps.Modules.Add(r.Context(), eventID, &module); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -31,7 +31,7 @@ func AddModule(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(module)
 }
 
-func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		IsActive bool `json:"isActive"`
 	}
@@ -40,7 +40,7 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
-	found, err := services.NewModuleService().SetActive(r.Context(), eventID, moduleID, input.IsActive)
+	found, err := h.deps.Modules.SetActive(r.Context(), eventID, moduleID, input.IsActive)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -54,7 +54,7 @@ func UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Module status updated"})
 }
 
-func PublishModule(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) PublishModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
@@ -63,7 +63,7 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
-	found, err := services.NewModuleService().Publish(r.Context(), eventID, moduleID, input.Data)
+	found, err := h.deps.Modules.Publish(r.Context(), eventID, moduleID, input.Data)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -77,13 +77,13 @@ func PublishModule(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Module published/configured"})
 }
 
-func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 	var response models.Response
 	if err := decodeJSON(w, r, &response); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	if err := services.NewModuleService().SubmitResponse(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"), &response); err != nil {
+	if err := h.deps.Modules.SubmitResponse(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"), &response); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -92,9 +92,9 @@ func SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-func DeleteModule(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteModule(w http.ResponseWriter, r *http.Request) {
 	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
-	found, err := services.NewModuleService().Delete(r.Context(), eventID, moduleID)
+	found, err := h.deps.Modules.Delete(r.Context(), eventID, moduleID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -108,7 +108,7 @@ func DeleteModule(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Module deleted"})
 }
 
-func UpdateModule(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
@@ -117,7 +117,7 @@ func UpdateModule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	eventID := r.PathValue("eventID")
-	if err := services.NewModuleService().UpdateData(r.Context(), eventID, r.PathValue("moduleID"), input.Data); err != nil {
+	if err := h.deps.Modules.UpdateData(r.Context(), eventID, r.PathValue("moduleID"), input.Data); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -128,8 +128,8 @@ func UpdateModule(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Module updated"})
 }
 
-func GetModule(w http.ResponseWriter, r *http.Request) {
-	module, err := services.NewModuleService().Get(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"))
+func (h *Handler) GetModule(w http.ResponseWriter, r *http.Request) {
+	module, err := h.deps.Modules.Get(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"))
 	if err != nil {
 		if errors.Is(err, services.ErrModuleNotFound) || errors.Is(err, mongo.ErrNoDocuments) {
 			http.Error(w, "Module not found", http.StatusNotFound)
@@ -142,8 +142,8 @@ func GetModule(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(module)
 }
 
-func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
-	results, err := services.NewModuleService().Responses(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"))
+func (h *Handler) GetModuleResponses(w http.ResponseWriter, r *http.Request) {
+	results, err := h.deps.Modules.Responses(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"))
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			http.Error(w, "Event not found", http.StatusNotFound)
@@ -156,7 +156,7 @@ func GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"responses": results})
 }
 
-func UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Data map[string]any `json:"data"`
 	}
@@ -164,7 +164,7 @@ func UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	found, err := services.NewModuleService().UpdateResponse(r.Context(), r.PathValue("responseID"), input.Data)
+	found, err := h.deps.Modules.UpdateResponse(r.Context(), r.PathValue("responseID"), input.Data)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -177,7 +177,7 @@ func UpdateModuleResponse(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Response updated"})
 }
 
-func UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Score int `json:"score"`
 	}
@@ -185,7 +185,7 @@ func UpdateQuizScore(w http.ResponseWriter, r *http.Request) {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	found, err := services.NewModuleService().UpdateScore(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"), r.PathValue("userID"), input.Score)
+	found, err := h.deps.Modules.UpdateScore(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"), r.PathValue("userID"), input.Score)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return

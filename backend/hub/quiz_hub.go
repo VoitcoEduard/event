@@ -78,6 +78,7 @@ func Min(a, b int) int {
 // clients.
 type QuizHub struct {
 	authService   *auth.Service
+	quizResults   *services.QuizResultService
 	eventByModule func(context.Context, string) (*models.Event, error)
 	teamsByEvent  func(context.Context, string) ([]models.Team, error)
 	saveTeams     func(string, string, string) (*models.TeamResult, error)
@@ -91,7 +92,12 @@ type QuizHub struct {
 	mu sync.RWMutex
 }
 
-func (h *QuizHub) SetAuthService(service *auth.Service) { h.authService = service }
+type Dependencies struct {
+	AuthService *auth.Service
+	Events      *services.EventService
+	Teams       *database.TeamRepository
+	QuizResults *services.QuizResultService
+}
 
 func (h *QuizHub) AdminActive(token string) bool {
 	if h.authService == nil || token == "" {
@@ -103,16 +109,18 @@ func (h *QuizHub) AdminActive(token string) bool {
 	return err == nil && user.Status == "active" && (user.Role == "admin" || user.Role == "owner")
 }
 
-func NewQuizHub() *QuizHub {
+func NewQuizHub(deps Dependencies) *QuizHub {
 	h := &QuizHub{
-		clients:  make(map[*Client]bool),
-		sessions: make(map[string]*models.QuizSession),
+		authService: deps.AuthService,
+		quizResults: deps.QuizResults,
+		clients:     make(map[*Client]bool),
+		sessions:    make(map[string]*models.QuizSession),
 	}
-	h.eventByModule = func(ctx context.Context, moduleID string) (*models.Event, error) {
-		return services.NewEventService().GetByModule(ctx, moduleID)
+	if deps.Events != nil {
+		h.eventByModule = deps.Events.GetByModule
 	}
-	h.teamsByEvent = func(ctx context.Context, eventID string) ([]models.Team, error) {
-		return database.NewTeamRepository().GetByEventID(ctx, eventID)
+	if deps.Teams != nil {
+		h.teamsByEvent = deps.Teams.GetByEventID
 	}
 	h.saveTeams = h.saveTeamResults
 	return h
@@ -361,13 +369,13 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return services.NewQuizResultService().SaveQuiz(ctx, session)
+	return h.quizResults.SaveQuiz(ctx, session)
 }
 
 func (h *QuizHub) saveTeamResults(eventID, moduleID, moduleName string) (*models.TeamResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return services.NewQuizResultService().SaveTeams(ctx, eventID, moduleID, moduleName)
+	return h.quizResults.SaveTeams(ctx, eventID, moduleID, moduleName)
 }
 
 func mustMarshal(v interface{}) []byte {

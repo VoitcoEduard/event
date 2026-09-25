@@ -1,14 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/user/go-expo-sample/backend/handlers"
+	"github.com/user/go-expo-sample/backend/hub"
+	"github.com/user/go-expo-sample/backend/models"
 )
 
 func TestRoutePatterns(t *testing.T) {
 	mux := http.NewServeMux()
-	registerRoutes(mux, nil)
+	registerRoutes(mux, handlers.New(handlers.Dependencies{}))
 
 	tests := []struct {
 		method, path, pattern string
@@ -34,6 +39,38 @@ func TestRoutePatterns(t *testing.T) {
 	mux.ServeHTTP(w, httptest.NewRequest("PATCH", "/events/e1/modules/m1", nil))
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("unsupported method status = %d, want 405", w.Code)
+	}
+}
+
+func TestRoutesUseTheirInjectedQuizHub(t *testing.T) {
+	firstHub := hub.NewQuizHub(hub.Dependencies{})
+	firstHub.CreateSession("quiz-1", "event-1")
+	secondHub := hub.NewQuizHub(hub.Dependencies{})
+
+	for _, tt := range []struct {
+		name string
+		hub  *hub.QuizHub
+		want string
+	}{
+		{name: "first", hub: firstHub, want: "lobby"},
+		{name: "second", hub: secondHub, want: "inactive"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			registerRoutes(mux, handlers.New(handlers.Dependencies{QuizHub: tt.hub}))
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/events/event-1/modules/quiz-1/quiz/state", nil))
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", w.Code)
+			}
+			var session models.QuizSession
+			if err := json.Unmarshal(w.Body.Bytes(), &session); err != nil {
+				t.Fatal(err)
+			}
+			if session.State != tt.want {
+				t.Fatalf("state = %q, want %q", session.State, tt.want)
+			}
+		})
 	}
 }
 

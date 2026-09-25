@@ -17,13 +17,14 @@ func TestInternalErrorDoesNotExposeDetails(t *testing.T) {
 }
 
 func TestCreateEventRejectsOversizedBody(t *testing.T) {
+	h := New(Dependencies{})
 	for _, body := range []string{
 		`{"name":"` + strings.Repeat("x", 4<<20) + `"}`,
 		`{"name":"test"}` + strings.Repeat(" ", 4<<20),
 	} {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodPost, "/events", strings.NewReader(body))
-		CreateEvent(w, r)
+		h.CreateEvent(w, r)
 		if w.Code != http.StatusRequestEntityTooLarge {
 			t.Fatalf("status = %d, want 413", w.Code)
 		}
@@ -31,9 +32,10 @@ func TestCreateEventRejectsOversizedBody(t *testing.T) {
 }
 
 func TestCreateEventRejectsTrailingJSON(t *testing.T) {
+	h := New(Dependencies{})
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/events", strings.NewReader(`{"name":"test"}{"name":"other"}`))
-	CreateEvent(w, r)
+	h.CreateEvent(w, r)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", w.Code)
 	}

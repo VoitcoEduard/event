@@ -6,20 +6,10 @@ import (
 	"strings"
 
 	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/services"
 )
 
-var eventSessionService *services.EventSessionService
-
-func getEventSessionService() *services.EventSessionService {
-	if eventSessionService == nil {
-		eventSessionService = services.NewEventSessionService()
-	}
-	return eventSessionService
-}
-
 // CreateSession POST /events/{id}/sessions
-func CreateSession(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 3 {
@@ -37,7 +27,7 @@ func CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	svc := getEventSessionService()
+	svc := h.deps.Sessions
 	session, err := svc.CreateSession(r.Context(), eventID, input.ModuleOrder)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
@@ -50,7 +40,7 @@ func CreateSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetSession GET /sessions/{id}
-func GetSession(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 2 {
@@ -59,7 +49,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionID := parts[1]
 
-	svc := getEventSessionService()
+	svc := h.deps.Sessions
 	session, err := svc.GetSession(r.Context(), sessionID)
 	if err != nil {
 		http.Error(w, "Session not found", http.StatusNotFound)
@@ -71,7 +61,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateSessionStatus PUT /sessions/{id}/status
-func UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 3 {
@@ -89,7 +79,7 @@ func UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	svc := getEventSessionService()
+	svc := h.deps.Sessions
 	if err := svc.UpdateSessionStatus(r.Context(), sessionID, input.Status); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -100,7 +90,7 @@ func UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdvanceSessionModule PUT /sessions/{id}/active_module
-func AdvanceSessionModule(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AdvanceSessionModule(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 3 {
@@ -118,7 +108,7 @@ func AdvanceSessionModule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	svc := getEventSessionService()
+	svc := h.deps.Sessions
 	if err := svc.AdvanceSessionModule(r.Context(), sessionID, input.ActiveModuleID); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return

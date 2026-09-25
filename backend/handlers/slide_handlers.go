@@ -5,12 +5,11 @@ import (
 	"net/http"
 
 	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/services"
 )
 
-func GetSlides(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetSlides(w http.ResponseWriter, r *http.Request) {
 	eventID := r.PathValue("eventID")
-	slides, err := services.NewEventService().GetSlides(r.Context(), eventID)
+	slides, err := h.deps.Events.GetSlides(r.Context(), eventID)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
@@ -20,14 +19,14 @@ func GetSlides(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(slides)
 }
 
-func SaveSlides(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SaveSlides(w http.ResponseWriter, r *http.Request) {
 	eventID := r.PathValue("eventID")
 	var input []models.Slide
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	if err := services.NewEventService().SaveSlides(r.Context(), eventID, input); err != nil {
+	if err := h.deps.Events.SaveSlides(r.Context(), eventID, input); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}

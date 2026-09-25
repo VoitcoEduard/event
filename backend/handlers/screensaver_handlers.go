@@ -5,12 +5,11 @@ import (
 	"net/http"
 
 	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/services"
 )
 
-func GetScreensaverConfig(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("eventID")
-	config, err := services.NewEventService().GetScreensaver(r.Context(), id)
+	config, err := h.deps.Events.GetScreensaver(r.Context(), id)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
@@ -19,14 +18,14 @@ func GetScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(config)
 }
 
-func UpdateScreensaverConfig(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateScreensaverConfig(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("eventID")
 	var input models.ScreensaverConfig
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	if err := services.NewEventService().SetScreensaver(r.Context(), id, input); err != nil {
+	if err := h.deps.Events.SetScreensaver(r.Context(), id, input); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}

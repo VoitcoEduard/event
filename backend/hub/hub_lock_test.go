@@ -18,7 +18,7 @@ func assertHubUnlocked(t *testing.T, h *QuizHub) {
 }
 
 func TestHostStartQuizLoadsOutsideLock(t *testing.T) {
-	h := NewQuizHub()
+	h := NewQuizHub(Dependencies{})
 	h.CreateSession("module-1", "")
 	h.eventByModule = func(_ context.Context, moduleID string) (*models.Event, error) {
 		assertHubUnlocked(t, h)
@@ -50,7 +50,7 @@ func TestHostStartQuizRejectsMissingQuestions(t *testing.T) {
 		{name: "missing module", event: &models.Event{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			h := NewQuizHub()
+			h := NewQuizHub(Dependencies{})
 			h.CreateSession("module-1", "")
 			h.eventByModule = func(context.Context, string) (*models.Event, error) {
 				return tc.event, tc.err
@@ -66,7 +66,7 @@ func TestHostStartQuizRejectsMissingQuestions(t *testing.T) {
 }
 
 func TestHostEndTeamsSavesAndBroadcastsWithoutDeadlock(t *testing.T) {
-	h := NewQuizHub()
+	h := NewQuizHub(Dependencies{})
 	h.saveTeams = func(eventID, moduleID, moduleName string) (*models.TeamResult, error) {
 		assertHubUnlocked(t, h)
 		return &models.TeamResult{EventID: eventID, ModuleID: moduleID}, nil
@@ -80,7 +80,7 @@ func TestHostEndTeamsSavesAndBroadcastsWithoutDeadlock(t *testing.T) {
 }
 
 func TestParticipantJoinLoadsTeamsAndBroadcastsWithoutDeadlock(t *testing.T) {
-	h := NewQuizHub()
+	h := NewQuizHub(Dependencies{})
 	h.teamsByEvent = func(_ context.Context, eventID string) ([]models.Team, error) {
 		assertHubUnlocked(t, h)
 		return []models.Team{{ID: "team-1"}}, nil

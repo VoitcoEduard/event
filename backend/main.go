@@ -14,9 +14,11 @@ import (
 	"time"
 
 	"github.com/user/go-expo-sample/backend/auth"
+	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
 	"github.com/user/go-expo-sample/backend/hub"
+	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
@@ -58,18 +60,34 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handlers.SetAuthService(authService)
-
-	// Initialize QuizHub
-	quizHub := hub.NewQuizHub()
-	quizHub.SetAuthService(authService)
-
-	// Inject QuizHub into handlers
-	handlers.SetQuizHub(quizHub)
+	// Build the HTTP and websocket dependencies once, after MongoDB is ready.
+	events := services.NewEventService()
+	teams := database.NewTeamRepository()
+	quizResults := &services.QuizResultService{
+		Results:     database.NewQuizResultRepository(),
+		Teams:       teams,
+		TeamResults: database.NewTeamResultRepository(),
+	}
+	quizHub := hub.NewQuizHub(hub.Dependencies{
+		AuthService: authService,
+		Events:      events,
+		Teams:       teams,
+		QuizResults: quizResults,
+	})
+	handler := handlers.New(handlers.Dependencies{
+		Auth:         authService,
+		QuizHub:      quizHub,
+		Events:       events,
+		Modules:      services.NewModuleService(),
+		Participants: services.NewParticipantService(),
+		Sessions:     services.NewEventSessionService(),
+		Templates:    services.NewTemplateService(),
+		Teams:        teams,
+	})
 
 	mux := http.NewServeMux()
 	authService.Register(mux)
-	registerRoutes(mux, quizHub)
+	registerRoutes(mux, handler)
 
 	// Serve the Vue SPA from the ./dist directory (built by `npm run build`).
 	// Any path not matched by an API handler above falls through here.

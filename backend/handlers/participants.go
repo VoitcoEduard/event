@@ -6,22 +6,11 @@ import (
 	"strings"
 
 	"github.com/user/go-expo-sample/backend/db"
-	"github.com/user/go-expo-sample/backend/services"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var participantService *services.ParticipantService
-
-// SetupService lazily initializes the service since db.ConnectDB might run later
-func getParticipantService() *services.ParticipantService {
-	if participantService == nil {
-		participantService = services.NewParticipantService()
-	}
-	return participantService
-}
-
 // JoinEvent handles POST /events/{id}/participants/join
-func JoinEvent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) JoinEvent(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 4 {
@@ -41,7 +30,7 @@ func JoinEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	svc := getParticipantService()
+	svc := h.deps.Participants
 	participant, err := svc.JoinEvent(r.Context(), eventID, input.JoinKey, input.DisplayName, input.Profile)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
@@ -54,7 +43,7 @@ func JoinEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetParticipants handles GET /events/{id}/participants
-func GetParticipants(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetParticipants(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 3 {
@@ -63,7 +52,7 @@ func GetParticipants(w http.ResponseWriter, r *http.Request) {
 	}
 	eventID := parts[1]
 
-	svc := getParticipantService()
+	svc := h.deps.Participants
 	participants, err := svc.GetParticipantsByEvent(r.Context(), eventID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
@@ -75,7 +64,7 @@ func GetParticipants(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateParticipantName handles POST /events/{id}/participants/{userId}/name
-func UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 5 {

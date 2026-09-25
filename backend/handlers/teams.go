@@ -7,21 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 )
-
-var teamRepo *database.TeamRepository
-
-func getTeamRepo() *database.TeamRepository {
-	if teamRepo == nil {
-		teamRepo = database.NewTeamRepository()
-	}
-	return teamRepo
-}
 
 func enableCors(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
@@ -29,7 +19,7 @@ func enableCors(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetTeams(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetTeams(w http.ResponseWriter, r *http.Request) {
 	enableCors(w, r)
 	if r.Method == "OPTIONS" {
 		return
@@ -42,7 +32,7 @@ func GetTeams(w http.ResponseWriter, r *http.Request) {
 	}
 	eventID := parts[2]
 
-	teams, err := getTeamRepo().GetByEventID(r.Context(), eventID)
+	teams, err := h.deps.Teams.GetByEventID(r.Context(), eventID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -56,7 +46,7 @@ func GetTeams(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(teams)
 }
 
-func CreateTeam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	enableCors(w, r)
 	if r.Method == "OPTIONS" {
 		return
@@ -95,19 +85,19 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: time.Now(),
 	}
 
-	if err := getTeamRepo().Create(r.Context(), team); err != nil {
+	if err := h.deps.Teams.Create(r.Context(), team); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	BroadcastTeamUpdate(eventID, "team:created", team)
+	h.BroadcastTeamUpdate(eventID, "team:created", team)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(team)
 }
 
-func UpdateTeam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	enableCors(w, r)
 	if r.Method == "OPTIONS" {
 		return
@@ -130,7 +120,7 @@ func UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	team, err := getTeamRepo().GetByID(r.Context(), teamID)
+	team, err := h.deps.Teams.GetByID(r.Context(), teamID)
 	if err != nil {
 		http.Error(w, "Team not found", http.StatusNotFound)
 		return
@@ -143,18 +133,18 @@ func UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		team.Color = input.Color
 	}
 
-	if err := getTeamRepo().Update(r.Context(), team); err != nil {
+	if err := h.deps.Teams.Update(r.Context(), team); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	BroadcastTeamUpdate(eventID, "team:updated", team)
+	h.BroadcastTeamUpdate(eventID, "team:updated", team)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(team)
 }
 
-func DeleteTeam(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	enableCors(w, r)
 	if r.Method == "OPTIONS" {
 		return
@@ -168,26 +158,26 @@ func DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	eventID := parts[2]
 	teamID := parts[4]
 
-	_, err := getTeamRepo().GetByID(r.Context(), teamID)
+	_, err := h.deps.Teams.GetByID(r.Context(), teamID)
 	if err != nil {
 		http.Error(w, "Team not found", http.StatusNotFound)
 		return
 	}
 
-	if err := getTeamRepo().Delete(r.Context(), teamID); err != nil {
+	if err := h.deps.Teams.Delete(r.Context(), teamID); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	clearParticipantsTeamAssignment(r.Context(), teamID)
 
-	BroadcastTeamUpdate(eventID, "team:deleted", map[string]string{"teamId": teamID})
+	h.BroadcastTeamUpdate(eventID, "team:deleted", map[string]string{"teamId": teamID})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Team deleted"})
 }
 
-func AssignParticipant(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AssignParticipant(w http.ResponseWriter, r *http.Request) {
 	enableCors(w, r)
 	if r.Method == "OPTIONS" {
 		return
@@ -214,7 +204,7 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	team, err := getTeamRepo().GetByID(r.Context(), input.TeamID)
+	team, err := h.deps.Teams.GetByID(r.Context(), input.TeamID)
 	if err != nil {
 		http.Error(w, "Team not found", http.StatusNotFound)
 		return
@@ -238,7 +228,7 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 	var participant models.Participant
 	collection.FindOne(r.Context(), bson.M{"_id": input.ParticipantID}).Decode(&participant)
 
-	BroadcastTeamUpdate(eventID, "participant:assigned", map[string]interface{}{
+	h.BroadcastTeamUpdate(eventID, "participant:assigned", map[string]interface{}{
 		"participant": participant,
 		"team":        team,
 	})
@@ -251,7 +241,7 @@ func AssignParticipant(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
 	enableCors(w, r)
 	if r.Method == "OPTIONS" {
 		return
@@ -264,7 +254,7 @@ func AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
 	}
 	eventID := parts[2]
 
-	teams, err := getTeamRepo().GetByEventID(r.Context(), eventID)
+	teams, err := h.deps.Teams.GetByEventID(r.Context(), eventID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -314,7 +304,7 @@ func AutoAssignParticipants(w http.ResponseWriter, r *http.Request) {
 		unassigned[i] = participant
 	}
 
-	BroadcastTeamUpdate(eventID, "team:auto_assigned", map[string]interface{}{
+	h.BroadcastTeamUpdate(eventID, "team:auto_assigned", map[string]interface{}{
 		"teams":         teams,
 		"participants":  unassigned,
 		"assignedCount": len(unassigned),
@@ -336,8 +326,8 @@ func clearParticipantsTeamAssignment(ctx context.Context, teamID string) {
 	collection.UpdateMany(ctx, filter, update)
 }
 
-func BroadcastTeamUpdate(eventID string, messageType string, payload interface{}) {
-	if quizHub == nil {
+func (h *Handler) BroadcastTeamUpdate(eventID string, messageType string, payload interface{}) {
+	if h.deps.QuizHub == nil {
 		return
 	}
 
@@ -349,5 +339,5 @@ func BroadcastTeamUpdate(eventID string, messageType string, payload interface{}
 		Payload: payload,
 	}
 
-	quizHub.BroadcastToEvent(eventID, serverMsg)
+	h.deps.QuizHub.BroadcastToEvent(eventID, serverMsg)
 }

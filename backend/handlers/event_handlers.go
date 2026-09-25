@@ -3,19 +3,18 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/utils"
 	"net/http"
 )
 
-func CreateEvent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var event models.Event
 	if err := decodeJSON(w, r, &event); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	if err := services.NewEventService().Create(r.Context(), &event); err != nil {
+	if err := h.deps.Events.Create(r.Context(), &event); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -27,14 +26,14 @@ func CreateEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(event)
 }
 
-func GetEvents(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	if cached, ok := eventsListCache.Get(eventsListCacheKey); ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(cached)
 		return
 	}
 
-	events, err := services.NewEventService().List(r.Context())
+	events, err := h.deps.Events.List(r.Context())
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -51,7 +50,7 @@ func GetEvents(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func GetEvent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL: /events/{id}
 	path := r.URL.Path
 	prefix := "/events/"
@@ -71,7 +70,7 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventService := services.NewEventService()
+	eventService := h.deps.Events
 	event, err := eventService.Get(r.Context(), id)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
@@ -105,7 +104,7 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func UpdateEvent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL (naive approach since using net/http)
 	// Assuming /events/{id}
 	id := r.URL.Path[len("/events/"):]
@@ -120,7 +119,7 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := services.NewEventService().Update(r.Context(), id, &event); err != nil {
+	if err := h.deps.Events.Update(r.Context(), id, &event); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -130,14 +129,14 @@ func UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Event updated"})
 }
 
-func DeleteEvent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Path[len("/events/"):]
 	if id == "" {
 		http.Error(w, "ID required", http.StatusBadRequest)
 		return
 	}
 
-	if err := services.NewEventService().Delete(r.Context(), id); err != nil {
+	if err := h.deps.Events.Delete(r.Context(), id); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -147,7 +146,7 @@ func DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Event deleted"})
 }
 
-func ConnectToEvent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Pin string `json:"pin"`
 	}
@@ -156,7 +155,7 @@ func ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := services.NewEventService().FindByPIN(r.Context(), input.Pin)
+	event, err := h.deps.Events.FindByPIN(r.Context(), input.Pin)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
@@ -171,7 +170,7 @@ func ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(event)
 }
 
-func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL: /events/{id}/status
 	// Simple parsing assuming correct format
 	path := r.URL.Path
@@ -191,7 +190,7 @@ func UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := services.NewEventService().SetStatus(r.Context(), id, input.IsActive); err != nil {
+	if err := h.deps.Events.SetStatus(r.Context(), id, input.IsActive); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
