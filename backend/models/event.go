@@ -10,6 +10,7 @@ const (
 	ModuleTypeForm          ModuleType = "form"
 	ModuleTypeQuiz          ModuleType = "quiz"
 	ModuleTypeWrongPictures ModuleType = "wrong_pictures"
+	ModuleTypeSimpleQuiz    ModuleType = "simple_quiz"
 )
 
 type ModuleInputBinding struct {

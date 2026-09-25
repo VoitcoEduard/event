@@ -5,21 +5,24 @@ import "time"
 // Question model
 type QuizQuestion struct {
 	ID                 string              `json:"id" bson:"id"`
-	Type               string              `json:"type" bson:"type"` // "classic", "true_false", "multi_select"
+	Type               string              `json:"type" bson:"type"` // "classic", "true_false", "multi_select", "simple_text"
 	Text               string              `json:"text" bson:"text"`
 	Answers            []string            `json:"answers" bson:"answers"` // 4 answer options (or 2 for True/False)
 	CorrectIndex       int                 `json:"correctIndex" bson:"correctIndex"`
 	CorrectIndices     []int               `json:"correctIndices" bson:"correctIndices"` // For multi_select
 	CorrectValue       float64             `json:"correctValue" bson:"correctValue"`     // For range
 	RangeConfig        RangeConfig         `json:"rangeConfig" bson:"rangeConfig"`       // For range
-	ScoringConfig      ScoringConfig       `json:"scoringConfig" bson:"scoringConfig"`   // For range
-	TimeLimit          int                 `json:"timeLimit" bson:"timeLimit"`           // seconds
+	ScoringConfig      ScoringConfig       `json:"scoringConfig" bson:"scoringConfig"`   // For range + choice + simple_text points
+	TimeLimit          int                 `json:"timeLimit" bson:"timeLimit"`           // seconds (0 = no limit for simple_text)
 	ExplainTime        int                 `json:"explainTime" bson:"explainTime"`       // seconds for explanation before question starts
 	ImageID            *string             `json:"imageId" bson:"imageId"`
 	ImageAlt           string              `json:"imageAlt" bson:"imageAlt"`
 	ImageOptions       []ImageOption       `json:"imageOptions" bson:"imageOptions"`             // For correct_picture
 	WrongPictureConfig *WrongPictureConfig `json:"wrongPictureConfig" bson:"wrongPictureConfig"` // For wrong_pictures
 	CorrectNumber      int                 `json:"correctNumber" bson:"correctNumber"`           // For number
+	// Simple Quiz (simple_text) fields. Points reuse ScoringConfig.MaxPoints.
+	JudgeNotes        string `json:"judgeNotes,omitempty" bson:"judgeNotes,omitempty"`               // Private marking notes, judge only
+	CorrectAnswerText string `json:"correctAnswerText,omitempty" bson:"correctAnswerText,omitempty"` // Public correct answer (revealed if allowed)
 }
 
 // RangeConfig stores range-specific configuration
@@ -65,6 +68,7 @@ const (
 	QuestionTypeCorrectPicture = "correct_picture"
 	QuestionTypeWrongPictures  = "wrong_pictures"
 	QuestionTypeNumber         = "number"
+	QuestionTypeSimpleText     = "simple_text"
 )
 
 // ImageOption struct for correct_picture question type
@@ -80,6 +84,10 @@ type QuizModuleData struct {
 	BackgroundMusicURL string         `json:"backgroundMusicUrl" bson:"backgroundMusicUrl"`
 	BackgroundMusicID  string         `json:"backgroundMusicId" bson:"backgroundMusicId"`
 	AudioOutput        string         `json:"audioOutput" bson:"audioOutput"` // "admin", "bigscreen", "both"
+	// Simple Quiz settings. Points per question reuse ScoringConfig.MaxPoints,
+	// TimeLimit 0 means no limit. JudgeNotes/CorrectAnswerText live per question.
+	AllowAnswerReveal bool   `json:"allowAnswerReveal,omitempty" bson:"allowAnswerReveal,omitempty"`
+	JudgeToken        string `json:"judgeToken,omitempty" bson:"judgeToken,omitempty"`
 }
 
 // Player in quiz
