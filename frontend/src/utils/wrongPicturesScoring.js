@@ -38,7 +38,6 @@ export function calculateTotalScore(guesses, targets, config) {
             scoredGuesses: guesses.map((guess) => ({
                 ...guess,
                 targetId: null,
-                nearestTargetId: null,
                 distance: Infinity,
                 isCorrect: false,
                 scoreEarned: 0
@@ -51,7 +50,6 @@ export function calculateTotalScore(guesses, targets, config) {
     for (const guess of guesses) {
         let isCorrect = false;
         let matchedTargetId = null;
-        let nearestTargetId = null;
         let bestDistance = Infinity;
         let bestMatchDistance = Infinity;
 
@@ -66,7 +64,6 @@ export function calculateTotalScore(guesses, targets, config) {
 
             if (distance < bestDistance) {
                 bestDistance = distance;
-                nearestTargetId = target.id;
             }
 
             if (distance <= target.radius + config.tolerancePercent && distance < bestMatchDistance) {
@@ -83,7 +80,6 @@ export function calculateTotalScore(guesses, targets, config) {
             scoredGuesses.push({
                 ...guess,
                 targetId: matchedTargetId,
-                nearestTargetId,
                 distance: bestDistance,
                 isCorrect: true,
                 scoreEarned: maxPointsPerGuess
@@ -93,7 +89,6 @@ export function calculateTotalScore(guesses, targets, config) {
             scoredGuesses.push({
                 ...guess,
                 targetId: null,
-                nearestTargetId,
                 distance: bestDistance,
                 isCorrect: false,
                 scoreEarned: 0

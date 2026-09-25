@@ -22,52 +22,40 @@
       </span>
     </div>
 
-    <div v-if="review.guesses.length" class="wrong-picture-answer-review__grid">
+    <div v-if="review.guesses.length" class="wrong-picture-answer-review__list">
       <article
         v-for="guess in review.guesses"
         :key="guess.number"
         class="wrong-picture-answer-card"
         :class="guess.isCorrect ? 'is-correct' : 'is-incorrect'"
       >
-        <div class="wrong-picture-answer-card__header">
-          <div>
-            <span class="wrong-picture-answer-card__number">
-              {{ $t('quiz.player.wrong_picture_review.answer', { number: guess.number }) }}
-            </span>
-            <span class="wrong-picture-answer-card__status">
-              <span aria-hidden="true">{{ guess.isCorrect ? '✓' : '×' }}</span>
-              {{ guess.isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}
-            </span>
-          </div>
-          <span class="wrong-picture-answer-card__points">
-            {{ $t('quiz.player.wrong_picture_review.points', { points: guess.scoreEarned.toLocaleString() }) }}
-          </span>
-        </div>
-
         <WrongPictureTargetCrop
-          :key="`${guess.number}-${showingCorrectTarget(guess) ? 'target' : 'guess'}`"
           class="wrong-picture-answer-card__crop"
           :image-url="review.imageUrl"
           :target="cropTarget(guess)"
-          :target-number="guess.number"
-          :marker-status="showingCorrectTarget(guess) ? 'correct' : (guess.isCorrect ? 'correct' : 'incorrect')"
-          :label="cropLabel(guess)"
+          :show-marker="false"
         />
 
-        <p v-if="!guess.isCorrect && nearestTarget(guess)" class="wrong-picture-answer-card__nearest">
-          {{ $t('quiz.player.wrong_picture_review.nearest_target', { label: nearestTarget(guess).label || $t('quiz.player.wrong_picture_review.target_number', { number: targetNumber(nearestTarget(guess)) }) }) }}
-        </p>
+        <div class="wrong-picture-answer-card__details">
+          <div class="wrong-picture-answer-card__header">
+            <div>
+              <span class="wrong-picture-answer-card__number">
+                {{ $t('quiz.player.wrong_picture_review.answer', { number: guess.number }) }}
+              </span>
+              <span class="wrong-picture-answer-card__status">
+                <span aria-hidden="true">{{ guess.isCorrect ? '✓' : '×' }}</span>
+                {{ guess.isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}
+              </span>
+            </div>
+            <span class="wrong-picture-answer-card__points">
+              {{ $t('quiz.player.wrong_picture_review.points', { points: guess.scoreEarned.toLocaleString() }) }}
+            </span>
+          </div>
 
-        <button
-          v-if="!guess.isCorrect && nearestTarget(guess)"
-          class="wrong-picture-answer-card__location-button"
-          type="button"
-          @click="toggleCorrectLocation(guess)"
-        >
-          {{ showingCorrectTarget(guess)
-            ? $t('quiz.player.wrong_picture_review.show_your_answer')
-            : $t('quiz.player.wrong_picture_review.show_correct_location') }}
-        </button>
+          <p v-if="guess.isCorrect" class="wrong-picture-answer-card__target">
+            {{ matchedTarget(guess)?.label || $t('quiz.player.wrong_picture_review.correct_location') }}
+          </p>
+        </div>
       </article>
     </div>
 
@@ -79,8 +67,6 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
-import { useI18n } from 'vue-i18n'
 import WrongPictureTargetCrop from './WrongPictureTargetCrop.vue'
 
 const props = defineProps({
@@ -90,28 +76,13 @@ const props = defineProps({
   }
 })
 
-const { t } = useI18n()
-const revealedTargets = reactive({})
-
-const nearestTarget = (guess) => {
-  if (!guess.nearestTargetId) return null
-  return props.review.targets?.find((target) => target.id === guess.nearestTargetId) || null
-}
-
-const targetNumber = (target) => {
-  const index = props.review.targets?.findIndex((item) => item.id === target?.id) ?? -1
-  return index >= 0 ? index + 1 : '?'
-}
-
-const showingCorrectTarget = (guess) => Boolean(!guess.isCorrect && revealedTargets[guess.number])
-
-const toggleCorrectLocation = (guess) => {
-  revealedTargets[guess.number] = !revealedTargets[guess.number]
+const matchedTarget = (guess) => {
+  if (!guess.isCorrect) return null
+  return props.review.targets?.find((target) => target.id === guess.targetId) || null
 }
 
 const cropTarget = (guess) => {
-  const target = nearestTarget(guess)
-  if (showingCorrectTarget(guess) && target) return target
+  const target = matchedTarget(guess)
 
   return {
     xPercent: guess.xPercent,
@@ -119,25 +90,16 @@ const cropTarget = (guess) => {
     radius: target?.radius || 5
   }
 }
-
-const cropLabel = (guess) => {
-  if (showingCorrectTarget(guess)) {
-    return nearestTarget(guess)?.label || t('quiz.player.wrong_picture_review.correct_location')
-  }
-
-  return guess.isCorrect
-    ? nearestTarget(guess)?.label || t('quiz.player.wrong_picture_review.correct_location')
-    : ''
-}
 </script>
 
 <style scoped>
 .wrong-picture-answer-review {
-  width: min(100%, 1120px);
+  width: min(100%, 900px);
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
   overflow: auto;
+  margin-inline: auto;
   padding: 8px clamp(16px, 4vw, 48px) 32px;
   color: #fff;
   text-align: left;
@@ -231,20 +193,24 @@ const cropLabel = (guess) => {
   color: #2b0808;
 }
 
-.wrong-picture-answer-review__grid {
+.wrong-picture-answer-review__list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
   padding-bottom: 12px;
 }
 
 .wrong-picture-answer-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   border: 2px solid rgb(255 255 255 / 12%);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgb(9 9 20 / 56%);
-  box-shadow: 0 12px 30px rgb(0 0 0 / 18%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
 }
 
 .wrong-picture-answer-card.is-correct {
@@ -255,13 +221,16 @@ const cropLabel = (guess) => {
   border-color: rgb(255 93 93 / 58%);
 }
 
+.wrong-picture-answer-card__details {
+  min-width: 0;
+}
+
 .wrong-picture-answer-card__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
-  min-height: 42px;
-  padding: 0 2px 10px;
 }
 
 .wrong-picture-answer-card__number,
@@ -271,12 +240,12 @@ const cropLabel = (guess) => {
 }
 
 .wrong-picture-answer-card__number {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 850;
 }
 
 .wrong-picture-answer-card__status {
-  margin-top: 3px;
+  margin-top: 2px;
   color: rgb(255 255 255 / 66%);
   font-size: 0.78rem;
   font-weight: 750;
@@ -295,38 +264,19 @@ const cropLabel = (guess) => {
   font-size: 0.78rem;
   font-weight: 800;
   text-align: right;
-  white-space: nowrap;
 }
 
 .wrong-picture-answer-card__crop {
   display: block;
+  width: 112px;
 }
 
-.wrong-picture-answer-card__nearest {
-  min-height: 2.5em;
-  margin: 10px 2px 0;
+.wrong-picture-answer-card__target {
+  margin: 7px 0 0;
   color: rgb(255 255 255 / 70%);
   font-size: 0.8rem;
-  line-height: 1.25;
-}
-
-.wrong-picture-answer-card__location-button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid rgb(255 255 255 / 24%);
-  border-radius: 9px;
-  background: rgb(255 255 255 / 10%);
-  color: #fff;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.wrong-picture-answer-card__location-button:hover,
-.wrong-picture-answer-card__location-button:focus-visible {
-  background: rgb(255 255 255 / 18%);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .wrong-picture-answer-review__empty {
@@ -370,8 +320,14 @@ const cropLabel = (guess) => {
     gap: 8px;
   }
 
-  .wrong-picture-answer-review__grid {
-    grid-template-columns: 1fr;
+  .wrong-picture-answer-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .wrong-picture-answer-card__crop {
+    width: 88px;
   }
 }
 </style>

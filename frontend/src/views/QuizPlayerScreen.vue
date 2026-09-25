@@ -371,6 +371,21 @@ const wpOuterContainer = ref(null)
 const wpImageContainer = ref(null)
 const wpContainerRect = ref(null)
 
+const createWrongPictureReview = (question, result = { totalScore: 0, scoredGuesses: [] }) => ({
+    questionId: question.id,
+    questionIndex: currentQuestionIndex.value,
+    imageId: question.imageId,
+    imageUrl: question.imageId ? getImageUrl(question.imageId) : '',
+    targets: question.wrongPictureConfig?.targets || [],
+    totalScore: result.totalScore,
+    correctCount: result.scoredGuesses.filter((guess) => guess.isCorrect).length,
+    incorrectCount: result.scoredGuesses.filter((guess) => !guess.isCorrect).length,
+    guesses: result.scoredGuesses.map((guess, index) => ({
+        ...guess,
+        number: index + 1
+    }))
+})
+
 const updateWpContainerRect = () => {
     // Legacy - kept for safety if needed by other components, but MapCoordinatePicker handles its own rect
 }
@@ -578,20 +593,7 @@ const validateAndScore = (answerData) => {
 
         // Update local guesses with feedback
         wpGuesses.value = result.scoredGuesses
-        wrongPictureReview.value = {
-            questionId: question.id,
-            questionIndex: currentQuestionIndex.value,
-            imageId: question.imageId,
-            imageUrl: question.imageId ? getImageUrl(question.imageId) : '',
-            targets: config.targets || [],
-            totalScore: result.totalScore,
-            correctCount: result.scoredGuesses.filter((guess) => guess.isCorrect).length,
-            incorrectCount: result.scoredGuesses.filter((guess) => !guess.isCorrect).length,
-            guesses: result.scoredGuesses.map((guess, index) => ({
-                ...guess,
-                number: index + 1
-            }))
-        }
+        wrongPictureReview.value = createWrongPictureReview(question, result)
 
         answerPayload = { guesses: result.scoredGuesses }
         currentPoints.value = result.totalScore
@@ -852,6 +854,13 @@ onMounted(async () => {
             }
             if (question) {
                 preloadImages(question)
+            }
+        }
+
+        if (newState === States.RESULTS && !wrongPictureReview.value) {
+            const question = questionCache.get(currentQuestionIndex.value)
+            if (question?.type === 'wrong_pictures') {
+                wrongPictureReview.value = createWrongPictureReview(question)
             }
         }
 

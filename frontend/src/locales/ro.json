@@ -451,10 +451,6 @@
         "incorrect_count": "{count} incorecte",
         "answer": "Răspunsul {number}",
         "points": "{points} pct",
-        "nearest_target": "Ținta cea mai apropiată: {label}",
-        "target_number": "Ținta {number}",
-        "show_correct_location": "Arată locația corectă",
-        "show_your_answer": "Arată răspunsul tău",
         "correct_location": "Locație corectă",
         "no_answers": "Nu ai trimis niciun răspuns."
       }

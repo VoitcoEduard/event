@@ -451,10 +451,6 @@
         "incorrect_count": "Неверных: {count}",
         "answer": "Ответ {number}",
         "points": "{points} очк.",
-        "nearest_target": "Ближайшая цель: {label}",
-        "target_number": "Цель {number}",
-        "show_correct_location": "Показать правильное место",
-        "show_your_answer": "Показать ваш ответ",
         "correct_location": "Правильное место",
         "no_answers": "Вы не отправили ответы."
       }

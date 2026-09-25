@@ -451,10 +451,6 @@
         "incorrect_count": "{count} incorrect",
         "answer": "Answer {number}",
         "points": "{points} pts",
-        "nearest_target": "Nearest target: {label}",
-        "target_number": "Target {number}",
-        "show_correct_location": "Show correct location",
-        "show_your_answer": "Show your answer",
         "correct_location": "Correct location",
         "no_answers": "You did not submit any answers."
       }

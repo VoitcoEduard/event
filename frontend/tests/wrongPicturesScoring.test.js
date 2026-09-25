@@ -25,7 +25,7 @@ test('awards points inside the target radius and tolerance', () => {
   assert.equal(calculateGuessScore({ xPercent: 58, yPercent: 50 }, target('one', 50, 50, 5), 2, 100), 0)
 })
 
-test('marks each submitted guess and keeps the nearest target for review', () => {
+test('marks each submitted guess and records its score', () => {
   const result = calculateTotalScore([
     { xPercent: 50, yPercent: 50, isPlaced: true },
     { xPercent: 85, yPercent: 15, isPlaced: true }
@@ -37,12 +37,10 @@ test('marks each submitted guess and keeps the nearest target for review', () =>
   assert.equal(result.totalScore, 100)
   assert.equal(result.scoredGuesses[0].isCorrect, true)
   assert.equal(result.scoredGuesses[0].targetId, 'first')
-  assert.equal(result.scoredGuesses[0].nearestTargetId, 'first')
   assert.equal(result.scoredGuesses[0].scoreEarned, 100)
 
   assert.equal(result.scoredGuesses[1].isCorrect, false)
   assert.equal(result.scoredGuesses[1].targetId, null)
-  assert.equal(result.scoredGuesses[1].nearestTargetId, 'second')
   assert.equal(result.scoredGuesses[1].scoreEarned, 0)
 })
 
@@ -55,7 +53,6 @@ test('uses the closest accepted target when accepted areas overlap', () => {
   ], { tolerancePercent: 0, maxPoints: 50 })
 
   assert.equal(result.scoredGuesses[0].targetId, 'closer')
-  assert.equal(result.scoredGuesses[0].nearestTargetId, 'closer')
   assert.equal(result.totalScore, 50)
 })
 
@@ -74,7 +71,6 @@ test('handles no targets and empty guesses', () => {
   assert.equal(noTargets.totalScore, 0)
   assert.equal(noTargets.scoredGuesses[0].isCorrect, false)
   assert.equal(noTargets.scoredGuesses[0].targetId, null)
-  assert.equal(noTargets.scoredGuesses[0].nearestTargetId, null)
   assert.equal(noTargets.scoredGuesses[0].scoreEarned, 0)
 
   const noGuesses = calculateTotalScore([], [target('one', 50, 50)], config)
