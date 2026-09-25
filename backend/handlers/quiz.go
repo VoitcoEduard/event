@@ -141,11 +141,12 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 
 		// Create question window for first question
 		if len(questions) > 0 {
+			limit := hub.EffectiveTimeLimit(questions[0])
 			qWindow := models.QuestionWindow{
 				QuestionIndex: int64(s.CurrentIndex),
 				StartTime:     s.StartTime,
-				EndTime:       s.StartTime + int64(questions[0].TimeLimit),
-				GraceEndTime:  s.StartTime + int64(questions[0].TimeLimit) + hub.GracePeriodSeconds,
+				EndTime:       s.StartTime + limit,
+				GraceEndTime:  s.StartTime + limit + hub.GracePeriodSeconds,
 				State:         "active",
 			}
 			s.QuestionWindows = []models.QuestionWindow{qWindow}
@@ -185,11 +186,12 @@ func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
 
 		// Create question window for new question
 		if s.CurrentIndex < len(s.Questions) {
+			limit := hub.EffectiveTimeLimit(s.Questions[s.CurrentIndex])
 			qWindow := models.QuestionWindow{
 				QuestionIndex: int64(s.CurrentIndex),
 				StartTime:     s.StartTime,
-				EndTime:       s.StartTime + int64(s.Questions[s.CurrentIndex].TimeLimit),
-				GraceEndTime:  s.StartTime + int64(s.Questions[s.CurrentIndex].TimeLimit) + hub.GracePeriodSeconds,
+				EndTime:       s.StartTime + limit,
+				GraceEndTime:  s.StartTime + limit + hub.GracePeriodSeconds,
 				State:         "active",
 			}
 			s.QuestionWindows = append(s.QuestionWindows, qWindow)

@@ -18,7 +18,21 @@ const (
 	GracePeriodSeconds   = 2
 	TargetBatchSize      = 50 * 1024 // 50KB
 	MaxQuestionsPerBatch = 50        // Conservative limit
+
+	// A8: defaults matching every client (`question.timeLimit || 20`).
+	// A missing TimeLimit (zero value in old templates/JSON) must not
+	// produce a 0-second acceptance window on the server.
+	DefaultQuestionTimeLimit = 20
 )
+
+// EffectiveTimeLimit returns the question's time limit in seconds,
+// falling back to DefaultQuestionTimeLimit when unset or invalid.
+func EffectiveTimeLimit(q models.QuizQuestion) int64 {
+	if q.TimeLimit > 0 {
+		return int64(q.TimeLimit)
+	}
+	return DefaultQuestionTimeLimit
+}
 
 // AcceptanceResult represents the result of signal acceptance check
 type AcceptanceResult struct {

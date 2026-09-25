@@ -6,6 +6,7 @@
 package hub
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -131,6 +132,52 @@ func TestStaleQuestionSignalRejected(t *testing.T) {
 		t.Fatalf("stale-question signal recorded = %d, want 0", len(h.sessions["m1"].PlayerSignals))
 	}
 }
+// A8: a missing TimeLimit must yield the same 20s window every client shows,
+// not a 0-second window that rejects every answer.
+func TestEffectiveTimeLimitDefault(t *testing.T) {
+	if got := EffectiveTimeLimit(models.QuizQuestion{TimeLimit: 0}); got != DefaultQuestionTimeLimit {
+		t.Fatalf("TimeLimit 0 -> %d, want %d", got, DefaultQuestionTimeLimit)
+	}
+	if got := EffectiveTimeLimit(models.QuizQuestion{TimeLimit: -5}); got != DefaultQuestionTimeLimit {
+		t.Fatalf("TimeLimit -5 -> %d, want %d", got, DefaultQuestionTimeLimit)
+	}
+	if got := EffectiveTimeLimit(models.QuizQuestion{TimeLimit: 30}); got != 30 {
+		t.Fatalf("TimeLimit 30 -> %d, want 30", got)
+	}
+}
+
+func TestStartQuizMissingTimeLimitGetsDefaultWindow(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.CreateSession("m-time", "")
+	h.eventByModule = func(_ context.Context, moduleID string) (*models.Event, error) {
+		return &models.Event{
+			ID: "event-1",
+			Modules: []models.Module{{ID: moduleID, Data: map[string]any{
+				"questions": []models.QuizQuestion{{ID: "q0", Type: "classic", CorrectIndex: 0, ExplainTime: 1}},
+			}}},
+		}, nil
+	}
+	h.processHostStartQuiz(&Client{ModuleID: "m-time", IsHost: true}, ClientMessage{})
+	h.mu.RLock()
+	window := h.sessions["m-time"].QuestionWindows[0]
+	h.mu.RUnlock()
+	if got := window.EndTime - window.StartTime; got != DefaultQuestionTimeLimit {
+		t.Fatalf("window length = %d, want default %d", got, DefaultQuestionTimeLimit)
+	}
+
+	// And an answer inside that window is accepted and scored.
+	h.mu.Lock()
+	h.sessions["m-time"].Players["p1"] = &models.Player{ID: "p1", Nickname: "P"}
+	h.mu.Unlock()
+	h.ProcessMessage(&Client{ModuleID: "m-time", PlayerID: "p1"},
+		[]byte(`{"type":"player:signal","payload":{"questionIndex":0,"answerIndex":0,"scoreEarned":1000,"timeSpent":1000}}`))
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if got := h.sessions["m-time"].Players["p1"].Score; got != 1000 {
+		t.Fatalf("answer in default window scored %d, want 1000", got)
+	}
+}
+
 // Bug 5 (FIXED as a side effect of A4): a negative questionIndex is rejected
 // instead of panicking the whole server on out-of-range indexing.
 func TestReproNegativeQuestionIndexPanics(t *testing.T) {

@@ -96,11 +96,14 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		// session.Players = make(map[string]*models.Player) // REMOVED: Do not reset players, keep lobby players
 
 		// Create question window for first question
+		// A8: EffectiveTimeLimit keeps old questions without a timeLimit
+		// on the same 20s window every client displays.
+		firstLimit := EffectiveTimeLimit(questions[0])
 		qWindow := models.QuestionWindow{
 			QuestionIndex: int64(session.CurrentIndex),
 			StartTime:     session.StartTime,
-			EndTime:       session.StartTime + int64(questions[0].TimeLimit),
-			GraceEndTime:  session.StartTime + int64(questions[0].TimeLimit) + GracePeriodSeconds,
+			EndTime:       session.StartTime + firstLimit,
+			GraceEndTime:  session.StartTime + firstLimit + GracePeriodSeconds,
 			State:         "active",
 		}
 		session.QuestionWindows = []models.QuestionWindow{qWindow}
@@ -136,14 +139,15 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 
 				// Update the QuestionWindow start time to now
 				if idx < len(sess.QuestionWindows) {
+					limit := EffectiveTimeLimit(sess.Questions[idx])
 					sess.QuestionWindows[idx].StartTime = sess.StartTime
-					sess.QuestionWindows[idx].EndTime = sess.StartTime + int64(sess.Questions[idx].TimeLimit)
+					sess.QuestionWindows[idx].EndTime = sess.StartTime + limit
 					sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
 				}
 
 				h.broadcastToSessionLocked(modID, ServerMessage{
 					Type:    "cmd:state",
-					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
+					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": EffectiveTimeLimit(sess.Questions[idx])},
 				})
 			}
 		}(moduleID, session.CurrentIndex, explainTime)
@@ -185,11 +189,12 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 
 		// Create question window for new question
 		if session.CurrentIndex < len(session.Questions) {
+			limit := EffectiveTimeLimit(session.Questions[session.CurrentIndex])
 			qWindow := models.QuestionWindow{
 				QuestionIndex: int64(session.CurrentIndex),
 				StartTime:     session.StartTime,
-				EndTime:       session.StartTime + int64(session.Questions[session.CurrentIndex].TimeLimit),
-				GraceEndTime:  session.StartTime + int64(session.Questions[session.CurrentIndex].TimeLimit) + GracePeriodSeconds,
+				EndTime:       session.StartTime + limit,
+				GraceEndTime:  session.StartTime + limit + GracePeriodSeconds,
 				State:         "active",
 			}
 			session.QuestionWindows = append(session.QuestionWindows, qWindow)
@@ -219,14 +224,15 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 
 				// Update the QuestionWindow start time to now
 				if idx < len(sess.QuestionWindows) {
+					limit := EffectiveTimeLimit(sess.Questions[idx])
 					sess.QuestionWindows[idx].StartTime = sess.StartTime
-					sess.QuestionWindows[idx].EndTime = sess.StartTime + int64(sess.Questions[idx].TimeLimit)
+					sess.QuestionWindows[idx].EndTime = sess.StartTime + limit
 					sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
 				}
 
 				h.broadcastToSessionLocked(modID, ServerMessage{
 					Type:    "cmd:state",
-					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": sess.Questions[idx].TimeLimit},
+					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": EffectiveTimeLimit(sess.Questions[idx])},
 				})
 			}
 		}(client.ModuleID, session.CurrentIndex, explainTime)
