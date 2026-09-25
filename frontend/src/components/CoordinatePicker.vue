@@ -156,6 +156,9 @@ const getTargetStyle = (target) => {
 }
 
 const getHitAreaStyle = (target) => {
+  // Radius is in width-percentage points: size from the container (image)
+  // width and keep a 1:1 aspect so the zone is a screen-space circle.
+  // Scoring (wrongPicturesScoring.js) uses the same convention.
   return {
     width: `${target.radius * 2}%`,
     aspectRatio: '1',

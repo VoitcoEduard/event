@@ -370,6 +370,23 @@ const activeMarkerIndex = ref(null)
 const wpOuterContainer = ref(null)
 const wpImageContainer = ref(null)
 const wpContainerRect = ref(null)
+// Image aspect ratio (W/H) used for aspect-corrected scoring. Radius and
+// tolerance are width-percentage points, so Y deltas are scaled by this.
+const wpAspectRatio = ref(1)
+
+const loadWpAspectRatio = (question) => {
+    wpAspectRatio.value = 1
+    if (question?.type !== 'wrong_pictures' || !question?.imageId) return
+    const url = getImageUrl(question.imageId)
+    if (!url) return
+    const img = new Image()
+    img.onload = () => {
+        if (img.naturalWidth && img.naturalHeight) {
+            wpAspectRatio.value = img.naturalWidth / img.naturalHeight
+        }
+    }
+    img.src = url
+}
 
 const createWrongPictureReview = (question, result = { totalScore: 0, scoredGuesses: [] }) => ({
     questionId: question.id,
@@ -497,6 +514,7 @@ watch(currentQuestion, (question) => {
     if (question.type === 'range' && selectedAnswer.value === null) {
         rangeValue.value = question.rangeConfig?.minValue ?? 0
     }
+    loadWpAspectRatio(question)
     preloadImages(question)
 })
 
@@ -589,7 +607,7 @@ const validateAndScore = (answerData) => {
         const guessesData = Array.isArray(answerData) ? answerData : []
         const config = question.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 1000 }
 
-        const result = calculateTotalScore(guessesData, config.targets, config)
+        const result = calculateTotalScore(guessesData, config.targets, config, wpAspectRatio.value)
 
         // Update local guesses with feedback
         wpGuesses.value = result.scoredGuesses
@@ -841,6 +859,7 @@ onMounted(async () => {
             wpGuesses.value = []
             wrongPictureReview.value = null
             activeMarkerIndex.value = null
+            wpAspectRatio.value = 1
 
             const question = questionCache.get(currentQuestionIndex.value)
 

@@ -261,7 +261,7 @@
                   left: `${target.xPercent}%`,
                   top: `${target.yPercent}%`,
                   width: `${target.radius * 2}%`,
-                  height: `${target.radius * 2}%`
+                  aspectRatio: '1'
                 }"
               >
                 <div class="wp-target-pulse"></div>

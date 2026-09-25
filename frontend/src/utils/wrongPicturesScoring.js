@@ -1,15 +1,33 @@
-// Calculate distance between two percentage-based coordinates
-export function calculateDistance(x1, y1, x2, y2) {
-    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+// Radius, tolerance and coordinates share one convention:
+// xPercent/yPercent are 0-100 relative to image width/height, while radius
+// and tolerancePercent are expressed in width-percentage points (matching the
+// admin hit-area circle, which sizes itself from the image width).
+// On non-square images 1% of width != 1% of height in pixels, so the Y delta
+// is converted to width-percentage units via the image aspect ratio (W/H)
+// before measuring Euclidean distance. For square images (aspect 1) this
+// reduces to the plain percentage distance.
+export function normalizeAspectRatio(value) {
+    const aspect = Number(value);
+    if (!Number.isFinite(aspect) || aspect <= 0) return 1;
+    return aspect;
+}
+
+// Calculate aspect-corrected distance in width-percentage units
+export function calculateDistance(x1, y1, x2, y2, aspectRatio = 1) {
+    const aspect = normalizeAspectRatio(aspectRatio);
+    const dx = x2 - x1;
+    const dy = (y2 - y1) / aspect;
+    return Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
 }
 
 // Calculate score based on distance from target
-export function calculateGuessScore(guess, target, tolerancePercent, maxPoints) {
+export function calculateGuessScore(guess, target, tolerancePercent, maxPoints, aspectRatio = 1) {
     const distance = calculateDistance(
         guess.xPercent,
         guess.yPercent,
         target.xPercent,
-        target.yPercent
+        target.yPercent,
+        aspectRatio
     );
 
     // All-or-nothing scoring: if within radius (including tolerance), full points. Otherwise 0.
@@ -24,9 +42,12 @@ export function calculateGuessScore(guess, target, tolerancePercent, maxPoints) 
 // New scoring: Each correct guess (within tolerance of ANY target) scores maxPoints
 // No need to match to specific targets - just count correct guesses
 // This allows user to guess any number of markers without knowing target count
-export function calculateTotalScore(guesses, targets, config) {
+export function calculateTotalScore(guesses, targets, config, aspectRatio) {
     let totalScore = 0;
     const scoredGuesses = [];
+
+    // Aspect may be passed explicitly or carried on the config object.
+    const aspect = normalizeAspectRatio(aspectRatio ?? config?.aspectRatio ?? 1);
 
     if (!guesses || guesses.length === 0) {
         return { totalScore: 0, scoredGuesses: [] };
@@ -59,7 +80,8 @@ export function calculateTotalScore(guesses, targets, config) {
                 guess.xPercent,
                 guess.yPercent,
                 target.xPercent,
-                target.yPercent
+                target.yPercent,
+                aspect
             );
 
             if (distance < bestDistance) {

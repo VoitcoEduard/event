@@ -99,8 +99,12 @@ const imageLayerStyle = computed(() => ({
 const markerStyle = computed(() => ({
   left: `${xPercent.value}%`,
   top: `${yPercent.value}%`,
+  // Radius is in width-percentage points: size from the layer width and keep
+  // a 1:1 aspect so the ring is a screen-space circle on any image shape.
+  // (A height % would resolve against the auto-sized layer height and render
+  // an ellipse — or collapse — on non-square images.)
   width: `${radius.value * 2}%`,
-  height: `${radius.value * 2}%`
+  aspectRatio: '1'
 }))
 </script>
 
