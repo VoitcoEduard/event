@@ -167,6 +167,17 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			}
 		}
 
+		// A4: only the active question accepts answers. Anything else —
+		// future, past, negative, or with no window yet — is dropped before
+		// it can score or pollute statistics. This also closes the
+		// out-of-range indexing panic on crafted questionIndex values.
+		if questionIndex < 0 || questionIndex != session.CurrentIndex ||
+			questionIndex >= len(session.QuestionWindows) {
+			log.Printf("Answer rejected (invalid question) for module %s: Question %d (current %d, windows %d)",
+				client.ModuleID, questionIndex, session.CurrentIndex, len(session.QuestionWindows))
+			return
+		}
+
 		// Check if signal is within acceptance window.
 		// A3: honour AcceptanceResult.Scored — grace-period answers count
 		// for statistics (Valid) but earn no points (Scored == false).

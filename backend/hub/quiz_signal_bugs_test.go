@@ -92,28 +92,58 @@ func TestReproGracePeriodStillScores(t *testing.T) {
 	}
 }
 
-// Bug 4: a signal for a question that has no window (a future question) is
-// accepted with the default "on_time" status and scored.
+// Bug 4 (FIXED A4): a signal for a question with no window (e.g. a future
+// question) is rejected — it scores nothing and is not recorded.
 func TestReproFutureQuestionSignalScores(t *testing.T) {
 	h, c := newSignalHub(t)
 	send(h, c, `{"questionIndex":42,"answerIndex":1,"scoreEarned":1000,"timeSpent":1000}`)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if got := h.sessions["m1"].Players["p1"].Score; got != 1000 {
-		t.Fatalf("answer for a question that never started scored: %d", got)
+	if got := h.sessions["m1"].Players["p1"].Score; got != 0 {
+		t.Fatalf("answer for a question that never started scored: %d, want 0", got)
+	}
+	if len(h.sessions["m1"].PlayerSignals) != 0 {
+		t.Fatalf("invalid-question signal recorded = %d, want 0", len(h.sessions["m1"].PlayerSignals))
 	}
 }
 
-// Bug 5: negative questionIndex panics (index out of range) and takes the
-// whole server down, because nothing recovers panics in the read loop.
+// A4 also covers stale answers: once the host advances, the previous
+// question no longer accepts signals.
+func TestStaleQuestionSignalRejected(t *testing.T) {
+	h, c := newSignalHub(t)
+	h.mu.Lock()
+	h.sessions["m1"].CurrentIndex = 1
+	h.sessions["m1"].QuestionWindows = append(h.sessions["m1"].QuestionWindows, models.QuestionWindow{
+		QuestionIndex: 1,
+		StartTime:     time.Now().Unix(),
+		EndTime:       time.Now().Unix() + 20,
+		GraceEndTime:  time.Now().Unix() + 22,
+		State:         "active",
+	})
+	h.mu.Unlock()
+	send(h, c, `{"questionIndex":0,"answerIndex":1,"scoreEarned":1000,"timeSpent":1000}`)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if got := h.sessions["m1"].Players["p1"].Score; got != 0 {
+		t.Fatalf("stale-question signal scored: %d, want 0", got)
+	}
+	if len(h.sessions["m1"].PlayerSignals) != 0 {
+		t.Fatalf("stale-question signal recorded = %d, want 0", len(h.sessions["m1"].PlayerSignals))
+	}
+}
+// Bug 5 (FIXED as a side effect of A4): a negative questionIndex is rejected
+// instead of panicking the whole server on out-of-range indexing.
 func TestReproNegativeQuestionIndexPanics(t *testing.T) {
 	h, c := newSignalHub(t)
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic for questionIndex = -1")
-		}
-	}()
 	send(h, c, `{"questionIndex":-1,"answerIndex":1,"scoreEarned":1000,"timeSpent":1000}`)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if got := h.sessions["m1"].Players["p1"].Score; got != 0 {
+		t.Fatalf("negative questionIndex scored: %d, want 0", got)
+	}
+	if len(h.sessions["m1"].PlayerSignals) != 0 {
+		t.Fatalf("negative questionIndex recorded = %d, want 0", len(h.sessions["m1"].PlayerSignals))
+	}
 }
 
 // Bug 6: host:next_question past the last question panics on
