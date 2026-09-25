@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -58,7 +57,7 @@ func UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	_, err := collection.UpdateOne(context.Background(), filter, update)
+	_, err := collection.UpdateOne(r.Context(), filter, update)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -115,7 +114,7 @@ func StartQuiz(w http.ResponseWriter, r *http.Request) {
 	// Load questions from DB
 	collection := db.GetCollection("events")
 	var event models.Event
-	err := collection.FindOne(context.Background(), bson.M{"_id": eventID, "modules.id": moduleID}).Decode(&event)
+	err := collection.FindOne(r.Context(), bson.M{"_id": eventID, "modules.id": moduleID}).Decode(&event)
 	var questions []models.QuizQuestion
 	if err == nil {
 		for _, mod := range event.Modules {

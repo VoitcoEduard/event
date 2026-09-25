@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -41,7 +40,7 @@ func PreloadWrongPictures(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var module models.Module
-	err = db.GetCollection("modules").FindOne(context.Background(), bson.M{"_id": moduleId}).Decode(&module)
+	err = db.GetCollection("modules").FindOne(r.Context(), bson.M{"_id": moduleId}).Decode(&module)
 	if err != nil {
 		http.Error(w, "Module not found", http.StatusNotFound)
 		return
@@ -71,10 +70,10 @@ func PreloadWrongPictures(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch media metadata
-	mediaCursor, err := db.GetCollection("media").Find(context.Background(), bson.M{"_id": bson.M{"$in": mediaIDs}})
+	mediaCursor, err := db.GetCollection("media").Find(r.Context(), bson.M{"_id": bson.M{"$in": mediaIDs}})
 	var mediaList []models.MediaFile
 	if err == nil {
-		mediaCursor.All(context.Background(), &mediaList)
+		mediaCursor.All(r.Context(), &mediaList)
 	}
 
 	// Map media for fast lookup

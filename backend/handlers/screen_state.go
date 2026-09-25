@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -65,7 +64,7 @@ func GetScreenState(w http.ResponseWriter, r *http.Request) {
 
 	collection := db.GetCollection("events")
 	var event models.Event
-	err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&event)
+	err := collection.FindOne(r.Context(), bson.M{"_id": id}).Decode(&event)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
@@ -108,7 +107,7 @@ func UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	}
 	opts := options.Update().SetUpsert(true)
 
-	_, err := collection.UpdateOne(context.Background(), bson.M{"_id": id}, update, opts)
+	_, err := collection.UpdateOne(r.Context(), bson.M{"_id": id}, update, opts)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -157,7 +156,7 @@ func ScreenStream(w http.ResponseWriter, r *http.Request) {
 	// Send initial state
 	collection := db.GetCollection("events")
 	var event models.Event
-	err := collection.FindOne(context.Background(), bson.M{"_id": eventID}).Decode(&event)
+	err := collection.FindOne(r.Context(), bson.M{"_id": eventID}).Decode(&event)
 	if err == nil {
 		state := event.ScreenState
 		if state == nil {

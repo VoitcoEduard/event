@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -138,7 +137,7 @@ func UploadMedia(w http.ResponseWriter, r *http.Request) {
 	}
 
 	collection := db.GetCollection("media")
-	_, err = collection.InsertOne(context.Background(), mediaFile)
+	_, err = collection.InsertOne(r.Context(), mediaFile)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -185,7 +184,7 @@ func GetMedia(w http.ResponseWriter, r *http.Request) {
 
 	collection := db.GetCollection("media")
 	var mediaFile models.MediaFile
-	err = collection.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&mediaFile)
+	err = collection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&mediaFile)
 	if err != nil {
 		http.Error(w, "Media not found", http.StatusNotFound)
 		return
@@ -233,7 +232,7 @@ func ServeMedia(w http.ResponseWriter, r *http.Request) {
 
 	collection := db.GetCollection("media")
 	var mediaFile models.MediaFile
-	err = collection.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&mediaFile)
+	err = collection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&mediaFile)
 	if err != nil {
 		http.Error(w, "Media not found", http.StatusNotFound)
 		return
@@ -295,7 +294,7 @@ func DeleteMedia(w http.ResponseWriter, r *http.Request) {
 
 	collection := db.GetCollection("media")
 	var mediaFile models.MediaFile
-	err = collection.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&mediaFile)
+	err = collection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&mediaFile)
 	if err != nil {
 		http.Error(w, "Media not found", http.StatusNotFound)
 		return
@@ -310,7 +309,7 @@ func DeleteMedia(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_, err = collection.DeleteOne(context.Background(), bson.M{"_id": objectID})
+	_, err = collection.DeleteOne(r.Context(), bson.M{"_id": objectID})
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -326,14 +325,14 @@ func GetScreensavers(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection("screensavers")
 	var screensavers []models.Screensaver
 
-	cursor, err := collection.Find(context.Background(), bson.M{})
+	cursor, err := collection.Find(r.Context(), bson.M{})
 	if err != nil {
 		http.Error(w, "Failed to fetch screensavers", http.StatusInternalServerError)
 		return
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(r.Context())
 
-	if err := cursor.All(context.Background(), &screensavers); err != nil {
+	if err := cursor.All(r.Context(), &screensavers); err != nil {
 		http.Error(w, "Failed to decode screensavers", http.StatusInternalServerError)
 		return
 	}
@@ -444,7 +443,7 @@ func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mediaCollection := db.GetCollection("media")
-	_, err = mediaCollection.InsertOne(context.Background(), mediaFile)
+	_, err = mediaCollection.InsertOne(r.Context(), mediaFile)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -472,7 +471,7 @@ func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
 	}
 
 	screensaverCollection := db.GetCollection("screensavers")
-	_, err = screensaverCollection.InsertOne(context.Background(), screensaver)
+	_, err = screensaverCollection.InsertOne(r.Context(), screensaver)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -511,7 +510,7 @@ func DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
 	// Find screensaver first
 	screensaverCollection := db.GetCollection("screensavers")
 	var screensaver models.Screensaver
-	err = screensaverCollection.FindOne(context.Background(), bson.M{"_id": objectID}).Decode(&screensaver)
+	err = screensaverCollection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&screensaver)
 	if err != nil {
 		http.Error(w, "Screensaver not found", http.StatusNotFound)
 		return
@@ -523,7 +522,7 @@ func DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
 	// Delete the associated media file
 	mediaCollection := db.GetCollection("media")
 	var mediaFile models.MediaFile
-	err = mediaCollection.FindOne(context.Background(), bson.M{"_id": screensaver.MediaID}).Decode(&mediaFile)
+	err = mediaCollection.FindOne(r.Context(), bson.M{"_id": screensaver.MediaID}).Decode(&mediaFile)
 	if err == nil {
 		// Delete from GridFS
 		bucket := db.GetGridFSBucket()
@@ -531,11 +530,11 @@ func DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
 			bucket.Delete(mediaFile.GridFSID)
 		}
 		// Delete media metadata
-		mediaCollection.DeleteOne(context.Background(), bson.M{"_id": screensaver.MediaID})
+		mediaCollection.DeleteOne(r.Context(), bson.M{"_id": screensaver.MediaID})
 	}
 
 	// Delete screensaver
-	_, err = screensaverCollection.DeleteOne(context.Background(), bson.M{"_id": objectID})
+	_, err = screensaverCollection.DeleteOne(r.Context(), bson.M{"_id": objectID})
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
