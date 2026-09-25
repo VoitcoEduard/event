@@ -151,6 +151,22 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		DebugLog("player:signal - Session found, state: %s, currentIndex: %d, questionWindows: %d",
 			session.State, session.CurrentIndex, len(session.QuestionWindows))
 
+		// A2: one answer per player per question. Without this, re-sent
+		// (or replayed) signals for the same question keep adding to the
+		// score and inflate the answer histogram.
+		if client.PlayerID == "" {
+			log.Printf("Answer rejected (no player) for module %s: Question %d",
+				client.ModuleID, questionIndex)
+			return
+		}
+		for _, prev := range session.PlayerSignals {
+			if prev.PlayerID == client.PlayerID && prev.QuestionIndex == questionIndex {
+				log.Printf("Duplicate answer ignored for module %s: player %s already answered question %d",
+					client.ModuleID, client.PlayerID, questionIndex)
+				return
+			}
+		}
+
 		// Check if signal is within acceptance window
 		var status string = "on_time"
 		if questionIndex < len(session.QuestionWindows) {
