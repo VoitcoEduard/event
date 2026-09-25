@@ -321,6 +321,7 @@ import { getUserName } from '../utils'
 import { getImageUrl } from '../services/media'
 import { calculateTotalScore } from '../utils/wrongPicturesScoring'
 import { calculateChoiceScore } from '../utils/choiceScoring'
+import { streakAfterTimeout, streakAfterCatchup } from '../utils/streak'
 
 const { locale } = useI18n()
 const router = useRouter()
@@ -821,6 +822,9 @@ const autoSubmitOnTimeout = () => {
         submitWrongPictures()
         return
     }
+    // A9: timing out without answering breaks the streak, otherwise the
+    // next correct answer would earn a bonus from a stale streak.
+    streak.value = streakAfterTimeout({ hasSubmitted: hasSubmitted.value, streak: streak.value })
     transition(States.QUESTION_ENDED)
 }
 
@@ -954,6 +958,8 @@ onMounted(async () => {
         const missedQuestions = payload.missedQuestions || []
         if (missedQuestions.length > 0) {
             console.warn(`You missed ${missedQuestions.length} questions`)
+            // A9: missed questions are skipped questions — break the streak.
+            streak.value = streakAfterCatchup({ missedCount: missedQuestions.length, streak: streak.value })
         }
         const batchesNeeded = payload.batchesNeeded || []
         batchesNeeded.forEach(requestBatch)
