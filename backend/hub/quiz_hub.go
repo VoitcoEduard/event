@@ -102,6 +102,13 @@ type QuizHub struct {
 	// Active quiz sessions
 	sessions map[string]*models.QuizSession
 
+	// Active Simple Quiz sessions (moduleID -> session)
+	simpleQuizSessions map[string]*models.SimpleQuizSession
+	// Per-judge undo stacks (moduleID -> judgeKey -> stack of undo entries)
+	simpleQuizUndo map[string]map[string][]simpleQuizUndoEntry
+	// Active auto-lock timers (moduleID -> timer)
+	simpleQuizTimers map[string]*time.Timer
+
 	// Mutex for thread-safe access
 	mu sync.RWMutex
 }
@@ -125,10 +132,13 @@ func (h *QuizHub) AdminActive(token string) bool {
 
 func NewQuizHub(deps Dependencies) *QuizHub {
 	h := &QuizHub{
-		authService: deps.AuthService,
-		quizResults: deps.QuizResults,
-		clients:     make(map[*Client]bool),
-		sessions:    make(map[string]*models.QuizSession),
+		authService:        deps.AuthService,
+		quizResults:        deps.QuizResults,
+		clients:            make(map[*Client]bool),
+		sessions:           make(map[string]*models.QuizSession),
+		simpleQuizSessions: make(map[string]*models.SimpleQuizSession),
+		simpleQuizUndo:     make(map[string]map[string][]simpleQuizUndoEntry),
+		simpleQuizTimers:   make(map[string]*time.Timer),
 	}
 	if deps.Events != nil {
 		h.eventByModule = deps.Events.GetByModule
@@ -226,6 +236,18 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		return
 	case "participant:join":
 		h.processParticipantJoin(client, msg)
+		return
+	case "simple:host_join":
+		h.processSimpleHostJoin(client, msg)
+		return
+	case "simple:player_join":
+		h.processSimplePlayerJoin(client, msg)
+		return
+	case "simple:projector_join":
+		h.processSimpleProjectorJoin(client, msg)
+		return
+	case "simple:judge_join":
+		h.processSimpleJudgeJoin(client, msg)
 		return
 	}
 

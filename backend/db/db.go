@@ -122,6 +122,10 @@ func EnsureIndexes() {
 		"quiz_results": {
 			{Keys: bson.D{{Key: "eventId", Value: 1}, {Key: "moduleId", Value: 1}}},
 		},
+		"simple_quiz_sessions": {
+			{Keys: bson.D{{Key: "moduleId", Value: 1}}},
+			{Keys: bson.D{{Key: "eventId", Value: 1}}},
+		},
 		"media": {
 			{Keys: bson.D{{Key: "eventId", Value: 1}}},
 			{Keys: bson.D{{Key: "moduleId", Value: 1}}},
