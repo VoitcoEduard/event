@@ -1,5 +1,5 @@
 <template>
-  <div class="wrong-picture-target-crop">
+  <div class="wrong-picture-target-crop" :class="`is-${markerStatus}`">
     <div
       class="wrong-picture-target-crop__image-layer"
       :style="imageLayerStyle"
@@ -59,6 +59,11 @@ const props = defineProps({
   showMarker: {
     type: Boolean,
     default: true
+  },
+  markerStatus: {
+    type: String,
+    default: 'correct',
+    validator: (value) => ['correct', 'incorrect', 'neutral'].includes(value)
   }
 })
 
@@ -140,6 +145,25 @@ const markerStyle = computed(() => ({
   transform: translate(-50%, -50%);
   pointer-events: none;
   animation: wrong-picture-marker-appear 450ms ease-out both;
+  transition: border-color 200ms ease, background 200ms ease, box-shadow 200ms ease;
+}
+
+.wrong-picture-target-crop.is-incorrect .wrong-picture-target-crop__marker {
+  border-color: #ff5d5d;
+  background: rgb(255 93 93 / 18%);
+  box-shadow:
+    0 0 0 clamp(1px, 0.12vw, 2px) rgb(255 255 255 / 72%),
+    0 0 clamp(12px, 2vw, 30px) rgb(255 93 93 / 80%);
+}
+
+.wrong-picture-target-crop.is-neutral .wrong-picture-target-crop__marker {
+  border-color: #ffffff;
+  background: rgb(255 255 255 / 12%);
+  box-shadow: 0 0 0 clamp(1px, 0.12vw, 2px) rgb(0 0 0 / 30%);
+}
+
+.wrong-picture-target-crop.is-incorrect .wrong-picture-target-crop__badge {
+  background: #ff5d5d;
 }
 
 .wrong-picture-target-crop__marker-center {

@@ -28,8 +28,22 @@ export function calculateTotalScore(guesses, targets, config) {
     let totalScore = 0;
     const scoredGuesses = [];
 
-    if (!targets || targets.length === 0 || !guesses || guesses.length === 0) {
-        return { totalScore: 0, scoredGuesses: guesses || [] };
+    if (!guesses || guesses.length === 0) {
+        return { totalScore: 0, scoredGuesses: [] };
+    }
+
+    if (!targets || targets.length === 0) {
+        return {
+            totalScore: 0,
+            scoredGuesses: guesses.map((guess) => ({
+                ...guess,
+                targetId: null,
+                nearestTargetId: null,
+                distance: Infinity,
+                isCorrect: false,
+                scoreEarned: 0
+            }))
+        };
     }
 
     const maxPointsPerGuess = config.maxPoints;
@@ -37,7 +51,9 @@ export function calculateTotalScore(guesses, targets, config) {
     for (const guess of guesses) {
         let isCorrect = false;
         let matchedTargetId = null;
+        let nearestTargetId = null;
         let bestDistance = Infinity;
+        let bestMatchDistance = Infinity;
 
         // Check if this guess is within tolerance of ANY target
         for (const target of targets) {
@@ -50,12 +66,13 @@ export function calculateTotalScore(guesses, targets, config) {
 
             if (distance < bestDistance) {
                 bestDistance = distance;
+                nearestTargetId = target.id;
             }
 
-            if (distance <= target.radius + config.tolerancePercent) {
+            if (distance <= target.radius + config.tolerancePercent && distance < bestMatchDistance) {
                 isCorrect = true;
                 matchedTargetId = target.id;
-                // Keep checking other targets to find the closest one for display
+                bestMatchDistance = distance;
             }
         }
 
@@ -66,6 +83,7 @@ export function calculateTotalScore(guesses, targets, config) {
             scoredGuesses.push({
                 ...guess,
                 targetId: matchedTargetId,
+                nearestTargetId,
                 distance: bestDistance,
                 isCorrect: true,
                 scoreEarned: maxPointsPerGuess
@@ -75,6 +93,7 @@ export function calculateTotalScore(guesses, targets, config) {
             scoredGuesses.push({
                 ...guess,
                 targetId: null,
+                nearestTargetId,
                 distance: bestDistance,
                 isCorrect: false,
                 scoreEarned: 0

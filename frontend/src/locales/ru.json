@@ -442,7 +442,22 @@
       "quiz_over": "Викторина окончена",
       "place": "место",
       "final_score": "Итоговый счет: {score}",
-      "exit_btn": "Выход"
+      "exit_btn": "Выход",
+      "wrong_picture_review": {
+        "eyebrow": "Неправильные картинки",
+        "title": "Ваши ответы",
+        "total_score": "Получено очков",
+        "correct_count": "Верных: {count}",
+        "incorrect_count": "Неверных: {count}",
+        "answer": "Ответ {number}",
+        "points": "{points} очк.",
+        "nearest_target": "Ближайшая цель: {label}",
+        "target_number": "Цель {number}",
+        "show_correct_location": "Показать правильное место",
+        "show_your_answer": "Показать ваш ответ",
+        "correct_location": "Правильное место",
+        "no_answers": "Вы не отправили ответы."
+      }
     },
     "host": {
       "join_title": "Присоединяйтесь к викторине!",

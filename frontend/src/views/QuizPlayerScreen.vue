@@ -244,6 +244,14 @@
        </div>
     </div>
 
+    <!-- WRONG PICTURES RESULT REVIEW -->
+    <div
+      v-else-if="state === States.RESULTS && isWrongPictures && wrongPictureReview"
+      class="state-container wrong-picture-review-container"
+    >
+      <WrongPictureAnswerReview :review="wrongPictureReview" />
+    </div>
+
     <!-- RESULT STATE -->
     <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
        <div class="result-content">
@@ -306,6 +314,7 @@ import { useQuizStateMachine } from '../composables/useQuizStateMachine'
 import RangeComponent from '../components/RangeComponent.vue'
 import HorizontalCarousel from '../components/HorizontalCarousel.vue'
 import MapCoordinatePicker from '../components/MapCoordinatePicker.vue'
+import WrongPictureAnswerReview from '../components/WrongPictureAnswerReview.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
@@ -356,6 +365,7 @@ const hasPreselection = ref(true) // Default to first item selected effectively
 
 // Wrong Pictures specific state
 const wpGuesses = ref([])
+const wrongPictureReview = ref(null)
 const activeMarkerIndex = ref(null)
 const wpOuterContainer = ref(null)
 const wpImageContainer = ref(null)
@@ -568,6 +578,20 @@ const validateAndScore = (answerData) => {
 
         // Update local guesses with feedback
         wpGuesses.value = result.scoredGuesses
+        wrongPictureReview.value = {
+            questionId: question.id,
+            questionIndex: currentQuestionIndex.value,
+            imageId: question.imageId,
+            imageUrl: question.imageId ? getImageUrl(question.imageId) : '',
+            targets: config.targets || [],
+            totalScore: result.totalScore,
+            correctCount: result.scoredGuesses.filter((guess) => guess.isCorrect).length,
+            incorrectCount: result.scoredGuesses.filter((guess) => !guess.isCorrect).length,
+            guesses: result.scoredGuesses.map((guess, index) => ({
+                ...guess,
+                number: index + 1
+            }))
+        }
 
         answerPayload = { guesses: result.scoredGuesses }
         currentPoints.value = result.totalScore
@@ -813,6 +837,7 @@ onMounted(async () => {
 
             // Wrong Pictures reset
             wpGuesses.value = []
+            wrongPictureReview.value = null
             activeMarkerIndex.value = null
 
             const question = questionCache.get(currentQuestionIndex.value)
@@ -1245,6 +1270,14 @@ onUnmounted(() => {
     justify-content: center;
     text-align: center;
     background-color: #0A84FF;
+}
+
+/* WRONG PICTURES RESULT REVIEW */
+.wrong-picture-review-container {
+    align-items: stretch;
+    padding-right: 0;
+    padding-left: 0;
+    background: linear-gradient(160deg, #1d123f 0%, #27125a 52%, #140c2c 100%);
 }
 
 /* RESULT */
