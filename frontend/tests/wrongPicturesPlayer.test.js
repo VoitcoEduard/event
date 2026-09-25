@@ -23,3 +23,21 @@ test('MapCoordinatePicker stays in sync with parent markers (no stale pins)', ()
   assert.match(script, /watch\(\(\)\s*=>\s*props\.initialMarkers/)
   assert.match(script, /localMarkers\.value\s*=\s*\[\.\.\.\(?Array\.isArray\(newVal\)/)
 })
+
+test('player timer auto-submits placed wrong-pictures pins on expiry', () => {
+  const script = scriptSetupOf('src/views/QuizPlayerScreen.vue')
+
+  // Expiry must route through the auto-submit helper, not straight to
+  // QUESTION_ENDED (which discarded guesses and sent no signal).
+  assert.match(script, /const autoSubmitOnTimeout = \(\) => \{/)
+  assert.match(script, /timeRemaining\.value--\s+if \(timeRemaining\.value <= 0\) \{\s+clearInterval\(timerInterval\)\s+autoSubmitOnTimeout\(\)/)
+
+  // Helper submits only placed pins of an unsubmitted wrong_pictures round…
+  assert.match(script, /question\?\.type === 'wrong_pictures'/)
+  assert.match(script, /!hasSubmitted\.value/)
+  assert.match(script, /wpGuesses\.value\.some\(\(guess\) => guess\.isPlaced\)/)
+  assert.match(script, /submitWrongPictures\(\)/)
+
+  // …and keeps the old end-of-question path otherwise.
+  assert.match(script, /transition\(States\.QUESTION_ENDED\)/)
+})

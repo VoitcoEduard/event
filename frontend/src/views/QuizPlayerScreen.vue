@@ -797,9 +797,26 @@ const startLocalTimer = (timeLimit) => {
         timeRemaining.value--
         if (timeRemaining.value <= 0) {
             clearInterval(timerInterval)
-            transition(States.QUESTION_ENDED)
+            autoSubmitOnTimeout()
         }
     }, 1000)
+}
+
+// On timeout, submit placed wrong-pictures pins instead of silently
+// discarding them. This scores locally, queues the signal for the host,
+// and moves to ANSWERED; with no placed pins (or other question types)
+// the previous end-of-question path is kept.
+const autoSubmitOnTimeout = () => {
+    const question = questionCache.get(currentQuestionIndex.value)
+    if (
+        question?.type === 'wrong_pictures' &&
+        !hasSubmitted.value &&
+        wpGuesses.value.some((guess) => guess.isPlaced)
+    ) {
+        submitWrongPictures()
+        return
+    }
+    transition(States.QUESTION_ENDED)
 }
 
 const startExplainTimer = (timeLimit) => {
