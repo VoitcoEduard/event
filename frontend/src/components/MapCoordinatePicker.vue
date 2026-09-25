@@ -143,6 +143,14 @@ const localMarkers = ref([...props.initialMarkers])
 const showHint = ref(true)
 const isPlacementMode = ref(false)
 
+// Stay in sync with the parent: it owns the marker list (resets it on new
+// questions, replaces it with scored guesses on submit). Without this, pins
+// from the previous round would carry over visually.
+watch(() => props.initialMarkers, (newVal) => {
+  if (newVal === localMarkers.value) return
+  localMarkers.value = [...(Array.isArray(newVal) ? newVal : [])]
+})
+
 // Navigation state
 const isDragging = ref(false)
 const lastClientX = ref(0)
