@@ -33,6 +33,9 @@ const routes = [
   { path: '/quiz/:eventId/:moduleId/player', name: 'quiz-player', component: QuizPlayerScreen },
   { path: '/wrong-pictures/:eventId/:moduleId/host', name: 'wrong-pictures-host', component: QuizHostScreen, meta: { requiresAuth: true } },
   { path: '/wrong-pictures/:eventId/:moduleId/player', name: 'wrong-pictures-player', component: QuizPlayerScreen },
+  { path: '/simple-quiz/:eventId/:moduleId/host', name: 'simple-quiz-host', component: () => import('../views/SimpleQuizHostScreen.vue'), meta: { requiresAuth: true } },
+  { path: '/simple-quiz/:eventId/:moduleId/player', name: 'simple-quiz-player', component: () => import('../views/SimpleQuizPlayerScreen.vue') },
+  { path: '/simple-quiz/:eventId/:moduleId/judge', name: 'simple-quiz-judge', component: () => import('../views/SimpleQuizJudgeScreen.vue') },
   { path: '/projector/:eventId', name: 'projector', component: ProjectorView },
   { path: '/event/team-selection', name: 'team-selection', component: TeamSelectionScreen },
   { path: '/event/my-team', name: 'my-team', component: MyTeamScreen }

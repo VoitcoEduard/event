@@ -87,6 +87,11 @@ const questionTypes = computed(() => [
     id: 'wrong_pictures', 
     label: t('quiz_config.question_editor.types.wrong_pictures'), 
     icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="16" height="12" rx="1.5"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><path d="M3 16l4-4 3 3 3-3 6 6"/><circle cx="14" cy="14" r="5" fill="#1C1C1E" stroke="currentColor" stroke-width="2"/><line x1="17.5" y1="17.5" x2="22" y2="22" stroke-width="3"/><line x1="14" y1="12" x2="14" y2="16" stroke-width="1.5" stroke="currentColor"/><line x1="12" y1="14" x2="16" y2="14" stroke-width="1.5" stroke="currentColor"/><circle cx="14" cy="14" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`
+  },
+  {
+    id: 'simple_text',
+    label: t('quiz_config.question_editor.types.simple_text'),
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="6" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="13" y2="16"/><circle cx="18" cy="16.5" r="2.2" fill="currentColor" stroke="none"/><path d="M17.2 16.5l.6.6 1.2-1.2" stroke="#1C1C1E" stroke-width="1.2"/></svg>`
   }
 ])
 

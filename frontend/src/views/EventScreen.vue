@@ -93,7 +93,8 @@
                 <span class="module-emoji">
                   {{ module.type === 'form' ? '📝' :
                      (module.type === 'quiz' ? '🎮' :
-                     (module.type === 'wrong_pictures' ? '🖼️' : '📊')) }}
+                     (module.type === 'wrong_pictures' ? '🖼️' :
+                     (module.type === 'simple_quiz' ? '✍️' : '📊'))) }}
                 </span>
               </div>
               <div class="module-main">
@@ -229,6 +230,10 @@ const selectModule = (module) => {
   }
   if (module.type === 'wrong_pictures') {
     router.push(`/wrong-pictures/${currentEvent.value.id}/${module.id}/player`)
+    return
+  }
+  if (module.type === 'simple_quiz') {
+    router.push(`/simple-quiz/${currentEvent.value.id}/${module.id}/player`)
     return
   }
   selectedModule.value = module

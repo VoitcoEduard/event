@@ -532,7 +532,7 @@ const route = useRoute()
 const eventId = route.params.eventId
 const activeModuleId = ref('')
 const currentEvent = ref(null)
-const supportedProjectorTypes = new Set(['quiz', 'wrong_pictures'])
+const supportedProjectorTypes = new Set(['quiz', 'wrong_pictures', 'simple_quiz'])
 let pollingInterval = null
 
 const changeLanguage = () => {

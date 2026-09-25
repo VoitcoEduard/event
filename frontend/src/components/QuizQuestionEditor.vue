@@ -27,6 +27,7 @@
             <span v-if="localQuestion.timeLimit === 20" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
           </label>
           <select v-model.number="localQuestion.timeLimit" class="select-input" @change="emitUpdate">
+            <option v-if="localQuestion.type === 'simple_text'" :value="0">{{ $t('quiz_config.question_editor.no_limit') }}</option>
             <option :value="5">5s</option>
             <option :value="10">10s</option>
             <option :value="20">20s</option>
@@ -36,7 +37,7 @@
             <option :value="120">120s</option>
           </select>
         </div>
-        <div class="input-group">
+        <div v-if="localQuestion.type !== 'simple_text'" class="input-group">
           <label>
             {{ $t('quiz_config.question_editor.explain_time') }}
             <span v-if="localQuestion.explainTime === 5" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
@@ -80,7 +81,7 @@
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
       ⚠️ Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
     </div>
-    <div v-if="localQuestion.type !== 'range' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
+    <div v-if="localQuestion.type !== 'range' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures' && localQuestion.type !== 'simple_text'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
@@ -269,6 +270,30 @@
       </div>
     </div>
 
+    <!-- SIMPLE TEXT (Simple Quiz) CONFIGURATION -->
+    <div v-if="localQuestion.type === 'simple_text'" class="simple-text-config">
+      <div class="input-group">
+        <label>{{ $t('quiz_config.question_editor.simple_text.judge_notes') }}</label>
+        <textarea
+          v-model="localQuestion.judgeNotes"
+          class="main-input judge-notes-input"
+          :placeholder="$t('quiz_config.question_editor.simple_text.judge_notes_placeholder')"
+          @input="emitUpdate"
+        ></textarea>
+        <p class="config-note">{{ $t('quiz_config.question_editor.simple_text.judge_notes_hint') }}</p>
+      </div>
+      <div class="input-group">
+        <label>{{ $t('quiz_config.question_editor.simple_text.correct_answer') }}</label>
+        <textarea
+          v-model="localQuestion.correctAnswerText"
+          class="main-input"
+          :placeholder="$t('quiz_config.question_editor.simple_text.correct_answer_placeholder')"
+          @input="emitUpdate"
+        ></textarea>
+        <p class="config-note">{{ $t('quiz_config.question_editor.simple_text.correct_answer_hint') }}</p>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -340,7 +365,9 @@ const localQuestion = reactive({
       targets: [],
       tolerancePercent: 10,
       maxPoints: 1000
-  }
+  },
+  judgeNotes: props.question.judgeNotes || '',
+  correctAnswerText: props.question.correctAnswerText || ''
 })
 
 // Unified Points Accessor
@@ -435,6 +462,15 @@ const handleTypeChange = () => {
         if (!localQuestion.wrongPictureConfig) {
              localQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 1000 }
         }
+    } else if (localQuestion.type === 'simple_text') {
+        if (!localQuestion.scoringConfig) {
+            localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 0, partialPercent: 0 }
+        } else if (!localQuestion.scoringConfig.maxPoints) {
+            localQuestion.scoringConfig.maxPoints = 100
+        }
+        if (localQuestion.judgeNotes === undefined) localQuestion.judgeNotes = ''
+        if (localQuestion.correctAnswerText === undefined) localQuestion.correctAnswerText = ''
+        if (localQuestion.timeLimit === undefined) localQuestion.timeLimit = 0
     } else {
         // Reset to empty if switching back from T/F
         if (localQuestion.answers[0] === 'True' && localQuestion.answers[1] === 'False') {
@@ -863,6 +899,21 @@ const isAnswerReadOnly = (idx) => {
   padding: 16px;
   border-radius: 8px;
   border: 1px dashed #3A3A3C;
+}
+
+.simple-text-config {
+  background: #232325;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px dashed #3A3A3C;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.judge-notes-input {
+  min-height: 64px;
+  resize: vertical;
 }
 
 .config-note {

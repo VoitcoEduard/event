@@ -121,7 +121,8 @@
         "module_added": "Модуль добавлен. Теперь настройте его.",
         "screensaver_updated": "Заставка обновлена",
         "screensaver_removed": "Заставка удалена"
-      }
+      },
+      "simple_quiz_option": "Простая викторина"
     }
   },
   "screen_manager": {
@@ -234,7 +235,9 @@
       "tf_options": "Вопросы Правда/Ложь должны иметь оба варианта.",
       "cp_options": "Вопросы 'Правильная картинка' должны иметь как минимум 2 варианта.",
       "number_required": "Правильный ответ для числового вопроса обязателен.",
-      "mc_options": "Все варианты ответов должны быть заполнены для вопросов с множественным выбором."
+      "mc_options": "Все варианты ответов должны быть заполнены для вопросов с множественным выбором.",
+      "simple_text_required": "Текстовому вопросу нужен текст или картинка.",
+      "simple_points": "Текстовому вопросу нужны положительные баллы."
     },
     "import": {
       "note_images": "Примечание: Изображения из импортированных файлов необходимо загрузить заново",
@@ -260,7 +263,8 @@
         "range": "Диапазон",
         "correct_picture": "Правильная картинка",
         "wrong_pictures": "Неправильные картинки",
-        "number": "Число"
+        "number": "Число",
+        "simple_text": "Текстовый ответ"
       },
       "type_descriptions": {
         "classic": "Standard multiple choice question with four options and one correct answer.",
@@ -269,7 +273,8 @@
         "range": "Players use a slider to guess a value. Points are awarded based on how close they are to the target.",
         "correct_picture": "Players must identify and select the correct image from a set of options.",
         "wrong_pictures": "A visual challenge where players must find and click on specific targets within a single image.",
-        "number": "Players must input an exact numeric value. No time bonus applies."
+        "number": "Players must input an exact numeric value. No time bonus applies.",
+        "simple_text": "Игроки пишут ответ. Судья оценивает Правильно или Неправильно."
       },
       "selector": {
         "title": "Выберите тип вопроса",
@@ -316,6 +321,15 @@
         "no_targets": "Цели не заданы.",
         "label_placeholder": "Метка...",
         "radius_label": "Радиус:"
+      },
+      "no_limit": "Без лимита",
+      "simple_text": {
+        "judge_notes": "Заметки судьи (только судье)",
+        "judge_notes_placeholder": "напр. Принимать Paris; 0 за пустой",
+        "judge_notes_hint": "Видно только судье.",
+        "correct_answer": "Правильный ответ (необязательно)",
+        "correct_answer_placeholder": "напр. Париж",
+        "correct_answer_hint": "Показывается только при раскрытии, если разрешено."
       }
     }
   },
@@ -539,5 +553,87 @@
     "cancel": "Отмена",
     "loading": "Загрузка...",
     "data_btn": "📊 Данные"
+  },
+  "simple_quiz": {
+    "config": {
+      "title": "Редактор простой викторины",
+      "allow_reveal": "Разрешить раскрытие ответов",
+      "allow_reveal_hint": "Если выкл, нет публичного ответа и кнопки.",
+      "judge_link": "Ссылка судьи (секретная)",
+      "copy": "Копировать",
+      "copied": "Ссылка скопирована"
+    },
+    "host": {
+      "join_title": "Присоединяйтесь!",
+      "game_pin": "PIN:",
+      "players": "Игроки",
+      "start": "Запустить и открыть В1",
+      "open": "Открыть вопрос",
+      "lock": "Закрыть ответы",
+      "next": "Следующий вопрос",
+      "end_answering": "Завершить ответы",
+      "reveal": "Показать ответ",
+      "publish": "Опубликовать",
+      "update_published": "Обновить публикацию",
+      "complete": "Завершить",
+      "resume": "Продолжить",
+      "reset": "Сбросить",
+      "copy_judge": "Ссылка судьи",
+      "copy_projector": "Ссылка проектора",
+      "answered": "ответов",
+      "grading_progress": "Проверка",
+      "waiting_grading": "Идёт проверка…",
+      "results_published": "Опубликовано",
+      "completed": "Завершено",
+      "paused": "Пауза — нужно продолжить",
+      "confirm_end": "Завершить приём ответов?",
+      "confirm_publish": "Опубликовать? Нужны все оценки.",
+      "reveal_hint": "Нужен публичный ответ и разрешение."
+    },
+    "player": {
+      "logo": "Простая викторина!",
+      "nickname_placeholder": "Никнейм",
+      "join_btn": "Войти",
+      "you_are_in": "Вы в игре!",
+      "see_name": "Видите своё имя на экране?",
+      "waiting_next": "Ждите следующий вопрос…",
+      "type_answer": "Введите ответ… (макс 2000)",
+      "submit": "Отправить",
+      "submitted": "Ответ locked!",
+      "waiting_others": "Ждите…",
+      "revealed_answer": "Правильный ответ",
+      "waiting_grading": "Ответы завершены. Проверка…",
+      "right": "Правильно",
+      "wrong": "Неправильно",
+      "missing": "Нет ответа",
+      "points": "Баллы",
+      "total": "Итого",
+      "leaderboard": "Таблица",
+      "place": "место",
+      "published": "Результаты!",
+      "draft_restored": "Черновик восстановлен"
+    },
+    "judge": {
+      "title": "Судья",
+      "pending": "Ожидают",
+      "all": "Все",
+      "right": "Правильно",
+      "wrong": "Неправильно",
+      "review_later": "Позже",
+      "undo": "Отменить",
+      "publish_hint": "Всё должно быть Правильно/Неправильно.",
+      "graded": "оценено",
+      "ungraded": "не оценено",
+      "review": "отложено",
+      "received": "получено",
+      "empty": "Ответов пока нет.",
+      "next_pending": "Следующий появится после оценки."
+    },
+    "projector": {
+      "join_title": "Присоединяйтесь!",
+      "waiting": "Ждите…",
+      "grading": "Проверка…",
+      "results": "Результаты"
+    }
   }
 }

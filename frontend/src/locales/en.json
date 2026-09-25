@@ -121,7 +121,8 @@
         "module_added": "Module added. Now please configure it.",
         "screensaver_updated": "Screensaver image updated",
         "screensaver_removed": "Screensaver image removed"
-      }
+      },
+      "simple_quiz_option": "Simple Quiz"
     }
   },
   "screen_manager": {
@@ -234,7 +235,9 @@
       "tf_options": "True/False questions must have both True and False options.",
       "cp_options": "Correct Picture questions must have at least 2 image options.",
       "number_required": "Correct answer for number question is required.",
-      "mc_options": "All answer options must be filled for multiple choice questions."
+      "mc_options": "All answer options must be filled for multiple choice questions.",
+      "simple_text_required": "Text questions need question text or an image.",
+      "simple_points": "Text questions need positive points."
     },
     "import": {
       "note_images": "Note: Images from imported files need to be re-uploaded",
@@ -260,7 +263,8 @@
         "range": "Range",
         "correct_picture": "Correct Picture",
         "wrong_pictures": "Wrong Pictures",
-        "number": "Number"
+        "number": "Number",
+        "simple_text": "Text Answer"
       },
       "type_descriptions": {
         "classic": "Standard multiple choice question with four options and one correct answer.",
@@ -269,7 +273,8 @@
         "range": "Players use a slider to guess a value. Points are awarded based on how close they are to the target.",
         "correct_picture": "Players must identify and select the correct image from a set of options.",
         "wrong_pictures": "A visual challenge where players must find and click on specific targets within a single image.",
-        "number": "Players must input an exact numeric value. No time bonus applies."
+        "number": "Players must input an exact numeric value. No time bonus applies.",
+        "simple_text": "Players type a written answer. A judge marks each answer Right or Wrong."
       },
       "selector": {
         "title": "Choose Question Type",
@@ -316,6 +321,15 @@
         "no_targets": "No targets set.",
         "label_placeholder": "Label...",
         "radius_label": "Radius:"
+      },
+      "no_limit": "No limit",
+      "simple_text": {
+        "judge_notes": "Private marking notes (judge only)",
+        "judge_notes_placeholder": "e.g. Accept Paris, Pariz; 0 for empty",
+        "judge_notes_hint": "Visible only to the judge. Never shown to players or projector.",
+        "correct_answer": "Public correct answer (optional)",
+        "correct_answer_placeholder": "e.g. Paris",
+        "correct_answer_hint": "Shown only when revealed and revealing is enabled."
       }
     }
   },
@@ -539,5 +553,87 @@
     "cancel": "Cancel",
     "loading": "Loading...",
     "data_btn": "📊 Data"
+  },
+  "simple_quiz": {
+    "config": {
+      "title": "Simple Quiz Editor",
+      "allow_reveal": "Allow correct answers to be revealed",
+      "allow_reveal_hint": "If off, no public answer field and no reveal button.",
+      "judge_link": "Judge link (secret, no login)",
+      "copy": "Copy",
+      "copied": "Judge link copied"
+    },
+    "host": {
+      "join_title": "Join the Simple Quiz!",
+      "game_pin": "Game PIN:",
+      "players": "Players",
+      "start": "Launch & open Q1",
+      "open": "Open question",
+      "lock": "Lock answers",
+      "next": "Next question",
+      "end_answering": "End answering",
+      "reveal": "Reveal answer",
+      "publish": "Publish results",
+      "update_published": "Update published results",
+      "complete": "Complete",
+      "resume": "Resume",
+      "reset": "Reset",
+      "copy_judge": "Copy judge link",
+      "copy_projector": "Copy projector link",
+      "answered": "answers",
+      "grading_progress": "Grading",
+      "waiting_grading": "Waiting for grading",
+      "results_published": "Results published",
+      "completed": "Completed",
+      "paused": "Paused — resume required",
+      "confirm_end": "End answering? Players can no longer submit.",
+      "confirm_publish": "Publish? Requires all answers graded.",
+      "reveal_hint": "Reveal needs a public answer and enabled setting."
+    },
+    "player": {
+      "logo": "Simple Quiz!",
+      "nickname_placeholder": "Enter Nickname",
+      "join_btn": "Join",
+      "you_are_in": "You're in!",
+      "see_name": "See your name on screen?",
+      "waiting_next": "Waiting for the next question…",
+      "type_answer": "Type your answer here… (max 2000)",
+      "submit": "Submit answer",
+      "submitted": "Answer locked!",
+      "waiting_others": "Waiting…",
+      "revealed_answer": "Correct answer",
+      "waiting_grading": "Answering finished. Waiting for grading…",
+      "right": "Right",
+      "wrong": "Wrong",
+      "missing": "Missing",
+      "points": "Points",
+      "total": "Total",
+      "leaderboard": "Leaderboard",
+      "place": "place",
+      "published": "Results are out!",
+      "draft_restored": "Draft restored"
+    },
+    "judge": {
+      "title": "Judge workspace",
+      "pending": "Pending",
+      "all": "All",
+      "right": "Right",
+      "wrong": "Wrong",
+      "review_later": "Review later",
+      "undo": "Undo",
+      "publish_hint": "All answers must be Right or Wrong before publishing.",
+      "graded": "graded",
+      "ungraded": "ungraded",
+      "review": "review later",
+      "received": "received",
+      "empty": "No answers yet. Grading can start while questions are active.",
+      "next_pending": "Next pending takes its place after grading."
+    },
+    "projector": {
+      "join_title": "Join the Simple Quiz!",
+      "waiting": "Waiting…",
+      "grading": "Grading in progress…",
+      "results": "Results"
+    }
   }
 }

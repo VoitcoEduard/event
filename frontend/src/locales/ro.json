@@ -121,7 +121,8 @@
         "module_added": "Modul adăugat. Te rugăm să îl configurezi.",
         "screensaver_updated": "Imaginea de screensaver a fost actualizată",
         "screensaver_removed": "Imaginea de screensaver a fost eliminată"
-      }
+      },
+      "simple_quiz_option": "Quiz Simplu"
     }
   },
   "screen_manager": {
@@ -234,7 +235,9 @@
       "tf_options": "Întrebările Adevărat/Fals trebuie să aibă ambele opțiuni.",
       "cp_options": "Întrebările Imagine Corectă trebuie să aibă cel puțin 2 opțiuni de imagine.",
       "number_required": "Răspunsul corect pentru întrebarea de tip număr este obligatoriu.",
-      "mc_options": "Toate opțiunile de răspuns trebuie completate pentru întrebările cu răspuns multiplu."
+      "mc_options": "Toate opțiunile de răspuns trebuie completate pentru întrebările cu răspuns multiplu.",
+      "simple_text_required": "Întrebările text necesită text sau imagine.",
+      "simple_points": "Întrebările text necesită puncte pozitive."
     },
     "import": {
       "note_images": "Notă: Imaginile din fișierele importate trebuie reîncărcate",
@@ -260,7 +263,8 @@
         "range": "Interval",
         "correct_picture": "Imagine Corectă",
         "wrong_pictures": "Imagini Greșite",
-        "number": "Număr"
+        "number": "Număr",
+        "simple_text": "Răspuns text"
       },
       "type_descriptions": {
         "classic": "Standard multiple choice question with four options and one correct answer.",
@@ -269,7 +273,8 @@
         "range": "Players use a slider to guess a value. Points are awarded based on how close they are to the target.",
         "correct_picture": "Players must identify and select the correct image from a set of options.",
         "wrong_pictures": "A visual challenge where players must find and click on specific targets within a single image.",
-        "number": "Players must input an exact numeric value. No time bonus applies."
+        "number": "Players must input an exact numeric value. No time bonus applies.",
+        "simple_text": "Jucătorii scriu un răspuns. Un arbitru notează Corect sau Greșit."
       },
       "selector": {
         "title": "Alege Tipul Întrebării",
@@ -316,6 +321,15 @@
         "no_targets": "Nicio țintă setată.",
         "label_placeholder": "Etichetă...",
         "radius_label": "Rază:"
+      },
+      "no_limit": "Fără limită",
+      "simple_text": {
+        "judge_notes": "Note private (doar arbitru)",
+        "judge_notes_placeholder": "ex. Acceptă Paris; 0 pentru gol",
+        "judge_notes_hint": "Vizibil doar arbitrului.",
+        "correct_answer": "Răspuns corect public (opțional)",
+        "correct_answer_placeholder": "ex. Paris",
+        "correct_answer_hint": "Afișat doar la dezvăluire, dacă este permis."
       }
     }
   },
@@ -539,5 +553,87 @@
     "cancel": "Anulează",
     "loading": "Încărcare...",
     "data_btn": "📊 Date"
+  },
+  "simple_quiz": {
+    "config": {
+      "title": "Editor Quiz Simplu",
+      "allow_reveal": "Permite dezvăluirea răspunsurilor",
+      "allow_reveal_hint": "Dacă e oprit, fără răspuns public și fără buton.",
+      "judge_link": "Link arbitru (secret)",
+      "copy": "Copiază",
+      "copied": "Link copiat"
+    },
+    "host": {
+      "join_title": "Alătură-te!",
+      "game_pin": "PIN:",
+      "players": "Jucători",
+      "start": "Lansează & deschide Î1",
+      "open": "Deschide întrebarea",
+      "lock": "Blochează răspunsurile",
+      "next": "Întrebarea următoare",
+      "end_answering": "Încheie răspunsurile",
+      "reveal": "Dezvăluie răspunsul",
+      "publish": "Publică rezultatele",
+      "update_published": "Actualizează rezultatele",
+      "complete": "Finalizează",
+      "resume": "Reia",
+      "reset": "Resetează",
+      "copy_judge": "Copiază link arbitru",
+      "copy_projector": "Copiază link proiector",
+      "answered": "răspunsuri",
+      "grading_progress": "Notare",
+      "waiting_grading": "Se notează…",
+      "results_published": "Rezultate publicate",
+      "completed": "Finalizat",
+      "paused": "Întrerupt — necesită reluare",
+      "confirm_end": "Închei răspunsurile?",
+      "confirm_publish": "Publici? Necesită toate notate.",
+      "reveal_hint": "Necesită răspuns public și setare activă."
+    },
+    "player": {
+      "logo": "Quiz Simplu!",
+      "nickname_placeholder": "Poreclă",
+      "join_btn": "Alătură-te",
+      "you_are_in": "Ești în!",
+      "see_name": "Îți vezi numele pe ecran?",
+      "waiting_next": "Așteaptă următoarea întrebare…",
+      "type_answer": "Scrie răspunsul… (max 2000)",
+      "submit": "Trimite",
+      "submitted": "Răspuns blocat!",
+      "waiting_others": "Așteaptă…",
+      "revealed_answer": "Răspuns corect",
+      "waiting_grading": "Răspunsuri încheiate. Se notează…",
+      "right": "Corect",
+      "wrong": "Greșit",
+      "missing": "Lipsă",
+      "points": "Puncte",
+      "total": "Total",
+      "leaderboard": "Clasament",
+      "place": "loc",
+      "published": "Rezultate publicate!",
+      "draft_restored": "Ciornă restaurată"
+    },
+    "judge": {
+      "title": "Arbitru",
+      "pending": "În așteptare",
+      "all": "Toate",
+      "right": "Corect",
+      "wrong": "Greșit",
+      "review_later": "Mai târziu",
+      "undo": "Anulează",
+      "publish_hint": "Toate trebuie notate Corect/Greșit.",
+      "graded": "notate",
+      "ungraded": "nenotate",
+      "review": "amânate",
+      "received": "primite",
+      "empty": "Niciun răspuns încă.",
+      "next_pending": "Următorul apare după notare."
+    },
+    "projector": {
+      "join_title": "Alătură-te!",
+      "waiting": "Așteaptă…",
+      "grading": "Se notează…",
+      "results": "Rezultate"
+    }
   }
 }

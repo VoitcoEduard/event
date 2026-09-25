@@ -284,6 +284,12 @@ const addQuestion = (type = 'classic') => {
   } else if (type === 'number') {
     newQuestion.correctNumber = 0
     newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+  } else if (type === 'simple_text') {
+    newQuestion.timeLimit = 0
+    newQuestion.explainTime = 0
+    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 0, partialPercent: 0 }
+    newQuestion.judgeNotes = ''
+    newQuestion.correctAnswerText = ''
   } else if (type === 'correct_picture') {
     newQuestion.imageOptions = [
       { id: Date.now().toString(), imageId: '', label: '' },
@@ -397,6 +403,9 @@ const validateQuestions = () => {
         if (!q.imageOptions || q.imageOptions.length < 2) return t('quiz_config.validation.cp_options')
     } else if (q.type === 'number') {
         if (q.correctNumber === undefined || q.correctNumber === null) return t('quiz_config.validation.number_required')
+    } else if (q.type === 'simple_text') {
+        if (!q.text.trim() && !q.imageId) return t('quiz_config.validation.simple_text_required')
+        if ((q.scoringConfig?.maxPoints ?? 0) <= 0) return t('quiz_config.validation.simple_points')
     } else {
       // For standard types (classic, multi_select), ensure all 4 slots are filled
       if (q.answers.some(a => !a.trim())) return t('quiz_config.validation.mc_options')
