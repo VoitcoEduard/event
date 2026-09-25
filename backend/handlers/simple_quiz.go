@@ -681,10 +681,25 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 	if len(rows) == limit {
 		nextCursor = rows[len(rows)-1].AnswerID
 	}
+	qs := make([]map[string]any, 0, len(s.Questions))
+	for i, q := range s.Questions {
+		qs = append(qs, map[string]any{
+			"index": i, "id": q.ID, "text": q.Text,
+			"imageId": q.ImageID, "imageAlt": q.ImageAlt,
+			"points": q.Points, "timeLimit": q.TimeLimit,
+			"judgeNotes": q.JudgeNotes,
+			"hasCorrectAnswer": strings.TrimSpace(q.CorrectAnswerText) != "",
+			"revealed": s.Revealed[i],
+		})
+	}
 	writeJSON(w, map[string]any{
 		"answers": rows, "progress": progress,
 		"gradingComplete": s.GradingComplete(),
 		"nextCursor":      nextCursor,
+		"questions":       qs,
+		"total":           len(s.Questions),
+		"status":          s.Status,
+		"currentIndex":    s.CurrentIndex,
 	})
 }
 

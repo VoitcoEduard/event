@@ -51,8 +51,15 @@
 
     <!-- Quiz Display States -->
     <template v-else>
+      <SimpleQuizProjector
+        v-if="isSimpleQuiz"
+        :event-id="eventId"
+        :module-id="activeModuleId"
+        :pin="String(pinCode)"
+        :visible="displayMode === 'module' || displayMode === 'idle'"
+      />
       <!-- LOBBY STATE -->
-      <div v-if="gameState === 'lobby'" class="state-container lobby-container">
+      <div v-else-if="gameState === 'lobby'" class="state-container lobby-container">
         <div class="lobby-header">
           <h1 class="game-title">{{ $t('quiz.host.join_title') }}</h1>
           <div class="pin-display">
@@ -520,6 +527,7 @@ import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
 import { preloader } from '../utils/imagePreload'
 import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
+import SimpleQuizProjector from '../components/SimpleQuizProjector.vue'
 import { getOverviewSize } from '../utils/wrongPictureGeometry'
 
 const getScaledFontSize = (size) => {
@@ -532,6 +540,8 @@ const route = useRoute()
 const eventId = route.params.eventId
 const activeModuleId = ref('')
 const currentEvent = ref(null)
+const activeModule = computed(() => currentEvent.value?.modules?.find(m => m.id === activeModuleId.value) || null)
+const isSimpleQuiz = computed(() => activeModule.value?.type === 'simple_quiz')
 const supportedProjectorTypes = new Set(['quiz', 'wrong_pictures', 'simple_quiz'])
 let pollingInterval = null
 
