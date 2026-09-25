@@ -54,6 +54,7 @@ type WrongPictureConfig struct {
 	Targets          []WrongPictureTarget `json:"targets" bson:"targets"`
 	TolerancePercent float64              `json:"tolerancePercent" bson:"tolerancePercent"` // For scoring
 	MaxPoints        int                  `json:"maxPoints" bson:"maxPoints"`
+	ShowTargetCount  bool                 `json:"showTargetCount" bson:"showTargetCount"` // Show answer count to players
 }
 
 const (
