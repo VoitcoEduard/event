@@ -1,0 +1,433 @@
+/* Shared, route-scoped appearance for administrative workflows. */
+html[data-admin-appearance="true"] {
+  --admin-bg: #f5f6f8;
+  --admin-surface: #ffffff;
+  --admin-surface-subtle: #f8f9fb;
+  --admin-surface-hover: #eef2f7;
+  --admin-border: #dde1e7;
+  --admin-border-strong: #c8ced8;
+  --admin-text: #191c22;
+  --admin-text-muted: #667085;
+  --admin-text-dim: #8a94a3;
+  --admin-primary: #147ff5;
+  --admin-primary-hover: #086bd5;
+  --admin-primary-soft: #e8f2ff;
+  --admin-danger: #b42318;
+  --admin-danger-soft: #feebe9;
+  --admin-success: #18733b;
+  --admin-success-soft: #e3f5e9;
+  --admin-warning: #925f0a;
+  --admin-warning-soft: #fff2d8;
+  --admin-focus: #0b69d1;
+  --admin-overlay: #e4e7ec;
+  --admin-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --admin-radius-sm: 8px;
+  --admin-radius-md: 12px;
+  --admin-radius-lg: 16px;
+
+  --ops-bg: var(--admin-bg);
+  --ops-surface: var(--admin-surface);
+  --ops-surface-raised: var(--admin-surface-subtle);
+  --ops-surface-hover: var(--admin-surface-hover);
+  --ops-border: var(--admin-border);
+  --ops-text: var(--admin-text);
+  --ops-text-muted: var(--admin-text-muted);
+  --ops-text-dim: var(--admin-text-dim);
+  --ops-blue: var(--admin-primary);
+  --ops-green: var(--admin-success);
+  --ops-red: var(--admin-danger);
+  --ops-shadow: var(--admin-shadow);
+}
+
+html[data-admin-theme="dark"] {
+  --admin-bg: #111111;
+  --admin-surface: #1d1d1f;
+  --admin-surface-subtle: #252528;
+  --admin-surface-hover: #303034;
+  --admin-border: #353538;
+  --admin-border-strong: #4b4b50;
+  --admin-text: #f5f5f7;
+  --admin-text-muted: #a8a8ae;
+  --admin-text-dim: #77777e;
+  --admin-primary: #147ff5;
+  --admin-primary-hover: #3294ff;
+  --admin-primary-soft: #162e4d;
+  --admin-danger: #ff6961;
+  --admin-danger-soft: #3b2020;
+  --admin-success: #4bd176;
+  --admin-success-soft: #173624;
+  --admin-warning: #ffc15c;
+  --admin-warning-soft: #3d3018;
+  --admin-focus: #75b7ff;
+  --admin-overlay: #0b0b0c;
+  --admin-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+html[data-admin-appearance="true"],
+html[data-admin-appearance="true"] body,
+html[data-admin-appearance="true"] #app {
+  min-height: 100%;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+html[data-admin-appearance="true"] body {
+  color-scheme: light;
+}
+
+html[data-admin-theme="dark"] body { color-scheme: dark; }
+
+html[data-admin-appearance="true"] :focus-visible {
+  outline: 3px solid var(--admin-focus) !important;
+  outline-offset: 2px;
+}
+
+.admin-theme-control {
+  position: fixed;
+  z-index: 10020;
+  top: 16px;
+  right: 216px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--admin-text-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-theme-option:hover { background: var(--admin-surface-hover); color: var(--admin-text); }
+.admin-theme-option.active { background: var(--admin-primary-soft); color: var(--admin-primary); }
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .quiz-host-screen, .judge-screen
+) {
+  min-height: 100vh;
+  background: var(--admin-bg) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-theme="light"] .data-page { color-scheme: light !important; }
+html[data-admin-theme="dark"] .data-page { color-scheme: dark !important; }
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .quiz-host-screen, .judge-screen
+) :is(h1, h2, h3, h4, strong, .title, .header-title, .form-title, .section-title, .event-name) {
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .quiz-host-screen, .judge-screen
+) :is(p, small, label, .subtitle, .header-subtitle, .event-description, .event-id) {
+  color: var(--admin-text-muted);
+}
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .judge-screen
+) :is(header, nav, .header, .top-bar, .toolbar, .sidebar, .tabs, .judge-header, .teams-admin-nav) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  box-shadow: none !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .judge-screen
+) :is(.card, .form-card, .event-card, .login-card, .user-row, .module-card, .module-item,
+  section, article, .panel, .props-panel, .slide-item, .template-card, .library-card,
+  .question-card, .answer-card, .judge-card, .submission-card, .teams-panel) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .judge-screen
+) :is(input, textarea, select) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-admin-appearance="true"] :is(input, textarea)::placeholder { color: var(--admin-text-dim) !important; opacity: 1; }
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .judge-screen
+) button:not(.submit-button):not(.create-btn):not(.primary):not(.save-btn):not(.launch-btn) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-admin-appearance="true"] :is(.submit-button, .create-btn, button.primary, .save-btn, .launch-btn, .btn-primary) {
+  background: var(--admin-primary) !important;
+  border-color: var(--admin-primary) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+html[data-admin-appearance="true"] :is(.submit-button, .create-btn, button.primary, .save-btn, .launch-btn, .btn-primary):hover:not(:disabled) {
+  background: var(--admin-primary-hover) !important;
+}
+
+html[data-admin-appearance="true"] :is(.delete-action, .delete-btn, .danger, button[class*="delete"]) {
+  background: var(--admin-danger-soft) !important;
+  border-color: color-mix(in srgb, var(--admin-danger) 35%, var(--admin-border)) !important;
+  color: var(--admin-danger) !important;
+}
+
+html[data-admin-appearance="true"] :is(.status-active, .success, .notice) {
+  background: var(--admin-success-soft) !important;
+  color: var(--admin-success) !important;
+}
+
+html[data-admin-appearance="true"] :is(.status-inactive, .error) {
+  background: var(--admin-danger-soft) !important;
+  color: var(--admin-danger) !important;
+}
+
+/* Reference layout: event administration landing page. */
+html[data-admin-appearance="true"] .admin-screen > .header {
+  min-height: 112px;
+  padding: 24px clamp(24px, 4vw, 64px) !important;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  grid-template-areas: "title actions" "subtitle actions";
+  align-items: center;
+  gap: 2px 28px;
+}
+html[data-admin-appearance="true"] .admin-screen .header-title { grid-area: title; margin: 0; }
+html[data-admin-appearance="true"] .admin-screen .header-subtitle { grid-area: subtitle; margin: 0; }
+html[data-admin-appearance="true"] .admin-screen .header-actions {
+  grid-area: actions;
+  width: auto;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-right: 0;
+}
+html[data-admin-appearance="true"] .admin-screen .language-switcher {
+  position: fixed;
+  z-index: 10010;
+  top: 16px;
+  right: 16px;
+}
+html[data-admin-appearance="true"] .admin-screen .scroll-content {
+  padding: 40px clamp(24px, 4vw, 64px) 48px;
+}
+html[data-admin-appearance="true"] .admin-screen .form-card {
+  width: min(100%, 540px);
+  max-width: 540px;
+  padding: 28px;
+  margin-bottom: 38px;
+  border-radius: var(--admin-radius-md);
+}
+html[data-admin-appearance="true"] .admin-screen .form-title { text-align: center; font-size: 24px; }
+html[data-admin-appearance="true"] .admin-screen .events-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+html[data-admin-appearance="true"] .admin-screen .event-card {
+  min-width: 0;
+  max-width: none;
+  padding: 20px;
+}
+html[data-admin-appearance="true"] .admin-screen .view-action {
+  background: var(--admin-primary-soft) !important;
+  border-color: transparent !important;
+  color: color-mix(in srgb, var(--admin-primary) 78%, #00204a) !important;
+  font-weight: 700;
+}
+html[data-admin-appearance="true"] .admin-screen .back-button {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+
+@media (max-width: 900px) {
+  html[data-admin-appearance="true"] .admin-screen .events-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html[data-admin-appearance="true"] .admin-screen > .header {
+    grid-template-columns: 1fr;
+    grid-template-areas: "title" "subtitle" "actions";
+  }
+  html[data-admin-appearance="true"] .admin-screen .header-actions { justify-content: flex-start; flex-wrap: wrap; margin-top: 12px; }
+}
+
+@media (max-width: 600px) {
+  html[data-admin-appearance="true"] .admin-screen .events-grid { grid-template-columns: 1fr; }
+  html[data-admin-appearance="true"] .admin-screen .form-card { padding: 20px; }
+}
+
+html[data-admin-appearance="true"] :is(.modal-overlay, .dialog-overlay, .overlay, .config-modal-overlay) {
+  background: var(--admin-overlay) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .modal, .dialog, .modal-content, .modal-container, .config-modal, .selector-modal,
+  .library-modal, .teams-config-modal, .toast
+) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.18) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(input, textarea, select) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.header, .selector-header, .modal-header, .settings-bar, .action-bar, .selector-footer, .description-area, .type-card, .template-item) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] table {
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  border-color: var(--admin-border);
+}
+html[data-admin-appearance="true"] :is(th, td) { border-color: var(--admin-border) !important; }
+html[data-admin-appearance="true"] th { background: var(--admin-surface-subtle) !important; color: var(--admin-text) !important; }
+
+html[data-admin-appearance="true"] .data-page {
+  --page: var(--admin-bg);
+  --sheet: var(--admin-surface);
+  --line: var(--admin-border);
+  --ink: var(--admin-text);
+  --muted: var(--admin-text-muted);
+  overflow-x: hidden;
+}
+html[data-admin-appearance="true"] .data-page :is(.table-wrap, .toolbar, .sheet-status, article) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .data-page :is(td, .row-number, .name-cell, .total-cell) {
+  background: var(--admin-surface) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .data-page tbody tr:nth-child(even) > :is(td, th) {
+  background: var(--admin-surface-subtle) !important;
+}
+html[data-admin-appearance="true"] .data-page tbody tr:hover > :is(td, th) {
+  background: var(--admin-surface-hover) !important;
+}
+
+html[data-admin-appearance="true"] .teams-module {
+  background: var(--admin-bg) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .teams-module :is(.teams-panel, .team-card, details, .teams-history-item) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+html[data-admin-appearance="true"] .teams-module :is(button, input, select, textarea) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .teams-module button.primary {
+  background: var(--admin-primary) !important;
+  border-color: var(--admin-primary) !important;
+  color: #fff !important;
+}
+
+html[data-admin-appearance="true"] .screen-manager :is(.editor-layout, .canvas-area) {
+  background: var(--admin-surface-subtle) !important;
+}
+html[data-admin-appearance="true"] .screen-manager :is(.sidebar, .props-panel, .template-box) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .screen-manager .slide-list li.active .slide-item {
+  background: var(--admin-primary) !important;
+  color: #fff !important;
+}
+
+/* Host screens keep their presentation layout while adopting the admin palette. */
+html[data-admin-appearance="true"] .quiz-host-screen .bg-layer {
+  background: var(--admin-bg) !important;
+  opacity: 1 !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.state-container, .lobby-content, .question-container, .results-container, .leaderboard-container) {
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.pin-display, .player-card, .question-card, .answer-option, .control-panel, .result-card, .leaderboard-row) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+  backdrop-filter: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(
+  .unmute-btn, .copy-link-btn, .player-chip, .timer, .range-instruction-view,
+  .stats-panel, .leaderboard-panel, .final-card
+) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.game-title, .question-text, .players-count) {
+  color: var(--admin-text) !important;
+  text-shadow: none !important;
+}
+
+/* Preserve authored slide/media content in the editor. */
+html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content, .slide-preview, .element-preview, .screensaver-preview) {
+  color: unset;
+}
+
+@media (max-width: 900px) {
+  .admin-theme-control { top: auto; right: 12px; bottom: 12px; }
+}
+
+@media (max-width: 480px) {
+  .admin-theme-option { padding: 8px; }
+  .admin-theme-option span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}

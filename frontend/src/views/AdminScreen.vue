@@ -21,21 +21,26 @@
       <div class="form-card">
         <h2 class="form-title">{{ editingId ? $t('admin.edit_event') : $t('admin.new_event') }}</h2>
         
+        <label class="field-label" for="admin-event-name">{{ $t('admin.event_name_placeholder') }}</label>
         <input
+          id="admin-event-name"
           v-model="name"
           type="text"
           :placeholder="$t('admin.event_name_placeholder')"
           class="input"
         />
         
+        <label class="field-label" for="admin-event-description">{{ $t('admin.description_placeholder') }}</label>
         <textarea
+          id="admin-event-description"
           v-model="description"
           :placeholder="$t('admin.description_placeholder')"
           class="input text-area"
           rows="3"
         ></textarea>
 
-        <select v-model="eventLanguage" class="input lang-select">
+        <label class="field-label" for="admin-event-language">{{ $t('appearance.language') }}</label>
+        <select id="admin-event-language" v-model="eventLanguage" class="input lang-select">
           <option value="en">English</option>
           <option value="ru">Русский</option>
           <option value="ro">Română</option>
@@ -324,6 +329,14 @@ const goToLibrary = () => {
 
 .input {
   margin-bottom: 12px;
+}
+
+.field-label {
+  display: block;
+  margin: 2px 0 7px;
+  color: var(--admin-text, #fff);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .text-area {
