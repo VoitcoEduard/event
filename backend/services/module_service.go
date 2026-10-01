@@ -8,6 +8,7 @@ import (
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/utils"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var ErrModuleNotFound = errors.New("module not found")
@@ -43,6 +44,15 @@ func (s *ModuleService) SubmitResponse(ctx context.Context, eventID, moduleID st
 }
 
 func (s *ModuleService) Delete(ctx context.Context, eventID, moduleID string) (bool, error) {
+	module, err := s.Get(ctx, eventID, moduleID)
+	if err != nil {
+		return false, err
+	}
+	if module.Type == models.ModuleTypeTeams {
+		if err := GuardTeamsModuleDeletion(ctx, database.NewTeamsActivityRepository(), eventID, moduleID); err != nil {
+			return false, err
+		}
+	}
 	return s.Repo.Delete(ctx, eventID, moduleID)
 }
 
@@ -69,6 +79,13 @@ func (s *ModuleService) Responses(ctx context.Context, eventID, moduleID string)
 		return nil, err
 	}
 	if module != nil && module.Type == "teams" {
+		activity, activityErr := database.NewTeamsActivityRepository().Get(ctx, eventID, moduleID)
+		if activityErr == nil {
+			return []any{TeamsActivityResult(activity)}, nil
+		}
+		if !errors.Is(activityErr, mongo.ErrNoDocuments) {
+			return nil, activityErr
+		}
 		return s.Repo.TeamResults(ctx, eventID, moduleID)
 	}
 	if module != nil && (module.Type == "quiz" || module.Type == "wrong_pictures") {

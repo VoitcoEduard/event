@@ -115,6 +115,9 @@ func EnsureIndexes() {
 			{Keys: bson.D{{Key: "eventId", Value: 1}, {Key: "moduleId", Value: 1}}},
 			{Keys: bson.D{{Key: "moduleId", Value: 1}}},
 		},
+		"teams_activities": {
+			{Keys: bson.D{{Key: "eventId", Value: 1}, {Key: "moduleId", Value: 1}}, Options: options.Index().SetUnique(true)},
+		},
 		"responses": {
 			{Keys: bson.D{{Key: "eventId", Value: 1}, {Key: "moduleId", Value: 1}, {Key: "participantId", Value: 1}}},
 			{Keys: bson.D{{Key: "eventId", Value: 1}, {Key: "moduleId", Value: 1}}},

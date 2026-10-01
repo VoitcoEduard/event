@@ -96,6 +96,11 @@ func (h *Handler) DeleteModule(w http.ResponseWriter, r *http.Request) {
 	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
 	found, err := h.deps.Modules.Delete(r.Context(), eventID, moduleID)
 	if err != nil {
+		var teamsErr *services.TeamsError
+		if errors.As(err, &teamsErr) || errors.Is(err, services.ErrTeamsConflict) {
+			teamsFailure(w, err)
+			return
+		}
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}

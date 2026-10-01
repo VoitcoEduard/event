@@ -80,7 +80,7 @@ func (h *Handler) SetManualScore(w http.ResponseWriter, r *http.Request) {
 	}
 	collection := "participants"
 	if target == "teams" {
-		collection = "teams"
+		collection = "event_teams"
 	}
 	count, err := db.GetCollection(collection).CountDocuments(r.Context(), bson.M{"_id": targetID, "eventId": eventID})
 	if err != nil {

@@ -11,6 +11,7 @@ const (
 	ModuleTypeQuiz          ModuleType = "quiz"
 	ModuleTypeWrongPictures ModuleType = "wrong_pictures"
 	ModuleTypeSimpleQuiz    ModuleType = "simple_quiz"
+	ModuleTypeTeams         ModuleType = "teams"
 )
 
 type ModuleInputBinding struct {

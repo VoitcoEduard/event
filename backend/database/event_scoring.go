@@ -50,6 +50,15 @@ func LoadEventScores(ctx context.Context, eventID string) (*EventScores, error) 
 			result.Entries = append(result.Entries, entry)
 		}
 	}
+	activities, err := NewTeamsActivityRepository().ByEvent(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	for _, activity := range activities {
+		if modules[activity.ModuleID] {
+			result.Entries = append(result.Entries, activity.ScoreEntries()...)
+		}
+	}
 	return result, nil
 }
 
