@@ -10,8 +10,16 @@ import (
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
+// EventSessionStore is the persistence boundary used by EventSessionService.
+// Tests inject a fake; production uses database.EventSessionRepository.
+type EventSessionStore interface {
+	Create(context.Context, *models.EventSession) error
+	GetByID(context.Context, string) (*models.EventSession, error)
+	Update(context.Context, *models.EventSession) error
+}
+
 type EventSessionService struct {
-	SessionRepo *database.EventSessionRepository
+	SessionRepo EventSessionStore
 }
 
 func NewEventSessionService() *EventSessionService {

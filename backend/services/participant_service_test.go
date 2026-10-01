@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
@@ -20,12 +19,6 @@ var testCtx = context.Background()
 // =============================================================================
 // Mock repository for testing
 // =============================================================================
-
-// ParticipantRepoInterface defines the repository methods needed by the service
-type ParticipantRepoInterface interface {
-	Create(ctx context.Context, participant *models.Participant) error
-	GetByEventID(ctx context.Context, eventID string) ([]models.Participant, error)
-}
 
 // MockParticipantRepository is a test double for ParticipantRepository
 type MockParticipantRepository struct {
@@ -69,39 +62,6 @@ func (m *MockParticipantRepository) GetByEventID(ctx context.Context, eventID st
 		}
 	}
 	return result, nil
-}
-
-// =============================================================================
-// Testable service wrapper
-// =============================================================================
-
-type TestableParticipantService struct {
-	Repo ParticipantRepoInterface
-}
-
-func (s *TestableParticipantService) JoinEvent(ctx context.Context, eventID, joinKey, displayName string, profile map[string]any) (*models.Participant, error) {
-	participant := &models.Participant{
-		ID:             utils.NewID(),
-		EventID:        eventID,
-		JoinKey:        joinKey,
-		DisplayName:    displayName,
-		NormalizedName: normalizeName(displayName),
-		Profile:        profile,
-		Status:         models.ParticipantStatusJoined,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
-	}
-
-	err := s.Repo.Create(ctx, participant)
-	if err != nil {
-		return nil, err
-	}
-
-	return participant, nil
-}
-
-func (s *TestableParticipantService) GetParticipantsByEvent(ctx context.Context, eventID string) ([]models.Participant, error) {
-	return s.Repo.GetByEventID(ctx, eventID)
 }
 
 // =============================================================================
@@ -316,7 +276,7 @@ func TestJoinEvent(t *testing.T) {
 			mock := NewMockRepo()
 			tt.setupMock(mock)
 
-			svc := &TestableParticipantService{Repo: mock}
+			svc := &ParticipantService{Repo: mock}
 
 			participant, err := svc.JoinEvent(testCtx, tt.eventID, tt.joinKey, tt.displayName, tt.profile)
 
@@ -339,7 +299,7 @@ func TestGetParticipantsByEvent(t *testing.T) {
 		mock := NewMockRepo()
 		mock.GetByEventIDResults["event-empty"] = []models.Participant{}
 
-		svc := &TestableParticipantService{Repo: mock}
+		svc := &ParticipantService{Repo: mock}
 
 		result, err := svc.GetParticipantsByEvent(testCtx, "event-empty")
 		if err != nil {
@@ -356,7 +316,7 @@ func TestGetParticipantsByEvent(t *testing.T) {
 			{ID: "123456", EventID: "event-single", DisplayName: "Alice"},
 		}
 
-		svc := &TestableParticipantService{Repo: mock}
+		svc := &ParticipantService{Repo: mock}
 
 		result, err := svc.GetParticipantsByEvent(testCtx, "event-single")
 		if err != nil {
@@ -378,7 +338,7 @@ func TestGetParticipantsByEvent(t *testing.T) {
 			{ID: "333333", EventID: "event-multi", DisplayName: "Charlie"},
 		}
 
-		svc := &TestableParticipantService{Repo: mock}
+		svc := &ParticipantService{Repo: mock}
 
 		result, err := svc.GetParticipantsByEvent(testCtx, "event-multi")
 		if err != nil {
@@ -395,7 +355,7 @@ func TestGetParticipantsByEvent(t *testing.T) {
 			return nil, errors.New("database timeout")
 		}
 
-		svc := &TestableParticipantService{Repo: mock}
+		svc := &ParticipantService{Repo: mock}
 
 		result, err := svc.GetParticipantsByEvent(testCtx, "event-error")
 		if err == nil {
@@ -435,7 +395,7 @@ func TestParticipantStatusConstants(t *testing.T) {
 
 func TestJoinEvent_And_GetParticipantsByEvent(t *testing.T) {
 	mock := NewMockRepo()
-	svc := &TestableParticipantService{Repo: mock}
+	svc := &ParticipantService{Repo: mock}
 
 	// Join two participants
 	p1, err := svc.JoinEvent(testCtx, "event-integrate", "key-1", "Alice", map[string]any{"team": "red"})

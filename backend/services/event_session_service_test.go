@@ -3,12 +3,12 @@ package services
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/utils"
 )
 
 // =============================================================================
@@ -19,14 +19,8 @@ import (
 // Mock repository for testing
 // =============================================================================
 
-type EventSessionRepoInterface interface {
-	Create(ctx context.Context, session *models.EventSession) error
-	GetByID(ctx context.Context, id string) (*models.EventSession, error)
-	GetByEventID(ctx context.Context, eventID string) ([]models.EventSession, error)
-	Update(ctx context.Context, session *models.EventSession) error
-}
-
 type MockEventSessionRepository struct {
+	mu sync.Mutex
 	CreateFunc          func(ctx context.Context, session *models.EventSession) error
 	GetByIDFunc         func(ctx context.Context, id string) (*models.EventSession, error)
 	GetByEventIDFunc    func(ctx context.Context, eventID string) ([]models.EventSession, error)
@@ -45,6 +39,8 @@ func NewMockEventSessionRepo() *MockEventSessionRepository {
 }
 
 func (m *MockEventSessionRepository) Create(ctx context.Context, session *models.EventSession) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.CreateFunc != nil {
 		return m.CreateFunc(ctx, session)
 	}
@@ -56,22 +52,28 @@ func (m *MockEventSessionRepository) Create(ctx context.Context, session *models
 }
 
 func (m *MockEventSessionRepository) GetByID(ctx context.Context, id string) (*models.EventSession, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.GetByIDFunc != nil {
 		return m.GetByIDFunc(ctx, id)
 	}
 	if session, ok := m.GetByIDResults[id]; ok {
-		return session, nil
+		copy := *session
+		return &copy, nil
 	}
 	// Also check CreatedSessions to find recently created sessions
 	for _, s := range m.CreatedSessions {
 		if s.ID == id {
-			return s, nil
+			copy := *s
+			return &copy, nil
 		}
 	}
 	return nil, errors.New("session not found")
 }
 
 func (m *MockEventSessionRepository) GetByEventID(ctx context.Context, eventID string) ([]models.EventSession, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.GetByEventIDFunc != nil {
 		return m.GetByEventIDFunc(ctx, eventID)
 	}
@@ -79,82 +81,18 @@ func (m *MockEventSessionRepository) GetByEventID(ctx context.Context, eventID s
 }
 
 func (m *MockEventSessionRepository) Update(ctx context.Context, session *models.EventSession) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.UpdateFunc != nil {
 		return m.UpdateFunc(ctx, session)
 	}
 	if session == nil {
 		return errors.New("session is nil")
 	}
-	// Auto-update in GetByIDResults
-	m.GetByIDResults[session.ID] = session
+	// Store an independent document, as MongoDB does.
+	copy := *session
+	m.GetByIDResults[session.ID] = &copy
 	return nil
-}
-
-// =============================================================================
-// Testable service wrapper
-// =============================================================================
-
-type TestableEventSessionService struct {
-	SessionRepo EventSessionRepoInterface
-}
-
-func (s *TestableEventSessionService) CreateSession(ctx context.Context, eventID string, moduleOrder []string) (*models.EventSession, error) {
-	if len(moduleOrder) == 0 {
-		return nil, errors.New("moduleOrder cannot be empty")
-	}
-
-	session := &models.EventSession{
-		ID:             utils.NewID(),
-		EventID:        eventID,
-		Status:         models.EventSessionStatusWaiting,
-		ModuleOrder:    moduleOrder,
-		ActiveModuleID: moduleOrder[0],
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
-	}
-
-	err := s.SessionRepo.Create(ctx, session)
-	if err != nil {
-		return nil, err
-	}
-
-	return session, nil
-}
-
-func (s *TestableEventSessionService) GetSession(ctx context.Context, sessionID string) (*models.EventSession, error) {
-	return s.SessionRepo.GetByID(ctx, sessionID)
-}
-
-func (s *TestableEventSessionService) UpdateSessionStatus(ctx context.Context, sessionID string, status models.EventSessionStatus) error {
-	session, err := s.SessionRepo.GetByID(ctx, sessionID)
-	if err != nil {
-		return err
-	}
-
-	session.Status = status
-	session.UpdatedAt = time.Now()
-
-	now := time.Now()
-	if status == models.EventSessionStatusLive && session.StartedAt == nil {
-		session.StartedAt = &now
-	}
-	if status == models.EventSessionStatusCompleted {
-		session.EndedAt = &now
-	}
-
-	return s.SessionRepo.Update(ctx, session)
-}
-
-func (s *TestableEventSessionService) AdvanceSessionModule(ctx context.Context, sessionID string, activeModuleID string) error {
-	session, err := s.SessionRepo.GetByID(ctx, sessionID)
-	if err != nil {
-		return err
-	}
-
-	session.ActiveModuleID = activeModuleID
-	session.UpdatedAt = time.Now()
-
-	return s.SessionRepo.Update(ctx, session)
 }
 
 // =============================================================================
@@ -269,7 +207,7 @@ func TestCreateSession(t *testing.T) {
 			mock := NewMockEventSessionRepo()
 			tt.setupMock(mock)
 
-			svc := &TestableEventSessionService{SessionRepo: mock}
+			svc := &EventSessionService{SessionRepo: mock}
 
 			session, err := svc.CreateSession(testCtx, tt.eventID, tt.moduleOrder)
 
@@ -356,7 +294,7 @@ func TestGetSession(t *testing.T) {
 			mock := NewMockEventSessionRepo()
 			tt.setupMock(mock)
 
-			svc := &TestableEventSessionService{SessionRepo: mock}
+			svc := &EventSessionService{SessionRepo: mock}
 
 			session, err := svc.GetSession(testCtx, tt.sessionID)
 
@@ -512,7 +450,7 @@ func TestUpdateSessionStatus(t *testing.T) {
 
 			tt.setupMock(mock)
 
-			svc := &TestableEventSessionService{SessionRepo: mock}
+			svc := &EventSessionService{SessionRepo: mock}
 
 			err := svc.UpdateSessionStatus(testCtx, tt.sessionID, tt.status)
 
@@ -605,7 +543,7 @@ func TestAdvanceSessionModule(t *testing.T) {
 
 			tt.setupMock(mock)
 
-			svc := &TestableEventSessionService{SessionRepo: mock}
+			svc := &EventSessionService{SessionRepo: mock}
 
 			err := svc.AdvanceSessionModule(testCtx, tt.sessionID, tt.activeModuleID)
 
@@ -768,7 +706,7 @@ func TestSessionStatusTransitions(t *testing.T) {
 				tt.setupMock(mock)
 			}
 
-			svc := &TestableEventSessionService{SessionRepo: mock}
+			svc := &EventSessionService{SessionRepo: mock}
 			err := svc.UpdateSessionStatus(testCtx, sessionID, tt.newStatus)
 
 			if (err != nil) != tt.wantErr {
@@ -790,7 +728,7 @@ func TestSessionStatusTransitions(t *testing.T) {
 
 func TestSessionStatusLifecycle(t *testing.T) {
 	mock := NewMockEventSessionRepo()
-	svc := &TestableEventSessionService{SessionRepo: mock}
+	svc := &EventSessionService{SessionRepo: mock}
 
 	// Step 1: Create session (starts in Waiting)
 	session, err := svc.CreateSession(testCtx, "event-lifecycle", []string{"intro", "main", "final"})
@@ -880,13 +818,12 @@ func TestSessionStatusLifecycle(t *testing.T) {
 
 func TestStatusUpdateUpdatesTimestamp(t *testing.T) {
 	mock := NewMockEventSessionRepo()
-	svc := &TestableEventSessionService{SessionRepo: mock}
+	svc := &EventSessionService{SessionRepo: mock}
 
 	session, _ := svc.CreateSession(testCtx, "event-timestamp", []string{"module-1"})
 	sessionID := session.ID
-	originalUpdatedAt := session.UpdatedAt
-
-	time.Sleep(10 * time.Millisecond) // Ensure time difference
+	originalUpdatedAt := time.Now().Add(-time.Hour)
+	session.UpdatedAt = originalUpdatedAt
 
 	err := svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusLive)
 	if err != nil {
@@ -970,7 +907,7 @@ func TestGetSessionReturnsCorrectStatus(t *testing.T) {
 			sessionID := "ses-status-" + string(tc.status)
 			tc.setupSession(mock, sessionID)
 
-			svc := &TestableEventSessionService{SessionRepo: mock}
+			svc := &EventSessionService{SessionRepo: mock}
 			session, err := svc.GetSession(testCtx, sessionID)
 
 			if err != nil {
@@ -985,7 +922,7 @@ func TestGetSessionReturnsCorrectStatus(t *testing.T) {
 
 func TestConcurrentStatusUpdates(t *testing.T) {
 	mock := NewMockEventSessionRepo()
-	svc := &TestableEventSessionService{SessionRepo: mock}
+	svc := &EventSessionService{SessionRepo: mock}
 
 	session, _ := svc.CreateSession(testCtx, "event-concurrent", []string{"module-1"})
 	sessionID := session.ID
@@ -1005,7 +942,9 @@ func TestConcurrentStatusUpdates(t *testing.T) {
 
 	// Collect results (we don't guarantee order, just that no panic occurs)
 	for i := 0; i < 3; i++ {
-		<-errChan
+		if err := <-errChan; err != nil {
+			t.Fatalf("concurrent status update: %v", err)
+		}
 	}
 
 	// Verify session still exists and has a valid status
@@ -1023,7 +962,7 @@ func TestConcurrentStatusUpdates(t *testing.T) {
 
 func TestCreateAndUpdateSession(t *testing.T) {
 	mock := NewMockEventSessionRepo()
-	svc := &TestableEventSessionService{SessionRepo: mock}
+	svc := &EventSessionService{SessionRepo: mock}
 
 	// Create session
 	session, err := svc.CreateSession(testCtx, "event-integration", []string{"intro", "main", "outro"})

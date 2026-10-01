@@ -10,8 +10,14 @@ import (
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
+// ParticipantStore is the persistence boundary used by ParticipantService.
+type ParticipantStore interface {
+	Create(context.Context, *models.Participant) error
+	GetByEventID(context.Context, string) ([]models.Participant, error)
+}
+
 type ParticipantService struct {
-	Repo *database.ParticipantRepository
+	Repo ParticipantStore
 }
 
 func NewParticipantService() *ParticipantService {
