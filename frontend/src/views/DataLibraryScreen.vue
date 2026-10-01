@@ -30,7 +30,7 @@
           <thead><tr><th class="row-number" scope="col">#</th><th class="name-cell" scope="col">{{ target === 'players' ? 'Player' : 'Team' }}</th>
             <template v-for="module in visibleModules" :key="module.id">
               <th v-if="target === 'players' && isGame(module)" scope="col" class="score-heading">{{ module.name }}<span>Latest game</span></th>
-              <th v-if="module.type === 'teams'" scope="col" class="score-heading">{{ module.name }}<span>{{ $t('teams_module.earned') }}</span></th>
+              <th v-if="module.type === 'teams'" scope="col" class="score-heading">{{ module.name }}<span>{{ $t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score') }}</span></th>
               <th scope="col" class="score-heading">{{ module.name }}<span>Manual adjustments</span></th>
             </template><th scope="col" class="total-cell">Total points</th><th v-if="selectedModule" scope="col" class="actions-cell">Actions</th>
           </tr></thead>

@@ -6,13 +6,17 @@ export function useTeamsActivity(eventId, moduleId, role = 'player') {
   const loading = ref(true)
   const disconnected = ref(false)
   const error = ref('')
-  let stream, interval, running, disposed = false
+  let stream, interval, running, queued = false, disposed = false
   const load = () => {
-    if (running) return running
+    if (running) { queued = true; return running }
     running = (role === 'admin' ? teamsActivity.admin(eventId, moduleId) : role === 'projector' ? teamsActivity.projector(eventId, moduleId) : teamsActivity.state(eventId, moduleId))
       .then(value => { if (!disposed) { state.value = value; disconnected.value = false; error.value = '' } return value })
       .catch(err => { if (!disposed) { disconnected.value = true; error.value = err.message } })
-      .finally(() => { if (!disposed) loading.value = false; running = null })
+      .finally(() => {
+        if (!disposed) loading.value = false
+        running = null
+        if (queued && !disposed) { queued = false; load() }
+      })
     return running
   }
   onMounted(() => {

@@ -308,3 +308,80 @@ func TestWholeTeamsPoints(t *testing.T) {
 		}
 	}
 }
+
+func TestTeamsAwardRevalidatesAfterRosterChange(t *testing.T) {
+	store := &memoryTeamsStore{a: fixtureTeams()}
+	store.a.Status = "live"
+	service := TeamsActivityService{store}
+	read := make(chan struct{})
+	changed := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		first := true
+		_, err := service.Mutate(context.Background(), "event", "relay", func(a *models.TeamsActivity) error {
+			if first {
+				first = false
+				close(read)
+				<-changed
+			}
+			return AwardTeam(a, models.TeamAward{ID: "win", RequestID: "win", TeamID: "blue", Points: 20})
+		})
+		done <- err
+	}()
+	<-read
+	_, err := service.Mutate(context.Background(), "event", "relay", func(a *models.TeamsActivity) error { return AssignTeamsEntrant(a, "anna", "red", false) })
+	mustTeams(t, err)
+	close(changed)
+	mustTeams(t, <-done)
+	current, err := store.Get(context.Background(), "event", "relay")
+	mustTeams(t, err)
+	_, people := current.Scores()
+	if people["anna"] != 0 || people["bob"] != 20 {
+		t.Fatal("stale recipient list committed")
+	}
+}
+func TestTeamsAwardCannotCommitAfterCompletion(t *testing.T) {
+	store := &memoryTeamsStore{a: fixtureTeams()}
+	store.a.Status = "live"
+	service := TeamsActivityService{store}
+	read := make(chan struct{})
+	completed := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		first := true
+		_, err := service.Mutate(context.Background(), "event", "relay", func(a *models.TeamsActivity) error {
+			if first {
+				first = false
+				close(read)
+				<-completed
+			}
+			return AwardTeam(a, models.TeamAward{ID: "win", RequestID: "win", TeamID: "blue", Points: 20})
+		})
+		done <- err
+	}()
+	<-read
+	_, err := service.Mutate(context.Background(), "event", "relay", func(a *models.TeamsActivity) error { return TransitionTeams(a, "complete") })
+	mustTeams(t, err)
+	close(completed)
+	if <-done == nil {
+		t.Fatal("award committed after completion")
+	}
+	current, err := store.Get(context.Background(), "event", "relay")
+	mustTeams(t, err)
+	if len(current.Awards) != 0 || current.Status != "completed" {
+		t.Fatal("completion lost")
+	}
+}
+func TestTeamsTargetSizeAddsTeamsWithoutMovingAssignedPeople(t *testing.T) {
+	a := NewTeamsActivity("e", "m", "", models.TeamsConfig{Method: "random", TargetSize: 2})
+	for i := 0; i < 4; i++ {
+		mustTeams(t, AddTeamsEntrant(a, models.TeamsEntrant{ParticipantID: fmt.Sprint(i)}))
+	}
+	mustTeams(t, DistributeTeams(a, false))
+	first := a.Entrants[0].TeamID
+	mustTeams(t, AddTeamsEntrant(a, models.TeamsEntrant{ParticipantID: "late"}))
+	mustTeams(t, DistributeTeams(a, false))
+	if len(a.Teams) != 3 || a.Entrants[0].TeamID != first {
+		t.Fatal("target size growth moved an existing member or ignored new team count")
+	}
+}

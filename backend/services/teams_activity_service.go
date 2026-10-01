@@ -232,17 +232,18 @@ func DistributeTeams(a *models.TeamsActivity, reshuffle bool) error {
 	if len(a.Entrants) == 0 {
 		return teamsError("No participants have entered")
 	}
-	if len(a.Teams) == 0 {
-		count := a.Config.TeamCount
-		if count == 0 {
-			count = (len(a.Entrants) + a.Config.TargetSize - 1) / a.Config.TargetSize
-		}
-		if count > 200 {
-			return teamsError("Use at most 200 teams")
-		}
-		for i := 0; i < count; i++ {
-			a.Teams = append(a.Teams, models.ActivityTeam{ID: utils.NewID(), Name: fmt.Sprintf("Team %d", i+1), Color: teamColors[i%len(teamColors)], Capacity: a.Config.Capacity})
-		}
+	count := a.Config.TeamCount
+	if count == 0 {
+		count = (len(a.Entrants) + a.Config.TargetSize - 1) / a.Config.TargetSize
+	}
+	if count > 200 {
+		return teamsError("Use at most 200 teams")
+	}
+	if len(a.Teams) > count {
+		return teamsError("Delete extra teams or increase the requested team count before distributing")
+	}
+	for i := len(a.Teams); i < count; i++ {
+		a.Teams = append(a.Teams, models.ActivityTeam{ID: utils.NewID(), Name: fmt.Sprintf("Team %d", i+1), Color: teamColors[i%len(teamColors)], Capacity: a.Config.Capacity})
 	}
 	counts := make(map[string]int)
 	pending := []int{}
