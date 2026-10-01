@@ -1,8 +1,8 @@
 <template>
   <main class="teams-module teams-admin">
     <header class="teams-header">
-      <div><p class="teams-eyebrow">{{ $t('teams_module.offline_activity') }}</p><h1>{{ module.name }}</h1><span v-if="activity" class="teams-status">{{ $t(`teams_module.${activity.status}`) }} · {{ activity.entrants.length }} {{ $t('teams_module.people') }}</span></div>
-      <div class="teams-actions"><button @click="showProjector">{{ $t('teams_module.projector') }}</button><button v-if="activity?.status === 'setup'" class="primary" :disabled="busy" @click="act({ action: 'start' })">{{ $t('teams_module.start') }}</button><button v-if="activity?.status === 'live'" class="primary" :disabled="busy" @click="complete">{{ $t('teams_module.complete') }}</button><button v-if="activity?.status === 'completed'" :disabled="busy" @click="act({ action: 'reopen' })">{{ $t('teams_module.reopen') }}</button></div>
+      <div><p class="teams-eyebrow">{{ $t('teams_module.offline_activity') }}</p><h1>{{ module.name }}</h1><span v-if="activity" class="teams-status" :class="activity.status">{{ $t(`teams_module.${activity.status}`) }} · {{ activity.entrants.length }} {{ $t('teams_module.people') }}</span></div>
+      <div class="teams-actions"><button class="projector-action" @click="showProjector">{{ $t('teams_module.projector') }}</button><button v-if="activity?.status === 'setup'" class="primary start-action" :disabled="busy" @click="act({ action: 'start' })">{{ $t('teams_module.start') }}</button><button v-if="activity?.status === 'live'" class="primary complete-action" :disabled="busy" @click="complete">{{ $t('teams_module.complete') }}</button><button v-if="activity?.status === 'completed'" class="reopen-action" :disabled="busy" @click="act({ action: 'reopen' })">{{ $t('teams_module.reopen') }}</button></div>
     </header>
     <p v-if="loading" class="teams-notice">{{ $t('teams_module.loading') }}</p>
     <p v-if="disconnected" class="teams-notice">{{ $t('teams_module.disconnected') }}</p>
@@ -52,6 +52,7 @@ import { useI18n } from 'vue-i18n'
 import { useTeamsActivity } from '../composables/useTeamsActivity'
 import { teamsActivity } from '../services/teamsActivity'
 import { activityTotals, defaultTeamsConfig } from '../utils/teamsActivity'
+import { localizeTeamsError } from '../utils/teamsErrors'
 import TeamsConfigFields from './TeamsConfigFields.vue'
 import '../styles/teams-activity.css'
 const props = defineProps({ eventId: String, module: Object, modules: Array })
@@ -84,7 +85,7 @@ async function act(payload) {
   }
   busy.value = true; message.value = ''
   try { await teamsActivity.action(props.eventId, props.module.id, payload); pending.delete(key); await load(); return true }
-  catch (err) { message.value = err.message; return false }
+  catch (err) { message.value = localizeTeamsError(err.message, t); return false }
   finally { busy.value = false }
 }
 function award(team, points) { return act({ action: 'award', teamId: team.id, points, reason: reason.value }) }

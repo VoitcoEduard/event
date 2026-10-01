@@ -722,6 +722,9 @@
     "standings": "Clasament",
     "earned": "Puncte individuale câștigate",
     "award_history": "Istoricul punctajelor",
-    "rank": "Loc"
+    "rank": "Loc",
+    "errors": {
+      "assign_participant_before_start": "Repartizează cel puțin un participant într-o echipă înainte de a începe"
+    }
   }
 }

@@ -118,12 +118,109 @@
   font-size:14px
 }
 .teams-admin{
-  max-width:none
+  max-width:none;
+  min-height:0;
+  background:#121212;
+  padding:28px 24px 48px
 }
-.teams-admin>section,.teams-admin>details,.teams-admin-grid{
-  max-width:1600px;
+.teams-admin>.teams-header,.teams-admin>section,.teams-admin>details,.teams-admin-grid,.teams-admin>.teams-error,.teams-admin>.teams-notice{
+  max-width:1400px;
   margin-left:auto;
   margin-right:auto
+}
+.teams-admin .teams-header{
+  padding:24px;
+  background:#1e1e1e;
+  border:1px solid #333;
+  border-radius:16px;
+  box-shadow:0 2px 8px #0003
+}
+.teams-admin .teams-header h1{
+  font-size:32px;
+  margin:4px 0 12px
+}
+.teams-admin .teams-eyebrow{
+  color:#888;
+  letter-spacing:1px
+}
+.teams-admin .teams-status{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.4px
+}
+.teams-admin .teams-status.setup{
+  color:#ffd60a;
+  background:#ffd60a24
+}
+.teams-admin .teams-status.live{
+  color:#30d158;
+  background:#30d15824
+}
+.teams-admin .teams-status.completed{
+  color:#8e8e93;
+  background:#8e8e9324
+}
+.teams-admin .teams-panel{
+  background:#1e1e1e;
+  border-color:#333;
+  border-radius:16px;
+  box-shadow:0 2px 8px #0003
+}
+.teams-admin button,.teams-admin select,.teams-admin input{
+  color:#fff;
+  background:#2c2c2e;
+  border-color:#444;
+  border-radius:8px
+}
+.teams-admin input{
+  background:#181818
+}
+.teams-admin button:hover:not(:disabled){
+  background:#3a3a3c;
+  transform:translateY(-1px)
+}
+.teams-admin button.primary{
+  background:#007aff;
+  border-color:#007aff
+}
+.teams-admin button.primary:hover:not(:disabled){
+  background:#0a84ff
+}
+.teams-admin button.projector-action{
+  background:#ff9500;
+  border-color:#ff9500;
+  font-weight:600
+}
+.teams-admin button.projector-action:hover:not(:disabled){
+  background:#ffa830
+}
+.teams-admin button.start-action{
+  background:#28cd41;
+  border-color:#28cd41
+}
+.teams-admin button.start-action:hover:not(:disabled){
+  background:#30d158
+}
+.teams-admin button.complete-action{
+  background:#ff3b30;
+  border-color:#ff3b30
+}
+.teams-admin button.complete-action:hover:not(:disabled){
+  background:#ff453a
+}
+.teams-admin button.reopen-action{
+  background:#607d8b;
+  border-color:#607d8b;
+  font-weight:600
+}
+.teams-admin .teams-muted,.teams-admin .team-card header p,.teams-admin .award-history small{
+  color:#888
+}
+.teams-admin .teams-roster li,.teams-admin .entrant-row,.teams-admin .award-history li{
+  border-color:#333
 }
 .setup-panel{
   max-width:620px!important
