@@ -6,15 +6,18 @@ html[data-admin-appearance="true"] {
   --admin-surface-hover: #eef2f7;
   --admin-border: #dde1e7;
   --admin-border-strong: #c8ced8;
-  --admin-text: #191c22;
-  --admin-text-muted: #667085;
-  --admin-text-dim: #8a94a3;
-  --admin-primary: #147ff5;
-  --admin-primary-hover: #086bd5;
+  --admin-text: #101828;
+  --admin-text-muted: #475467;
+  --admin-text-dim: #667085;
+  --admin-primary: #0969da;
+  --admin-primary-solid: #0969da;
+  --admin-primary-hover: #0758b8;
   --admin-primary-soft: #e8f2ff;
   --admin-danger: #b42318;
+  --admin-danger-solid: #b42318;
   --admin-danger-soft: #feebe9;
   --admin-success: #18733b;
+  --admin-success-solid: #18733b;
   --admin-success-soft: #e3f5e9;
   --admin-warning: #925f0a;
   --admin-warning-soft: #fff2d8;
@@ -47,14 +50,17 @@ html[data-admin-theme="dark"] {
   --admin-border: #353538;
   --admin-border-strong: #4b4b50;
   --admin-text: #f5f5f7;
-  --admin-text-muted: #a8a8ae;
-  --admin-text-dim: #77777e;
-  --admin-primary: #147ff5;
-  --admin-primary-hover: #3294ff;
+  --admin-text-muted: #c5c5ca;
+  --admin-text-dim: #a3a3aa;
+  --admin-primary: #75b7ff;
+  --admin-primary-solid: #0969da;
+  --admin-primary-hover: #0b78f0;
   --admin-primary-soft: #162e4d;
   --admin-danger: #ff6961;
+  --admin-danger-solid: #b42318;
   --admin-danger-soft: #3b2020;
   --admin-success: #4bd176;
+  --admin-success-solid: #18733b;
   --admin-success-soft: #173624;
   --admin-warning: #ffc15c;
   --admin-warning-soft: #3d3018;
@@ -85,8 +91,8 @@ html[data-admin-appearance="true"] :focus-visible {
 .admin-theme-control {
   position: fixed;
   z-index: 10020;
-  top: 16px;
-  right: 216px;
+  right: 18px;
+  bottom: 18px;
   display: flex;
   gap: 2px;
   padding: 3px;
@@ -142,6 +148,20 @@ html[data-admin-appearance="true"] :is(
   color: var(--admin-text-muted);
 }
 
+/* Titles are often rendered as paragraphs in the existing screens. Keep them
+   at full contrast after the general paragraph treatment above. */
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .quiz-host-screen, .judge-screen
+) :is(
+  .card-title, .module-name, .event-name, .template-name, .question-title,
+  .dialog-title, .form-title, .section-title, .title
+) {
+  color: var(--admin-text) !important;
+  opacity: 1 !important;
+}
+
 html[data-admin-appearance="true"] :is(
   .admin-screen, .admin-details-screen, .access-page, .login-page,
   .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
@@ -183,7 +203,7 @@ html[data-admin-appearance="true"] :is(
   .admin-screen, .admin-details-screen, .access-page, .login-page,
   .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
   .judge-screen
-) button:not(.submit-button):not(.create-btn):not(.primary):not(.save-btn):not(.launch-btn) {
+) button {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border-strong) !important;
   color: var(--admin-text) !important;
@@ -191,10 +211,23 @@ html[data-admin-appearance="true"] :is(
 }
 
 html[data-admin-appearance="true"] :is(.submit-button, .create-btn, button.primary, .save-btn, .launch-btn, .btn-primary) {
-  background: var(--admin-primary) !important;
-  border-color: var(--admin-primary) !important;
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
   color: #fff !important;
   box-shadow: none !important;
+}
+
+html[data-admin-appearance="true"] .login-page .login-btn,
+html[data-admin-appearance="true"] :is(.modal-container, .dialog, .library-modal) :is(.publish-btn, .dialog-btn.save, .save-template-btn, .add-btn, .add-round-btn) {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+html[data-admin-appearance="true"] button:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
 }
 
 html[data-admin-appearance="true"] :is(.submit-button, .create-btn, button.primary, .save-btn, .launch-btn, .btn-primary):hover:not(:disabled) {
@@ -215,6 +248,66 @@ html[data-admin-appearance="true"] :is(.status-active, .success, .notice) {
 html[data-admin-appearance="true"] :is(.status-inactive, .error) {
   background: var(--admin-danger-soft) !important;
   color: var(--admin-danger) !important;
+}
+
+/* Event details contains several action variants whose original colors were
+   neutralized by the shared button reset. Restore clear, semantic controls. */
+html[data-admin-appearance="true"] .admin-details-screen :is(.card-description, .label, .section-label, .module-type, .control-hint) {
+  color: var(--admin-text-muted) !important;
+  opacity: 1 !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.value, .module-name) {
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen .module-item {
+  background: var(--admin-surface-subtle) !important;
+  border: 1px solid var(--admin-border) !important;
+  box-shadow: none !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.add-button, .add-module-button) {
+  background: var(--admin-primary-solid) !important;
+  border: 1px solid var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.copy-btn, .config-btn, .nav-button, .module-btn) {
+  min-height: 38px;
+  border: 1px solid var(--admin-border-strong) !important;
+  background: var(--admin-surface) !important;
+  color: var(--admin-text) !important;
+  font-weight: 700;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.screen-manager-btn, .library-btn, .data-btn, .host-btn) {
+  background: var(--admin-primary-soft) !important;
+  border-color: color-mix(in srgb, var(--admin-primary) 38%, var(--admin-border)) !important;
+  color: color-mix(in srgb, var(--admin-primary) 76%, var(--admin-text)) !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.start-button, .module-btn.start-button) {
+  background: var(--admin-success-solid) !important;
+  border-color: var(--admin-success-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.stop-button, .module-btn.stop-button) {
+  background: var(--admin-danger-solid) !important;
+  border-color: var(--admin-danger-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.delete-btn, .module-btn.delete-btn) {
+  background: var(--admin-danger-soft) !important;
+  border-color: color-mix(in srgb, var(--admin-danger) 45%, var(--admin-border)) !important;
+  color: var(--admin-danger) !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.status-badge.active, .event-status.active, .module-status-badge.status-active) {
+  background: var(--admin-success-soft) !important;
+  border-color: color-mix(in srgb, var(--admin-success) 35%, var(--admin-border)) !important;
+  color: var(--admin-success) !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen :is(.status-badge.inactive, .event-status.inactive, .module-status-badge.status-inactive) {
+  background: var(--admin-danger-soft) !important;
+  border-color: color-mix(in srgb, var(--admin-danger) 35%, var(--admin-border)) !important;
+  color: var(--admin-danger) !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen .control-group {
+  border-color: var(--admin-border) !important;
 }
 
 /* Reference layout: event administration landing page. */
@@ -369,8 +462,8 @@ html[data-admin-appearance="true"] .teams-module :is(button, input, select, text
   color: var(--admin-text) !important;
 }
 html[data-admin-appearance="true"] .teams-module button.primary {
-  background: var(--admin-primary) !important;
-  border-color: var(--admin-primary) !important;
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
   color: #fff !important;
 }
 
@@ -385,6 +478,36 @@ html[data-admin-appearance="true"] .screen-manager :is(.sidebar, .props-panel, .
 html[data-admin-appearance="true"] .screen-manager .slide-list li.active .slide-item {
   background: var(--admin-primary) !important;
   color: #fff !important;
+}
+html[data-admin-appearance="true"] .screen-manager .push-btn {
+  background: var(--admin-success-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .screen-manager :is(.danger-btn, .delete-slide) {
+  background: var(--admin-danger-solid) !important;
+  border-color: var(--admin-danger-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .screen-manager :is(.action-btn, .add-slide-btn) {
+  background: var(--admin-surface-hover) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] .judge-screen .grade-right {
+  background: var(--admin-success-solid) !important;
+  border-color: var(--admin-success-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .judge-screen .grade-wrong {
+  background: var(--admin-danger-solid) !important;
+  border-color: var(--admin-danger-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .judge-screen .grade-later {
+  background: var(--admin-warning-soft) !important;
+  border-color: var(--admin-warning) !important;
+  color: var(--admin-warning) !important;
 }
 
 /* Host screens keep their presentation layout while adopting the admin palette. */
@@ -417,6 +540,16 @@ html[data-admin-appearance="true"] .quiz-host-screen :is(.game-title, .question-
   color: var(--admin-text) !important;
   text-shadow: none !important;
 }
+html[data-admin-appearance="true"] .quiz-host-screen :is(.start-btn, .control-btn.primary) {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .control-btn:not(.primary) {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
 
 /* Preserve authored slide/media content in the editor. */
 html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content, .slide-preview, .element-preview, .screensaver-preview) {
@@ -424,7 +557,7 @@ html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content,
 }
 
 @media (max-width: 900px) {
-  .admin-theme-control { top: auto; right: 12px; bottom: 12px; }
+  .admin-theme-control { right: 12px; bottom: 12px; }
 }
 
 @media (max-width: 480px) {
