@@ -9,8 +9,20 @@ import (
 )
 
 type EventScores struct {
-	Games   []models.QuizResult `json:"games"`
-	Entries []models.ScoreEntry `json:"entries"`
+	Games        []models.QuizResult     `json:"games"`
+	Entries      []models.ScoreEntry     `json:"entries"`
+	Teams        []EventScoreTeam        `json:"teams"`
+	Participants []EventScoreParticipant `json:"participants"`
+}
+
+type EventScoreTeam struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	ModuleID string `json:"moduleId"`
+}
+type EventScoreParticipant struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"displayName"`
 }
 
 func LoadEventScores(ctx context.Context, eventID string) (*EventScores, error) {
@@ -36,7 +48,7 @@ func LoadEventScores(ctx context.Context, eventID string) (*EventScores, error) 
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	result := &EventScores{Games: []models.QuizResult{}}
+	result := &EventScores{Games: []models.QuizResult{}, Teams: []EventScoreTeam{}, Participants: []EventScoreParticipant{}}
 	if err = cursor.All(ctx, &result.Games); err != nil {
 		return nil, err
 	}
@@ -57,6 +69,12 @@ func LoadEventScores(ctx context.Context, eventID string) (*EventScores, error) 
 	for _, activity := range activities {
 		if modules[activity.ModuleID] {
 			result.Entries = append(result.Entries, activity.ScoreEntries()...)
+			for _, team := range activity.Teams {
+				result.Teams = append(result.Teams, EventScoreTeam{team.ID, team.Name, activity.ModuleID})
+			}
+			for _, person := range activity.Entrants {
+				result.Participants = append(result.Participants, EventScoreParticipant{person.ParticipantID, person.Name})
+			}
 		}
 	}
 	return result, nil

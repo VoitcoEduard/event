@@ -94,7 +94,7 @@
                   {{ module.type === 'form' ? '📝' :
                      (module.type === 'quiz' ? '🎮' :
                      (module.type === 'wrong_pictures' ? '🖼️' :
-                     (module.type === 'simple_quiz' ? '✍️' : '📊'))) }}
+                     (module.type === 'simple_quiz' ? '✍️' : (module.type === 'teams' ? '👥' : '📊')))) }}
                 </span>
               </div>
               <div class="module-main">
@@ -224,6 +224,10 @@ onUnmounted(() => {
 })
 
 const selectModule = (module) => {
+  if (module.type === 'teams') {
+    router.push(`/teams/${currentEvent.value.id}/${module.id}/player`)
+    return
+  }
   if (module.type === 'quiz') {
     router.push(`/quiz/${currentEvent.value.id}/${module.id}/player`)
     return

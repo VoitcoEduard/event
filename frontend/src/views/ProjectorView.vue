@@ -51,8 +51,9 @@
 
     <!-- Quiz Display States -->
     <template v-else>
+      <TeamsProjector v-if="isTeams" :key="activeModuleId" :event-id="eventId" :module-id="activeModuleId" />
       <SimpleQuizProjector
-        v-if="isSimpleQuiz"
+        v-else-if="isSimpleQuiz"
         :event-id="eventId"
         :module-id="activeModuleId"
         :pin="String(pinCode)"
@@ -528,6 +529,7 @@ import { getImageUrl } from '../services/media'
 import { preloader } from '../utils/imagePreload'
 import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
 import SimpleQuizProjector from '../components/SimpleQuizProjector.vue'
+import TeamsProjector from '../components/TeamsProjector.vue'
 import { getOverviewSize } from '../utils/wrongPictureGeometry'
 
 const getScaledFontSize = (size) => {
@@ -541,8 +543,9 @@ const eventId = route.params.eventId
 const activeModuleId = ref('')
 const currentEvent = ref(null)
 const activeModule = computed(() => currentEvent.value?.modules?.find(m => m.id === activeModuleId.value) || null)
+const isTeams = computed(() => activeModule.value?.type === 'teams')
 const isSimpleQuiz = computed(() => activeModule.value?.type === 'simple_quiz')
-const supportedProjectorTypes = new Set(['quiz', 'wrong_pictures', 'simple_quiz'])
+const supportedProjectorTypes = new Set(['quiz', 'wrong_pictures', 'simple_quiz', 'teams'])
 let pollingInterval = null
 
 const changeLanguage = () => {
@@ -981,6 +984,10 @@ const connectToModule = (module) => {
   activeModuleId.value = module.id
   applyModuleConfig(module)
   displayMode.value = 'connecting'
+  if (module.type === 'teams') {
+    displayMode.value = 'module'
+    return
+  }
 
   // Preload wrong pictures metadata if applicable
   if (module.type === 'wrong_pictures') {
@@ -1114,7 +1121,7 @@ const fetchEventState = async () => {
       return
     }
 
-    if (activeModuleId.value !== nextModule.id || !quizWS.isConnected) {
+    if (activeModuleId.value !== nextModule.id || (nextModule.type !== 'teams' && !quizWS.isConnected)) {
       connectToModule(nextModule)
       return
     }

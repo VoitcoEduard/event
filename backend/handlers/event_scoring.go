@@ -88,6 +88,22 @@ func (h *Handler) SetManualScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if count == 0 {
+		if target == "teams" && module.Type == "teams" {
+			activity, activityErr := database.NewTeamsActivityRepository().Get(r.Context(), eventID, moduleID)
+			if activityErr == nil {
+				for _, team := range activity.Teams {
+					if team.ID == targetID {
+						count = 1
+					}
+				}
+			}
+			if activityErr != nil && !errors.Is(activityErr, mongo.ErrNoDocuments) {
+				writeRequestError(w, activityErr, 500)
+				return
+			}
+		}
+	}
+	if count == 0 {
 		http.Error(w, "Player or team not found in this event", 404)
 		return
 	}

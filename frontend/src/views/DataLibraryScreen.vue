@@ -5,7 +5,7 @@
       <h1>{{ event?.name || 'Event' }} · Data</h1>
       <button :disabled="busy || loading || dirty" @click="load">Refresh</button>
     </header>
-    <p class="scoring-note">Only the latest completed run of each game counts. Manual points are added separately. Team points stay with the team.</p>
+    <p class="scoring-note">Only the latest completed run of each game counts. Manual adjustments are added separately. Teams activity awards give the full award to each recorded member; legacy team adjustments stay with the team.</p>
     <p v-if="error" role="alert" class="error">{{ error }}</p>
     <p v-if="notice" role="status" class="notice">{{ notice }}</p>
     <p v-if="loading">Loading event data…</p>
@@ -30,7 +30,8 @@
           <thead><tr><th class="row-number" scope="col">#</th><th class="name-cell" scope="col">{{ target === 'players' ? 'Player' : 'Team' }}</th>
             <template v-for="module in visibleModules" :key="module.id">
               <th v-if="target === 'players' && isGame(module)" scope="col" class="score-heading">{{ module.name }}<span>Latest game</span></th>
-              <th scope="col" class="score-heading">{{ module.name }}<span>Manual points</span></th>
+              <th v-if="module.type === 'teams'" scope="col" class="score-heading">{{ module.name }}<span>{{ $t('teams_module.earned') }}</span></th>
+              <th scope="col" class="score-heading">{{ module.name }}<span>Manual adjustments</span></th>
             </template><th scope="col" class="total-cell">Total points</th><th v-if="selectedModule" scope="col" class="actions-cell">Actions</th>
           </tr></thead>
           <tbody><tr v-for="(row, index) in rows" :key="row.id" :class="{ edited: hasDraft(row) }">
@@ -41,6 +42,7 @@
                 <input v-if="selectedModule && row.game[module.id] !== undefined" :aria-label="`${row.name} game points`" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
                 <span v-else>{{ row.game[module.id] ?? '—' }}</span>
               </td>
+              <td v-if="module.type === 'teams'">{{ row.awards[module.id] ?? 0 }}</td>
               <td><input v-if="selectedModule && row.registered && allowsManual(module, target)" :aria-label="`${row.name} manual points`" type="number" step="any" :disabled="busy" :value="draft(row, 'manual')" @input="setDraft(row, 'manual', $event.target.value)" /><span v-else>{{ row.manual[module.id] ?? 0 }}</span></td>
             </template>
             <td class="total-cell"><strong>{{ row.total }}</strong></td>
@@ -50,6 +52,15 @@
       </div>
       <div class="sheet-status"><span>{{ selectedModule?.name || 'All points' }} · {{ target === 'players' ? 'Player scores' : 'Team scores' }}</span><span>{{ busy ? 'Saving…' : dirty ? 'Unsaved changes — save each edited row' : 'Up to date' }}</span></div>
       <p v-if="!rows.length">No {{ target }} yet. Add them to the event before entering points.</p>
+      <section v-if="selectedModule?.type === 'teams'">
+        <h2>{{ $t('teams_module.standings') }}</h2>
+        <p><router-link :to="{ name: 'teams-admin', params: { id: eventId }, query: { moduleId: selectedModule.id } }">{{ $t('teams_module.manage_teams') }}</router-link></p>
+        <article v-for="(result, resultIndex) in responses" :key="resultIndex">
+          <p v-if="result.status">{{ $t(`teams_module.${result.status}`) }}</p>
+          <div class="table-wrap"><table><thead><tr><th>{{ $t('teams_module.rank') }}</th><th>{{ $t('teams_module.team_name') }}</th><th>{{ $t('teams_module.team_score') }}</th><th>{{ $t('teams_module.members') }}</th></tr></thead><tbody><tr v-for="team in result.teams || []" :key="team.id"><td>{{ team.rank ?? '—' }}</td><td>{{ team.name }}</td><td>{{ team.score ?? '—' }}</td><td>{{ team.members?.map(member => member.nickname).join(', ') }}</td></tr></tbody></table></div>
+          <h3>{{ $t('teams_module.award_history') }}</h3><div v-for="award in result.awards || []" :key="award.id" class="result-award"><strong>{{ award.points > 0 ? '+' : '' }}{{ award.points }}</strong> · {{ result.teams?.find(team => team.id === award.teamId)?.name }} · {{ award.reason }} · {{ award.recipients.length }} {{ $t('teams_module.members') }}</div>
+        </article>
+      </section>
       <section v-if="selectedModule?.type === 'form'">
         <h2>Form responses</h2>
         <p v-if="!responses.length">No responses yet.</p>
@@ -102,7 +113,7 @@ async function load() {
 async function loadResponses() {
   const tab = activeTab.value
   responses.value = []
-  if (selectedModule.value?.type !== 'form') return
+  if (!['form', 'teams'].includes(selectedModule.value?.type)) return
   const result = await request(modulePath() + '/responses')
   if (activeTab.value === tab) responses.value = result.responses || []
 }
@@ -238,7 +249,7 @@ tbody tr.edited > td:not(.row-number), tbody tr.edited > .name-cell { background
 .error, .notice { padding: 9px 12px; border: 1px solid; border-radius: 4px; font-size: 12px; }
 .error { color: #edc0b9; background: #493b3b; border-color: #755751; }
 .notice { color: #bdd8c5; background: #35473d; border-color: #536f5d; }
-h2 { font-size: 16px; margin-top: 24px; } h3 { font-size: 13px; margin: 0 0 10px; }
+.result-award{padding:8px 0;border-bottom:1px solid var(--line)}a{color:#afd3fb}h2 { font-size: 16px; margin-top: 24px; } h3 { font-size: 13px; margin: 0 0 10px; }
 article { padding: 14px; border: 1px solid var(--line); background: #343a40; }
 article label { margin: 4px 16px 4px 0; }
 .data-page article input { width: 240px; max-width: 100%; }

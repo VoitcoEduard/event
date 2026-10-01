@@ -121,7 +121,7 @@
                             {{ $t('admin.details.configure') }}
                           </button>
                           <button
-                            v-if="module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz'"
+                            v-if="module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz' || module.type === 'teams'"
                             class="module-btn host-btn"
                             @click="hostQuiz(module)"
                           >
@@ -178,6 +178,12 @@
       @update="fetchEventDetails"
     />
 
+    <TeamsModuleConfig
+      v-if="showConfigModal && selectedModule?.type === 'teams'"
+      :module="selectedModule" :event-id="currentEvent?.id" :modules="currentEvent?.modules || []"
+      @close="closeConfigModal" @update="fetchEventDetails"
+    />
+
     <SimpleQuizModuleConfig
       v-if="showConfigModal && selectedModule?.type === 'simple_quiz'"
       :visible="showConfigModal && selectedModule?.type === 'simple_quiz'"
@@ -229,6 +235,7 @@ import FormModuleConfig from '../components/FormModuleConfig.vue'
 import QuizModuleConfig from '../components/QuizModuleConfig.vue'
 import WrongPicturesModuleConfig from '../components/WrongPicturesModuleConfig.vue'
 import SimpleQuizModuleConfig from '../components/SimpleQuizModuleConfig.vue'
+import TeamsModuleConfig from '../components/TeamsModuleConfig.vue'
 
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
@@ -395,12 +402,8 @@ const copyLink = () => {
 }
 
 const configureModule = (module) => {
-  if (module.type === 'teams') {
-    router.push(`/admin/event/${currentEvent.value.id}/teams?moduleId=${module.id}&moduleName=${encodeURIComponent(module.name)}`)
-  } else {
-    selectedModule.value = module
-    showConfigModal.value = true
-  }
+  selectedModule.value = module
+  showConfigModal.value = true
 }
 
 const closeConfigModal = () => {
@@ -409,6 +412,10 @@ const closeConfigModal = () => {
 }
 
 const hostQuiz = (module) => {
+  if (module.type === 'teams') {
+    router.push({ name: 'teams-admin', params: { id: currentEvent.value.id }, query: { moduleId: module.id } })
+    return
+  }
   if (module.type === 'wrong_pictures') {
     router.push(`/wrong-pictures/${currentEvent.value.id}/${module.id}/host`)
   } else if (module.type === 'simple_quiz') {
@@ -505,7 +512,7 @@ const deleteModule = async (module) => {
       success('Module deleted')
       fetchEventDetails()
     } else {
-      error('Failed to delete module')
+      error((await response.text()).trim() || 'Failed to delete module')
     }
   } catch (err) {
     console.error('Error deleting module:', err)

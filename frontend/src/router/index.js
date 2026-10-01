@@ -12,8 +12,8 @@ import ProjectorView from '../views/ProjectorView.vue'
 import ScreenManagerScreen from '../views/ScreenManagerScreen.vue'
 
 import TeamsAdminScreen from '../views/TeamsAdminScreen.vue'
-import TeamSelectionScreen from '../views/TeamSelectionScreen.vue'
-import MyTeamScreen from '../views/MyTeamScreen.vue'
+import TeamsActivityPicker from '../views/TeamsActivityPicker.vue'
+import TeamsPlayerScreen from '../views/TeamsPlayerScreen.vue'
 
 import { loadSession, session } from '../session.js'
 
@@ -37,8 +37,9 @@ const routes = [
   { path: '/simple-quiz/:eventId/:moduleId/player', name: 'simple-quiz-player', component: () => import('../views/SimpleQuizPlayerScreen.vue') },
   { path: '/simple-quiz/:eventId/:moduleId/judge', name: 'simple-quiz-judge', component: () => import('../views/SimpleQuizJudgeScreen.vue') },
   { path: '/projector/:eventId', name: 'projector', component: ProjectorView },
-  { path: '/event/team-selection', name: 'team-selection', component: TeamSelectionScreen },
-  { path: '/event/my-team', name: 'my-team', component: MyTeamScreen }
+  { path: '/teams/:eventId/:moduleId/player', name: 'teams-player', component: TeamsPlayerScreen },
+  { path: '/event/team-selection', name: 'team-selection', component: TeamsActivityPicker },
+  { path: '/event/my-team', name: 'my-team', component: TeamsActivityPicker }
 ]
 
 const router = createRouter({
