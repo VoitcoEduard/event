@@ -290,15 +290,6 @@ func TransitionTeams(a *models.TeamsActivity, action string) error {
 		if len(a.Teams) == 0 {
 			return teamsError("Create teams before starting")
 		}
-		assigned := false
-		for _, p := range a.Entrants {
-			if p.TeamID != "" {
-				assigned = true
-			}
-		}
-		if !assigned {
-			return teamsError("Assign at least one participant before starting")
-		}
 		a.Status = "live"
 	case "complete":
 		if a.Status == "completed" {

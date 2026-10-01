@@ -23,6 +23,21 @@ func mustTeams(t *testing.T, err error) {
 		t.Fatal(err)
 	}
 }
+func TestTeamsCanStartBeforeParticipantsEnter(t *testing.T) {
+	a := NewTeamsActivity("event", "relay", "Relay", models.TeamsConfig{Method: "manual", Presets: []int{1, 5, 10}})
+	a.Teams = []models.ActivityTeam{{ID: "blue", Name: "Blue", Color: "#3B82F6"}}
+
+	mustTeams(t, TransitionTeams(a, "start"))
+	if a.Status != "live" {
+		t.Fatalf("activity status = %q, want live", a.Status)
+	}
+
+	mustTeams(t, AddTeamsEntrant(a, models.TeamsEntrant{ParticipantID: "late", Name: "Late participant"}))
+	mustTeams(t, AssignTeamsEntrant(a, "late", "blue", false))
+	if len(a.Entrants) != 1 || a.Entrants[0].TeamID != "blue" {
+		t.Fatal("participant could not enter and be assigned after the activity started")
+	}
+}
 func TestTeamsAwardsKeepOriginalRecipients(t *testing.T) {
 	a := fixtureTeams()
 	mustTeams(t, TransitionTeams(a, "start"))

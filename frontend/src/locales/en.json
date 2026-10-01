@@ -722,9 +722,6 @@
     "standings": "Standings",
     "earned": "Individual points earned",
     "award_history": "Award history",
-    "rank": "Rank",
-    "errors": {
-      "assign_participant_before_start": "Assign at least one participant before starting"
-    }
+    "rank": "Rank"
   }
 }

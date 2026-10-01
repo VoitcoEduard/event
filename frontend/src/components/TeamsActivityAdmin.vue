@@ -52,7 +52,6 @@ import { useI18n } from 'vue-i18n'
 import { useTeamsActivity } from '../composables/useTeamsActivity'
 import { teamsActivity } from '../services/teamsActivity'
 import { activityTotals, defaultTeamsConfig } from '../utils/teamsActivity'
-import { localizeTeamsError } from '../utils/teamsErrors'
 import TeamsConfigFields from './TeamsConfigFields.vue'
 import '../styles/teams-activity.css'
 const props = defineProps({ eventId: String, module: Object, modules: Array })
@@ -85,7 +84,7 @@ async function act(payload) {
   }
   busy.value = true; message.value = ''
   try { await teamsActivity.action(props.eventId, props.module.id, payload); pending.delete(key); await load(); return true }
-  catch (err) { message.value = localizeTeamsError(err.message, t); return false }
+  catch (err) { message.value = err.message; return false }
   finally { busy.value = false }
 }
 function award(team, points) { return act({ action: 'award', teamId: team.id, points, reason: reason.value }) }
