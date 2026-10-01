@@ -636,6 +636,12 @@
       "results": "Rezultate"
     }
   },
+  "appearance": {
+    "label": "Aspect",
+    "light": "Luminos",
+    "dark": "Întunecat",
+    "language": "Limba evenimentului"
+  },
   "teams_module": {
     "participant_count": "{count} participanți | {count} participant | {count} participanți",
     "member_count": "{count} membri | {count} membru | {count} membri",

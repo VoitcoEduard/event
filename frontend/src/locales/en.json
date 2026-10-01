@@ -636,6 +636,12 @@
       "results": "Results"
     }
   },
+  "appearance": {
+    "label": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "language": "Event language"
+  },
   "teams_module": {
     "participant_count": "{count} participants | {count} participant | {count} participants",
     "member_count": "{count} members | {count} member | {count} members",

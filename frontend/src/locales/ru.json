@@ -636,6 +636,12 @@
       "results": "Результаты"
     }
   },
+  "appearance": {
+    "label": "Оформление",
+    "light": "Светлая",
+    "dark": "Тёмная",
+    "language": "Язык события"
+  },
   "teams_module": {
     "participant_count": "{count} участников | {count} участник | {count} участников",
     "member_count": "{count} участников | {count} участник | {count} участников",
