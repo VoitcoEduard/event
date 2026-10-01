@@ -48,7 +48,8 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	authService := &auth.Service{Config: auth.Config{Mode: "dev", Environment: "development", BaseURL: "http://localhost:3000"}, Store: store}
-	handler := handlers.New(handlers.Dependencies{Auth: authService, Events: services.NewEventService(), Modules: services.NewModuleService(), Teams: database.NewTeamRepository(), Participants: services.NewParticipantService()})
+	handlerModules := services.NewModuleService()
+	handler := handlers.New(handlers.Dependencies{Auth: authService, Events: services.NewEventService(), Modules: handlerModules, Teams: database.NewTeamRepository(), Participants: services.NewParticipantService()})
 	mux := http.NewServeMux()
 	registerRoutes(mux, handler)
 	modules := []models.Module{{ID: "relay", Type: models.ModuleTypeTeams, Name: "Relay"}, {ID: "build", Type: models.ModuleTypeTeams, Name: "Building"}, {ID: "reuse", Type: models.ModuleTypeTeams, Name: "Reuse"}, {ID: "legacy", Type: models.ModuleTypeTeams, Name: "Legacy"}, {ID: "quiz", Type: models.ModuleTypeQuiz, Name: "Quiz"}}
@@ -86,6 +87,16 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	action := func(m, body string) *httptest.ResponseRecorder {
 		return must(request("POST", base(m)+"/actions", body, "", true))
 	}
+	assertModuleActive := func(moduleID string, want bool) {
+		t.Helper()
+		module, err := handlerModules.Get(ctx, "event", moduleID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if module.IsActive != want {
+			t.Fatalf("module %s active = %v, want %v", moduleID, module.IsActive, want)
+		}
+	}
 	for _, path := range []string{base("relay") + "/admin", base("relay") + "/actions"} {
 		method := "GET"
 		if strings.HasSuffix(path, "actions") {
@@ -96,6 +107,7 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 		}
 	}
 	action("relay", `{"action":"initialize","config":{"method":"choice","presets":[1,5,20]}}`)
+	assertModuleActive("relay", true)
 	action("relay", `{"action":"save_team","team":{"id":"blue","name":"Blue","color":"#3B82F6"}}`)
 	action("relay", `{"action":"save_team","team":{"id":"red","name":"Red","color":"#EF4444"}}`)
 	for _, id := range []string{"anna", "bob"} {
@@ -130,6 +142,7 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	}
 	action("relay", `{"action":"complete"}`)
 	action("relay", `{"action":"complete"}`)
+	assertModuleActive("relay", false)
 	// Reusing a roster copies neither entrants nor points until people enter.
 	action("reuse", `{"action":"initialize","config":{"sourceModuleId":"relay","method":"manual"}}`)
 	must(request("POST", base("reuse")+"/join", `{"name":"Anna"}`, "anna", false))
@@ -176,6 +189,7 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	}
 	// Reopening and reversing uses the old recipients even after a member moves.
 	action("relay", `{"action":"reopen"}`)
+	assertModuleActive("relay", true)
 	action("relay", `{"action":"assign","participantId":"anna","teamId":"red"}`)
 	action("relay", fmt.Sprintf(`{"action":"undo","awardId":%q,"requestId":"undo-relay"}`, a.Awards[0].ID))
 	action("relay", `{"action":"complete"}`)

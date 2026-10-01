@@ -52,6 +52,18 @@ func (h *Handler) teamsChanged(a *models.TeamsActivity) {
 	}
 }
 
+func (h *Handler) setTeamsModuleActive(ctx context.Context, eventID, moduleID string, active bool) error {
+	found, err := h.deps.Modules.SetActive(ctx, eventID, moduleID, active)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return services.ErrModuleNotFound
+	}
+	invalidateEventCache(eventID)
+	return nil
+}
+
 // Live events use device IDs in participants, while older orchestration code
 // uses event_participants. Prefer live IDs; never match people by their names.
 func teamsParticipants(ctx context.Context, eventID string) ([]models.TeamsEntrant, error) {
@@ -401,6 +413,13 @@ func (h *Handler) TeamsActivityAction(w http.ResponseWriter, r *http.Request) {
 		teamsFailure(w, err)
 		return
 	}
+	if input.Action == "start" || input.Action == "reopen" || input.Action == "complete" {
+		active := input.Action != "complete"
+		if err := h.setTeamsModuleActive(r.Context(), e, m, active); err != nil {
+			teamsFailure(w, err)
+			return
+		}
+	}
 	h.teamsChanged(a)
 	writeJSON(w, a)
 }
@@ -409,6 +428,10 @@ func (h *Handler) initializeTeams(w http.ResponseWriter, r *http.Request, module
 	repo := database.NewTeamsActivityRepository()
 	existing, err := repo.Get(r.Context(), e, m)
 	if err == nil {
+		if err = h.setTeamsModuleActive(r.Context(), e, m, true); err != nil {
+			teamsFailure(w, err)
+			return
+		}
 		writeJSON(w, existing)
 		return
 	}
@@ -486,10 +509,18 @@ func (h *Handler) initializeTeams(w http.ResponseWriter, r *http.Request, module
 		if mongo.IsDuplicateKeyError(err) {
 			existing, err = repo.Get(r.Context(), e, m)
 			if err == nil {
+				if err = h.setTeamsModuleActive(r.Context(), e, m, true); err != nil {
+					teamsFailure(w, err)
+					return
+				}
 				writeJSON(w, existing)
 				return
 			}
 		}
+		teamsFailure(w, err)
+		return
+	}
+	if err = h.setTeamsModuleActive(r.Context(), e, m, true); err != nil {
 		teamsFailure(w, err)
 		return
 	}
