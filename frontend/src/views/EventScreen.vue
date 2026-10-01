@@ -52,7 +52,7 @@
           </div>
           <div v-if="participantStatus" class="points-badge">
             <span class="points-value">{{ participantStatus.totalPoints || 0 }}</span>
-            <span class="points-label">PTS</span>
+              <span class="points-label">{{ $t('event.points_short') }}</span>
           </div>
         </div>
 

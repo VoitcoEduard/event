@@ -26,7 +26,7 @@
             >
               <div class="round-header">
                 <h3>Round {{ index + 1 }}</h3>
-                <button class="remove-btn" @click="removeRound(index)" aria-label="Remove round"><AppIcon name="close" :size="16" /></button>
+                <button class="remove-btn" @click="removeRound(index)" :aria-label="$t('quiz_config.question_editor.wrong_pictures.remove_round')"><AppIcon name="close" :size="16" /></button>
               </div>
               
               <div class="config-compact-row">
@@ -88,7 +88,7 @@
           </div>
           
           <div class="add-round-container">
-            <button class="add-round-btn" @click="addRound">+ Add Round</button>
+            <button class="add-round-btn" @click="addRound">{{ $t('quiz_config.question_editor.wrong_pictures.add_round') }}</button>
           </div>
 
           <div class="settings-bar mt-auto">
@@ -300,7 +300,7 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
 
 
 const removeRound = (index) => {
-  if (!confirm('Remove this round?')) return
+  if (!confirm(t('quiz_config.question_editor.wrong_pictures.remove_round_confirm'))) return
   questions.value.splice(index, 1)
 }
 

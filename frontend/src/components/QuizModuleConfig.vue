@@ -394,9 +394,9 @@ const validateQuestions = () => {
     
     if (q.type === 'range') {
         const config = q.rangeConfig
-        if (!config) return t('quiz_config.validation.slider_config')
-        if (config.minValue >= config.maxValue) return t('quiz_config.validation.slider_min_max')
-        if (config.step <= 0) return t('quiz_config.validation.slider_step')
+        if (!config) return t('quiz_config.validation.range_config')
+        if (config.minValue >= config.maxValue) return t('quiz_config.validation.range_min_max')
+        if (config.step <= 0) return t('quiz_config.validation.range_step')
     } else if (q.type === 'true_false') {
       // Only check first 2 answers for T/F
       if (q.answers.slice(0, 2).some(a => !a.trim())) return t('quiz_config.validation.tf_options')

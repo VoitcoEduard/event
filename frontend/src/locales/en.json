@@ -135,7 +135,10 @@
     "custom_text_slide": "Custom Text Slide",
     "custom_text_placeholder": "Enter custom text to display...",
     "live_preview": "Live Preview",
-    "toast_pushed": "Successfully pushed to Projector"
+    "toast_pushed": "Successfully pushed to Projector",
+    "editor": {
+      "title": "Slide Editor", "push_current": "Push Current Slide", "save_all": "Save All", "slides": "Slides", "add_custom_slide": "+ Add Custom Slide", "text": "Text", "properties": "Properties", "element": "Element", "text_content": "Text Content", "text_color": "Text Color", "font_size": "Font Size", "image": "Image", "select_image": "Select an Image", "delete_element": "Delete Element", "slide": "Slide", "name": "Name", "background_color": "Background Color", "background_image": "Background Image", "select_background": "Select Background", "clear_image": "Clear Image", "add_elements": "Add Elements", "add_text": "+ Add Text", "add_image": "+ Add Image", "add_qr": "+ Add QR Code", "template_options": "Template Options", "save_template": "Save as Template", "apply_template": "Apply Template", "no_templates": "No templates saved.", "template_name_prompt": "Enter a name for this template:", "template_saved": "Saved as template successfully", "template_save_failed": "Failed to save template", "apply_confirm": "Apply template \"{name}\"? This will overwrite the current slide.", "template_applied": "Template applied", "load_failed": "Failed to load slides", "saved": "Slides saved successfully", "save_failed": "Failed to save slides", "pushed": "Pushed to Big Screen", "push_failed": "Failed to push to screen", "new_custom_slide": "New Custom Slide", "delete_slide_confirm": "Delete this slide?"
+    }
   },
   "library": {
     "title": "Library",
@@ -195,7 +198,9 @@
       "user_id": "User ID",
       "name": "Name",
       "total_score": "Total Score"
-    }
+    },
+    "scoring_note": "Only the latest completed run of each game counts. Manual adjustments are added separately. Teams activity awards give the full award to each recorded member; legacy team adjustments stay with the team.",
+    "modules": "Modules", "all_points": "All points", "show": "Show", "players": "Players", "teams": "Teams", "players_and_teams": "Players and teams", "manual_points_for": "Manual points for", "edit_hint": "Edit a player name and save the row. Choose a module to enter or correct points.", "manual_disabled": "Manual entry for {target} is disabled for this module. Previously saved points still count.", "spreadsheet": "Event points spreadsheet", "player": "Player", "team": "Team", "latest_game": "Latest game", "manual_adjustments": "Manual adjustments", "total_points": "Total points", "actions": "Actions", "save": "Save", "player_scores": "Player scores", "team_scores": "Team scores", "saving": "Saving…", "unsaved": "Unsaved changes — save each edited row", "up_to_date": "Up to date", "no_rows": "No {target} yet. Add them to the event before entering points.", "form_responses": "Form responses", "no_responses": "No responses yet."
   },
   "quiz_config": {
     "title": "Quiz Editor",
@@ -256,6 +261,8 @@
       "points": "Points",
       "default_hint": "default",
       "answer_placeholder": "Type answer option",
+      "multi_select_warning": "Please mark at least {count} answers as correct for a multi-select question.",
+      "mark_correct": "Mark as correct",
       "types": {
         "classic": "Classic",
         "multi_select": "Multi Select",
@@ -282,6 +289,8 @@
         "description_hint": "Hover over a type to see what it does"
       },
       "number": {
+        "configuration": "Number Configuration",
+        "configuration_hint": "Players must input this exact number to score points. No time bonus applies.",
         "correct_answer": "Correct Answer",
         "points": "Points"
       },
@@ -294,7 +303,10 @@
         "points_short": "Points",
         "tolerance_short": "Tolerance %",
         "time_short": "Time (s)",
-        "show_count": "Show Count"
+        "show_count": "Show Count",
+        "add_round": "+ Add Round",
+        "remove_round": "Remove round",
+        "remove_round_confirm": "Remove this round?"
       },
       "range": {
         "range_unit": "Range & Unit",
@@ -394,6 +406,7 @@
     "radio_label": "Choose an option:",
     "checkbox_label": "Select all that apply:",
     "welcome_msg": "Welcome to the form!",
+    "delete_question": "Delete question",
     "types": {
       "text": "Text",
       "number": "Number",
@@ -427,7 +440,10 @@
     "tap_to_start": "Tap to start",
     "waiting_msg": "Waiting for host to start the next activity...",
     "waiting_submsg": "Sit tight and get ready!",
-    "leave_btn": "Leave Event"
+    "leave_btn": "Leave Event",
+    "toggle_theme": "Toggle theme",
+    "guest": "Guest",
+    "points_short": "PTS"
   },
   "quiz": {
     "player": {
@@ -457,6 +473,9 @@
       "place": "place",
       "final_score": "Final Score: {score}",
       "exit_btn": "Exit",
+      "select_multiple": "Select all that apply",
+      "leaderboard": "Leaderboard",
+      "points": "Points",
       "wrong_picture_review": {
         "eyebrow": "Wrong pictures",
         "title": "Your answers",
@@ -492,7 +511,8 @@
       "enable_sound": "🔊 Enable Sound",
       "toast": {
         "link_copied": "Projector link copied to clipboard!"
-      }
+      },
+      "wrong_picture_title": "What is wrong with the picture?", "show_leaderboard": "Show Leaderboard", "question_of": "Question {current} of {total}"
     }
   },
   "projector": {
@@ -547,12 +567,14 @@
     "members_count": "{count} members",
     "no_team": "You are not in a team",
     "go_back": "Go Back",
-    "change_team": "Change Team"
+    "change_team": "Change Team",
+    "you": "You"
   },
   "common": {
     "cancel": "Cancel",
     "loading": "Loading...",
-    "data_btn": "📊 Data"
+    "data_btn": "📊 Data",
+    "close": "Close", "open": "Open", "previous": "Previous", "next": "Next"
   },
   "simple_quiz": {
     "config": {
@@ -627,7 +649,9 @@
       "review": "review later",
       "received": "received",
       "empty": "No answers yet. Grading can start while questions are active.",
-      "next_pending": "Next pending takes its place after grading."
+      "next_pending": "Next pending takes its place after grading.",
+      "missing_token": "Missing judge token.",
+      "notes": "Judge notes"
     },
     "projector": {
       "join_title": "Join the Simple Quiz!",
@@ -635,6 +659,13 @@
       "grading": "Grading in progress…",
       "results": "Results"
     }
+  },
+  "map_coordinate_picker": {
+    "close_selection": "Close Selection",
+    "answers": "Answers",
+    "place_answer": "Place Answer",
+    "drop_pin": "Drop Pin",
+    "interaction_hint": "Pan and zoom to align target under the selector"
   },
   "appearance": {
     "label": "Appearance",

@@ -1,42 +1,42 @@
 <template>
   <main class="data-page">
     <header>
-      <button @click="router.push(`/admin/event/${eventId}`)"><AppIcon name="arrowLeft" :size="18" /> Back to event</button>
+      <button @click="router.push(`/admin/event/${eventId}`)"><AppIcon name="arrowLeft" :size="18" /> {{ t('data_library.back_to_event') }}</button>
       <h1>{{ event?.name || 'Event' }} · Data</h1>
-      <button :disabled="busy || loading || dirty" @click="load">Refresh</button>
+      <button :disabled="busy || loading || dirty" @click="load">{{ t('data_library.refresh_btn') }}</button>
     </header>
-    <p class="scoring-note">Only the latest completed run of each game counts. Manual adjustments are added separately. Teams activity awards give the full award to each recorded member; legacy team adjustments stay with the team.</p>
+    <p class="scoring-note">{{ t('data_library.scoring_note') }}</p>
     <p v-if="error" role="alert" class="error">{{ error }}</p>
     <p v-if="notice" role="status" class="notice">{{ notice }}</p>
-    <p v-if="loading">Loading event data…</p>
+    <p v-if="loading">{{ t('data_library.loading') }}</p>
     <template v-else-if="event">
-      <nav aria-label="Modules">
-        <button :class="{ active: activeTab === 'unified' }" :disabled="busy" @click="selectTab('unified')">All points</button>
+      <nav :aria-label="t('data_library.modules')">
+        <button :class="{ active: activeTab === 'unified' }" :disabled="busy" @click="selectTab('unified')">{{ t('data_library.all_points') }}</button>
         <button v-for="module in event.modules || []" :key="module.id" :disabled="busy" :class="{ active: activeTab === module.id }" @click="selectTab(module.id)">{{ module.name }}</button>
       </nav>
       <section class="toolbar">
-        <label>Show <select v-model="target" :disabled="busy || dirty"><option value="players">Players</option><option value="teams">Teams</option></select></label>
-        <label v-if="selectedModule">Manual points for
+        <label>{{ t('data_library.show') }} <select v-model="target" :disabled="busy || dirty"><option value="players">{{ t('data_library.players') }}</option><option value="teams">{{ t('data_library.teams') }}</option></select></label>
+        <label v-if="selectedModule">{{ t('data_library.manual_points_for') }}
           <select :value="manualTarget(selectedModule)" :disabled="busy || dirty" @change="saveTarget($event.target.value)">
-            <option value="players">Players</option><option value="teams">Teams</option><option value="both">Players and teams</option>
+            <option value="players">{{ t('data_library.players') }}</option><option value="teams">{{ t('data_library.teams') }}</option><option value="both">{{ t('data_library.players_and_teams') }}</option>
           </select>
         </label>
         <span class="record-count">{{ rows.length }} {{ target }}</span>
       </section>
-      <p class="sheet-hint" v-if="!selectedModule">Choose a module to enter or correct points.</p>
-      <p class="sheet-hint" v-else-if="!allowsManual(selectedModule, target)">Manual entry for {{ target }} is disabled for this module. Previously saved points still count.</p>
-      <div class="table-wrap" role="region" aria-label="Event points spreadsheet" tabindex="0">
+      <p class="sheet-hint" v-if="!selectedModule">{{ t('data_library.edit_hint') }}</p>
+      <p class="sheet-hint" v-else-if="!allowsManual(selectedModule, target)">{{ t('data_library.manual_disabled', { target: target === 'players' ? t('data_library.players') : t('data_library.teams') }) }}</p>
+      <div class="table-wrap" role="region" :aria-label="t('data_library.spreadsheet')" tabindex="0">
         <table>
-          <thead><tr><th class="row-number" scope="col">#</th><th class="name-cell" scope="col">{{ target === 'players' ? 'Player' : 'Team' }}</th>
+          <thead><tr><th class="row-number" scope="col">#</th><th class="name-cell" scope="col">{{ target === 'players' ? t('data_library.player') : t('data_library.team') }}</th>
             <template v-for="module in visibleModules" :key="module.id">
-              <th v-if="target === 'players' && isGame(module)" scope="col" class="score-heading">{{ module.name }}<span>Latest game</span></th>
-              <th v-if="module.type === 'teams'" scope="col" class="score-heading">{{ module.name }}<span>{{ $t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score') }}</span></th>
-              <th scope="col" class="score-heading">{{ module.name }}<span>Manual adjustments</span></th>
-            </template><th scope="col" class="total-cell">Total points</th><th v-if="selectedModule" scope="col" class="actions-cell">Actions</th>
+              <th v-if="target === 'players' && isGame(module)" scope="col" class="score-heading">{{ module.name }}<span>{{ t('data_library.latest_game') }}</span></th>
+              <th v-if="module.type === 'teams'" scope="col" class="score-heading">{{ module.name }}<span>{{ t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score') }}</span></th>
+              <th scope="col" class="score-heading">{{ module.name }}<span>{{ t('data_library.manual_adjustments') }}</span></th>
+            </template><th scope="col" class="total-cell">{{ t('data_library.total_points') }}</th><th scope="col" class="actions-cell">{{ t('data_library.actions') }}</th>
           </tr></thead>
           <tbody><tr v-for="(row, index) in rows" :key="row.id" :class="{ edited: hasDraft(row) }">
             <td class="row-number">{{ index + 1 }}</td>
-            <th scope="row" class="name-cell" :title="row.id"><span>{{ row.name }}</span><small>{{ row.id }}</small></th>
+            <th scope="row" class="name-cell" :title="row.id"><input v-if="target === 'players' && row.registered" :aria-label="`${row.name} player name`" :disabled="busy" :value="drafts[row.id]?.name ?? row.name" @input="setDraft(row, 'name', $event.target.value)" /><span v-else>{{ row.name }}</span><small>{{ row.id }}</small></th>
             <template v-for="module in visibleModules" :key="module.id">
               <td v-if="target === 'players' && isGame(module)">
                 <input v-if="selectedModule && row.game[module.id] !== undefined" :aria-label="`${row.name} game points`" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
@@ -46,24 +46,24 @@
               <td><input v-if="selectedModule && row.registered && allowsManual(module, target)" :aria-label="`${row.name} manual points`" type="number" step="any" :disabled="busy" :value="draft(row, 'manual')" @input="setDraft(row, 'manual', $event.target.value)" /><span v-else>{{ row.manual[module.id] ?? 0 }}</span></td>
             </template>
             <td class="total-cell"><strong>{{ row.total }}</strong></td>
-            <td v-if="selectedModule" class="actions-cell"><button :disabled="busy || !hasDraft(row)" @click="saveRow(row)">Save</button><button v-if="hasDraft(row)" :disabled="busy" @click="delete drafts[row.id]">Cancel</button></td>
+            <td class="actions-cell"><button :disabled="busy || !hasDraft(row)" @click="saveRow(row)">{{ t('data_library.save') }}</button><button v-if="hasDraft(row)" :disabled="busy" @click="delete drafts[row.id]">{{ t('common.cancel') }}</button></td>
           </tr></tbody>
         </table>
       </div>
-      <div class="sheet-status"><span>{{ selectedModule?.name || 'All points' }} · {{ target === 'players' ? 'Player scores' : 'Team scores' }}</span><span>{{ busy ? 'Saving…' : dirty ? 'Unsaved changes — save each edited row' : 'Up to date' }}</span></div>
-      <p v-if="!rows.length">No {{ target }} yet. Add them to the event before entering points.</p>
+      <div class="sheet-status"><span>{{ selectedModule?.name || t('data_library.all_points') }} · {{ target === 'players' ? t('data_library.player_scores') : t('data_library.team_scores') }}</span><span>{{ busy ? t('data_library.saving') : dirty ? t('data_library.unsaved') : t('data_library.up_to_date') }}</span></div>
+      <p v-if="!rows.length">{{ t('data_library.no_rows', { target: target === 'players' ? t('data_library.players') : t('data_library.teams') }) }}</p>
       <section v-if="selectedModule?.type === 'teams'">
-        <h2>{{ $t('teams_module.standings') }}</h2>
-        <p><router-link :to="{ name: 'teams-admin', params: { id: eventId }, query: { moduleId: selectedModule.id } }">{{ $t('teams_module.manage_teams') }}</router-link></p>
+        <h2>{{ t('teams_module.standings') }}</h2>
+        <p><router-link :to="{ name: 'teams-admin', params: { id: eventId }, query: { moduleId: selectedModule.id } }">{{ t('teams_module.manage_teams') }}</router-link></p>
         <article v-for="(result, resultIndex) in responses" :key="resultIndex">
-          <p v-if="result.status">{{ $t(`teams_module.${result.status}`) }}</p>
-          <div class="table-wrap"><table><thead><tr><th>{{ $t('teams_module.rank') }}</th><th>{{ $t('teams_module.team_name') }}</th><th>{{ $t('teams_module.team_score') }}</th><th>{{ $t('teams_module.members') }}</th></tr></thead><tbody><tr v-for="team in result.teams || []" :key="team.id"><td>{{ team.rank ?? '—' }}</td><td>{{ team.name }}</td><td>{{ team.score ?? '—' }}</td><td>{{ team.members?.map(member => member.nickname).join(', ') }}</td></tr></tbody></table></div>
-          <h3>{{ $t('teams_module.award_history') }}</h3><div v-for="award in result.awards || []" :key="award.id" class="result-award"><strong>{{ award.points > 0 ? '+' : '' }}{{ award.points }}</strong> · {{ result.teams?.find(team => team.id === award.teamId)?.name }} · {{ award.reason }} · {{ award.recipients.length }} {{ $t('teams_module.members') }}</div>
+          <p v-if="result.status">{{ t(`teams_module.${result.status}`) }}</p>
+          <div class="table-wrap"><table><thead><tr><th>{{ t('teams_module.rank') }}</th><th>{{ t('teams_module.team_name') }}</th><th>{{ t('teams_module.team_score') }}</th><th>{{ t('teams_module.members') }}</th></tr></thead><tbody><tr v-for="team in result.teams || []" :key="team.id"><td>{{ team.rank ?? '—' }}</td><td>{{ team.name }}</td><td>{{ team.score ?? '—' }}</td><td>{{ team.members?.map(member => member.nickname).join(', ') }}</td></tr></tbody></table></div>
+          <h3>{{ t('teams_module.award_history') }}</h3><div v-for="award in result.awards || []" :key="award.id" class="result-award"><strong>{{ award.points > 0 ? '+' : '' }}{{ award.points }}</strong> · {{ result.teams?.find(team => team.id === award.teamId)?.name }} · {{ award.reason }} · {{ award.recipients.length }} {{ t('teams_module.members') }}</div>
         </article>
       </section>
       <section v-if="selectedModule?.type === 'form'">
-        <h2>Form responses</h2>
-        <p v-if="!responses.length">No responses yet.</p>
+        <h2>{{ t('data_library.form_responses') }}</h2>
+        <p v-if="!responses.length">{{ t('data_library.no_responses') }}</p>
         <article v-for="response in responses" :key="response.id">
           <h3>{{ response.userId }}</h3>
           <label v-for="(value, key) in response.data" :key="key">{{ fieldLabel(key) }}
@@ -76,13 +76,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, getCurrentInstance } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import AppIcon from '../components/AppIcon.vue'
 import { extractLabel } from '../utils/labelExtractor'
 import { isGame, manualTarget, allowsManual, scoreRows, parsePoints } from '../utils/eventScores'
 const route = useRoute(), router = useRouter()
+const instance = getCurrentInstance()
+const t = (...args) => instance?.appContext.config.globalProperties.$t?.(...args) ?? args[0]
 const eventId = computed(() => route.query.eventId)
 const event = ref(null), participants = ref([]), teams = ref([]), scores = ref({}), responses = ref([])
 const loading = ref(false), busy = ref(false), error = ref(''), notice = ref(''), activeTab = ref('unified'), target = ref('players'), drafts = ref({})
@@ -119,20 +121,30 @@ async function loadResponses() {
   if (activeTab.value === tab) responses.value = result.responses || []
 }
 async function selectTab(id) {
-  if (Object.keys(drafts.value).length) { error.value = 'Save or cancel your point edits before changing modules.'; return }
+  if (Object.keys(drafts.value).length) { error.value = 'Save or cancel your edits before changing modules.'; return }
   activeTab.value = id; error.value = ''; notice.value = ''
   try { await loadResponses() } catch (err) { error.value = err.message }
 }
 function draft(row, kind) { return drafts.value[row.id]?.[kind] ?? row[kind][activeTab.value] ?? 0 }
 function setDraft(row, kind, value) { drafts.value[row.id] = { ...drafts.value[row.id], [kind]: value } }
 function hasDraft(row) { return !!drafts.value[row.id] }
-async function refreshScores() { scores.value = await request(path('/scores')) }
+async function refreshScores() {
+  const [updatedScores, updatedParticipants] = await Promise.all([request(path('/scores')), request(path('/participants'))])
+  scores.value = updatedScores
+  participants.value = updatedParticipants || []
+}
 async function saveRow(row) {
   busy.value = true; error.value = ''; notice.value = ''
   try {
     const values = drafts.value[row.id]
     const game = values.game === undefined ? undefined : parsePoints(values.game, true)
     const manual = values.manual === undefined ? undefined : parsePoints(values.manual)
+    const name = values.name === undefined ? undefined : values.name.trim()
+    if (name !== undefined && (!name || name.length > 120)) throw new Error('Enter a player name (up to 120 characters).')
+    if (name !== undefined) {
+      await request(path(`/participants/${encodeURIComponent(row.id)}/name`), 'POST', { displayName: name })
+      delete values.name
+    }
     if (game !== undefined) {
       await request(modulePath() + `/quiz-scores/${encodeURIComponent(row.id)}`, 'PUT', { score: game })
       delete values.game
@@ -142,7 +154,9 @@ async function saveRow(row) {
       delete values.manual
     }
     delete drafts.value[row.id]
-    await refreshScores(); notice.value = `Points saved for ${row.name}.`
+    await refreshScores()
+    await loadResponses()
+    notice.value = `Changes saved for ${name ?? row.name}.`
   } catch (err) {
     error.value = `Could not finish saving: ${err.message}`
     try { await refreshScores() } catch { /* Keep the original save error visible. */ }
@@ -164,13 +178,18 @@ async function saveResponse(response, key, value) {
   busy.value = true; error.value = ''
   try {
     const data = { ...response.data, [key]: value }
+    if (key === 'step_welcome_name') {
+      await request(path(`/participants/${encodeURIComponent(response.userId)}/name`), 'POST', { displayName: value })
+      data[key] = value.trim()
+      await refreshScores()
+    }
     await request(modulePath() + `/responses/${encodeURIComponent(response.id)}`, 'PUT', { data })
     response.data = data; notice.value = 'Response saved.'
   } catch (err) { error.value = `Response was not saved: ${err.message}`; try { await loadResponses() } catch { /* Preserve save error. */ } }
   finally { busy.value = false }
 }
 function canNavigate() {
-  if (busy.value || dirty.value) { error.value = 'Save or cancel your point edits before leaving.'; return false }
+  if (busy.value || dirty.value) { error.value = 'Save or cancel your edits before leaving.'; return false }
   return true
 }
 onBeforeRouteLeave(canNavigate)
@@ -262,4 +281,5 @@ article label { margin: 4px 16px 4px 0; }
   .name-cell { width: 155px; } .score-heading { width: 135px; }
   .sheet-status { flex-wrap: wrap; }
 }
+.data-page .name-cell input { width: 100%; min-width: 0; background: transparent; font-weight: 500; }
 </style>

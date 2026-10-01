@@ -70,7 +70,7 @@
             </div>
           </div>
           <button class="dialog-close-btn" @click="showTemplateModal = false">
-            {{ $t('admin.details.cancel_btn') }}
+            {{ $t('common.cancel') }}
           </button>
         </div>
       </div>
@@ -86,7 +86,7 @@
           />
           <div class="dialog-buttons">
             <button class="dialog-btn cancel" @click="showSaveTemplateModal = false">
-              {{ $t('admin.details.cancel_btn') }}
+              {{ $t('common.cancel') }}
             </button>
             <button class="dialog-btn save" @click="saveAsTemplate">
               {{ $t('admin.details.add_modal_title') }}

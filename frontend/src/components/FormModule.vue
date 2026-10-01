@@ -210,7 +210,7 @@
           </template>
         </div>
         <button class="dialog-close-btn" @click="showTemplateModal = false">
-          {{ $t('admin.details.cancel_btn') }}
+          {{ $t('common.cancel') }}
         </button>
       </div>
     </div>

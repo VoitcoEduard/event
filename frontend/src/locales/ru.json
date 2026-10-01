@@ -135,7 +135,8 @@
     "custom_text_slide": "Слайд с вашим текстом",
     "custom_text_placeholder": "Введите текст для показа...",
     "live_preview": "Предпросмотр",
-    "toast_pushed": "Успешно отправлено на проектор"
+    "toast_pushed": "Успешно отправлено на проектор",
+    "editor": {"title":"Редактор слайдов","push_current":"Отправить текущий слайд","save_all":"Сохранить всё","slides":"Слайды","add_custom_slide":"+ Добавить слайд","text":"Текст","properties":"Свойства","element":"Элемент","text_content":"Содержимое текста","text_color":"Цвет текста","font_size":"Размер шрифта","image":"Изображение","select_image":"Выбрать изображение","delete_element":"Удалить элемент","slide":"Слайд","name":"Название","background_color":"Цвет фона","background_image":"Фоновое изображение","select_background":"Выбрать фон","clear_image":"Очистить изображение","add_elements":"Добавить элементы","add_text":"+ Добавить текст","add_image":"+ Добавить изображение","add_qr":"+ Добавить QR-код","template_options":"Параметры шаблона","save_template":"Сохранить как шаблон","apply_template":"Применить шаблон","no_templates":"Нет сохранённых шаблонов.","template_name_prompt":"Введите название шаблона:","template_saved":"Шаблон сохранён","template_save_failed":"Не удалось сохранить шаблон","apply_confirm":"Применить шаблон \"{name}\"? Текущий слайд будет заменён.","template_applied":"Шаблон применён","load_failed":"Не удалось загрузить слайды","saved":"Слайды сохранены","save_failed":"Не удалось сохранить слайды","pushed":"Отправлено на большой экран","push_failed":"Не удалось отправить на экран","new_custom_slide":"Новый пользовательский слайд","delete_slide_confirm":"Удалить этот слайд?"}
   },
   "library": {
     "title": "Библиотека",
@@ -195,7 +196,8 @@
       "user_id": "ID пользователя",
       "name": "Имя",
       "total_score": "Общий счет"
-    }
+    },
+    "scoring_note":"Учитывается только последний завершённый запуск каждой игры. Ручные корректировки добавляются отдельно. Награды командной активности полностью начисляются каждому участнику; старые корректировки команд остаются у команды.","modules":"Модули","all_points":"Все баллы","show":"Показать","players":"Игроки","teams":"Команды","players_and_teams":"Игроки и команды","manual_points_for":"Ручные баллы для","edit_hint":"Измените имя игрока и сохраните строку. Выберите модуль, чтобы ввести или исправить баллы.","manual_disabled":"Ручной ввод для «{target}» отключён в этом модуле. Ранее сохранённые баллы учитываются.","spreadsheet":"Таблица баллов события","player":"Игрок","team":"Команда","latest_game":"Последняя игра","manual_adjustments":"Ручные корректировки","total_points":"Всего баллов","actions":"Действия","save":"Сохранить","player_scores":"Баллы игроков","team_scores":"Баллы команд","saving":"Сохранение…","unsaved":"Есть несохранённые изменения — сохраните каждую строку","up_to_date":"Данные актуальны","no_rows":"Пока нет: {target}. Добавьте их в событие перед вводом баллов.","form_responses":"Ответы формы","no_responses":"Ответов пока нет."
   },
   "quiz_config": {
     "title": "Редактор викторины",
@@ -228,7 +230,7 @@
     "save_error": "Не удалось сохранить викторину.",
     "validation": {
       "min_one": "Пожалуйста, добавьте хотя бы один вопрос.",
-      "text_required": "All вопросы должны иметь текст.",
+      "text_required": "Все вопросы должны содержать текст.",
       "range_config": "Конфигурация диапазона отсутствует.",
       "range_min_max": "Мин. значение диапазона должно быть меньше макс. значения.",
       "range_step": "Шаг диапазона должен быть больше 0.",
@@ -256,6 +258,7 @@
       "points": "Баллы",
       "default_hint": "по ум.",
       "answer_placeholder": "Введите вариант ответа",
+      "multi_select_warning":"Отметьте как правильные минимум {count} варианта для вопроса с несколькими ответами.","mark_correct":"Отметить как правильный",
       "types": {
         "classic": "Классик",
         "multi_select": "Множественный выбор",
@@ -267,22 +270,22 @@
         "simple_text": "Текстовый ответ"
       },
       "type_descriptions": {
-        "classic": "Standard multiple choice question with four options and one correct answer.",
-        "multi_select": "Multiple choice question where players can and must select all correct answers to score.",
-        "true_false": "A simple question with only two options: True or False.",
-        "range": "Players use a slider to guess a value. Points are awarded based on how close they are to the target.",
-        "correct_picture": "Players must identify and select the correct image from a set of options.",
-        "wrong_pictures": "A visual challenge where players must find and click on specific targets within a single image.",
-        "number": "Players must input an exact numeric value. No time bonus applies.",
+        "classic": "Обычный вопрос с четырьмя вариантами и одним правильным ответом.",
+        "multi_select": "Вопрос с несколькими вариантами, где нужно выбрать все правильные ответы.",
+        "true_false": "Простой вопрос только с двумя вариантами: правда или ложь.",
+        "range": "Игроки используют ползунок, чтобы угадать значение. Баллы зависят от близости к цели.",
+        "correct_picture": "Игроки должны выбрать правильное изображение из набора вариантов.",
+        "wrong_pictures": "Визуальное задание: найдите и нажмите на цели внутри одного изображения.",
+        "number": "Игроки должны ввести точное числовое значение. Бонус за время не применяется.",
         "simple_text": "Игроки пишут ответ. Судья оценивает Правильно или Неправильно."
       },
       "selector": {
         "title": "Выберите тип вопроса",
         "cancel": "Отмена",
-        "description_hint": "Hover over a type to see what it does"
+        "description_hint": "Наведите курсор на тип, чтобы увидеть его описание"
       },
       "number": {
-        "correct_answer": "Правильный ответ",
+        "configuration":"Настройки числового ответа","configuration_hint":"Игроки должны ввести это точное число. Бонус за время не применяется.","correct_answer": "Правильный ответ",
         "points": "Баллы"
       },
       "wrong_pictures": {
@@ -294,7 +297,7 @@
         "points_short": "Баллы",
         "tolerance_short": "Допуск %",
         "time_short": "Время (с)",
-        "show_count": "Показать кол-во"
+        "show_count": "Показать кол-во","add_round":"+ Добавить раунд","remove_round":"Удалить раунд","remove_round_confirm":"Удалить этот раунд?"
       },
       "range": {
         "range_unit": "Диапазон и Единицы",
@@ -393,7 +396,7 @@
     "date_label": "Выберите дату:",
     "radio_label": "Выберите вариант:",
     "checkbox_label": "Выберите все подходящие варианты:",
-    "welcome_msg": "Добро пожаловать в форму!",
+    "welcome_msg": "Добро пожаловать в форму!", "delete_question":"Удалить вопрос",
     "types": {
       "text": "Текст",
       "number": "Число",
@@ -427,7 +430,7 @@
     "tap_to_start": "Нажмите, чтобы начать",
     "waiting_msg": "Ожидание начала следующего действия хостом...",
     "waiting_submsg": "Приготовьтесь!",
-    "leave_btn": "Покинуть событие"
+    "leave_btn": "Покинуть событие", "toggle_theme":"Переключить тему", "guest":"Гость", "points_short":"БАЛЛЫ"
   },
   "quiz": {
     "player": {
@@ -456,7 +459,7 @@
       "quiz_over": "Викторина окончена",
       "place": "место",
       "final_score": "Итоговый счет: {score}",
-      "exit_btn": "Выход",
+      "exit_btn": "Выход", "select_multiple":"Выберите все подходящие варианты", "leaderboard":"Таблица лидеров", "points":"Баллы",
       "wrong_picture_review": {
         "eyebrow": "Неправильные картинки",
         "title": "Ваши ответы",
@@ -490,6 +493,7 @@
       "quiz_complete": "Викторина завершена!",
       "final_standings": "Итоговое положение",
       "enable_sound": "🔊 Включить звук",
+      "wrong_picture_title":"Что не так с картинкой?", "show_leaderboard":"Показать таблицу лидеров", "question_of":"Вопрос {current} из {total}",
       "toast": {
         "link_copied": "Ссылка на проектор скопирована!"
       }
@@ -547,12 +551,12 @@
     "members_count": "Участников: {count}",
     "no_team": "Вы не в команде",
     "go_back": "Назад",
-    "change_team": "Сменить команду"
+    "change_team": "Сменить команду", "you":"Вы"
   },
   "common": {
     "cancel": "Отмена",
     "loading": "Загрузка...",
-    "data_btn": "📊 Данные"
+    "data_btn": "📊 Данные", "close":"Закрыть", "open":"Открыть", "previous":"Предыдущий", "next":"Следующий"
   },
   "simple_quiz": {
     "config": {
@@ -627,7 +631,7 @@
       "review": "отложено",
       "received": "получено",
       "empty": "Ответов пока нет.",
-      "next_pending": "Следующий появится после оценки."
+      "next_pending": "Следующий появится после оценки.", "missing_token":"Отсутствует токен судьи.", "notes":"Заметки судьи"
     },
     "projector": {
       "join_title": "Присоединяйтесь!",
@@ -636,6 +640,7 @@
       "results": "Результаты"
     }
   },
+  "map_coordinate_picker": {"close_selection":"Закрыть выбор","answers":"Ответы","place_answer":"Разместить ответ","drop_pin":"Поставить метку","interaction_hint":"Перемещайте и масштабируйте изображение, чтобы совместить цель с указателем"},
   "appearance": {
     "label": "Оформление",
     "light": "Светлая",

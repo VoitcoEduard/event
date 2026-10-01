@@ -3,7 +3,7 @@
     <div class="header">
       <div class="header-left">
         <button class="back-btn" @click="goBack"><AppIcon name="arrowLeft" :size="18" /> {{ $t('admin.details.back_btn') }}</button>
-        <h1>Slide Editor</h1>
+        <h1>{{ $t('screen_manager.editor.title') }}</h1>
       </div>
       <div class="header-right">
         <button 
@@ -14,10 +14,10 @@
           {{ isProjectorOpen ? $t('admin.details.close_projector') : $t('screen_manager.open_projector') }}
         </button>
         <button class="push-btn" @click="pushToScreen" :disabled="!activeSlide">
-          Push Current Slide
+          {{ $t('screen_manager.editor.push_current') }}
         </button>
         <button class="save-btn" @click="saveSlides">
-          Save All
+          {{ $t('screen_manager.editor.save_all') }}
         </button>
       </div>
     </div>
@@ -25,7 +25,7 @@
     <div class="editor-layout">
       <!-- Left Sidebar -->
       <div class="sidebar left-sidebar">
-        <h3>Slides</h3>
+        <h3>{{ $t('screen_manager.editor.slides') }}</h3>
         <ul class="slide-list">
           <li 
             v-for="slide in slides" 
@@ -45,7 +45,7 @@
             </div>
           </li>
         </ul>
-        <button class="add-slide-btn" @click="addCustomSlide">+ Add Custom Slide</button>
+        <button class="add-slide-btn" @click="addCustomSlide">{{ $t('screen_manager.editor.add_custom_slide') }}</button>
       </div>
 
       <!-- Center Canvas -->
@@ -79,8 +79,8 @@
             @mousedown.stop="startDrag(element, $event)"
             @click.stop="selectElement(element.id)"
           >
-            <div class="el-content">
-              <div v-if="element.type === 'text'" class="el-text">{{ element.content || 'Text' }}</div>
+              <div class="el-content">
+              <div v-if="element.type === 'text'" class="el-text">{{ element.content || $t('screen_manager.editor.text') }}</div>
                <img v-else-if="element.type === 'image'" :src="getImageUrl(element.content)" class="el-image" decoding="async" loading="eager" />
               <div v-else-if="element.type === 'qr'" class="el-qr">
                 <QRCodeVue :value="qrCodeValue" :size="150" level="H" />
@@ -93,23 +93,23 @@
 
       <!-- Right Sidebar -->
       <div class="sidebar right-sidebar" v-if="activeSlide">
-        <h3>Properties</h3>
+        <h3>{{ $t('screen_manager.editor.properties') }}</h3>
         <div v-if="selectedElement" class="props-panel">
-          <h4>Element</h4>
+          <h4>{{ $t('screen_manager.editor.element') }}</h4>
           <div v-if="selectedElement.type === 'text'">
-             <label>Text Content</label>
+             <label>{{ $t('screen_manager.editor.text_content') }}</label>
              <textarea v-model="selectedElement.content" rows="3"></textarea>
              
-             <label>Text Color</label>
+             <label>{{ $t('screen_manager.editor.text_color') }}</label>
              <input type="color" v-model="selectedElement.color" />
 
-             <label>Font Size</label>
+             <label>{{ $t('screen_manager.editor.font_size') }}</label>
              <input type="range" min="10" max="200" v-model.number="selectedElement.fontSize" />
              <span>{{ selectedElement.fontSize }}px</span>
           </div>
           <div v-if="selectedElement.type === 'image'">
-             <label>Image</label>
-             <button class="action-btn" @click="showImageSelector('element')">Select an Image</button>
+             <label>{{ $t('screen_manager.editor.image') }}</label>
+             <button class="action-btn" @click="showImageSelector('element')">{{ $t('screen_manager.editor.select_image') }}</button>
           </div>
           
           <div class="pos-inputs mt-3">
@@ -118,35 +118,35 @@
              <div class="input-group"><label>W(%)</label><input type="number" v-model="selectedElement.width" step="1"/></div>
              <div class="input-group"><label>H(%)</label><input type="number" v-model="selectedElement.height" step="1"/></div>
           </div>
-          <button v-if="activeSlide.type !== 'screensaver'" class="danger-btn mt-4" @click="deleteSelectedElement">Delete Element</button>
+          <button v-if="activeSlide.type !== 'screensaver'" class="danger-btn mt-4" @click="deleteSelectedElement">{{ $t('screen_manager.editor.delete_element') }}</button>
         </div>
         <div v-else class="props-panel">
-          <h4>Slide</h4>
+          <h4>{{ $t('screen_manager.editor.slide') }}</h4>
           <div class="input-group mb-2">
-            <label>Name</label>
+            <label>{{ $t('screen_manager.editor.name') }}</label>
             <input type="text" v-model="activeSlide.name" :disabled="activeSlide.type !== 'custom'" />
           </div>
           <div class="input-group mb-2">
-            <label>Background Color</label>
+            <label>{{ $t('screen_manager.editor.background_color') }}</label>
             <input type="color" v-model="activeSlide.backgroundColor" />
           </div>
           <div class="input-group mb-3">
-            <label>Background Image</label>
-            <button class="action-btn block-btn" @click="showImageSelector('bg')">Select Background</button>
-            <button v-if="activeSlide.backgroundImage" @click="activeSlide.backgroundImage = ''" class="danger-btn mt-2 block-btn">Clear Image</button>
+            <label>{{ $t('screen_manager.editor.background_image') }}</label>
+            <button class="action-btn block-btn" @click="showImageSelector('bg')">{{ $t('screen_manager.editor.select_background') }}</button>
+            <button v-if="activeSlide.backgroundImage" @click="activeSlide.backgroundImage = ''" class="danger-btn mt-2 block-btn">{{ $t('screen_manager.editor.clear_image') }}</button>
           </div>
           
           <hr v-if="activeSlide.type !== 'screensaver'" />
-          <h4 v-if="activeSlide.type !== 'screensaver'">Add Elements</h4>
-          <button class="action-btn block-btn mb-2" v-if="activeSlide.type !== 'screensaver'" @click="addElement('text')">+ Add Text</button>
-          <button class="action-btn block-btn mb-2" v-if="activeSlide.type !== 'screensaver'" @click="addElement('image')">+ Add Image</button>
-          <button class="action-btn block-btn" v-if="activeSlide.type === 'welcome'" @click="addElement('qr')">+ Add QR Code</button>
+          <h4 v-if="activeSlide.type !== 'screensaver'">{{ $t('screen_manager.editor.add_elements') }}</h4>
+          <button class="action-btn block-btn mb-2" v-if="activeSlide.type !== 'screensaver'" @click="addElement('text')">{{ $t('screen_manager.editor.add_text') }}</button>
+          <button class="action-btn block-btn mb-2" v-if="activeSlide.type !== 'screensaver'" @click="addElement('image')">{{ $t('screen_manager.editor.add_image') }}</button>
+          <button class="action-btn block-btn" v-if="activeSlide.type === 'welcome'" @click="addElement('qr')">{{ $t('screen_manager.editor.add_qr') }}</button>
           
           <div v-if="activeSlide.type === 'custom'" class="mt-4">
             <hr />
-            <h4 class="mt-3">Template Options</h4>
-            <button class="action-btn block-btn mb-2" @click="saveAsTemplate">Save as Template</button>
-            <button class="action-btn block-btn" @click="openTemplateSelector">Apply Template</button>
+            <h4 class="mt-3">{{ $t('screen_manager.editor.template_options') }}</h4>
+            <button class="action-btn block-btn mb-2" @click="saveAsTemplate">{{ $t('screen_manager.editor.save_template') }}</button>
+            <button class="action-btn block-btn" @click="openTemplateSelector">{{ $t('screen_manager.editor.apply_template') }}</button>
           </div>
         </div>
       </div>
@@ -156,11 +156,11 @@
     <div v-if="isTemplateSelectorOpen" class="modal-overlay" @click.self="isTemplateSelectorOpen = false">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Apply Template</h3>
-          <button class="close-btn" @click="isTemplateSelectorOpen = false" aria-label="Close"><AppIcon name="close" :size="18" /></button>
+          <h3>{{ $t('screen_manager.editor.apply_template') }}</h3>
+          <button class="close-btn" @click="isTemplateSelectorOpen = false" :aria-label="$t('common.close')"><AppIcon name="close" :size="18" /></button>
         </div>
         <div class="modal-body">
-          <div v-if="templates.length === 0" style="text-align:center;">No templates saved.</div>
+          <div v-if="templates.length === 0" style="text-align:center;">{{ $t('screen_manager.editor.no_templates') }}</div>
           <div class="screensavers-grid">
             <div 
               v-for="t in templates" 
@@ -181,8 +181,8 @@
     <div v-if="isImageSelectorOpen" class="modal-overlay" @click.self="isImageSelectorOpen = false">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Select Image</h3>
-          <button class="close-btn" @click="isImageSelectorOpen = false" aria-label="Close"><AppIcon name="close" :size="18" /></button>
+          <h3>{{ $t('screen_manager.editor.select_image') }}</h3>
+          <button class="close-btn" @click="isImageSelectorOpen = false" :aria-label="$t('common.close')"><AppIcon name="close" :size="18" /></button>
         </div>
         <div class="modal-body">
           <div class="screensavers-grid">
@@ -258,7 +258,7 @@ const fetchTemplates = async () => {
 
 const saveAsTemplate = async () => {
   if(!activeSlide.value) return;
-  const tplName = prompt("Enter a name for this template:", activeSlide.value.name);
+  const tplName = prompt(t('screen_manager.editor.template_name_prompt'), activeSlide.value.name);
   if(!tplName) return;
 
   try {
@@ -277,10 +277,10 @@ const saveAsTemplate = async () => {
       body: JSON.stringify(payload)
     });
     if(res.ok) {
-      success('Saved as template successfully');
+      success(t('screen_manager.editor.template_saved'));
     }
   } catch(err) {
-    error('Failed to save template');
+    error(t('screen_manager.editor.template_save_failed'));
   }
 }
 
@@ -292,7 +292,7 @@ const openTemplateSelector = async () => {
 const applyTemplate = (tpl) => {
   if(!activeSlide.value || !tpl.data) return;
   
-  if (confirm(`Apply template "${tpl.name}"? This will overwrite the current slide.`)) {
+  if (confirm(t('screen_manager.editor.apply_confirm', { name: tpl.name }))) {
     activeSlide.value.backgroundColor = tpl.data.backgroundColor || '#1E1E1E';
     activeSlide.value.backgroundImage = tpl.data.backgroundImage || '';
     
@@ -304,7 +304,7 @@ const applyTemplate = (tpl) => {
     activeSlide.value.elements = newElements;
     
     isTemplateSelectorOpen.value = false;
-    success('Template applied');
+    success(t('screen_manager.editor.template_applied'));
   }
 }
 
@@ -325,7 +325,7 @@ const fetchSlides = async () => {
     }
   } catch (err) {
     console.error(err)
-    error('Failed to load slides')
+    error(t('screen_manager.editor.load_failed'))
   }
 }
 
@@ -337,11 +337,11 @@ const saveSlides = async () => {
       body: JSON.stringify(slides.value)
     })
     if (res.ok) {
-      success('Slides saved successfully')
+      success(t('screen_manager.editor.saved'))
     }
   } catch (err) {
     console.error(err)
-    error('Failed to save slides')
+    error(t('screen_manager.editor.save_failed'))
   }
 }
 
@@ -363,10 +363,10 @@ const pushToScreen = async () => {
       body: JSON.stringify(payload)
     })
     if (res.ok) {
-      success('Pushed to Big Screen')
+      success(t('screen_manager.editor.pushed'))
     }
   } catch (err) {
-    error('Failed to push to screen')
+    error(t('screen_manager.editor.push_failed'))
   }
 }
 
@@ -381,7 +381,7 @@ const addCustomSlide = () => {
   const newSlide = {
     id: generateId(),
     type: 'custom',
-    name: 'New Custom Slide',
+    name: t('screen_manager.editor.new_custom_slide'),
     backgroundColor: '#1E1E1E',
     backgroundImage: '',
     elements: []
@@ -391,7 +391,7 @@ const addCustomSlide = () => {
 }
 
 const deleteSlide = (id) => {
-  if (confirm('Delete this slide?')) {
+  if (confirm(t('screen_manager.editor.delete_slide_confirm'))) {
     slides.value = slides.value.filter(s => s.id !== id)
     if (activeSlideId.value === id) {
       activeSlideId.value = slides.value[0]?.id || null

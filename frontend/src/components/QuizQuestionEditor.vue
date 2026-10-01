@@ -5,7 +5,7 @@
         <span class="question-number">{{ $t('quiz_config.question_editor.question_number', { number: index + 1 }) }}</span>
         <span class="question-type-tag" @click="$emit('change-type')">{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</span>
       </div>
-      <button class="delete-btn" @click="$emit('delete')" aria-label="Delete question">
+      <button class="delete-btn" @click="$emit('delete')" :aria-label="$t('form_editor.delete_question')">
         <AppIcon name="trash" :size="16" />
       </button>
     </div>
@@ -81,7 +81,7 @@
     <!-- STANDARD ANSWERS (MC/TF/MS) -->
     <!-- Multi-select warning -->
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
-      <AppIcon name="alert" :size="16" /> Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
+      <AppIcon name="alert" :size="16" /> {{ $t('quiz_config.question_editor.multi_select_warning', { count: 2 }) }}
     </div>
     <div v-if="localQuestion.type !== 'range' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures' && localQuestion.type !== 'simple_text'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
@@ -100,7 +100,7 @@
               :checked="isCorrect(idx)"
               @change="toggleCorrect(idx)"
             />
-            <span class="checkmark" title="Mark as correct"></span>
+            <span class="checkmark" :title="$t('quiz_config.question_editor.mark_correct')"></span>
           </label>
         </div>
         <textarea 
@@ -202,7 +202,7 @@
               <input type="number" v-model.number="localQuestion.correctNumber" class="config-input correct-value-input" @input="emitUpdate" />
            </div>
         </div>
-        <p class="config-note">Players must input this exact number to score points. No time bonus applies.</p>
+        <p class="config-note">{{ $t('quiz_config.question_editor.number.configuration_hint') }}</p>
       </div>
 
       <div class="number-input-preview">

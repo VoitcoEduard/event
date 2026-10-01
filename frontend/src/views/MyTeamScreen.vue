@@ -15,7 +15,7 @@
       <div class="members-list">
         <div v-for="member in members" :key="member.id" class="member-item">
           <span class="member-name">{{ member.displayName }}</span>
-          <span v-if="member.id === userId" class="you-badge">You</span>
+          <span v-if="member.id === userId" class="you-badge">{{ $t('my_team.you') }}</span>
         </div>
       </div>
 

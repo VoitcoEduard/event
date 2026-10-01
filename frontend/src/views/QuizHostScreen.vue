@@ -5,13 +5,13 @@
     <!-- LOBBY STATE -->
     <div v-if="gameState === 'lobby'" class="state-container lobby-container">
       <div class="lobby-header">
-        <h1 class="game-title">Join the Quiz!</h1>
+        <h1 class="game-title">{{ $t('quiz.host.join_title') }}</h1>
         <div class="pin-display">
-          <span class="pin-label">Game PIN:</span>
+          <span class="pin-label">{{ $t('quiz.host.game_pin') }}</span>
           <span class="pin-code">{{ pinCode }}</span>
         </div>
         <div class="qr-container">
-           <div class="qr-placeholder">QR Code</div>
+           <div class="qr-placeholder">{{ $t('quiz.host.qr_placeholder') }}</div>
         </div>
         <div class="lobby-actions">
             <button class="copy-link-btn" @click="copyProjectorLink">
@@ -33,7 +33,7 @@
 
       <div class="lobby-footer">
         <button class="start-btn" @click="startQuiz" :disabled="players.length === 0">
-          Start Quiz
+          {{ $t('quiz.host.start_btn') }}
         </button>
       </div>
     </div>
@@ -41,7 +41,7 @@
     <!-- GET READY STATE -->
     <div v-else-if="gameState === 'get-ready'" class="state-container get-ready-container">
       <div class="loading-content">
-        <h1>Get Ready!</h1>
+        <h1>{{ $t('quiz.player.get_ready') }}</h1>
         <div class="loader"></div>
       </div>
     </div>
@@ -78,7 +78,7 @@
       <!-- WRONG PICTURES HOST LAYOUT -->
       <div v-else-if="isWrongPictures" class="wrong-picture-host-layout">
           <div class="wp-host-header">
-              <h1 class="wp-host-title">What is wrong with the picture?</h1>
+              <h1 class="wp-host-title">{{ $t('quiz.host.wrong_picture_title') }}</h1>
               <p class="wp-host-instruction">{{ currentQuestion.text }}</p>
           </div>
           <div class="wp-host-image-container">
@@ -332,7 +332,7 @@
 
        <div class="host-controls">
          <button class="control-btn primary" @click="nextState">
-           Show Leaderboard
+           {{ $t('quiz.host.show_leaderboard') }}
          </button>
        </div>
     </div>
@@ -342,8 +342,8 @@
       <div class="lb-bg-glow"></div>
       <div class="lb-header">
         <AppIcon class="lb-trophy" name="trophy" :size="54" />
-        <h2 class="lb-title">Leaderboard</h2>
-        <div class="lb-subtitle">Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}</div>
+        <h2 class="lb-title">{{ $t('quiz.host.leaderboard_title') }}</h2>
+        <div class="lb-subtitle">{{ $t('quiz.host.question_of', { current: currentQuestionIndex + 1, total: totalQuestions }) }}</div>
       </div>
       <div class="lb-list">
         <div 
@@ -375,7 +375,7 @@
       </div>
       <div class="host-controls">
         <button class="control-btn primary" @click="nextState">
-          {{ isLastQuestion ? 'End Quiz' : 'Next Question' }}
+          {{ isLastQuestion ? $t('quiz.host.end_quiz') : $t('quiz.host.next_question') }}
         </button>
       </div>
     </div>
@@ -389,8 +389,8 @@
 
        <div class="final-header">
          <AppIcon class="final-trophy" name="trophy" :size="64" />
-         <h1 class="final-title">Quiz Complete!</h1>
-         <p class="final-subtitle">Final Standings</p>
+         <h1 class="final-title">{{ $t('quiz.host.quiz_complete') }}</h1>
+         <p class="final-subtitle">{{ $t('quiz.host.final_standings') }}</p>
        </div>
 
        <!-- Top 3 Podium -->
@@ -430,7 +430,7 @@
          </div>
        </div>
 
-       <button class="control-btn" @click="exitQuiz" style="margin-top: 20px; z-index: 1;">End Quiz</button>
+       <button class="control-btn" @click="exitQuiz" style="margin-top: 20px; z-index: 1;">{{ $t('quiz.host.end_quiz') }}</button>
     </div>
 
     <!-- Audio Player -->

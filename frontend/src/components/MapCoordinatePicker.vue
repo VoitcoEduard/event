@@ -57,7 +57,7 @@
     <Transition name="fade">
       <div class="placement-layer-overlay" v-if="isPlacementMode">
         <button class="exit-placement-btn" @click="isPlacementMode = false">
-          <span>Close Selection</span>
+          <span>{{ $t('map_coordinate_picker.close_selection') }}</span>
           <AppIcon name="close" :size="16" />
         </button>
       </div>
@@ -68,7 +68,7 @@
       <div class="top-controls">
           <div class="target-counter" v-if="showTargetCount">
             <span class="count">{{ localMarkers.length }}</span> / {{ maxTargets }} 
-            <span class="label">Answers</span>
+            <span class="label">{{ $t('map_coordinate_picker.answers') }}</span>
           </div>
       </div>
       
@@ -81,7 +81,7 @@
             :disabled="isMaxTargets"
           >
             <AppIcon class="btn-icon" name="pin" :size="18" />
-            <span class="btn-text">Place Answer</span>
+            <span class="btn-text">{{ $t('map_coordinate_picker.place_answer') }}</span>
           </button>
 
           <button 
@@ -91,7 +91,7 @@
             :disabled="isMaxTargets"
           >
             <AppIcon class="btn-icon" name="check" :size="18" />
-            <span class="btn-text">Drop Pin</span>
+            <span class="btn-text">{{ $t('map_coordinate_picker.drop_pin') }}</span>
           </button>
       </div>
 
@@ -115,7 +115,7 @@
     <!-- Mini Feedback Toast -->
     <Transition name="fade">
       <div v-if="showHint" class="interaction-hint">
-        Pan and zoom to align target under the selector
+        {{ $t('map_coordinate_picker.interaction_hint') }}
       </div>
     </Transition>
   </div>
@@ -124,6 +124,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   imageUrl: { type: String, required: true },

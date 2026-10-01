@@ -209,7 +209,7 @@
         />
 
         <p class="input-label">{{ $t('admin.details.module_type_label') }}</p>
-        <select v-model="selectedModuleType" class="dropdown-select">
+        <select v-model="selectedModuleType" class="dropdown-select" :aria-label="$t('admin.details.module_type_label')">
           <option value="form">{{ $t('admin.details.form_option') }}</option>
           <option value="quiz">{{ $t('admin.details.quiz_option') }}</option>
           <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
@@ -428,7 +428,7 @@ const hostQuiz = (module) => {
 
 const addModule = async () => {
   if (!newModuleName.value.trim()) {
-    info(t('admin.details.messages.fill_fields'))
+    info(t('admin.messages.fill_fields'))
     return
   }
 

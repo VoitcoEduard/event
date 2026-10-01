@@ -474,7 +474,7 @@ const deleteTemplate = async (template) => {
 
 const saveTemplate = async () => {
   if (!currentTemplate.value.name.trim()) {
-    info(t('admin.details.messages.fill_fields'))
+    info(t('admin.messages.fill_fields'))
     return
   }
   

@@ -135,7 +135,8 @@
     "custom_text_slide": "Slide cu Text Personalizat",
     "custom_text_placeholder": "Introduceți text personalizat...",
     "live_preview": "Previzualizare Live",
-    "toast_pushed": "Afișat cu succes pe proiector"
+    "toast_pushed": "Afișat cu succes pe proiector",
+    "editor": {"title":"Editor de diapozitive","push_current":"Afișează diapozitivul curent","save_all":"Salvează tot","slides":"Diapozitive","add_custom_slide":"+ Adaugă diapozitiv","text":"Text","properties":"Proprietăți","element":"Element","text_content":"Conținut text","text_color":"Culoare text","font_size":"Dimensiune font","image":"Imagine","select_image":"Selectează o imagine","delete_element":"Șterge elementul","slide":"Diapozitiv","name":"Nume","background_color":"Culoare fundal","background_image":"Imagine de fundal","select_background":"Selectează fundalul","clear_image":"Șterge imaginea","add_elements":"Adaugă elemente","add_text":"+ Adaugă text","add_image":"+ Adaugă imagine","add_qr":"+ Adaugă cod QR","template_options":"Opțiuni șablon","save_template":"Salvează ca șablon","apply_template":"Aplică șablonul","no_templates":"Nu există șabloane salvate.","template_name_prompt":"Introdu numele șablonului:","template_saved":"Șablon salvat","template_save_failed":"Salvarea șablonului a eșuat","apply_confirm":"Aplici șablonul \"{name}\"? Diapozitivul curent va fi înlocuit.","template_applied":"Șablon aplicat","load_failed":"Încărcarea diapozitivelor a eșuat","saved":"Diapozitive salvate","save_failed":"Salvarea diapozitivelor a eșuat","pushed":"Afișat pe ecranul mare","push_failed":"Afișarea pe ecran a eșuat","new_custom_slide":"Diapozitiv personalizat nou","delete_slide_confirm":"Ștergi acest diapozitiv?"}
   },
   "library": {
     "title": "Librărie",
@@ -195,7 +196,8 @@
       "user_id": "ID utilizator",
       "name": "Nume",
       "total_score": "Scor total"
-    }
+    },
+    "scoring_note":"Este luată în calcul doar ultima rundă finalizată a fiecărui joc. Ajustările manuale sunt adăugate separat. Premiile activității pe echipe se acordă integral fiecărui membru înregistrat; ajustările vechi rămân la echipă.","modules":"Module","all_points":"Toate punctele","show":"Afișează","players":"Jucători","teams":"Echipe","players_and_teams":"Jucători și echipe","manual_points_for":"Puncte manuale pentru","edit_hint":"Editează numele unui jucător și salvează rândul. Alege un modul pentru a introduce sau corecta puncte.","manual_disabled":"Introducerea manuală pentru „{target}” este dezactivată în acest modul. Punctele salvate anterior rămân valabile.","spreadsheet":"Tabel cu punctele evenimentului","player":"Jucător","team":"Echipă","latest_game":"Ultimul joc","manual_adjustments":"Ajustări manuale","total_points":"Total puncte","actions":"Acțiuni","save":"Salvează","player_scores":"Punctele jucătorilor","team_scores":"Punctele echipelor","saving":"Se salvează…","unsaved":"Modificări nesalvate — salvează fiecare rând editat","up_to_date":"La zi","no_rows":"Nu există încă {target}. Adaugă-i în eveniment înainte de a introduce puncte.","form_responses":"Răspunsuri formular","no_responses":"Nu există încă răspunsuri."
   },
   "quiz_config": {
     "title": "Editor Quiz",
@@ -256,6 +258,7 @@
       "points": "Puncte",
       "default_hint": "imp.",
       "answer_placeholder": "Introdu variantă de răspuns",
+      "multi_select_warning":"Marchează cel puțin {count} răspunsuri ca fiind corecte pentru o întrebare cu selecție multiplă.","mark_correct":"Marchează ca răspuns corect",
       "types": {
         "classic": "Clasic",
         "multi_select": "Selecție Multiplă",
@@ -267,22 +270,22 @@
         "simple_text": "Răspuns text"
       },
       "type_descriptions": {
-        "classic": "Standard multiple choice question with four options and one correct answer.",
-        "multi_select": "Multiple choice question where players can and must select all correct answers to score.",
-        "true_false": "A simple question with only two options: True or False.",
-        "range": "Players use a slider to guess a value. Points are awarded based on how close they are to the target.",
-        "correct_picture": "Players must identify and select the correct image from a set of options.",
-        "wrong_pictures": "A visual challenge where players must find and click on specific targets within a single image.",
-        "number": "Players must input an exact numeric value. No time bonus applies.",
+        "classic": "Întrebare cu patru variante și un singur răspuns corect.",
+        "multi_select": "Întrebare cu mai multe variante, unde trebuie selectate toate răspunsurile corecte.",
+        "true_false": "Întrebare simplă cu doar două variante: adevărat sau fals.",
+        "range": "Jucătorii folosesc un glisor pentru a ghici o valoare. Punctele depind de apropierea de țintă.",
+        "correct_picture": "Jucătorii trebuie să identifice imaginea corectă dintr-un set de variante.",
+        "wrong_pictures": "Provocare vizuală: găsește și apasă pe țintele dintr-o singură imagine.",
+        "number": "Jucătorii trebuie să introducă o valoare numerică exactă. Nu se aplică bonus pentru timp.",
         "simple_text": "Jucătorii scriu un răspuns. Un arbitru notează Corect sau Greșit."
       },
       "selector": {
         "title": "Alege Tipul Întrebării",
         "cancel": "Anulează",
-        "description_hint": "Hover over a type to see what it does"
+        "description_hint": "Treci cu cursorul peste un tip pentru a vedea ce face"
       },
       "number": {
-        "correct_answer": "Răspuns Corect",
+        "configuration":"Configurare răspuns numeric","configuration_hint":"Jucătorii trebuie să introducă exact acest număr. Nu se aplică bonus pentru timp.","correct_answer": "Răspuns Corect",
         "points": "Puncte"
       },
       "wrong_pictures": {
@@ -294,7 +297,7 @@
         "points_short": "Puncte",
         "tolerance_short": "Toleranță %",
         "time_short": "Timp (s)",
-        "show_count": "Arată Nr."
+        "show_count": "Arată Nr.","add_round":"+ Adaugă rundă","remove_round":"Elimină runda","remove_round_confirm":"Elimini această rundă?"
       },
       "range": {
         "range_unit": "Interval & Unități",
@@ -393,7 +396,7 @@
     "date_label": "Selectează o dată:",
     "radio_label": "Alege o opțiune:",
     "checkbox_label": "Selectează tot ce se aplică:",
-    "welcome_msg": "Bine ai venit la formular!",
+    "welcome_msg": "Bine ai venit la formular!", "delete_question":"Șterge întrebarea",
     "types": {
       "text": "Text",
       "number": "Număr",
@@ -427,7 +430,7 @@
     "tap_to_start": "Apasă pentru a începe",
     "waiting_msg": "Se așteaptă ca gazda să înceapă următoarea activitate...",
     "waiting_submsg": "Fii pe fază!",
-    "leave_btn": "Părăsește Evenimentul"
+    "leave_btn": "Părăsește Evenimentul", "toggle_theme":"Schimbă tema", "guest":"Invitat", "points_short":"PCT"
   },
   "quiz": {
     "player": {
@@ -456,7 +459,7 @@
       "quiz_over": "Quiz Finalizat",
       "place": "locul",
       "final_score": "Scor Final: {score}",
-      "exit_btn": "Ieșire",
+      "exit_btn": "Ieșire", "select_multiple":"Selectează toate variantele potrivite", "leaderboard":"Clasament", "points":"Puncte",
       "wrong_picture_review": {
         "eyebrow": "Imagini greșite",
         "title": "Răspunsurile tale",
@@ -490,6 +493,7 @@
       "quiz_complete": "Quiz Complet!",
       "final_standings": "Clasament Final",
       "enable_sound": "🔊 Activează Sunetul",
+      "wrong_picture_title":"Ce este în neregulă cu imaginea?", "show_leaderboard":"Afișează clasamentul", "question_of":"Întrebarea {current} din {total}",
       "toast": {
         "link_copied": "Link-ul proiectorului a fost copiat!"
       }
@@ -547,12 +551,12 @@
     "members_count": "Membri: {count}",
     "no_team": "Nu sunteți într-o echipă",
     "go_back": "Înapoi",
-    "change_team": "Schimbă Echipa"
+    "change_team": "Schimbă Echipa", "you":"Tu"
   },
   "common": {
     "cancel": "Anulează",
     "loading": "Încărcare...",
-    "data_btn": "📊 Date"
+    "data_btn": "📊 Date", "close":"Închide", "open":"Deschide", "previous":"Anterior", "next":"Următorul"
   },
   "simple_quiz": {
     "config": {
@@ -627,7 +631,7 @@
       "review": "amânate",
       "received": "primite",
       "empty": "Niciun răspuns încă.",
-      "next_pending": "Următorul apare după notare."
+      "next_pending": "Următorul apare după notare.", "missing_token":"Lipsește tokenul arbitrului.", "notes":"Notele arbitrului"
     },
     "projector": {
       "join_title": "Alătură-te!",
@@ -636,6 +640,7 @@
       "results": "Rezultate"
     }
   },
+  "map_coordinate_picker": {"close_selection":"Închide selecția","answers":"Răspunsuri","place_answer":"Plasează răspunsul","drop_pin":"Plasează marcajul","interaction_hint":"Panorează și mărește imaginea pentru a alinia ținta cu selectorul"},
   "appearance": {
     "label": "Aspect",
     "light": "Luminos",

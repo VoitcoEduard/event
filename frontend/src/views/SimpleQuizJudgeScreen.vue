@@ -16,13 +16,13 @@
     </div>
 
     <p v-if="error" class="judge-error">{{ error }}</p>
-    <p v-if="!token" class="judge-error">Missing ?token= judge token</p>
+    <p v-if="!token" class="judge-error">{{ $t('simple_quiz.judge.missing_token') }}</p>
 
     <div class="judge-progress">
       <div v-for="p in progress" :key="p.questionIndex" class="prog-card" :class="{ active: p.questionIndex === currentIdx }">
         <strong>Q{{ p.questionIndex + 1 }}</strong>
         <span>{{ p.received }} {{ $t('simple_quiz.judge.received') }} · {{ p.graded }} {{ $t('simple_quiz.judge.graded') }} · {{ p.ungraded }} {{ $t('simple_quiz.judge.ungraded') }} · {{ p.reviewLater }} {{ $t('simple_quiz.judge.review') }}</span>
-        <button class="link-btn" @click="questionFilter = p.questionIndex">open</button>
+        <button class="link-btn" @click="questionFilter = p.questionIndex">{{ $t('common.open') }}</button>
       </div>
     </div>
 
@@ -37,7 +37,7 @@
         <img :src="questionImage(current.questionIndex)" alt="" class="judge-img" />
       </div>
       <div class="judge-notes" v-if="questionNotes(current.questionIndex)">
-        <strong>Judge notes:</strong> {{ questionNotes(current.questionIndex) }}
+        <strong>{{ $t('simple_quiz.judge.notes') }}:</strong> {{ questionNotes(current.questionIndex) }}
       </div>
       <div class="judge-points">{{ questionPoints(current.questionIndex) }} pts</div>
       <p class="judge-answer">{{ current.text }}</p>
@@ -47,9 +47,9 @@
         <button class="grade-later" @click="grade('review_later')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.review_later') }}</button>
       </div>
       <div class="judge-nav">
-        <button @click="step(-1)" aria-label="Previous"><AppIcon name="arrowLeft" :size="18" /></button>
+        <button @click="step(-1)" :aria-label="$t('common.previous')"><AppIcon name="arrowLeft" :size="18" /></button>
         <span>{{ queueIndex + 1 }} / {{ queue.length }}</span>
-        <button @click="step(1)" aria-label="Next"><AppIcon name="arrowRight" :size="18" /></button>
+        <button @click="step(1)" :aria-label="$t('common.next')"><AppIcon name="arrowRight" :size="18" /></button>
       </div>
       <p class="judge-hint">{{ $t('simple_quiz.judge.next_pending') }}</p>
     </div>
