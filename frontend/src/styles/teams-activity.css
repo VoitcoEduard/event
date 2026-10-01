@@ -189,32 +189,62 @@
 .teams-admin button.primary:hover:not(:disabled){
   background:#0a84ff
 }
-.teams-admin button.projector-action{
-  background:#ff9500;
-  border-color:#ff9500;
-  font-weight:600
-}
-.teams-admin button.projector-action:hover:not(:disabled){
-  background:#ffa830
-}
-.teams-admin button.start-action{
-  background:#28cd41;
-  border-color:#28cd41
-}
-.teams-admin button.start-action:hover:not(:disabled){
-  background:#30d158
-}
 .teams-admin button.complete-action{
-  background:#ff3b30;
-  border-color:#ff3b30
+  color:#ff8f89
 }
-.teams-admin button.complete-action:hover:not(:disabled){
-  background:#ff453a
+.teams-summary{
+  min-width:0
 }
-.teams-admin button.reopen-action{
-  background:#607d8b;
-  border-color:#607d8b;
-  font-weight:600
+.teams-summary-counts{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin:12px 0;
+  font-size:14px
+}
+.teams-visibility{
+  margin:12px 0
+}
+.teams-visibility button{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-align:left
+}
+.teams-visibility p{
+  margin:8px 0;
+  max-width:480px
+}
+.visibility-track{
+  display:inline-flex;
+  flex-shrink:0;
+  align-items:center;
+  width:34px;
+  height:20px;
+  padding:3px;
+  border-radius:20px;
+  background:#636366
+}
+.visibility-track.visible{
+  background:#28cd41;
+  justify-content:flex-end
+}
+.visibility-track span{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#fff
+}
+.team-empty{
+  margin:14px 0
+}
+.teams-cards,.entrant-panel{
+  scroll-margin-top:24px
+}
+.teams-admin [tabindex="-1"]:focus-visible{
+  outline:3px solid #8ccaff;
+  outline-offset:2px
 }
 .teams-admin .teams-muted,.teams-admin .team-card header p,.teams-admin .award-history small{
   color:#888
@@ -238,13 +268,15 @@
 .teams-admin-grid{
   display:grid;
   grid-template-columns:minmax(0,1fr) 340px;
-  gap:20px
+  gap:20px;
+  margin-bottom:18px
 }
 .teams-cards{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
   gap:18px;
-  align-content:start
+  align-content:start;
+  align-items:start
 }
 .team-card{
   border-top:5px solid var(--team-color);

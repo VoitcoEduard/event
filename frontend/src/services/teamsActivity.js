@@ -16,6 +16,15 @@ async function request(eventId, moduleId, path, body, admin = false) {
   return response.json()
 }
 export const teamsActivity = {
+  setVisibility: async (eventId, moduleId, isActive) => {
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId)}/modules/${encodeURIComponent(moduleId)}/status`, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ isActive })
+    })
+    if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`)
+  },
   state: (e, m) => request(e, m, 'state'),
   projector: async (e, m) => {
     const response = await fetch(`${teamsBase(e, m)}/projector`)
