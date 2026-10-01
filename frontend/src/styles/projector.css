@@ -707,6 +707,8 @@
 }
 
 .answer-icon {
+  width: 1em;
+  height: 1em;
   font-size: 3vw;
 }
 
@@ -1186,6 +1188,8 @@
 }
 
 .lb-trophy {
+  width: 1em;
+  height: 1em;
   font-size: 4vw;
   margin-bottom: 0.5vh;
   filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
@@ -1348,6 +1352,8 @@
 }
 
 .final-trophy {
+  width: 1em;
+  height: 1em;
   font-size: 4vw;
   filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
   animation: trophyPulse 2s ease-in-out infinite;
@@ -1399,6 +1405,8 @@
 }
 
 .fp-crown {
+  width: 1em;
+  height: 1em;
   font-size: 3vw;
   animation: crownFloat 2s ease-in-out infinite;
   filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
@@ -1410,6 +1418,8 @@
 }
 
 .fp-avatar {
+  width: 1em;
+  height: 1em;
   font-size: 3.5vw;
   margin-bottom: 0.5vh;
 }
@@ -1678,6 +1688,8 @@
 }
 
 .dist-icon {
+  width: 1em;
+  height: 1em;
     font-size: 2vw;
     margin-top: 5px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.8);
@@ -2118,3 +2130,7 @@
   margin-bottom: 5px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
+
+/* Dark markers preserve contrast on the bright yellow and green answer cards. */
+.color-2 .app-icon--circle,
+.color-3 .app-icon--square { color: #172033; }

@@ -1306,6 +1306,8 @@ onUnmounted(() => {
 .color-0 { background-color: #FF3B30; }
 .color-1 { background-color: #0A84FF; }
 .color-2 { background-color: #FFD60A; }
+.color-2 .shape-icon,
+.color-3 .shape-icon { color: #172033; }
 .color-3 { background-color: #32D74B; }
 
 .dimmed { opacity: 0.45; }
