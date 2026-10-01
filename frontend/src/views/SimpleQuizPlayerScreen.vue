@@ -48,7 +48,7 @@
       <div class="sq-points">{{ question?.points }} {{ $t('simple_quiz.player.points') }}</div>
 
       <div v-if="submitted" class="sq-locked">
-        <div class="sq-check">✓</div>
+        <AppIcon class="sq-check" name="check" :size="42" />
         <p>{{ $t('simple_quiz.player.submitted') }}</p>
         <p class="sq-sub">{{ $t('simple_quiz.player.waiting_others') }}</p>
       </div>
@@ -134,6 +134,7 @@ import { useI18n } from 'vue-i18n'
 import { quizWS } from '../services/websocket'
 import { simpleQuizApi, loadDraft, saveDraft, clearDraft, newAnswerId } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
+import AppIcon from '../components/AppIcon.vue'
 
 const { locale, t } = useI18n()
 const route = useRoute()

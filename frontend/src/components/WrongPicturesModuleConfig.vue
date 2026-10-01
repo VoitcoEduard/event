@@ -9,10 +9,10 @@
           </div>
           <div class="header-buttons">
             <button class="icon-button" @click="showLibraryModal = true" :title="$t('quiz_config.load_library')">
-              📥
+              <AppIcon name="download" :size="18" />
             </button>
             <button class="close-button" @click="handleClose">
-              ✕
+              <AppIcon name="close" :size="18" />
             </button>
           </div>
         </div>
@@ -26,7 +26,7 @@
             >
               <div class="round-header">
                 <h3>Round {{ index + 1 }}</h3>
-                <button class="remove-btn" @click="removeRound(index)">✕</button>
+                <button class="remove-btn" @click="removeRound(index)" aria-label="Remove round"><AppIcon name="close" :size="16" /></button>
               </div>
               
               <div class="config-compact-row">
@@ -81,7 +81,7 @@
                   />
                 </div>
                 <div v-else class="image-required-warning">
-                  ⚠️ {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+                  <AppIcon name="alert" :size="16" /> {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
                 </div>
               </div>
             </div>
@@ -135,7 +135,7 @@
       <div class="library-modal">
           <div class="library-header">
               <h3>{{ $t('quiz_config.select_template') }}</h3>
-              <button class="close-btn" @click="showLibraryModal = false">✕</button>
+              <button class="close-btn" @click="showLibraryModal = false" aria-label="Close"><AppIcon name="close" :size="18" /></button>
           </div>
           <div class="library-content">
               <div v-if="loadingTemplates" class="loading">{{ $t('common.loading') }}</div>
@@ -163,6 +163,7 @@ import { useToast } from '../composables/useToast'
 import { getTracks } from '../services/media'
 import ImageUploader from './ImageUploader.vue'
 import CoordinatePicker from './CoordinatePicker.vue'
+import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
 const props = defineProps({

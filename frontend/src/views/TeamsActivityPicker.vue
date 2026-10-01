@@ -1,9 +1,10 @@
-<template><main class="teams-module teams-player"><button @click="router.push({ name: 'event', query: { eventId } })">← {{ $t('teams_module.back_event') }}</button><h1>{{ $t('teams_module.select_activity') }}</h1><p v-if="error" class="teams-error">{{ error }}</p><p v-if="loading" class="teams-notice">{{ $t('teams_module.loading') }}</p><div class="player-choice"><button v-for="module in modules" :key="module.id" @click="open(module)"><strong>{{ module.name }}</strong>{{ $t('teams_module.enter') }}</button></div><p v-if="!loading && !modules.length">{{ $t('teams_module.no_activities') }}</p></main></template>
+<template><main class="teams-module teams-player"><button @click="router.push({ name: 'event', query: { eventId } })"><AppIcon name="arrowLeft" :size="18" /> {{ $t('teams_module.back_event') }}</button><h1>{{ $t('teams_module.select_activity') }}</h1><p v-if="error" class="teams-error">{{ error }}</p><p v-if="loading" class="teams-notice">{{ $t('teams_module.loading') }}</p><div class="player-choice"><button v-for="module in modules" :key="module.id" @click="open(module)"><strong>{{ module.name }}</strong>{{ $t('teams_module.enter') }}</button></div><p v-if="!loading && !modules.length">{{ $t('teams_module.no_activities') }}</p></main></template>
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { API_BASE_URL } from '../utils'
 import '../styles/teams-activity.css'
+import AppIcon from '../components/AppIcon.vue'
 const route = useRoute(), router = useRouter(), modules = ref([]), error = ref(''), loading = ref(true)
 const eventId = route.query.eventId || route.params.eventId
 function open(module) { router.replace(`/teams/${eventId}/${module.id}/player`) }

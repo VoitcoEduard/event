@@ -4,7 +4,7 @@
       <!-- Theme & Language -->
       <div class="top-controls">
         <button @click="toggleTheme" class="theme-toggle" :title="$t('event.toggle_theme')">
-          {{ theme === 'bold' ? '🎨' : '🏗️' }}
+          <AppIcon :name="theme === 'bold' ? 'palette' : 'settings'" :size="20" />
         </button>
         <div class="language-switcher-container">
           <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
@@ -25,7 +25,7 @@
       <div v-else-if="selectedModule" class="module-view">
         <div class="module-header">
           <button class="back-link" @click="selectedModule = null">
-            <span class="back-arrow">←</span>
+            <AppIcon class="back-arrow" name="arrowLeft" :size="18" />
             <span>{{ $t('event.back_to_event') }}</span>
           </button>
         </div>
@@ -72,7 +72,7 @@
               :class="card.type"
               :style="{ borderLeftColor: card.color }"
             >
-              <div class="card-icon">{{ card.icon }}</div>
+              <AppIcon class="card-icon" :name="dynamicCardIcon(card)" :size="22" />
               <div class="card-body">
                 <h3 class="card-title">{{ card.title }}</h3>
                 <p class="card-text">{{ card.content }}</p>
@@ -90,18 +90,13 @@
               @click="selectModule(module)"
             >
               <div class="module-icon-box">
-                <span class="module-emoji">
-                  {{ module.type === 'form' ? '📝' :
-                     (module.type === 'quiz' ? '🎮' :
-                     (module.type === 'wrong_pictures' ? '🖼️' :
-                     (module.type === 'simple_quiz' ? '✍️' : (module.type === 'teams' ? '👥' : '📊')))) }}
-                </span>
+                <AppIcon class="module-emoji" :name="moduleIcon(module.type)" :size="24" />
               </div>
               <div class="module-main">
                 <p class="module-name">{{ module.name }}</p>
                 <p class="module-call">{{ $t('event.tap_to_start') }}</p>
               </div>
-              <div class="module-arrow">→</div>
+              <AppIcon class="module-arrow" name="arrowRight" :size="20" />
             </div>
           </template>
 
@@ -127,6 +122,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FormModule from '../components/FormModule.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { API_BASE_URL, getUserId, getUserName, setUserName } from '../utils'
 
 const { locale } = useI18n()
@@ -149,6 +145,20 @@ const theme = ref(localStorage.getItem('userTheme') || 'bold')
 const toggleTheme = () => {
   theme.value = theme.value === 'bold' ? 'material' : 'bold'
   localStorage.setItem('userTheme', theme.value)
+}
+
+const moduleIcon = (type) => ({
+  form: 'form',
+  quiz: 'quiz',
+  wrong_pictures: 'image',
+  simple_quiz: 'edit',
+  teams: 'teams'
+}[type] || 'chart')
+
+const dynamicCardIcon = (card) => {
+  const supported = ['alert', 'info', 'message', 'link', 'play', 'check', 'chart', 'teams', 'image']
+  if (supported.includes(card.icon)) return card.icon
+  return ({ alert: 'alert', action: 'play', info: 'info' }[card.type] || 'info')
 }
 
 const activeModules = ref([])
@@ -274,39 +284,37 @@ const goToMain = () => {
 
 <style>
 :root {
-  --bg-primary: #20222c;
-  --bg-secondary: #2a2d3d;
-  --surface-layer: #373b4d;
-  --accent: #8b8eff;
-  --text-main: #f8f8fb;
-  --text-dim: #b0b3c5;
-  --border-solid: #4d526b;
-  --gold: #fbbf24;
-  --radius-main: 20px;
+  --bg-primary: var(--ops-bg);
+  --bg-secondary: var(--ops-surface);
+  --surface-layer: var(--ops-surface-raised);
+  --accent: var(--ops-blue);
+  --text-main: var(--ops-text);
+  --text-dim: var(--ops-text-muted);
+  --border-solid: var(--ops-border);
+  --gold: var(--ops-amber);
+  --radius-main: var(--ops-radius-lg);
   --shadow-main: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .theme-material {
-  --bg-primary: #121212;
-  --bg-secondary: #1e1e1e;
-  --surface-layer: #2c2c2c;
-  --accent: #bb86fc;
-  --text-main: #e1e1e1;
-  --text-dim: #9e9e9e;
-  --border-solid: #333333;
-  --gold: #03dac6; /* Using teal as secondary accent in material */
-  --radius-main: 8px; /* Material typically uses smaller radius for cards */
+  --bg-primary: var(--ops-bg);
+  --bg-secondary: var(--ops-surface);
+  --surface-layer: var(--ops-surface-raised);
+  --accent: var(--ops-blue);
+  --text-main: var(--ops-text);
+  --text-dim: var(--ops-text-muted);
+  --border-solid: var(--ops-border);
+  --gold: var(--ops-amber);
+  --radius-main: var(--ops-radius-md);
   --shadow-main: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 </style>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
-
 /* foundation variables moved to global style block above */
 
 * {
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--ops-font);
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }

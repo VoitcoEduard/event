@@ -58,7 +58,7 @@
       <div class="placement-layer-overlay" v-if="isPlacementMode">
         <button class="exit-placement-btn" @click="isPlacementMode = false">
           <span>Close Selection</span>
-          <span class="icon">✕</span>
+          <AppIcon name="close" :size="16" />
         </button>
       </div>
     </Transition>
@@ -80,7 +80,7 @@
             @click="isPlacementMode = true"
             :disabled="isMaxTargets"
           >
-            <span class="btn-icon">📍</span>
+            <AppIcon class="btn-icon" name="pin" :size="18" />
             <span class="btn-text">Place Answer</span>
           </button>
 
@@ -90,7 +90,7 @@
             @click="addCurrentPosition" 
             :disabled="isMaxTargets"
           >
-            <span class="btn-icon">✓</span>
+            <AppIcon class="btn-icon" name="check" :size="18" />
             <span class="btn-text">Drop Pin</span>
           </button>
       </div>
@@ -106,7 +106,7 @@
               {{ step }}x
             </button>
             <button @click="toggleZoom" class="toggle-btn">
-              {{ scale === 1 ? '🔍' : '🔎' }}
+              <AppIcon name="search" :size="18" />
             </button>
           </div>
       </div>
@@ -123,6 +123,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   imageUrl: { type: String, required: true },

@@ -13,11 +13,11 @@
 
     <div class="wrong-picture-answer-review__summary" aria-live="polite">
       <span class="summary-item summary-item--correct">
-        <span class="summary-icon">✓</span>
+        <AppIcon class="summary-icon" name="check" :size="16" />
         {{ $t('quiz.player.wrong_picture_review.correct_count', { count: review.correctCount }) }}
       </span>
       <span class="summary-item summary-item--incorrect">
-        <span class="summary-icon">×</span>
+        <AppIcon class="summary-icon" name="close" :size="16" />
         {{ $t('quiz.player.wrong_picture_review.incorrect_count', { count: review.incorrectCount }) }}
       </span>
     </div>
@@ -43,7 +43,7 @@
                 {{ $t('quiz.player.wrong_picture_review.answer', { number: guess.number }) }}
               </span>
               <span class="wrong-picture-answer-card__status">
-                <span aria-hidden="true">{{ guess.isCorrect ? '✓' : '×' }}</span>
+                <AppIcon :name="guess.isCorrect ? 'check' : 'close'" :size="15" aria-hidden="true" />
                 {{ guess.isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}
               </span>
             </div>
@@ -68,6 +68,7 @@
 
 <script setup>
 import WrongPictureTargetCrop from './WrongPictureTargetCrop.vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   review: {

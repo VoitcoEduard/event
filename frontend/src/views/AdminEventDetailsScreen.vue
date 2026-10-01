@@ -23,7 +23,7 @@
             {{ $t('admin.details.screen_manager') }}
           </button>
           <button class="nav-button copy-link-btn" @click="copyProjectorLink" :title="$t('quiz.host.copy_link')">
-             🔗
+             <AppIcon name="link" :size="18" />
           </button>
           <button class="nav-button library-btn" @click="goToLibrary">
             {{ $t('admin.details.library_btn') }}
@@ -197,7 +197,7 @@
       <div class="add-module-container">
         <div class="add-module-header">
           <p class="form-title">{{ $t('admin.details.add_modal_title') }}</p>
-          <button @click="showModuleModal = false" class="close-btn">✕</button>
+          <button @click="showModuleModal = false" class="close-btn" aria-label="Close"><AppIcon name="close" :size="18" /></button>
         </div>
 
         <p class="input-label">{{ $t('admin.details.module_name_label') }}</p>
@@ -242,6 +242,7 @@ import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import { getImageUrl } from '../services/media'
 import { getScreensavers } from '../services/media'
+import AppIcon from '../components/AppIcon.vue'
 
 const { t, locale } = useI18n()
 const router = useRouter()

@@ -9,10 +9,10 @@
           </div>
           <div class="header-buttons">
             <button class="icon-button" @click="showLibraryModal = true" :title="$t('quiz_config.load_library')">
-              📥
+              <AppIcon name="download" :size="18" />
             </button>
             <button class="library-btn" @click="triggerFileInput">
-              📄 {{ $t('quiz_config.load_json') }}
+              <AppIcon name="form" :size="18" /> {{ $t('quiz_config.load_json') }}
             </button>
             <input 
               type="file" 
@@ -22,7 +22,7 @@
               @change="handleFileUpload"
             />
             <button class="close-button" @click="handleClose">
-              ✕
+              <AppIcon name="close" :size="18" />
             </button>
           </div>
         </div>
@@ -82,7 +82,7 @@
         <div class="library-modal">
             <div class="library-header">
                 <h3>{{ $t('quiz_config.select_template') }}</h3>
-                <button class="close-btn" @click="showLibraryModal = false">✕</button>
+                <button class="close-btn" @click="showLibraryModal = false" aria-label="Close"><AppIcon name="close" :size="18" /></button>
             </div>
             <div class="library-content">
                 <div v-if="loadingTemplates" class="loading">{{ $t('common.loading') }}</div>
@@ -110,6 +110,7 @@ import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from './QuizEditor.vue'
 import { getTracks } from '../services/media'
+import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
 const props = defineProps({

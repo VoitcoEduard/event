@@ -5,7 +5,9 @@
         <span class="question-number">{{ $t('quiz_config.question_editor.question_number', { number: index + 1 }) }}</span>
         <span class="question-type-tag" @click="$emit('change-type')">{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</span>
       </div>
-      <button class="delete-btn" @click="$emit('delete')">🗑</button>
+      <button class="delete-btn" @click="$emit('delete')" aria-label="Delete question">
+        <AppIcon name="trash" :size="16" />
+      </button>
     </div>
 
 
@@ -79,7 +81,7 @@
     <!-- STANDARD ANSWERS (MC/TF/MS) -->
     <!-- Multi-select warning -->
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
-      ⚠️ Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
+      <AppIcon name="alert" :size="16" /> Please mark at least <strong>2 answers</strong> as correct for a multi-select question.
     </div>
     <div v-if="localQuestion.type !== 'range' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures' && localQuestion.type !== 'simple_text'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
@@ -90,7 +92,7 @@
         v-show="isAnswerVisible(idx)"
       >
         <div class="answer-header">
-          <span class="shape-icon">{{ getShapeIcon(idx) }}</span>
+          <AppIcon class="shape-icon" :name="getShapeIcon(idx)" :size="20" />
           <label class="correct-toggle">
             <input 
               :type="localQuestion.type === 'multi_select' ? 'checkbox' : 'radio'"
@@ -265,7 +267,7 @@
           />
         </div>
         <div v-else class="image-required-warning">
-          ⚠️ {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+          <AppIcon name="alert" :size="16" /> {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
         </div>
       </div>
     </div>
@@ -304,6 +306,7 @@ import RangeComponent from './RangeComponent.vue'
 import ImageUploader from './ImageUploader.vue'
 import ImageOptionEditor from './ImageOptionEditor.vue'
 import CoordinatePicker from './CoordinatePicker.vue'
+import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
 const props = defineProps({
@@ -538,9 +541,9 @@ const getAnswerColorClass = (idx) => {
 
 const getShapeIcon = (idx) => {
   if (localQuestion.type === 'true_false') {
-      return idx === 0 ? '✔️' : '❌'
+      return idx === 0 ? 'check' : 'close'
   }
-  const shapes = ['▲', '◆', '●', '■']
+  const shapes = ['triangle', 'diamond', 'circle', 'square']
   return shapes[idx]
 }
 

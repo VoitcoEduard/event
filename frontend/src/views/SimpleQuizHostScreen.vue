@@ -16,7 +16,7 @@
         <p v-if="judgeToken" class="judge-url">{{ judgeUrl }}</p>
       </div>
       <div class="players-area">
-        <div class="players-count"><span>👥 {{ playersCount }}</span> {{ $t('simple_quiz.host.players') }}</div>
+        <div class="players-count"><span><AppIcon name="teams" :size="18" /> {{ playersCount }}</span> {{ $t('simple_quiz.host.players') }}</div>
         <div class="players-grid">
           <div v-for="p in playerList" :key="p.playerId" class="player-chip">{{ p.nickname }}</div>
         </div>
@@ -46,7 +46,7 @@
               <h2 class="question-text">{{ currentQuestion?.text }}</h2>
             </div>
           </div>
-          <div v-if="revealedAnswer" class="reveal-card">✓ {{ revealedAnswer }}</div>
+          <div v-if="revealedAnswer" class="reveal-card"><AppIcon name="check" :size="16" /> {{ revealedAnswer }}</div>
         </div>
         <div class="answers-column">
           <div class="answer-counter-widget">
@@ -57,9 +57,9 @@
             <h4>{{ $t('simple_quiz.host.grading_progress') }}</h4>
             <div v-for="p in progress" :key="p.questionIndex" class="prog-row">
               <span>Q{{ p.questionIndex + 1 }}</span>
-              <span>{{ p.received }} / {{ p.graded }} ✓ / {{ p.reviewLater }}…</span>
+              <span>{{ p.received }} / {{ p.graded }} <AppIcon name="check" :size="14" /> / {{ p.reviewLater }}…</span>
             </div>
-            <p v-if="gradingComplete">✓ {{ $t('simple_quiz.host.waiting_grading') }} ready</p>
+            <p v-if="gradingComplete"><AppIcon name="check" :size="16" /> {{ $t('simple_quiz.host.waiting_grading') }} ready</p>
             <p v-else>{{ $t('simple_quiz.host.waiting_grading') }}</p>
           </div>
           <div v-if="leaderboard.length" class="grading-card">
@@ -93,6 +93,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import AppIcon from '../components/AppIcon.vue'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { simpleQuizApi } from '../services/simpleQuiz'

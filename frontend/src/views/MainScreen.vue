@@ -12,7 +12,7 @@
 
     <div class="content">
       <div class="brand">
-        <div class="brand-icon">⚡</div>
+        <div class="brand-icon"><img src="/brand-mark.svg" alt="" width="48" height="48" /></div>
         <h1 class="title">{{ $t('main.title') }}</h1>
         <p class="subtitle">{{ $t('main.subtitle') }}</p>
       </div>
@@ -36,7 +36,7 @@
         </div>
 
         <p v-if="error" class="error-text">
-          <span class="error-icon">⚠</span> {{ error }}
+          <AppIcon class="error-icon" name="alert" :size="18" /> {{ error }}
         </p>
 
         <button
@@ -46,7 +46,7 @@
           :class="{ 'is-loading': loading }"
         >
           <span v-if="loading" class="loading-spinner"></span>
-          <span v-else class="btn-label">{{ $t('main.connect_btn') }} →</span>
+          <span v-else class="btn-label">{{ $t('main.connect_btn') }} <AppIcon name="arrowRight" :size="18" /></span>
         </button>
       </div>
 
@@ -69,6 +69,7 @@ const loading = ref(false)
 const error = ref('')
 
 import { API_BASE_URL } from '../utils'
+import AppIcon from '../components/AppIcon.vue'
 
 onMounted(() => {
   const params = new URLSearchParams(window.location.search)
@@ -204,15 +205,14 @@ const goToAdmin = () => {
 }
 
 .brand-icon {
-  font-size: 40px;
   margin-bottom: 14px;
-  filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.7));
+  filter: drop-shadow(0 0 16px rgba(20, 127, 245, 0.42));
   animation: pulse-glow 2.5s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6)); }
-  50%       { filter: drop-shadow(0 0 22px rgba(99, 102, 241, 0.9)); }
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(20, 127, 245, 0.35)); }
+  50%       { filter: drop-shadow(0 0 22px rgba(20, 127, 245, 0.6)); }
 }
 
 .title {
@@ -283,11 +283,11 @@ const goToAdmin = () => {
   border: 2px solid #2a2a35;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
-  caret-color: #6366f1;
+  caret-color: #147ff5;
 }
 
 .input:focus {
-  border-color: #6366f1;
+  border-color: #147ff5;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
@@ -325,7 +325,7 @@ const goToAdmin = () => {
 
 /* Connect Button */
 .connect-button {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #2d8cff 0%, #0a6cf5 100%);
   padding: 17px;
   border-radius: 14px;
   width: 100%;

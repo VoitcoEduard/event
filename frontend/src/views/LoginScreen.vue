@@ -9,17 +9,7 @@
     </div>
     <div class="login-card">
       <div class="login-logo">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-          <rect width="40" height="40" rx="12" fill="url(#grad)"/>
-          <path d="M20 10L28 15V25L20 30L12 25V15L20 10Z" stroke="white" stroke-width="2" fill="none"/>
-          <circle cx="20" cy="20" r="4" fill="white"/>
-          <defs>
-            <linearGradient id="grad" x1="0" y1="0" x2="40" y2="40">
-              <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="100%" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-        </svg>
+        <img src="/brand-mark.svg" width="48" height="48" alt="Event Operations" />
       </div>
       <h1 class="login-title">{{ $t('login.title') }}</h1>
 	  <p class="login-subtitle">{{ mode === 'google' ? $t('auth.googleSubtitle') : $t('login.subtitle') }}</p>
@@ -37,8 +27,8 @@
             autocomplete="current-password"
             :disabled="loading"
           />
-          <button type="button" class="toggle-pw" @click="showPassword = !showPassword" tabindex="-1">
-            {{ showPassword ? '🙈' : '👁️' }}
+          <button type="button" class="toggle-pw" @click="showPassword = !showPassword" tabindex="-1" :aria-label="showPassword ? 'Hide password' : 'Show password'">
+            <AppIcon :name="showPassword ? 'eyeOff' : 'eye'" :size="18" />
           </button>
         </div>
 
@@ -58,6 +48,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { API_BASE_URL } from '../utils/index.js'
 import { loadAuthMode, loadSession } from '../session.js'
+import AppIcon from '../components/AppIcon.vue'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -205,7 +196,7 @@ async function handleLogin() {
 }
 
 .input-group input:focus {
-  border-color: rgba(99, 102, 241, 0.6);
+  border-color: rgba(20, 127, 245, 0.7);
   background: rgba(255,255,255,0.08);
 }
 
@@ -240,7 +231,7 @@ async function handleLogin() {
 }
 
 .login-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #2d8cff, #0a6cf5);
   border: none;
   border-radius: 10px;
   color: #fff;

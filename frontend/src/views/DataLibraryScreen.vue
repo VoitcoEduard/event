@@ -1,7 +1,7 @@
 <template>
   <main class="data-page">
     <header>
-      <button @click="router.push(`/admin/event/${eventId}`)">← Back to event</button>
+      <button @click="router.push(`/admin/event/${eventId}`)"><AppIcon name="arrowLeft" :size="18" /> Back to event</button>
       <h1>{{ event?.name || 'Event' }} · Data</h1>
       <button :disabled="busy || loading || dirty" @click="load">Refresh</button>
     </header>
@@ -79,6 +79,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
+import AppIcon from '../components/AppIcon.vue'
 import { extractLabel } from '../utils/labelExtractor'
 import { isGame, manualTarget, allowsManual, scoreRows, parsePoints } from '../utils/eventScores'
 const route = useRoute(), router = useRouter()

@@ -8,7 +8,7 @@
             <p class="subtitle">{{ module?.name || $t('quiz_config.untitled') }}</p>
           </div>
           <div class="header-buttons">
-            <button class="close-button" @click="handleClose">✕</button>
+            <button class="close-button" @click="handleClose" aria-label="Close"><AppIcon name="close" :size="18" /></button>
           </div>
         </div>
 
@@ -56,6 +56,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppIcon from './AppIcon.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import QuizEditor from './QuizEditor.vue'

@@ -8,9 +8,13 @@
           class="toast"
           :class="toast.type"
         >
-          <span class="toast-icon">{{ getIcon(toast.type) }}</span>
+          <span class="toast-icon">
+            <AppIcon :name="getIcon(toast.type)" :size="15" />
+          </span>
           <span class="toast-message">{{ toast.message }}</span>
-          <button class="toast-close" @click="remove(toast.id)">✕</button>
+          <button class="toast-close" @click="remove(toast.id)" aria-label="Close notification">
+            <AppIcon name="close" :size="16" />
+          </button>
         </div>
       </TransitionGroup>
     </div>
@@ -19,15 +23,16 @@
 
 <script setup>
 import { useToast } from '../composables/useToast'
+import AppIcon from './AppIcon.vue'
 
 const { toasts, remove } = useToast()
 
 const getIcon = (type) => {
   switch (type) {
-    case 'success': return '✓'
-    case 'error': return '✕'
-    case 'warning': return '!'
-    default: return 'ℹ'
+    case 'success': return 'check'
+    case 'error': return 'close'
+    case 'warning': return 'alert'
+    default: return 'info'
   }
 }
 </script>

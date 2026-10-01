@@ -152,7 +152,8 @@
           :disabled="hasSubmitted"
           @click="submitRangeAnswer"
         >
-          {{ hasSubmitted ? '✓' : $t('quiz.player.submit_btn') }}
+          <AppIcon v-if="hasSubmitted" name="check" :size="18" />
+          <template v-else>{{ $t('quiz.player.submit_btn') }}</template>
         </button>
       </div>
     </div>
@@ -186,7 +187,8 @@
           :disabled="hasSubmitted || numberValue === null || numberValue === ''"
           @click="submitNumberAnswer"
         >
-          {{ hasSubmitted ? '✓' : $t('quiz.player.submit_btn') }}
+          <AppIcon v-if="hasSubmitted" name="check" :size="18" />
+          <template v-else>{{ $t('quiz.player.submit_btn') }}</template>
         </button>
       </div>
     </div>
@@ -199,7 +201,7 @@
 
       <!-- Multi-select mode hint -->
       <div v-if="isMultiSelect" class="multi-hint-pill">
-        <span class="multi-hint-icon">☑</span>
+        <AppIcon class="multi-hint-icon" name="listCheck" :size="18" />
         <span>{{ $t('quiz.player.select_multiple', 'Select all that apply') }}</span>
       </div>
 
@@ -218,10 +220,10 @@
          >
             <!-- Multi-select checkbox corner indicator -->
             <div v-if="isMultiSelect" class="ms-checkbox" :class="{ 'ms-checked': isSelected(idx) }">
-              <span v-if="isSelected(idx)">✓</span>
+              <AppIcon v-if="isSelected(idx)" name="check" :size="14" />
             </div>
             <div class="answer-btn-layout" :class="{ 'row-layout': isTrueFalse }">
-               <span class="shape-icon">{{ shape }}</span>
+               <AppIcon class="shape-icon" :name="shape" :size="28" />
                <span v-if="isTrueFalse" class="tf-label">{{ idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false') }}</span>
                <span v-else-if="currentQuestion?.answers?.[idx]" class="answer-text">{{ currentQuestion.answers[idx] }}</span>
             </div>
@@ -255,7 +257,7 @@
     <!-- RESULT STATE -->
     <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
        <div class="result-content">
-          <div class="result-icon" :class="isCorrect ? 'icon-correct' : 'icon-wrong'">{{ isCorrect ? '✅' : '❌' }}</div>
+          <div class="result-icon" :class="isCorrect ? 'icon-correct' : 'icon-wrong'"><AppIcon :name="isCorrect ? 'check' : 'close'" :size="52" /></div>
           <h1 class="result-title">{{ isCorrect ? $t('quiz.player.correct') : $t('quiz.player.incorrect') }}</h1>
 
           <div class="score-summary">
@@ -264,7 +266,7 @@
              </div>
              <div class="score-delta wrong-delta" v-else>{{ $t('quiz.player.incorrect') }}</div>
              <div class="streak-badge" v-if="streak > 2">
-               🔥 {{ $t('quiz.player.streak', { streak: streak }) }}
+               <AppIcon name="fire" :size="16" /> {{ $t('quiz.player.streak', { streak: streak }) }}
              </div>
           </div>
 
@@ -277,7 +279,7 @@
     <!-- LEADERBOARD STATE -->
     <div v-else-if="state === States.LEADERBOARD" class="state-container player-leaderboard-container">
        <div class="player-leaderboard-content">
-          <div class="leaderboard-icon">🏆</div>
+          <AppIcon class="leaderboard-icon" name="trophy" :size="72" />
           <h2 class="leaderboard-title">{{ $t('quiz.player.leaderboard', 'Leaderboard') }}</h2>
           <div class="rank-badge-large">
              <span class="rank-num">{{ rank }}</span>
@@ -315,6 +317,7 @@ import RangeComponent from '../components/RangeComponent.vue'
 import HorizontalCarousel from '../components/HorizontalCarousel.vue'
 import MapCoordinatePicker from '../components/MapCoordinatePicker.vue'
 import WrongPictureAnswerReview from '../components/WrongPictureAnswerReview.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
 import { getUserName } from '../utils'
@@ -505,9 +508,9 @@ const isSelected = (idx) => {
 
 const shapes = computed(() => {
     if (isTrueFalse.value) {
-        return ['✔️', '❌']
+        return ['check', 'close']
     }
-    return ['▲', '◆', '●', '■']
+    return ['triangle', 'diamond', 'circle', 'square']
 })
 
 watch(currentQuestion, (question) => {

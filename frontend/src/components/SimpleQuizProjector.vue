@@ -9,7 +9,7 @@
         </div>
       </div>
       <div class="players-area">
-        <div class="players-count"><span>👥 {{ players }}</span></div>
+        <div class="players-count"><span><AppIcon name="teams" :size="18" /> {{ players }}</span></div>
       </div>
     </div>
 
@@ -28,7 +28,7 @@
               <h2 class="question-text">{{ question?.text }}</h2>
             </div>
           </div>
-          <div v-if="revealedAnswer" class="reveal-card">✓ {{ revealedAnswer }}</div>
+          <div v-if="revealedAnswer" class="reveal-card"><AppIcon name="check" :size="16" /> {{ revealedAnswer }}</div>
         </div>
         <div class="answers-column">
           <div class="answer-counter-widget">
@@ -48,7 +48,7 @@
 
     <div v-else-if="status === 'results_published' || status === 'completed'" class="state-container leaderboard-container">
       <div class="lb-header">
-        <div class="lb-trophy">🏆</div>
+        <AppIcon class="lb-trophy" name="trophy" :size="54" />
         <h2 class="lb-title">{{ $t('simple_quiz.projector.results') }}</h2>
       </div>
       <div class="lb-list">
@@ -67,6 +67,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { simpleQuizApi } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import { quizWS } from '../services/websocket'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   eventId: { type: String, required: true },

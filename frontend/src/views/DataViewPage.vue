@@ -41,14 +41,14 @@
 
       <!-- Error State -->
       <div v-else-if="error" class="error-state">
-        <div class="error-icon">⚠️</div>
+        <AppIcon class="error-icon" name="alert" :size="48" />
         <p>{{ $t('data_library.error', { error: error }) }}</p>
         <button class="retry-btn" @click="fetchData">{{ $t('data_library.retry') }}</button>
       </div>
 
       <!-- No Data State (only if not loading and no error and no records) -->
       <div v-else-if="!loading && !error && recordCount === 0" class="no-data-state">
-        <div class="empty-icon">📊</div>
+        <AppIcon class="empty-icon" name="chart" :size="56" />
         <p>{{ $t('data_library.no_data') }}</p>
         <p class="hint">{{ $t('data_library.hint_waiting') }}</p>
       </div>
@@ -73,6 +73,7 @@ import { registerAllModules } from 'handsontable/registry';
 import 'handsontable/styles/handsontable.min.css';
 import 'handsontable/styles/ht-theme-main.min.css';
 import { API_BASE_URL, getAuthHeaders } from '../utils';
+import AppIcon from '../components/AppIcon.vue'
 import { extractLabel } from '../utils/labelExtractor';
 
 const { t, locale } = useI18n();

@@ -62,12 +62,8 @@
     >
       <!-- Idle hint arrows -->
       <div v-if="!hasInteracted && !isScrolling" class="hint-arrows">
-        <svg class="arrow arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="18 15 12 9 6 15"/>
-        </svg>
-        <svg class="arrow arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
+        <AppIcon class="arrow arrow-up" name="chevronUp" :size="24" />
+        <AppIcon class="arrow arrow-down" name="chevronDown" :size="24" />
       </div>
       <div class="notches" :class="{ faded: !hasInteracted && !isScrolling }">
         <div v-for="i in 20" :key="i" class="notch" :class="{ center: i === 10 || i === 11 }"></div>
@@ -79,6 +75,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   min:               { type: Number,  default: 0 },

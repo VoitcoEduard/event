@@ -2,7 +2,7 @@
   <div class="screen-manager">
     <div class="header">
       <div class="header-left">
-        <button class="back-btn" @click="goBack">← {{ $t('admin.details.back_btn') }}</button>
+        <button class="back-btn" @click="goBack"><AppIcon name="arrowLeft" :size="18" /> {{ $t('admin.details.back_btn') }}</button>
         <h1>Slide Editor</h1>
       </div>
       <div class="header-right">
@@ -40,7 +40,7 @@
                 class="icon-btn delete-slide" 
                 @click.stop="deleteSlide(slide.id)"
               >
-                ✕
+                <AppIcon name="close" :size="16" />
               </button>
             </div>
           </li>
@@ -83,7 +83,7 @@
               <div v-if="element.type === 'text'" class="el-text">{{ element.content || 'Text' }}</div>
                <img v-else-if="element.type === 'image'" :src="getImageUrl(element.content)" class="el-image" decoding="async" loading="eager" />
               <div v-else-if="element.type === 'qr'" class="el-qr">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=example" class="el-image" />
+                <QRCodeVue :value="qrCodeValue" :size="150" level="H" />
               </div>
             </div>
             <div class="resize-handle" v-if="selectedElementId === element.id" @mousedown.stop="startResize(element, $event)"></div>
@@ -157,7 +157,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Apply Template</h3>
-          <button class="close-btn" @click="isTemplateSelectorOpen = false">✕</button>
+          <button class="close-btn" @click="isTemplateSelectorOpen = false" aria-label="Close"><AppIcon name="close" :size="18" /></button>
         </div>
         <div class="modal-body">
           <div v-if="templates.length === 0" style="text-align:center;">No templates saved.</div>
@@ -182,7 +182,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Select Image</h3>
-          <button class="close-btn" @click="isImageSelectorOpen = false">✕</button>
+          <button class="close-btn" @click="isImageSelectorOpen = false" aria-label="Close"><AppIcon name="close" :size="18" /></button>
         </div>
         <div class="modal-body">
           <div class="screensavers-grid">
@@ -205,9 +205,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import { getImageUrl, getScreensavers } from '../services/media'
+import AppIcon from '../components/AppIcon.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -224,6 +226,7 @@ const activeSlideId = ref(null)
 
 const activeSlide = computed(() => slides.value.find(s => s.id === activeSlideId.value))
 const activeSlideElements = computed(() => activeSlide.value?.elements || [])
+const qrCodeValue = computed(() => `${window.location.origin}/?eventId=${eventId}`)
 
 const selectedElementId = ref(null)
 const selectedElement = computed(() => activeSlideElements.value.find(e => e.id === selectedElementId.value))
@@ -581,7 +584,7 @@ const closeProjector = () => {
 .launch-btn.close-btn { background: #ef4444; }
 .push-btn { background: #10b981; color: white; }
 .push-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.save-btn { background: #6366f1; color: white; }
+.save-btn { background: var(--ops-blue); color: white; }
 .action-btn { background: #4b5563; color: white; }
 .danger-btn { background: #ef4444; color: white; }
 .add-slide-btn { background: #374151; color: white; width: 100%; margin-top: 10px; }

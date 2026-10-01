@@ -11,10 +11,10 @@
     
     <div v-if="modelValue && hidePreview" class="compact-actions">
       <button type="button" class="change-btn" @click="triggerFileSelect" :disabled="disabled">
-        🔄 Change Image
+        <AppIcon name="upload" :size="16" /> Change Image
       </button>
       <button type="button" class="remove-btn-compact" @click="removeImage" :disabled="disabled">
-        ✕ Remove
+        <AppIcon name="close" :size="16" /> Remove
       </button>
     </div>
     
@@ -40,7 +40,7 @@
       @click="!disabled && triggerFileSelect()"
     >
       <div v-if="!isUploading" class="upload-content">
-        <span class="upload-icon">📷</span>
+        <AppIcon class="upload-icon" name="camera" :size="32" />
         <span class="upload-text">{{ $t('image_uploader.click_drag') }}</span>
         <span class="upload-hint">{{ $t('image_uploader.hint') }}</span>
       </div>
@@ -65,6 +65,7 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { uploadImage, getImageUrl, deleteImage } from '../services/media'
+import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
 const props = defineProps({

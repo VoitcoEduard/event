@@ -10,7 +10,8 @@
           </select>
         </div>
         <button class="back-link" @click="goBack">
-          <span>{{ $t('library.actions.discard_confirm') === 'Discard changes?' ? '← Back' : $t('admin.details.back_btn') }}</span>
+          <AppIcon name="arrowLeft" :size="18" />
+          <span>{{ $t('library.actions.discard_confirm') === 'Discard changes?' ? 'Back' : $t('admin.details.back_btn') }}</span>
         </button>
         <p class="header-title">{{ $t('library.title') }}</p>
       </div>
@@ -60,7 +61,7 @@
                 :class="{ active: activeTab === 'form' }"
                 @click="activeTab = 'form'"
             >
-                <span class="tab-icon">📝</span>
+                <AppIcon class="tab-icon" name="form" :size="20" />
                 {{ $t('library.tabs.forms') }}
             </button>
             <button 
@@ -68,7 +69,7 @@
                 :class="{ active: activeTab === 'quiz' }"
                 @click="activeTab = 'quiz'"
             >
-                <span class="tab-icon">🎮</span>
+                <AppIcon class="tab-icon" name="quiz" :size="20" />
                 {{ $t('library.tabs.quizzes') }}
             </button>
             <button 
@@ -76,7 +77,7 @@
                 :class="{ active: activeTab === 'screensaver' }"
                 @click="activeTab = 'screensaver'"
             >
-                <span class="tab-icon">🖼️</span>
+                <AppIcon class="tab-icon" name="image" :size="20" />
                 {{ $t('library.tabs.screensavers') }}
             </button>
             <button 
@@ -84,7 +85,7 @@
                 :class="{ active: activeTab === 'music' }"
                 @click="activeTab = 'music'"
             >
-                <span class="tab-icon">🎵</span>
+                <AppIcon class="tab-icon" name="music" :size="20" />
                 {{ $t('library.tabs.music') }}
             </button>
             <button 
@@ -92,7 +93,7 @@
                 :class="{ active: activeTab === 'wrong_pictures' }"
                 @click="activeTab = 'wrong_pictures'"
             >
-                <span class="tab-icon">🖼️</span>
+                <AppIcon class="tab-icon" name="image" :size="20" />
                 {{ $t('library.tabs.wrong_pictures') }}
             </button>
         </div>
@@ -106,7 +107,7 @@
             <!-- Screensavers Tab Content -->
             <div v-else-if="activeTab === 'screensaver'" class="screensaver-view">
                 <div v-if="screensavers.length === 0" class="empty-state">
-                    <p class="empty-icon">🖼️</p>
+                    <AppIcon class="empty-icon" name="image" :size="48" />
                     <p class="empty-text">{{ $t('library.empty.no_screensavers') }}</p>
                     <p class="empty-hint">{{ $t('library.empty.screensaver_hint') }}</p>
                 </div>
@@ -121,7 +122,7 @@
                             <p class="screensaver-date">{{ $t('library.meta.added') }}: {{ formatDate(screensaver.createdAt) }}</p>
                         </div>
                         <div class="screensaver-actions">
-                            <button class="icon-btn delete-btn" @click="handleDeleteScreensaver(screensaver)" title="Delete">🗑️</button>
+                            <button class="icon-btn delete-btn" @click="handleDeleteScreensaver(screensaver)" title="Delete" aria-label="Delete screensaver"><AppIcon name="trash" :size="17" /></button>
                         </div>
                     </div>
                 </div>
@@ -130,14 +131,14 @@
             <!-- Music Tab Content -->
             <div v-else-if="activeTab === 'music'" class="music-view">
                 <div v-if="tracks.length === 0" class="empty-state">
-                    <p class="empty-icon">🎵</p>
+                    <AppIcon class="empty-icon" name="music" :size="48" />
                     <p class="empty-text">{{ $t('library.empty.no_music') }}</p>
                     <p class="empty-hint">{{ $t('library.empty.music_hint') }}</p>
                 </div>
 
                 <div v-else class="tracks-list">
                     <div v-for="track in tracks" :key="track.id" class="track-card">
-                        <div class="track-icon">🎵</div>
+                        <AppIcon class="track-icon" name="music" :size="24" />
                         <div class="track-info">
                             <h3 class="track-name">{{ track.name }}</h3>
                             <p class="track-date">{{ $t('library.meta.added') }}: {{ formatDate(track.createdAt) }}</p>
@@ -146,14 +147,14 @@
                             <audio controls :src="`${API_BASE_URL}${track.url}`" class="audio-player"></audio>
                         </div>
                         <div class="track-actions">
-                            <button class="icon-btn delete-btn" @click="handleDeleteTrack(track)" title="Delete">🗑️</button>
+                            <button class="icon-btn delete-btn" @click="handleDeleteTrack(track)" title="Delete" aria-label="Delete track"><AppIcon name="trash" :size="17" /></button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div v-else-if="filteredTemplates.length === 0" class="empty-state">
-                <p class="empty-icon">{{ activeTab === 'form' ? '📝' : '🎮' }}</p>
+                <AppIcon class="empty-icon" :name="activeTab === 'form' ? 'form' : 'quiz'" :size="48" />
                 <p class="empty-text">{{ $t('library.empty.no_templates', { type: activeTab }) }}</p>
             </div>
 
@@ -162,9 +163,9 @@
                 <div class="card-header">
                     <h3 class="template-name">{{ template.name }}</h3>
                     <div class="card-actions">
-                        <button class="icon-btn" @click="exportTemplate(template)" title="Export JSON">⬇</button>
-                        <button class="icon-btn edit-btn" @click="editTemplate(template)" title="Edit">✎</button>
-                        <button class="icon-btn delete-btn" @click="deleteTemplate(template)" title="Delete">🗑</button>
+                        <button class="icon-btn" @click="exportTemplate(template)" title="Export JSON" aria-label="Export JSON"><AppIcon name="download" :size="17" /></button>
+                        <button class="icon-btn edit-btn" @click="editTemplate(template)" title="Edit" aria-label="Edit template"><AppIcon name="edit" :size="17" /></button>
+                        <button class="icon-btn delete-btn" @click="deleteTemplate(template)" title="Delete" aria-label="Delete template"><AppIcon name="trash" :size="17" /></button>
                     </div>
                 </div>
                 <p class="template-desc">{{ template.description || $t('library.meta.no_desc') }}</p>
@@ -191,7 +192,7 @@
             <button class="save-btn" @click="saveTemplate" :disabled="saving">
               {{ saving ? $t('library.actions.saving_btn') : $t('library.actions.save_btn') }}
             </button>
-            <button class="close-btn" @click="closeEditor">✕</button>
+            <button class="close-btn" @click="closeEditor" aria-label="Close"><AppIcon name="close" :size="18" /></button>
           </div>
         </div>
         
@@ -249,6 +250,7 @@ import { useToast } from '../composables/useToast'
 import QuizEditor from '../components/QuizEditor.vue'
 import FormEditor from '../components/FormEditor.vue'
 import { getScreensavers, uploadScreensaver, deleteScreensaver, getTracks, uploadTrack, deleteTrack, getImageUrl } from '../services/media'
+import AppIcon from '../components/AppIcon.vue'
 
 const { t, locale } = useI18n()
 const router = useRouter()

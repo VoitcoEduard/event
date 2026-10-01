@@ -1,7 +1,7 @@
 <template>
   <div class="form-module">
     <div v-if="completed" class="completed-view">
-      <div class="success-icon">✓</div>
+      <AppIcon class="success-icon" name="check" :size="34" />
       <h2 class="completed-title">{{ $t('form_module.completed_title') }}</h2>
       <p class="completed-text">{{ $t('form_module.completed_text') }}</p>
       <p class="completed-sub">{{ $t('form_module.completed_sub') }}</p>
@@ -92,7 +92,7 @@
               @click="toggleCheckboxOption(currentStep.id, option.value)"
             >
               <div class="selection-indicator" :class="{ selected: isCheckboxSelected(currentStep.id, option.value) }">
-                <span v-if="isCheckboxSelected(currentStep.id, option.value)" class="checkbox-check">✓</span>
+                <AppIcon v-if="isCheckboxSelected(currentStep.id, option.value)" class="checkbox-check" name="check" :size="14" />
               </div>
               <span class="selection-text">{{ option.text }}</span>
             </div>
@@ -102,7 +102,7 @@
               @click="toggleCheckboxOption(currentStep.id, '__other__')"
             >
               <div class="selection-indicator" :class="{ selected: isCheckboxSelected(currentStep.id, '__other__') }">
-                <span v-if="isCheckboxSelected(currentStep.id, '__other__')" class="checkbox-check">✓</span>
+                <AppIcon v-if="isCheckboxSelected(currentStep.id, '__other__')" class="checkbox-check" name="check" :size="14" />
               </div>
               <span class="selection-text">{{ $t('form_module.other') }}</span>
             </div>
@@ -201,7 +201,7 @@
                 <p class="template-item-desc">{{ template.description }}</p>
               </div>
               <button class="delete-template-btn" @click.stop="deleteTemplate(template.id, template.name)">
-                🗑
+                <AppIcon name="trash" :size="16" />
               </button>
             </div>
             <p v-if="templates.length === 0" class="no-templates">
@@ -220,6 +220,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppIcon from './AppIcon.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 
@@ -451,7 +452,7 @@ const handleSubmit = async () => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1, #818cf8);
+  background: linear-gradient(90deg, var(--ops-blue), #2d8cff);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 0 2px 2px 0;
 }
@@ -531,7 +532,7 @@ const handleSubmit = async () => {
   width: 100%;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
-  caret-color: #6366f1;
+  caret-color: var(--ops-blue);
   font-family: 'Inter', sans-serif;
 }
 
@@ -542,7 +543,7 @@ const handleSubmit = async () => {
 }
 
 .field-input:focus {
-  border-color: #6366f1;
+  border-color: var(--ops-blue);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
@@ -574,7 +575,7 @@ const handleSubmit = async () => {
 
 /* selected state: full border highlight */
 .selection-option:has(.selection-indicator.selected) {
-  border-color: #6366f1;
+  border-color: var(--ops-blue);
   background: rgba(99, 102, 241, 0.05);
 }
 
@@ -592,8 +593,8 @@ const handleSubmit = async () => {
 }
 
 .selection-indicator.selected {
-  border-color: #6366f1;
-  background: #6366f1;
+  border-color: var(--ops-blue);
+  background: var(--ops-blue);
 }
 
 .selection-dot {
@@ -672,7 +673,7 @@ const handleSubmit = async () => {
   flex: 2;
   padding: 15px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, #2d8cff, #0a6cf5);
   border: none;
   color: #fff;
   font-size: 15px;
@@ -705,7 +706,7 @@ const handleSubmit = async () => {
   background: #1a1a2a;
   border: 1px solid #2a2a45;
   border-radius: 10px;
-  color: #818cf8;
+  color: #2d8cff;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -715,7 +716,7 @@ const handleSubmit = async () => {
 
 .template-button:hover {
   background: #1e1e35;
-  border-color: #6366f1;
+  border-color: var(--ops-blue);
 }
 
 /* ── Completed view ── */
@@ -733,7 +734,7 @@ const handleSubmit = async () => {
   width: 88px;
   height: 88px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, #2d8cff, #0a6cf5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -844,7 +845,7 @@ const handleSubmit = async () => {
 
 .template-item:hover {
   background: #111115;
-  border-color: #6366f1;
+  border-color: var(--ops-blue);
 }
 
 .template-item-name {

@@ -62,7 +62,7 @@
                <span>%</span>
              </div>
           </div>
-          <button class="remove-btn-small" @click.stop="removeTarget(target.id)">✕</button>
+          <button class="remove-btn-small" @click.stop="removeTarget(target.id)" aria-label="Remove target"><AppIcon name="close" :size="14" /></button>
         </div>
       </div>
     </div>
@@ -71,6 +71,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   imageId: {

@@ -1,6 +1,6 @@
 <template>
   <div class="teams-player-shell"><main class="teams-module teams-player">
-    <header class="teams-header"><div><button @click="router.push({ name: 'event', query: { eventId } })">← {{ $t('teams_module.back_event') }}</button><p class="teams-eyebrow">{{ $t('teams_module.offline_activity') }}</p><h1>{{ state?.name || $t('teams_module.teams') }}</h1><span v-if="state?.status" class="teams-status">{{ $t(`teams_module.${state.status}`) }}</span></div></header>
+    <header class="teams-header"><div><button @click="router.push({ name: 'event', query: { eventId } })"><AppIcon name="arrowLeft" :size="18" /> {{ $t('teams_module.back_event') }}</button><p class="teams-eyebrow">{{ $t('teams_module.offline_activity') }}</p><h1>{{ state?.name || $t('teams_module.teams') }}</h1><span v-if="state?.status" class="teams-status">{{ $t(`teams_module.${state.status}`) }}</span></div></header>
     <p v-if="loading" class="teams-notice">{{ $t('teams_module.loading') }}</p><p v-if="disconnected" class="teams-notice">{{ $t('teams_module.disconnected') }}</p><p v-if="message || error" role="alert" class="teams-error">{{ message || error }}</p>
     <p v-if="state && !state.initialized" class="teams-notice">{{ $t('teams_module.waiting_setup') }}</p>
     <form v-if="state?.initialized && !state.joined && state.status !== 'completed'" class="teams-panel" @submit.prevent="join"><h2>{{ $t('teams_module.enter') }}</h2><label>{{ $t('teams_module.your_name') }}<input v-model="name" required maxlength="120" autocomplete="given-name" /></label><button class="primary" :disabled="busy || !name.trim()">{{ $t('teams_module.enter') }}</button></form>
@@ -24,6 +24,7 @@ import { useTeamsActivity } from '../composables/useTeamsActivity'
 import { teamsActivity } from '../services/teamsActivity'
 import { teamAwardTracker } from '../utils/teamsActivity'
 import '../styles/teams-activity.css'
+import AppIcon from '../components/AppIcon.vue'
 const route = useRoute(), router = useRouter()
 const eventId = route.params.eventId, moduleId = route.params.moduleId
 const { state, loading, disconnected, error } = useTeamsActivity(eventId, moduleId)

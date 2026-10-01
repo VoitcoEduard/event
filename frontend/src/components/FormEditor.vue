@@ -2,14 +2,14 @@
   <div class="form-editor">
     <div class="scroll-content">
       <div v-if="localTimeline.length === 0" class="empty-state">
-        <p class="empty-icon">✏️</p>
+        <AppIcon class="empty-icon" name="edit" :size="42" />
         <p class="empty-text">{{ $t('form_editor.empty_text') }}</p>
       </div>
       <div v-else>
         <div v-for="(step, index) in localTimeline" :key="step.id" class="step-card">
           <div class="step-header" :class="{ 'field-step': step.type === 'field', 'message-step': step.type === 'message' }">
             <div class="step-title-container">
-              <span class="step-icon">{{ step.type === 'field' ? '❓' : '💬' }}</span>
+              <AppIcon class="step-icon" :name="step.type === 'field' ? 'question' : 'message'" :size="18" />
               <span class="step-index">{{ $t('form_module.step_counter', { current: index + 1, total: localTimeline.length }) }}</span>
               <span class="step-type-label">{{ step.type === 'field' ? $t('form_editor.question') : $t('form_editor.message') }}</span>
             </div>
@@ -19,17 +19,17 @@
                 @click="moveStep(index, 'up')"
                 :disabled="index === 0"
               >
-                ↑
+                <AppIcon name="chevronUp" :size="16" />
               </button>
               <button 
                 class="action-icon" 
                 @click="moveStep(index, 'down')"
                 :disabled="index === localTimeline.length - 1"
               >
-                ↓
+                <AppIcon name="chevronDown" :size="16" />
               </button>
               <button class="action-icon delete-btn" @click="removeStep(step.id)">
-                🗑
+                <AppIcon name="trash" :size="16" />
               </button>
             </div>
           </div>
@@ -85,7 +85,7 @@
                         @click="removeAnswer(step.id, answerIndex)"
                         :title="$t('form_editor.delete_question')"
                       >
-                        ✕
+                        <AppIcon name="close" :size="14" />
                       </button>
                     </div>
                   </div>
@@ -164,6 +164,7 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { extractLabel } from '../utils/labelExtractor'
+import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
 const props = defineProps({

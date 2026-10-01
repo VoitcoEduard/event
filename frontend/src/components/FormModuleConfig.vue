@@ -9,13 +9,13 @@
           </div>
           <div class="header-buttons">
             <button class="icon-button" @click="openTemplateModal" :title="$t('quiz_config.load_library')">
-              📥
+              <AppIcon name="download" :size="18" />
             </button>
             <button class="library-btn" @click="openSaveTemplateModal">
-               💾 {{ $t('quiz_config.save_template') }}
+               <AppIcon name="copy" :size="18" /> {{ $t('quiz_config.save_template') }}
             </button>
             <button class="close-button" @click="handleClose">
-              ✕
+              <AppIcon name="close" :size="18" />
             </button>
           </div>
         </div>
@@ -104,6 +104,7 @@ import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
 import FormEditor from './FormEditor.vue'
+import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
 const props = defineProps({

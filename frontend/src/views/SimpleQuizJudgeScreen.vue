@@ -47,14 +47,14 @@
         <button class="grade-later" @click="grade('review_later')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.review_later') }}</button>
       </div>
       <div class="judge-nav">
-        <button @click="step(-1)">←</button>
+        <button @click="step(-1)" aria-label="Previous"><AppIcon name="arrowLeft" :size="18" /></button>
         <span>{{ queueIndex + 1 }} / {{ queue.length }}</span>
-        <button @click="step(1)">→</button>
+        <button @click="step(1)" aria-label="Next"><AppIcon name="arrowRight" :size="18" /></button>
       </div>
       <p class="judge-hint">{{ $t('simple_quiz.judge.next_pending') }}</p>
     </div>
 
-    <p class="publish-hint">{{ $t('simple_quiz.judge.publish_hint') }} <span v-if="gradingComplete">✓</span></p>
+    <p class="publish-hint">{{ $t('simple_quiz.judge.publish_hint') }} <AppIcon v-if="gradingComplete" name="check" :size="16" /></p>
   </div>
 </template>
 
@@ -64,6 +64,7 @@ import { useRoute } from 'vue-router'
 import { simpleQuizApi } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import { quizWS } from '../services/websocket'
+import AppIcon from '../components/AppIcon.vue'
 
 const route = useRoute()
 const eventId = route.params.eventId

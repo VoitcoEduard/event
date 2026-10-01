@@ -2,7 +2,7 @@
   <div class="quiz-editor">
     <div class="scroll-content">
       <div v-if="questions.length === 0" class="empty-state">
-        <p class="empty-icon">🎮</p>
+        <AppIcon class="empty-icon" name="quiz" :size="42" />
         <p class="empty-text">{{ $t('quiz_editor.empty_text') }}</p>
       </div>
       
@@ -47,6 +47,7 @@
 import { ref } from 'vue'
 import QuizQuestionEditor from './QuizQuestionEditor.vue'
 import QuestionTypeSelector from './QuestionTypeSelector.vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   questions: { type: Array, default: () => [] },

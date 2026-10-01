@@ -74,7 +74,7 @@
         
         <div class="players-area">
           <div class="players-count">
-            <span>👥 {{ players.length }}</span> {{ $t('quiz.host.players') }}
+            <span><AppIcon name="teams" :size="18" /> {{ players.length }}</span> {{ $t('quiz.host.players') }}
           </div>
           <div class="players-grid">
             <div v-for="player in players" :key="player.id" class="player-chip">
@@ -168,7 +168,7 @@
             </div>
             <template v-else-if="isNumber">
               <div class="number-host-view">
-                <div class="nh-input-icon">🔢</div>
+                <div class="nh-input-icon"><AppIcon name="hash" :size="32" /></div>
                 <div class="nh-label">{{ $t('quiz.host.players_entering_number') }}</div>
               </div>
             </template>
@@ -180,7 +180,7 @@
                 :class="getAnswerColorClass(idx)"
                 v-show="!isTrueFalse || idx < 2"
               >
-                <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
+                <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" />
                 <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
               </div>
             </template>
@@ -209,7 +209,7 @@
               <div v-if="isAnswerCorrect(idx)" class="cp-hero-frame">
                 <div class="cp-hero-glow"></div>
                 <img :src="getImageUrl(option.imageId)" class="cp-hero-img" decoding="async" loading="eager" />
-                <div class="cp-hero-check">✓</div>
+                <div class="cp-hero-check"><AppIcon name="check" :size="24" /></div>
                 <div class="cp-hero-label">{{ currentQuestion.text }}</div>
               </div>
             </div>
@@ -303,7 +303,7 @@
             <div class="range-result-timeline">
               <!-- Big correct value badge -->
               <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
-                <span class="srt-check">✓</span>
+                <AppIcon class="srt-check" name="check" :size="18" />
                 <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</span>
               </div>
 
@@ -355,7 +355,7 @@
              <div class="number-result-card">
                 <div class="nr-label">{{ $t('quiz.host.correct_answer') }}</div>
                 <div class="nr-value">{{ currentQuestion?.correctNumber }}</div>
-                <div class="nr-check">✓</div>
+                <div class="nr-check"><AppIcon name="check" :size="20" /></div>
              </div>
           </div>
         </div>
@@ -385,7 +385,7 @@
                                 ></div>
                             </div>
                             <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
-                            <div class="dist-icon">{{ getShapeIcon(idx) }}</div>
+                            <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" />
                         </div>
                     </div>
                 </div>
@@ -408,9 +408,9 @@
                 ]"
                 v-show="!isTrueFalse || idx < 2"
               >
-                <div class="answer-icon">{{ getShapeIcon(idx) }}</div>
+                <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" />
                 <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
-                <div v-if="isAnswerCorrect(idx)" class="result-check-icon">✓</div>
+                <AppIcon v-if="isAnswerCorrect(idx)" class="result-check-icon" name="check" :size="18" />
               </div>
           </div>
         </div>
@@ -420,7 +420,7 @@
       <div v-else-if="gameState === 'leaderboard'" class="state-container leaderboard-container" :key="leaderboardAnimKey">
         <div class="lb-bg-glow"></div>
         <div class="lb-header">
-          <div class="lb-trophy">🏆</div>
+          <AppIcon class="lb-trophy" name="trophy" :size="54" />
           <h2 class="lb-title">{{ $t('quiz.host.leaderboard_title') }}</h2>
           <div class="lb-subtitle">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
@@ -433,9 +433,7 @@
             :style="{ animationDelay: ((topPlayers.length - 1 - idx) * 0.12) + 's' }"
           >
             <div class="lb-rank-badge" :class="'lb-badge-' + (idx + 1)">
-              <span v-if="idx === 0">🥇</span>
-              <span v-else-if="idx === 1">🥈</span>
-              <span v-else-if="idx === 2">🥉</span>
+              <AppIcon v-if="idx < 3" name="medal" :size="22" />
               <span v-else>{{ idx + 1 }}</span>
             </div>
             <div class="lb-player-name">{{ player.nickname }}</div>
@@ -464,7 +462,7 @@
         </div>
 
         <div class="final-header">
-          <div class="final-trophy">🏆</div>
+          <AppIcon class="final-trophy" name="trophy" :size="64" />
           <h1 class="final-title">{{ $t('quiz.host.quiz_complete') }}</h1>
           <p class="final-subtitle">{{ $t('quiz.host.final_standings') }}</p>
         </div>
@@ -472,20 +470,20 @@
         <!-- Top 3 Podium -->
         <div class="final-podium">
           <div class="final-podium-place fp-second" v-if="topPlayers[1]">
-            <div class="fp-avatar">🥈</div>
+            <AppIcon class="fp-avatar" name="medal" :size="32" />
             <div class="fp-name">{{ topPlayers[1].nickname }}</div>
             <div class="fp-score">{{ topPlayers[1].score.toLocaleString() }}</div>
             <div class="fp-block fp-block-2"><span>2</span></div>
           </div>
           <div class="final-podium-place fp-first" v-if="topPlayers[0]">
-            <div class="fp-crown">👑</div>
-            <div class="fp-avatar">🥇</div>
+            <AppIcon class="fp-crown" name="crown" :size="28" />
+            <AppIcon class="fp-avatar" name="medal" :size="32" />
             <div class="fp-name">{{ topPlayers[0].nickname }}</div>
             <div class="fp-score">{{ topPlayers[0].score.toLocaleString() }}</div>
             <div class="fp-block fp-block-1"><span>1</span></div>
           </div>
           <div class="final-podium-place fp-third" v-if="topPlayers[2]">
-            <div class="fp-avatar">🥉</div>
+            <AppIcon class="fp-avatar" name="medal" :size="32" />
             <div class="fp-name">{{ topPlayers[2].nickname }}</div>
             <div class="fp-score">{{ topPlayers[2].score.toLocaleString() }}</div>
             <div class="fp-block fp-block-3"><span>3</span></div>
@@ -530,6 +528,7 @@ import { preloader } from '../utils/imagePreload'
 import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
 import SimpleQuizProjector from '../components/SimpleQuizProjector.vue'
 import TeamsProjector from '../components/TeamsProjector.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { getOverviewSize } from '../utils/wrongPictureGeometry'
 
 const getScaledFontSize = (size) => {
@@ -847,9 +846,9 @@ const isBucketCorrect = (bucketIdx) => {
 
 const getShapeIcon = (idx) => {
   if (isTrueFalse.value) {
-    return idx === 0 ? '✔️' : '❌'
+    return idx === 0 ? 'check' : 'close'
   }
-  return ['▲', '◆', '●', '■'][idx]
+  return ['triangle', 'diamond', 'circle', 'square'][idx]
 }
 
 const getAnswerColorClass = (idx) => {

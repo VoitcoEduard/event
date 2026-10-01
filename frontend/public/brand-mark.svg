@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Event Operations</title>
+  <desc id="desc">Blue rounded square with a white event spark mark</desc>
+  <defs>
+    <linearGradient id="brand" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2D8CFF"/>
+      <stop offset="1" stop-color="#0A6CF5"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#brand)"/>
+  <path d="M33 10 18 34h12l-2 20 18-27H34l-1-17Z" fill="#fff"/>
+</svg>

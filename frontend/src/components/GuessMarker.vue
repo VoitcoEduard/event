@@ -13,14 +13,15 @@
   >
     <div class="marker-circle">
       <span class="marker-number" v-if="!isCorrect && isCorrect !== false">{{ markerNumber }}</span>
-      <span class="marker-icon" v-if="isCorrect === true">✓</span>
-      <span class="marker-icon" v-if="isCorrect === false">✕</span>
+      <AppIcon class="marker-icon" v-if="isCorrect === true" name="check" :size="16" />
+      <AppIcon class="marker-icon" v-if="isCorrect === false" name="close" :size="16" />
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   markerNumber: { type: Number, required: true },

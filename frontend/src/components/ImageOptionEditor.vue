@@ -35,7 +35,7 @@
             class="remove-btn"
             title="Remove option"
           >
-            ✕
+            <AppIcon name="close" :size="16" />
           </button>
         </div>
         
@@ -53,6 +53,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ImageUploader from './ImageUploader.vue'
+import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
 const props = defineProps({

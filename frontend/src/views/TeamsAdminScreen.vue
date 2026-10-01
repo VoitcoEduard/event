@@ -3,7 +3,7 @@
     <nav class="teams-admin-nav">
       <div class="teams-admin-nav-content">
         <div class="teams-admin-nav-left">
-          <button class="teams-admin-back" @click="router.push(`/admin/event/${eventId}`)">← {{ $t('teams_module.back_event') }}</button>
+          <button class="teams-admin-back" @click="router.push(`/admin/event/${eventId}`)"><AppIcon name="arrowLeft" :size="18" /> {{ $t('teams_module.back_event') }}</button>
           <div class="teams-admin-context">
             <span>{{ eventName }}</span>
             <strong>{{ $t('teams_module.teams') }}</strong>
@@ -28,6 +28,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { API_BASE_URL } from '../utils'
 import TeamsActivityAdmin from '../components/TeamsActivityAdmin.vue'
+import AppIcon from '../components/AppIcon.vue'
 const route = useRoute(), router = useRouter()
 const eventId = route.params.id || route.query.eventId
 const modules = ref([]), eventName = ref(''), error = ref(''), selectedId = ref(route.query.moduleId || '')
