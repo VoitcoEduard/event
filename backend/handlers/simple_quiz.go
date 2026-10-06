@@ -478,8 +478,8 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 
 // SubmitSimpleQuizAnswer stores one locked answer per player per question.
 func (h *Handler) SubmitSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) {
-	hub := h.simpleQuizHub()
-	if hub == nil {
+	qh := h.simpleQuizHub()
+	if qh == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -513,57 +513,25 @@ func (h *Handler) SubmitSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Answer exceeds 2000 characters", http.StatusBadRequest)
 		return
 	}
-	s := hub.GetSimpleQuiz(moduleID)
-	if s == nil {
+	id, code := qh.SubmitSimpleQuizAnswer(moduleID, body.PlayerID, body.Secret, body.AnswerID, body.QuestionIndex, text, time.Now())
+	switch code {
+	case hub.SimpleQuizSubmitNoSession:
 		http.Error(w, "No session", http.StatusNotFound)
-		return
-	}
-	p, ok := s.Players[body.PlayerID]
-	if !ok || p.Secret != body.Secret {
+	case hub.SimpleQuizSubmitUnknownPlayer:
 		http.Error(w, "Unknown player", http.StatusForbidden)
-		return
-	}
-	// Idempotent retry with same answerId.
-	for _, a := range s.Answers {
-		if a.ID == body.AnswerID {
-			writeJSON(w, map[string]any{"answerId": a.ID, "duplicate": true})
-			return
-		}
-	}
-	if s.Status != models.SimpleQuizStateQuestionOpen {
+	case hub.SimpleQuizSubmitDuplicate:
+		writeJSON(w, map[string]any{"answerId": id, "duplicate": true})
+	case hub.SimpleQuizSubmitClosed:
 		http.Error(w, "Submissions are closed", http.StatusConflict)
-		return
-	}
-	if body.QuestionIndex != s.CurrentIndex {
+	case hub.SimpleQuizSubmitWrongQuestion:
 		http.Error(w, "Wrong question is active", http.StatusConflict)
-		return
-	}
-	if s.DeadlineUnix > 0 && time.Now().Unix() > s.DeadlineUnix {
+	case hub.SimpleQuizSubmitDeadline:
 		http.Error(w, "Deadline has passed", http.StatusConflict)
-		return
-	}
-	for _, a := range s.Answers {
-		if a.PlayerID == body.PlayerID && a.QuestionIndex == body.QuestionIndex {
-			writeJSON(w, map[string]any{"answerId": a.ID, "duplicate": true})
-			return
-		}
-	}
-	if body.QuestionIndex < 0 || body.QuestionIndex >= len(s.Questions) {
+	case hub.SimpleQuizSubmitInvalid:
 		http.Error(w, "Invalid question", http.StatusBadRequest)
-		return
+	default:
+		writeJSON(w, map[string]any{"answerId": id})
 	}
-	ans := models.SimpleQuizAnswer{
-		ID:            body.AnswerID,
-		PlayerID:      body.PlayerID,
-		QuestionIndex: body.QuestionIndex,
-		QuestionID:    s.Questions[body.QuestionIndex].ID,
-		Text:          text,
-		CreatedAt:     time.Now(),
-	}
-	hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
-		sess.Answers = append(sess.Answers, ans)
-	})
-	writeJSON(w, map[string]any{"answerId": ans.ID})
 }
 
 // GetSimpleQuizState returns role-filtered state (never leaks notes/grades/secrets).

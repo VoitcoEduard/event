@@ -85,6 +85,87 @@ func (h *QuizHub) ArmSimpleQuizTimer(moduleID string, deadlineUnix int64) {
 	h.scheduleSimpleQuizAutoLock(moduleID, deadlineUnix)
 }
 
+// SimpleQuiz submit outcomes for SubmitSimpleQuizAnswer.
+const (
+	SimpleQuizSubmitOK            = "ok"
+	SimpleQuizSubmitNoSession     = "no_session"
+	SimpleQuizSubmitUnknownPlayer = "unknown_player"
+	SimpleQuizSubmitDuplicate     = "duplicate"
+	SimpleQuizSubmitClosed        = "closed"
+	SimpleQuizSubmitWrongQuestion = "wrong_question"
+	SimpleQuizSubmitDeadline      = "deadline"
+	SimpleQuizSubmitInvalid       = "invalid_question"
+)
+
+// SubmitSimpleQuizAnswer validates and appends one answer atomically.
+// Check-then-append runs under a single hub lock so concurrent requests with
+// the same answerId (idempotency key) or the same player+question cannot
+// both pass duplicate checks and both be stored.
+// Returns the answerId to report to the caller plus an outcome code.
+// On "duplicate" the returned id is the already-stored answer's id.
+func (h *QuizHub) SubmitSimpleQuizAnswer(moduleID, playerID, secret, answerID string, questionIndex int, text string, now time.Time) (string, string) {
+	if now.IsZero() {
+		now = time.Now()
+	}
+	h.mu.Lock()
+	s, ok := h.simpleQuizSessions[moduleID]
+	if !ok {
+		h.mu.Unlock()
+		return "", SimpleQuizSubmitNoSession
+	}
+	p, ok := s.Players[playerID]
+	if !ok || p.Secret != secret {
+		h.mu.Unlock()
+		return "", SimpleQuizSubmitUnknownPlayer
+	}
+	// Idempotent retry with same answerId.
+	for _, a := range s.Answers {
+		if a.ID == answerID {
+			existing := a.ID
+			h.mu.Unlock()
+			return existing, SimpleQuizSubmitDuplicate
+		}
+	}
+	if s.Status != models.SimpleQuizStateQuestionOpen {
+		h.mu.Unlock()
+		return "", SimpleQuizSubmitClosed
+	}
+	if questionIndex != s.CurrentIndex {
+		h.mu.Unlock()
+		return "", SimpleQuizSubmitWrongQuestion
+	}
+	if s.DeadlineUnix > 0 && now.Unix() > s.DeadlineUnix {
+		h.mu.Unlock()
+		return "", SimpleQuizSubmitDeadline
+	}
+	for _, a := range s.Answers {
+		if a.PlayerID == playerID && a.QuestionIndex == questionIndex {
+			existing := a.ID
+			h.mu.Unlock()
+			return existing, SimpleQuizSubmitDuplicate
+		}
+	}
+	if questionIndex < 0 || questionIndex >= len(s.Questions) {
+		h.mu.Unlock()
+		return "", SimpleQuizSubmitInvalid
+	}
+	ans := models.SimpleQuizAnswer{
+		ID:            answerID,
+		PlayerID:      playerID,
+		QuestionIndex: questionIndex,
+		QuestionID:    s.Questions[questionIndex].ID,
+		Text:          text,
+		CreatedAt:     now,
+	}
+	s.Answers = append(s.Answers, ans)
+	h.mu.Unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	h.persistSimpleQuiz(ctx, s)
+	h.BroadcastSimpleQuiz(moduleID)
+	return ans.ID, SimpleQuizSubmitOK
+}
+
 // GenerateJudgeTokenForModule rotates the secret judge token in Module.Data.
 func (h *QuizHub) GenerateJudgeTokenForModule(ctx context.Context, eventID, moduleID string) string {
 	if db.Client == nil {
