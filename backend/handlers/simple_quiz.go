@@ -412,8 +412,8 @@ func (h *Handler) ResetSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 
 // JoinSimpleQuiz registers a nickname and returns a private reconnect identity.
 func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
-	hub := h.simpleQuizHub()
-	if hub == nil {
+	qh := h.simpleQuizHub()
+	if qh == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -431,49 +431,25 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Nickname required (max 40 chars)", http.StatusBadRequest)
 		return
 	}
-	s := hub.GetSimpleQuiz(moduleID)
-	if s == nil {
-		http.Error(w, "Quiz is not launched yet", http.StatusNotFound)
-		return
-	}
-	if s.Status != models.SimpleQuizStateLobby &&
-		s.Status != models.SimpleQuizStateQuestionOpen &&
-		s.Status != models.SimpleQuizStateAnswersLocked &&
-		s.Status != models.SimpleQuizStateBetweenQuestions {
-		http.Error(w, "Joining is closed", http.StatusConflict)
-		return
-	}
-	// Reconnect with secret.
-	if body.Secret != "" {
-		for _, p := range s.Players {
-			if p.Secret == body.Secret && strings.EqualFold(p.Nickname, nick) {
-				hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
-					sess.Players[p.ID].Connected = true
-				})
-				writeJSON(w, map[string]any{"playerId": p.ID, "secret": p.Secret, "nickname": p.Nickname, "reconnected": true})
-				return
-			}
-		}
-	}
-	lower := strings.ToLower(nick)
-	for _, p := range s.Players {
-		if strings.ToLower(p.Nickname) == lower {
-			http.Error(w, "Nickname is already taken", http.StatusConflict)
-			return
-		}
-	}
 	id := "sq_" + randHex(8)
 	secret := randHex(16)
-	now := time.Now()
-	hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
-		if sess.Players == nil {
-			sess.Players = make(map[string]*models.SimpleQuizPlayer)
-		}
-		sess.Players[id] = &models.SimpleQuizPlayer{
-			ID: id, Nickname: nick, Secret: secret, JoinedAt: now, Connected: true,
-		}
-	})
-	writeJSON(w, map[string]any{"playerId": id, "secret": secret, "nickname": nick})
+	player, reconnected, code := qh.JoinSimpleQuiz(moduleID, nick, body.Secret, id, secret, time.Now())
+	switch code {
+	case hub.SimpleQuizJoinNoSession:
+		http.Error(w, "Quiz is not launched yet", http.StatusNotFound)
+		return
+	case hub.SimpleQuizJoinClosed:
+		http.Error(w, "Joining is closed", http.StatusConflict)
+		return
+	case hub.SimpleQuizJoinTaken:
+		http.Error(w, "Nickname is already taken", http.StatusConflict)
+		return
+	}
+	if reconnected {
+		writeJSON(w, map[string]any{"playerId": player.ID, "secret": player.Secret, "nickname": player.Nickname, "reconnected": true})
+		return
+	}
+	writeJSON(w, map[string]any{"playerId": player.ID, "secret": player.Secret, "nickname": player.Nickname})
 }
 
 // SubmitSimpleQuizAnswer stores one locked answer per player per question.

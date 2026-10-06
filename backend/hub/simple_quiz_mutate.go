@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/user/go-expo-sample/backend/db"
@@ -164,6 +165,96 @@ func (h *QuizHub) SubmitSimpleQuizAnswer(moduleID, playerID, secret, answerID st
 	h.persistSimpleQuiz(ctx, s)
 	h.BroadcastSimpleQuiz(moduleID)
 	return ans.ID, SimpleQuizSubmitOK
+}
+
+// SimpleQuiz join outcomes for JoinSimpleQuiz.
+const (
+	SimpleQuizJoinOK        = "ok"
+	SimpleQuizJoinNoSession = "no_session"
+	SimpleQuizJoinClosed    = "closed"
+	SimpleQuizJoinTaken     = "taken"
+)
+
+// JoinSimpleQuiz performs reconnect-or-join atomically under a single hub
+// lock, so concurrent joins with the same nickname cannot both pass the
+// uniqueness check and both be stored. The nickname comparison is
+// case-insensitive.
+//
+// nick must already be trimmed. providedSecret is the client-supplied
+// reconnect secret (may be ""). newID/newSecret are the pre-generated
+// identity for the fresh-join case; they are only consumed when a new player
+// is actually inserted. Returns a copy of the joined player, whether it was
+// a reconnect, and an outcome code.
+func (h *QuizHub) JoinSimpleQuiz(moduleID, nick, providedSecret, newID, newSecret string, now time.Time) (models.SimpleQuizPlayer, bool, string) {
+	if now.IsZero() {
+		now = time.Now()
+	}
+	// Restore from DB on cold hub (same fallback as GetSimpleQuiz), keeping
+	// the blocking DB read outside the hub lock.
+	h.mu.RLock()
+	_, ok := h.simpleQuizSessions[moduleID]
+	h.mu.RUnlock()
+	if !ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		restored := h.loadSimpleQuizFromDB(ctx, moduleID)
+		cancel()
+		if restored == nil {
+			return models.SimpleQuizPlayer{}, false, SimpleQuizJoinNoSession
+		}
+		h.mu.Lock()
+		if _, dup := h.simpleQuizSessions[moduleID]; !dup {
+			h.simpleQuizSessions[moduleID] = restored
+		}
+		h.mu.Unlock()
+	}
+
+	h.mu.Lock()
+	s, ok := h.simpleQuizSessions[moduleID]
+	if !ok {
+		h.mu.Unlock()
+		return models.SimpleQuizPlayer{}, false, SimpleQuizJoinNoSession
+	}
+	if s.Status != models.SimpleQuizStateLobby &&
+		s.Status != models.SimpleQuizStateQuestionOpen &&
+		s.Status != models.SimpleQuizStateAnswersLocked &&
+		s.Status != models.SimpleQuizStateBetweenQuestions {
+		h.mu.Unlock()
+		return models.SimpleQuizPlayer{}, false, SimpleQuizJoinClosed
+	}
+	// Reconnect with secret.
+	if providedSecret != "" {
+		for _, p := range s.Players {
+			if p.Secret == providedSecret && strings.EqualFold(p.Nickname, nick) {
+				p.Connected = true
+				out := *p
+				h.mu.Unlock()
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				h.persistSimpleQuiz(ctx, s)
+				cancel()
+				h.BroadcastSimpleQuiz(moduleID)
+				return out, true, SimpleQuizJoinOK
+			}
+		}
+	}
+	for _, p := range s.Players {
+		if strings.EqualFold(p.Nickname, nick) {
+			h.mu.Unlock()
+			return models.SimpleQuizPlayer{}, false, SimpleQuizJoinTaken
+		}
+	}
+	if s.Players == nil {
+		s.Players = make(map[string]*models.SimpleQuizPlayer)
+	}
+	s.Players[newID] = &models.SimpleQuizPlayer{
+		ID: newID, Nickname: nick, Secret: newSecret, JoinedAt: now, Connected: true,
+	}
+	out := *s.Players[newID]
+	h.mu.Unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	h.persistSimpleQuiz(ctx, s)
+	h.BroadcastSimpleQuiz(moduleID)
+	return out, false, SimpleQuizJoinOK
 }
 
 // GenerateJudgeTokenForModule rotates the secret judge token in Module.Data.
