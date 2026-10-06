@@ -132,6 +132,7 @@ func TestStaleQuestionSignalRejected(t *testing.T) {
 		t.Fatalf("stale-question signal recorded = %d, want 0", len(h.sessions["m1"].PlayerSignals))
 	}
 }
+
 // A8: a missing TimeLimit must yield the same 20s window every client shows,
 // not a 0-second window that rejects every answer.
 func TestEffectiveTimeLimitDefault(t *testing.T) {
@@ -193,20 +194,50 @@ func TestReproNegativeQuestionIndexPanics(t *testing.T) {
 	}
 }
 
-// Bug 6: host:next_question past the last question panics on
-// session.Questions[session.CurrentIndex].
+// Bug 6 (FIXED): host:next_question past the last question used to panic on
+// session.Questions[session.CurrentIndex]. The advance is now ignored so a
+// double-click or racing client can never index out of range.
 func TestReproNextQuestionPastEndPanics(t *testing.T) {
-	h, c := newSignalHub(t)
-	c.IsHost = true
-	h.mu.Lock()
-	h.sessions["m1"].CurrentIndex = len(h.sessions["m1"].Questions) // == len
-	h.mu.Unlock()
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic when advancing past the last question")
+	// Two ways to reach the end: "next" clicked on the last question
+	// (double-click / race) and "next" arriving when already past the end.
+	for _, tc := range []struct {
+		name          string
+		offsetFromEnd int // 0: on the last question, 1: already past the end
+	}{
+		{name: "on last question", offsetFromEnd: 0},
+		{name: "already past end", offsetFromEnd: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, c := newSignalHub(t)
+			c.IsHost = true
+			h.mu.Lock()
+			defer h.mu.Unlock()
+			s := h.sessions["m1"]
+			s.CurrentIndex = len(s.Questions) - 1 + tc.offsetFromEnd
+			start := s.CurrentIndex
+			h.processHostNextQuestion(c, ClientMessage{})
+			if s.CurrentIndex != start {
+				t.Fatalf("next_question past the end moved CurrentIndex %d -> %d, want no change", start, s.CurrentIndex)
+			}
+			if s.State != "question-active" {
+				t.Fatalf("next_question past the end changed state to %q", s.State)
+			}
+		})
+	}
+
+	// Session auto-created by host:join: Questions is nil, so even the first
+	// "next" must be ignored instead of indexing a nil slice.
+	t.Run("unstarted session", func(t *testing.T) {
+		h := NewQuizHub(Dependencies{})
+		h.CreateSession("m1", "e1")
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		s := h.sessions["m1"]
+		h.processHostNextQuestion(&Client{ModuleID: "m1", IsHost: true}, ClientMessage{})
+		if s.State != "lobby" {
+			t.Fatalf("next_question on unstarted session changed state to %q", s.State)
 		}
-	}()
-	h.processHostNextQuestion(c, ClientMessage{})
+	})
 }
 
 // Bug 7: too-late answers are still recorded in PlayerSignals, which is what

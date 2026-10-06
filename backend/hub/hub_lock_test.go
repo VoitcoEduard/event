@@ -93,6 +93,22 @@ func TestParticipantJoinLoadsTeamsAndBroadcastsWithoutDeadlock(t *testing.T) {
 	assertMessageType(t, admin.send, "participant:joined")
 }
 
+// A panic inside a message handler must not crash the server (readPump runs
+// ProcessMessage in a bare goroutine) and must not leave the hub lock held.
+func TestProcessMessageRecoversFromHandlerPanic(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.mu.Lock()
+	// Partially-initialized session: Players is nil, so player:join panics on
+	// map assignment — the class of runtime bug recovery must contain.
+	h.sessions["module-1"] = &models.QuizSession{ModuleID: "module-1", State: "lobby"}
+	h.mu.Unlock()
+
+	player := &Client{send: make(chan []byte, 1)}
+	h.ProcessMessage(player, []byte(`{"type":"player:join","payload":{"moduleId":"module-1","userId":"user-1","nickname":"Alex"}}`))
+
+	assertHubUnlocked(t, h)
+}
+
 func assertMessageType(t *testing.T, messages <-chan []byte, want string) {
 	t.Helper()
 	select {

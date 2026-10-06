@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -213,6 +214,13 @@ func (h *QuizHub) BroadcastToSession(moduleID string, message interface{}) {
 // ProcessMessage handles incoming WebSocket messages
 func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 	var msg ClientMessage
+	// readPump runs this in a bare goroutine, so an unrecovered panic here would
+	// terminate the whole server process. Contain handler bugs to a single message.
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("recovered panic in hub handler %q: %v\n%s", msg.Type, r, debug.Stack())
+		}
+	}()
 	if err := json.Unmarshal(message, &msg); err != nil {
 		log.Println("Error unmarshalling message:", err)
 		return

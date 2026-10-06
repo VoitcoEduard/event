@@ -128,12 +128,18 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 
 		// Auto-transition to question-active after explainTime seconds
 		go func(modID string, idx int, delay int) {
+			// Detached goroutine: contain panics so a timer bug cannot kill the server.
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("panic in question-timer for module %s: %v", modID, r)
+				}
+			}()
 			time.Sleep(time.Duration(delay) * time.Second)
 			h.mu.Lock()
 			defer h.mu.Unlock()
 
 			sess := h.sessions[modID]
-			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" {
+			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" && idx < len(sess.Questions) {
 				sess.State = "question-active"
 				sess.StartTime = time.Now().Unix()
 
@@ -181,6 +187,15 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		// Advancing past the final question is invalid — the host UI only sends
+		// next_question while another question remains (it sends end/leaderboard
+		// actions past the last one). A double-click, a racing client, or a
+		// session that was never started must be ignored, never index out of range.
+		if session.CurrentIndex+1 >= len(session.Questions) {
+			DebugLog("host:next_question ignored for module %s: already on question %d of %d",
+				client.ModuleID, session.CurrentIndex+1, len(session.Questions))
+			return
+		}
 		// session.State = "question-active" // Will be set after delay
 		session.CurrentIndex++
 		session.AnswerCounts = make(map[int]int)
@@ -188,17 +203,15 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 		session.StartTime = time.Now().Unix()
 
 		// Create question window for new question
-		if session.CurrentIndex < len(session.Questions) {
-			limit := EffectiveTimeLimit(session.Questions[session.CurrentIndex])
-			qWindow := models.QuestionWindow{
-				QuestionIndex: int64(session.CurrentIndex),
-				StartTime:     session.StartTime,
-				EndTime:       session.StartTime + limit,
-				GraceEndTime:  session.StartTime + limit + GracePeriodSeconds,
-				State:         "active",
-			}
-			session.QuestionWindows = append(session.QuestionWindows, qWindow)
+		limit := EffectiveTimeLimit(session.Questions[session.CurrentIndex])
+		qWindow := models.QuestionWindow{
+			QuestionIndex: int64(session.CurrentIndex),
+			StartTime:     session.StartTime,
+			EndTime:       session.StartTime + limit,
+			GraceEndTime:  session.StartTime + limit + GracePeriodSeconds,
+			State:         "active",
 		}
+		session.QuestionWindows = append(session.QuestionWindows, qWindow)
 
 		// Notify state change - send 'question-presenting' first
 		session.State = "question-presenting"
@@ -213,12 +226,18 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 
 		// Auto-transition to question-active after explainTime seconds
 		go func(modID string, idx int, delay int) {
+			// Detached goroutine: contain panics so a timer bug cannot kill the server.
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("panic in question-timer for module %s: %v", modID, r)
+				}
+			}()
 			time.Sleep(time.Duration(delay) * time.Second)
 			h.mu.Lock()
 			defer h.mu.Unlock()
 
 			sess := h.sessions[modID]
-			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" {
+			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" && idx < len(sess.Questions) {
 				sess.State = "question-active"
 				sess.StartTime = time.Now().Unix()
 
