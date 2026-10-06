@@ -291,6 +291,22 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 	}
 }
 
+// sendToClientLocked delivers msg to one client without blocking.
+// Callers must hold h.mu. A client whose buffer is full is evicted, exactly
+// like the broadcast helpers, and false is returned so the caller stops
+// touching the evicted client. A blocking send here would stall every session
+// because ProcessMessage holds the hub-wide lock.
+func (h *QuizHub) sendToClientLocked(client *Client, msg []byte) bool {
+	select {
+	case client.send <- msg:
+		return true
+	default:
+		close(client.send)
+		delete(h.clients, client)
+		return false
+	}
+}
+
 // Internal helper that assumes Lock is held
 func (h *QuizHub) broadcastToSessionLocked(moduleID string, message interface{}) {
 	jsonMsg, err := json.Marshal(message)

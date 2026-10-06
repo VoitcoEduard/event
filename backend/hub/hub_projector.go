@@ -42,14 +42,18 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 				"currentIndex": h.sessions[moduleID].CurrentIndex,
 			},
 		})
-		client.send <- jsonMsg
+		if !h.sendToClientLocked(client, jsonMsg) {
+			return
+		}
 
 		// Also send full session data via state:update (for player list)
 		jsonMsg2, _ := json.Marshal(ServerMessage{
 			Type:    "state:update",
 			Payload: h.sessions[moduleID],
 		})
-		client.send <- jsonMsg2
+		if !h.sendToClientLocked(client, jsonMsg2) {
+			return
+		}
 
 		// Send data:batch with questions to projector
 		if len(h.sessions[moduleID].Batches) > 0 {
@@ -57,7 +61,9 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 				Type:    "data:batch",
 				Payload: h.sessions[moduleID].Batches[0],
 			})
-			client.send <- jsonMsg3
+			if !h.sendToClientLocked(client, jsonMsg3) {
+				return
+			}
 			DebugLog("projector:join: Sent data:batch to projector for module: %s", moduleID)
 		}
 

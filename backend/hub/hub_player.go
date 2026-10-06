@@ -292,10 +292,10 @@ func (h *QuizHub) processPlayerBatchRequest(client *Client, msg ClientMessage) {
 	session := h.sessions[client.ModuleID]
 	if session != nil && currentBatchIndex >= 0 && currentBatchIndex < len(session.Batches) {
 		// Send the requested batch.
-		client.send <- mustMarshal(ServerMessage{
+		h.sendToClientLocked(client, mustMarshal(ServerMessage{
 			Type:    "data:batch",
 			Payload: session.Batches[currentBatchIndex],
-		})
+		}))
 	}
 }
 
@@ -318,10 +318,10 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 
 	session := h.sessions[moduleID]
 	if session == nil {
-		client.send <- mustMarshal(ServerMessage{
+		h.sendToClientLocked(client, mustMarshal(ServerMessage{
 			Type:    "sync:quiz_ended",
 			Payload: map[string]interface{}{"reason": "quiz_not_found"},
-		})
+		}))
 		return
 	}
 	player := session.Players[client.PlayerID]
@@ -370,7 +370,7 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 	isActive := len(missedQuestions) <= 5
 
 	// Send catch-up response
-	client.send <- mustMarshal(ServerMessage{
+	h.sendToClientLocked(client, mustMarshal(ServerMessage{
 		Type: "sync:catchup",
 		Payload: map[string]interface{}{
 			"currentState":         session.State,
@@ -380,5 +380,5 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 			"isActive":             isActive,
 			"batchesNeeded":        batchesNeeded,
 		},
-	})
+	}))
 }

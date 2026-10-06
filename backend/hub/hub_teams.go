@@ -26,7 +26,7 @@ func (h *QuizHub) processTeamsAdminJoin(client *Client, msg ClientMessage) {
 		Type:    "teams:admin_joined",
 		Payload: map[string]interface{}{"eventId": eventID, "status": "connected"},
 	})
-	client.send <- jsonMsg
+	h.sendToClientLocked(client, jsonMsg)
 }
 
 func (h *QuizHub) processHostEndTeams(client *Client, msg ClientMessage) {
@@ -93,7 +93,9 @@ func (h *QuizHub) processParticipantJoin(client *Client, msg ClientMessage) {
 			Type:    "teams:available",
 			Payload: map[string]interface{}{"eventId": eventID, "teams": teamsAvailable},
 		})
-		client.send <- jsonMsg
+		// The admin broadcast below skips evicted clients, so the join is
+		// still announced even when this client is too stalled to inform.
+		h.sendToClientLocked(client, jsonMsg)
 	}
 
 	if userID != "" && displayName != "" {

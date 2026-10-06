@@ -46,14 +46,18 @@ func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 			"currentIndex": h.sessions[moduleID].CurrentIndex,
 		},
 	})
-	client.send <- jsonMsg
+	if !h.sendToClientLocked(client, jsonMsg) {
+		return
+	}
 
 	// Also send full session data via state:update (for player list)
 	jsonMsg2, _ := json.Marshal(ServerMessage{
 		Type:    "state:update",
 		Payload: h.sessions[moduleID],
 	})
-	client.send <- jsonMsg2
+	if !h.sendToClientLocked(client, jsonMsg2) {
+		return
+	}
 	DebugLog("host:join: Sent state:update to host for module: %s", moduleID)
 }
 

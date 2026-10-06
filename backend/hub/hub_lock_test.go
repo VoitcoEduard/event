@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/user/go-expo-sample/backend/models"
 )
@@ -107,6 +108,46 @@ func TestProcessMessageRecoversFromHandlerPanic(t *testing.T) {
 	h.ProcessMessage(player, []byte(`{"type":"player:join","payload":{"moduleId":"module-1","userId":"user-1","nickname":"Alex"}}`))
 
 	assertHubUnlocked(t, h)
+}
+
+// A join greeting to a client whose send buffer is full must not block while
+// holding the hub lock: the stalled client is evicted and the hub stays usable.
+func TestJoinToStalledClientDoesNotHoldHubLock(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	victim := &Client{send: make(chan []byte, 1)}
+	victim.send <- []byte(`full`)
+	h.Register(victim)
+	healthy := &Client{ModuleID: "module-1", send: make(chan []byte, 4)}
+	h.Register(healthy)
+
+	done := make(chan struct{})
+	go func() {
+		// Mirrors ProcessMessage, which holds h.mu across the join handlers.
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		defer close(done)
+		h.processHostJoin(victim, ClientMessage{Payload: map[string]any{"moduleId": "module-1"}})
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("hub stalled: join greeting to a client with a full buffer blocked while holding h.mu")
+	}
+	assertHubUnlocked(t, h)
+
+	h.mu.RLock()
+	_, victimKept := h.clients[victim]
+	_, healthyKept := h.clients[healthy]
+	h.mu.RUnlock()
+	if victimKept {
+		t.Fatal("stalled client was not evicted from the hub")
+	}
+	if !healthyKept {
+		t.Fatal("healthy client was dropped from the hub")
+	}
+
+	h.BroadcastToSession("module-1", ServerMessage{Type: "ping"})
+	assertMessageType(t, healthy.send, "ping")
 }
 
 func assertMessageType(t *testing.T, messages <-chan []byte, want string) {
