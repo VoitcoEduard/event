@@ -49,7 +49,34 @@ func (r *EventSessionRepository) GetByEventID(ctx context.Context, eventID strin
 
 func (r *EventSessionRepository) Update(ctx context.Context, session *models.EventSession) error {
 	filter := bson.M{"_id": session.ID}
-	update := bson.M{"$set": session}
+	update := bson.M{"$set": buildEventSessionUpdate(session)}
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
+}
+
+// buildEventSessionUpdate returns only mutable fields for $set.
+// It intentionally excludes immutable identity fields (_id, eventId,
+// createdAt) and omits nil pointers/slices so a partial input cannot
+// null out previously stored StartedAt, EndedAt, ModuleOrder, etc.
+func buildEventSessionUpdate(session *models.EventSession) bson.M {
+	set := bson.M{
+		"status":    session.Status,
+		"updatedAt": session.UpdatedAt,
+	}
+	if session.ActiveModuleID != "" {
+		set["activeModuleId"] = session.ActiveModuleID
+	}
+	if session.ModuleOrder != nil {
+		set["moduleOrder"] = session.ModuleOrder
+	}
+	if session.ModuleStates != nil {
+		set["moduleStates"] = session.ModuleStates
+	}
+	if session.StartedAt != nil {
+		set["startedAt"] = session.StartedAt
+	}
+	if session.EndedAt != nil {
+		set["endedAt"] = session.EndedAt
+	}
+	return set
 }
