@@ -20,7 +20,7 @@ import (
 // =============================================================================
 
 type MockEventSessionRepository struct {
-	mu sync.Mutex
+	mu                  sync.Mutex
 	CreateFunc          func(ctx context.Context, session *models.EventSession) error
 	GetByIDFunc         func(ctx context.Context, id string) (*models.EventSession, error)
 	GetByEventIDFunc    func(ctx context.Context, eventID string) ([]models.EventSession, error)

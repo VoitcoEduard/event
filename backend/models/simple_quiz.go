@@ -101,24 +101,24 @@ type SimpleQuizPublishedSnapshot struct {
 // SimpleQuizSession is the live session. Persisted in simple_quiz_sessions,
 // cached in-memory in the hub. Questions is the launch-time snapshot.
 type SimpleQuizSession struct {
-	EventID       string                       `json:"eventId" bson:"eventId"`
-	ModuleID      string                       `json:"moduleId" bson:"moduleId"`
-	Title         string                       `json:"title,omitempty" bson:"title,omitempty"`
-	Status        string                       `json:"status" bson:"status"`
-	CurrentIndex  int                          `json:"currentIndex" bson:"currentIndex"`
-	Questions     []SimpleQuizQuestionSnapshot `json:"questions" bson:"questions"`
-	Players       map[string]*SimpleQuizPlayer `json:"players" bson:"players"`
-	Answers       []SimpleQuizAnswer           `json:"answers" bson:"answers"`
-	Grades        map[string]*SimpleQuizGrade  `json:"grades" bson:"grades"`
-	Revealed      map[int]bool                 `json:"revealed" bson:"revealed"` // questionIndex -> revealed
-	Published     *SimpleQuizPublishedSnapshot `json:"published,omitempty" bson:"published,omitempty"`
-	PublishedVer  int                          `json:"publishedVersion" bson:"publishedVersion"`
-	AllowReveal   bool                         `json:"allowReveal" bson:"allowReveal"`
-	DeadlineUnix  int64                        `json:"deadlineUnix,omitempty" bson:"deadlineUnix,omitempty"` // 0 = no limit
-	QuestionOpenedAt time.Time                 `json:"questionOpenedAt,omitempty" bson:"questionOpenedAt,omitempty"`
-	PausedFrom    string                       `json:"pausedFrom,omitempty" bson:"pausedFrom,omitempty"`
-	CreatedAt     time.Time                    `json:"createdAt" bson:"createdAt"`
-	UpdatedAt     time.Time                    `json:"updatedAt" bson:"updatedAt"`
+	EventID          string                       `json:"eventId" bson:"eventId"`
+	ModuleID         string                       `json:"moduleId" bson:"moduleId"`
+	Title            string                       `json:"title,omitempty" bson:"title,omitempty"`
+	Status           string                       `json:"status" bson:"status"`
+	CurrentIndex     int                          `json:"currentIndex" bson:"currentIndex"`
+	Questions        []SimpleQuizQuestionSnapshot `json:"questions" bson:"questions"`
+	Players          map[string]*SimpleQuizPlayer `json:"players" bson:"players"`
+	Answers          []SimpleQuizAnswer           `json:"answers" bson:"answers"`
+	Grades           map[string]*SimpleQuizGrade  `json:"grades" bson:"grades"`
+	Revealed         map[int]bool                 `json:"revealed" bson:"revealed"` // questionIndex -> revealed
+	Published        *SimpleQuizPublishedSnapshot `json:"published,omitempty" bson:"published,omitempty"`
+	PublishedVer     int                          `json:"publishedVersion" bson:"publishedVersion"`
+	AllowReveal      bool                         `json:"allowReveal" bson:"allowReveal"`
+	DeadlineUnix     int64                        `json:"deadlineUnix,omitempty" bson:"deadlineUnix,omitempty"` // 0 = no limit
+	QuestionOpenedAt time.Time                    `json:"questionOpenedAt,omitempty" bson:"questionOpenedAt,omitempty"`
+	PausedFrom       string                       `json:"pausedFrom,omitempty" bson:"pausedFrom,omitempty"`
+	CreatedAt        time.Time                    `json:"createdAt" bson:"createdAt"`
+	UpdatedAt        time.Time                    `json:"updatedAt" bson:"updatedAt"`
 }
 
 // SnapshotSimpleQuizQuestion copies template fields into a snapshot.

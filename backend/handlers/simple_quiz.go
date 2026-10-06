@@ -681,9 +681,9 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 			"index": i, "id": q.ID, "text": q.Text,
 			"imageId": q.ImageID, "imageAlt": q.ImageAlt,
 			"points": q.Points, "timeLimit": q.TimeLimit,
-			"judgeNotes": q.JudgeNotes,
+			"judgeNotes":       q.JudgeNotes,
 			"hasCorrectAnswer": strings.TrimSpace(q.CorrectAnswerText) != "",
-			"revealed": s.Revealed[i],
+			"revealed":         s.Revealed[i],
 		})
 	}
 	writeJSON(w, map[string]any{
