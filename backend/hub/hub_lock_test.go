@@ -150,6 +150,68 @@ func TestJoinToStalledClientDoesNotHoldHubLock(t *testing.T) {
 	assertMessageType(t, healthy.send, "ping")
 }
 
+// A simple-quiz join greeting to a stalled client must not block readPump.
+// The stalled client is evicted and the hub stays usable.
+func TestSimpleJoinToStalledClientDoesNotBlock(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.simpleQuizSessions["module-1"] = &models.SimpleQuizSession{
+		ModuleID: "module-1",
+		Status:   "lobby",
+		Players:  make(map[string]*models.SimpleQuizPlayer),
+	}
+	victim := &Client{send: make(chan []byte, 1)}
+	victim.send <- []byte(`full`)
+	h.Register(victim)
+	healthy := &Client{ModuleID: "module-1", send: make(chan []byte, 4)}
+	h.Register(healthy)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		// Called from readPump without holding h.mu.
+		h.processSimpleHostJoin(victim, ClientMessage{Payload: map[string]any{"moduleId": "module-1"}})
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("simple join greeting to a stalled client blocked readPump")
+	}
+	assertHubUnlocked(t, h)
+
+	h.mu.RLock()
+	_, victimKept := h.clients[victim]
+	_, healthyKept := h.clients[healthy]
+	h.mu.RUnlock()
+	if victimKept {
+		t.Fatal("stalled simple client was not evicted from the hub")
+	}
+	if !healthyKept {
+		t.Fatal("healthy simple client was dropped from the hub")
+	}
+}
+
+// A simple-quiz join greeting must not panic when cleanup concurrently closes
+// the client's send channel.
+func TestSimpleJoinDoesNotRaceWithConcurrentUnregister(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.simpleQuizSessions["module-1"] = &models.SimpleQuizSession{
+		ModuleID: "module-1",
+		Status:   "lobby",
+		Players:  make(map[string]*models.SimpleQuizPlayer),
+	}
+	client := &Client{send: make(chan []byte, 1)}
+	client.send <- []byte(`full`)
+	h.Register(client)
+
+	go func() {
+		h.Unregister(client)
+	}()
+
+	// This used to panic with "send on closed channel" when the blocking send
+	// in the simple join handler raced with Unregister or broadcast eviction.
+	h.processSimpleHostJoin(client, ClientMessage{Payload: map[string]any{"moduleId": "module-1"}})
+}
+
 func assertMessageType(t *testing.T, messages <-chan []byte, want string) {
 	t.Helper()
 	select {

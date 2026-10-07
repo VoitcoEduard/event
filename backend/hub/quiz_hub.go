@@ -307,6 +307,19 @@ func (h *QuizHub) sendToClientLocked(client *Client, msg []byte) bool {
 	}
 }
 
+// sendToClient delivers msg to a registered client without blocking. It is safe
+// to call from goroutines that do not already hold h.mu. If the client has
+// already been unregistered or its send buffer is full, it is evicted and false
+// is returned.
+func (h *QuizHub) sendToClient(client *Client, msg []byte) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.clients[client]; !ok {
+		return false
+	}
+	return h.sendToClientLocked(client, msg)
+}
+
 // Internal helper that assumes Lock is held
 func (h *QuizHub) broadcastToSessionLocked(moduleID string, message interface{}) {
 	jsonMsg, err := json.Marshal(message)

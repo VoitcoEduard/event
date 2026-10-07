@@ -318,7 +318,7 @@ func (h *QuizHub) processSimpleHostJoin(client *Client, msg ClientMessage) {
 	if s == nil {
 		return
 	}
-	client.send <- mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)})
+	h.sendToClient(client, mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)}))
 }
 
 func (h *QuizHub) processSimplePlayerJoin(client *Client, msg ClientMessage) {
@@ -336,7 +336,7 @@ func (h *QuizHub) processSimplePlayerJoin(client *Client, msg ClientMessage) {
 	if s == nil {
 		return
 	}
-	client.send <- mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)})
+	h.sendToClient(client, mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)}))
 }
 
 func (h *QuizHub) processSimpleProjectorJoin(client *Client, msg ClientMessage) {
@@ -352,7 +352,7 @@ func (h *QuizHub) processSimpleProjectorJoin(client *Client, msg ClientMessage) 
 	if s == nil {
 		return
 	}
-	client.send <- mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)})
+	h.sendToClient(client, mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)}))
 }
 
 func (h *QuizHub) processSimpleJudgeJoin(client *Client, msg ClientMessage) {
@@ -374,7 +374,7 @@ func (h *QuizHub) processSimpleJudgeJoin(client *Client, msg ClientMessage) {
 	if s == nil {
 		return
 	}
-	client.send <- mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)})
+	h.sendToClient(client, mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)}))
 }
 
 func simpleStatePayload(s *models.SimpleQuizSession) map[string]interface{} {
