@@ -546,6 +546,7 @@ const isTeams = computed(() => activeModule.value?.type === 'teams')
 const isSimpleQuiz = computed(() => activeModule.value?.type === 'simple_quiz')
 const supportedProjectorTypes = new Set(['quiz', 'wrong_pictures', 'simple_quiz', 'teams'])
 let pollingInterval = null
+let stopped = false
 
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
@@ -1102,11 +1103,15 @@ const retryConnection = () => {
 const fetchEventState = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/events/${eventId}`)
+    if (stopped) return
     if (!res.ok) {
       throw new Error(`Failed to load event: ${res.status}`)
     }
 
     const eventData = await res.json()
+    // In-flight poll must not call connectToModule after leave. That reopens
+    // the shared socket and clears intentionalDisconnect.
+    if (stopped) return
     currentEvent.value = eventData
 
     const nextModule = eventData.modules?.find(m => m.isActive && supportedProjectorTypes.has(m.type))
@@ -1127,6 +1132,7 @@ const fetchEventState = async () => {
 
     applyModuleConfig(nextModule)
   } catch (err) {
+    if (stopped) return
     console.error('[Projector] Failed to fetch event state:', err)
     if (!currentEvent.value) {
       errorMessage.value = 'Failed to load projector state.'
@@ -1141,6 +1147,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  stopped = true
   clearInterval(timerInterval)
   clearInterval(explainTimerInterval)
   clearWrongPicturesResultTimers()

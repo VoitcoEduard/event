@@ -292,10 +292,13 @@ watch(currentIndex, () => {
   }
 })
 
+let stopped = false
 onMounted(async () => {
   const ok = await tryReconnect()
+  if (stopped) return
   if (ok) {
     await refresh()
+    if (stopped) return
     quizWS.connect(moduleId, identity.value.nickname, false)
     quizWS.send('simple:player_join', { moduleId, playerId: identity.value.playerId })
   }
@@ -305,6 +308,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  stopped = true
   if (pollTimer) clearInterval(pollTimer)
   if (deadlineTimer) clearInterval(deadlineTimer)
   quizWS.disconnect()

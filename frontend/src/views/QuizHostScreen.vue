@@ -877,11 +877,14 @@ watch(gameState, () => {
 })
 
 // WebSocket & Data Loading
+let stopped = false
 onMounted(async () => {
     // 1. Fetch Questions & Module Config
     try {
         const res = await fetch(`${API_BASE_URL}/events/${eventId}`)
+        if (stopped) return
         const data = await res.json()
+        if (stopped) return
         pinCode.value = data.pin || eventId
         const mod = data.modules?.find(m => m.id === moduleId)
         if (mod && mod.data) {
@@ -896,6 +899,10 @@ onMounted(async () => {
     } catch (e) {
         console.error('Failed to load questions', e)
     }
+
+    // Navigation during the fetch already ran onUnmounted. Registering or
+    // connecting now would undo that disconnect on the shared socket.
+    if (stopped) return
 
     // 2. Register handlers BEFORE connecting (server sends messages immediately)
     quizWS.on('cmd:state', (payload) => {
@@ -996,6 +1003,7 @@ onMounted(async () => {
  })
 
 onUnmounted(() => {
+    stopped = true
     clearInterval(timerInterval)
     clearInterval(explainTimerInterval)
     quizWS.disconnect()

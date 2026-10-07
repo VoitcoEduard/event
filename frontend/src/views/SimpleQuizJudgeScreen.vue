@@ -167,9 +167,12 @@ watch([questionFilter, pendingFilter], () => {
 })
 
 let poll = null
+let stopped = false
 onMounted(async () => {
   await loadState()
+  if (stopped) return
   await loadQueue()
+  if (stopped) return
   quizWS.on('simple:state', () => {
     loadState()
     loadQueue()
@@ -179,6 +182,7 @@ onMounted(async () => {
   poll = setInterval(loadQueue, 5000)
 })
 onUnmounted(() => {
+  stopped = true
   if (poll) clearInterval(poll)
   quizWS.disconnect()
   quizWS.clearHandlers()

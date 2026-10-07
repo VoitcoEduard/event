@@ -226,13 +226,18 @@ const copyProjectorLink = async () => {
   } catch { /* ignore */ }
 }
 
+let stopped = false
 onMounted(async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/events/${eventId}`)
+    if (stopped) return
     const data = await res.json()
+    if (stopped) return
     pinCode.value = data.pin || eventId
   } catch { /* ignore */ }
+  if (stopped) return
   await refresh()
+  if (stopped) return
   quizWS.on('simple:state', refresh)
   quizWS.connect(moduleId, '', true)
   quizWS.send('simple:host_join', { moduleId })
@@ -241,6 +246,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  stopped = true
   if (deadlineTimer) clearInterval(deadlineTimer)
   quizWS.disconnect()
   quizWS.clearHandlers()
