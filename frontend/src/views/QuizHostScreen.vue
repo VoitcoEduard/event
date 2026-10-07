@@ -1006,6 +1006,9 @@ onUnmounted(() => {
     stopped = true
     clearInterval(timerInterval)
     clearInterval(explainTimerInterval)
+    // Release preloaded image references so they don't accumulate across
+    // quizzes for the lifetime of the SPA session (mirrors ProjectorView).
+    preloader.clear()
     quizWS.disconnect()
     quizWS.clearHandlers()
 })
