@@ -72,7 +72,7 @@
         <button
           class="submit-selection-btn"
           :class="{ 'active': hasPreselection, 'loading': isSubmitting }"
-          :disabled="!hasPreselection || hasSubmitted"
+          :disabled="!hasPreselection || hasSubmitted || isSubmitting"
           @click="confirmSelection"
         >
           <span v-if="!hasPreselection">{{ $t('quiz.player.swipe_to_view') }}</span>
@@ -428,11 +428,17 @@ const onCarouselSnap = (idx) => {
 }
 
 const confirmSelection = () => {
-    if (hasSubmitted.value) return
+    if (hasSubmitted.value || isSubmitting.value) return
     isSubmitting.value = true
 
     // Simulate short delay for "working" feel or network
-    setTimeout(() => {
+    confirmSelectionTimeout = setTimeout(() => {
+        confirmSelectionTimeout = null
+        // Re-check: the flag may have flipped while the timeout was pending
+        if (hasSubmitted.value) {
+            isSubmitting.value = false
+            return
+        }
         submitAnswer(preselectedIndex.value)
         isSubmitting.value = false
     }, 300)
@@ -564,6 +570,8 @@ const submitNumberAnswer = () => {
 }
 
 const submitAnswer = (answerData) => {
+    // Guard against double submission (e.g. pending confirmSelection timeout)
+    if (hasSubmitted.value) return
     console.log('[DEBUG] submitAnswer called:', {
         answerData,
         currentQuestionIndex: currentQuestionIndex.value,
@@ -586,6 +594,7 @@ const goHome = () => {
 
 let timerInterval
 let explainTimerInterval
+let confirmSelectionTimeout = null
 
 // Answer validation and scoring
 const validateAndScore = (answerData) => {
@@ -882,6 +891,8 @@ onMounted(async () => {
             // Correct Picture reset
             preselectedIndex.value = 0
             isSubmitting.value = false
+            clearTimeout(confirmSelectionTimeout)
+            confirmSelectionTimeout = null
             hasPreselection.value = true
 
             // Wrong Pictures reset
@@ -1004,6 +1015,7 @@ onMounted(async () => {
 onUnmounted(() => {
     clearInterval(timerInterval)
     clearInterval(explainTimerInterval)
+    clearTimeout(confirmSelectionTimeout)
     quizWS.disconnect()
     quizWS.clearHandlers()
 })
