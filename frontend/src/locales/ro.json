@@ -219,6 +219,7 @@
     "saving": "Se salvează...",
     "select_template": "Selectează un Șablon",
     "no_templates": "Nu au fost găsite șabloane.",
+    "template_load_failed": "Nu s-au putut încărca șabloanele.",
     "questions_count": "{count} Întrebări",
     "confirm_replace": "Aceasta va înlocui întrebările curente. Continui?",
     "loaded_template": "Șablon încărcat: {name}",

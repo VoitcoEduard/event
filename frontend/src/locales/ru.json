@@ -219,6 +219,7 @@
     "saving": "Сохранение...",
     "select_template": "Выберите шаблон",
     "no_templates": "Шаблоны не найдены.",
+    "template_load_failed": "Не удалось загрузить шаблоны.",
     "questions_count": "{count} впр.",
     "confirm_replace": "Это заменит текущие вопросы. Продолжить?",
     "loaded_template": "Загружен шаблон: {name}",

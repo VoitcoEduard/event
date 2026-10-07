@@ -61,6 +61,7 @@
           <h3 class="dialog-title">{{ $t('quiz_config.load_library') }}</h3>
           <div class="template-list">
             <div v-if="loadingTemplates">{{ $t('common.loading') }}</div>
+            <div v-else-if="templateError" class="template-error">{{ $t('quiz_config.template_load_failed') }}</div>
             <div v-else-if="templates.length === 0">{{ $t('quiz_config.no_templates') }}</div>
             <div v-else v-for="template in templates" :key="template.id" class="template-item-wrapper">
               <div class="template-item" @click="loadTemplate(template)">
@@ -121,6 +122,7 @@ const hideAfterCompletion = ref(false)
 const loading = ref(false)
 const templates = ref([])
 const loadingTemplates = ref(false)
+const templateError = ref(false)
 const showTemplateModal = ref(false)
 const templateName = ref('')
 const showSaveTemplateModal = ref(false)
@@ -182,17 +184,18 @@ const handlePublish = async () => {
 
 const fetchTemplates = async () => {
   loadingTemplates.value = true
+  templateError.value = false
   try {
     const response = await fetch(`${API_BASE_URL}/templates`)
-    if (response.ok) {
-      const data = normalizeTemplates(await response.json())
-      // Filter for form templates
-      templates.value = data.filter(t => t.moduleType === 'form' || (!t.moduleType && !t.data?.questions))
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = normalizeTemplates(await response.json())
+    // Filter for form templates
+    templates.value = data.filter(t => t.moduleType === 'form' || (!t.moduleType && !t.data?.questions))
   } catch (err) {
     console.error('Error fetching templates:', err)
+    templateError.value = true
   } finally {
-      loadingTemplates.value = false
+    loadingTemplates.value = false
   }
 }
 
@@ -414,6 +417,11 @@ const modalStyle = computed(() => ({
   max-height: 300px;
   overflow-y: auto;
   margin-bottom: 16px;
+}
+
+.template-error {
+  color: #FF453A;
+  padding: 12px;
 }
 
 .template-item-wrapper {

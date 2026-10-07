@@ -86,6 +86,7 @@
             </div>
             <div class="library-content">
                 <div v-if="loadingTemplates" class="loading">{{ $t('common.loading') }}</div>
+                <div v-else-if="templateError" class="template-error">{{ $t('quiz_config.template_load_failed') }}</div>
                 <div v-else-if="templates.length === 0" class="empty">{{ $t('quiz_config.no_templates') }}</div>
                 <div v-else class="template-list">
                     <div v-for="t in templates" :key="t.id" class="template-item" @click="loadTemplate(t)">
@@ -127,6 +128,7 @@ const loading = ref(false)
 const showLibraryModal = ref(false)
 const templates = ref([])
 const loadingTemplates = ref(false)
+const templateError = ref(false)
 const fileInput = ref(null)
 
 const tracks = ref([])
@@ -136,14 +138,15 @@ const audioOutput = ref('projector')
 // Load existing data when module opens
 const fetchTemplates = async () => {
     loadingTemplates.value = true
+    templateError.value = false
     try {
         const res = await fetch(`${API_BASE_URL}/templates`)
-        if(res.ok) {
-            const data = normalizeTemplates(await res.json())
-            templates.value = data.filter(t => t.moduleType === 'quiz' || (!t.moduleType && t.data?.questions))
-        }
+        if(!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = normalizeTemplates(await res.json())
+        templates.value = data.filter(t => t.moduleType === 'quiz' || (!t.moduleType && t.data?.questions))
     } catch(e) {
         console.error(e)
+        templateError.value = true
     } finally {
         loadingTemplates.value = false
     }
@@ -697,6 +700,8 @@ const modalStyle = computed(() => ({
     overflow-y: auto;
     padding: 16px;
 }
+
+.template-error { color: #FF453A; padding: 12px; }
 
 .close-btn { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; }
 

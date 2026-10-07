@@ -222,6 +222,7 @@
     "saving": "Saving...",
     "select_template": "Select a Template",
     "no_templates": "No templates found.",
+    "template_load_failed": "Failed to load templates.",
     "questions_count": "{count} Qs",
     "confirm_replace": "This will replace your current questions. Continue?",
     "loaded_template": "Loaded template: {name}",
