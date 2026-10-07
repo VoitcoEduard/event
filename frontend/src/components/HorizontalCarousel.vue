@@ -132,15 +132,8 @@ const onImageLoad = () => {
   scrollbar-width: none; /* Firefox */
   height: 80%;
   align-items: center;
-  padding: 0 50%; /* Center the first item */
-  box-sizing: content-box; /* Important for padding to work with scroll width */
-}
-
-/* Adjust padding dynamically via JS or use a cleaner CSS approach */
-.carousel-track {
-    /* Better approach for centering: */
-    padding: 0; 
-    scroll-padding: 0;
+  padding: 0;
+  scroll-padding: 0;
 }
 
 .carousel-track::-webkit-scrollbar {
@@ -148,8 +141,8 @@ const onImageLoad = () => {
 }
 
 .carousel-item {
-  flex: 0 0 80%; /* Show part of next items */
-  width: 80%;
+  flex: 0 0 100%;
+  width: 100%;
   height: 90%;
   scroll-snap-align: center;
   display: flex;
@@ -157,14 +150,7 @@ const onImageLoad = () => {
   align-items: center;
   transition: all 0.3s ease;
   position: relative;
-  margin: 0 10%; /* Spacing */
-}
-
-/* Override margin/width for simple centering */
-.carousel-item {
-    flex: 0 0 100%; /* Take full width container, but scale down content */
-    width: 100%;
-    margin: 0;
+  margin: 0;
 }
 
 .image-wrapper {
