@@ -5,16 +5,10 @@ class SignalQueue {
     }
 
     enqueue(signal) {
-        console.log('[DEBUG] signalQueue.enqueue called:', {
-            isConnected: this.isConnected,
-            hasSender: !!this.sender,
-            signal
-        })
         if (this.isConnected && this.sender) {
             this.flushSingle(signal)
         } else {
             this.queue.push(signal)
-            console.log('[DEBUG] Signal queued, queue length:', this.queue.length)
         }
     }
 
@@ -46,7 +40,6 @@ class SignalQueue {
 
         // Send signal to server
         if (this.sender) {
-            console.log('Sending signal:', signal)
             this.sender(signal)
         } else {
             console.warn('No sender configured for signalQueue')

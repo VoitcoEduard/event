@@ -113,14 +113,12 @@ const updateResponse = async (moduleId, responseId, data) => {
     return;
   }
   try {
-    console.log(`[UnifiedView] Updating response ${responseId} in module ${moduleId}`, data);
     const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/responses/${responseId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ data })
     });
     if (!response.ok) throw new Error('Failed to update response');
-    console.log("[UnifiedView] Response updated successfully");
   } catch (e) {
     console.error("[UnifiedView] Error updating response:", e);
   }
@@ -128,34 +126,26 @@ const updateResponse = async (moduleId, responseId, data) => {
 
 const getModuleFieldMapping = (moduleDef) => {
   const mapping = {};
-  console.log('[UnifiedView] Generating mapping for module:', moduleDef ? moduleDef.name : 'undefined');
   if (moduleDef && moduleDef.type === 'form' && moduleDef.data && moduleDef.data.timeline) {
-    console.log('[UnifiedView] Timeline found with steps:', moduleDef.data.timeline.length);
     moduleDef.data.timeline.forEach(step => {
        if(step.type === 'field') {
           // Always generate label from question text to ensure consistency
           const label = step.data.label ? extractLabel(step.data.label) : 'Question';
           mapping[step.id] = label;
-          console.log(`[UnifiedView] Mapped field ${step.id} -> ${label}`);
        }
     });
-  } else {
-    console.log('[UnifiedView] No timeline found or module is not a form');
-    if (moduleDef) console.log('Module type:', moduleDef.type, 'Data:', moduleDef.data);
   }
   return mapping;
 };
 
 const updateScore = async (moduleId, userId, score) => {
   try {
-    console.log(`[UnifiedView] Updating score for user ${userId} in module ${moduleId}: ${score}`);
     const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/quiz-scores/${userId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ score })
     });
     if (!response.ok) throw new Error('Failed to update score');
-    console.log("[UnifiedView] Score updated successfully");
   } catch (e) {
     console.error("[UnifiedView] Error updating score:", e);
   }
@@ -163,7 +153,6 @@ const updateScore = async (moduleId, userId, score) => {
 
 const handleTableChange = (changes, source) => {
   if (!changes || source === 'loadData') return;
-  console.log("[UnifiedView] Table changed:", source, changes);
 
   changes.forEach(([row, prop, oldValue, newValue]) => {
     if (oldValue === newValue) return; // No change
@@ -174,7 +163,6 @@ const handleTableChange = (changes, source) => {
         return;
     }
     const userId = rowData.userId;
-    console.log(`[UnifiedView] Change detected for user ${userId}, prop ${prop}: ${oldValue} -> ${newValue}`);
 
     // Determine what changed
     if (prop === 'name') {
@@ -254,7 +242,6 @@ const fetchEventDetails = async () => {
     const event = await response.json();
     eventName.value = event.name;
     eventModules.value = event.modules || [];
-    console.log("[UnifiedView] Event Details Loaded:", eventName.value, eventModules.value);
 
     // Build Tabs
     const newTabs = [{ id: 'unified', label: 'Unified View' }];
@@ -276,7 +263,6 @@ const fetchEventDetails = async () => {
     } else {
       activeTab.value = 'unified';
     }
-    console.log("[UnifiedView] Active Tab set to:", activeTab.value);
 
   } catch (e) {
     console.error("[UnifiedView] Error fetching event:", e);
@@ -285,7 +271,6 @@ const fetchEventDetails = async () => {
 };
 
 const setActiveTab = (tabId) => {
-  console.log("[UnifiedView] Switching tab to:", tabId);
   activeTab.value = tabId;
   const query = { ...route.query };
   if (tabId === 'unified') {
@@ -298,7 +283,6 @@ const setActiveTab = (tabId) => {
 
 const fetchData = async () => {
   if (!routeEventId.value) return;
-  console.log("[UnifiedView] Fetching data for tab:", activeTab.value);
   loading.value = true;
   error.value = null;
   
@@ -325,7 +309,6 @@ const fetchData = async () => {
 };
 
 const fetchUnifiedData = async () => {
-  console.log("[UnifiedView] Starting Unified Data Fetch...");
   const promises = eventModules.value.map(m => 
     fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${m.id}/responses`, { headers: getAuthHeaders() })
       .then(async res => {
@@ -336,7 +319,6 @@ const fetchUnifiedData = async () => {
   );
 
   const results = await Promise.all(promises);
-  console.log("[UnifiedView] Fetched raw results from modules:", results);
   
   const userMap = new Map(); 
 
@@ -374,8 +356,6 @@ results.forEach(({ moduleId, type, responses }) => {
       }
     });
   });
-
-  console.log("[UnifiedView] Aggregated User Map size:", userMap.size);
 
   const headers = [t('data_library.headers.user_id'), t('data_library.headers.name'), t('data_library.headers.total_score')];
   const columns = [
@@ -425,17 +405,12 @@ results.forEach(({ moduleId, type, responses }) => {
     return { ...u, totalScore };
   });
 
-  console.log("[UnifiedView] Constructed Headers:", headers);
-  console.log("[UnifiedView] Constructed Columns:", columns);
-  console.log("[UnifiedView] Flattened Data Sample:", flattenedData.slice(0, 2));
-
   tableHeaders.value = headers;
   tableColumns.value = columns;
   tableData.value = flattenedData;
   
   // Force update settings to be safe
   if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
-    console.log("[UnifiedView] Updating HotTable Settings with new data/columns...");
     hotTableComponent.value.hotInstance.updateSettings({
       colHeaders: headers,
       columns: columns,
@@ -446,7 +421,6 @@ results.forEach(({ moduleId, type, responses }) => {
 };
 
 const fetchModuleData = async (moduleId) => {
-  console.log(`[UnifiedView] Fetching Single Module Data: ${moduleId}`);
   const response = await fetch(`${API_BASE_URL}/events/${routeEventId.value}/modules/${moduleId}/responses`, { headers: getAuthHeaders() });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
@@ -542,9 +516,6 @@ const fetchModuleData = async (moduleId) => {
     });
     return row;
   });
-
-  console.log("[UnifiedView] Single Module Headers:", displayHeaders);
-  console.log("[UnifiedView] Single Module Data Sample:", rows.slice(0, 2));
 
   tableHeaders.value = displayHeaders;
   tableColumns.value = displayColumns;

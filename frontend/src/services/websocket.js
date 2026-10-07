@@ -38,8 +38,6 @@ class QuizWebSocket {
         }
         const wsUrl = `${protocol}//${host}/ws`
 
-        console.log('Connecting to WebSocket:', wsUrl)
-
         if (this.socket) {
             this.socket.close()
         }
@@ -49,7 +47,6 @@ class QuizWebSocket {
 
         socket.onopen = () => {
             if (this.socket !== socket) return
-            console.log('WebSocket Connected')
             this.isConnected = true
             this.reconnectAttempts = 0
             // Configure signal queue sender
@@ -99,7 +96,6 @@ class QuizWebSocket {
 
         socket.onclose = (event) => {
             if (this.socket !== socket) return
-            console.log('WebSocket Disconnected')
             this.isConnected = false
             signalQueue.onDisconnect()
 			if (event.code === 1008) {
@@ -111,7 +107,6 @@ class QuizWebSocket {
 
             if (!this.intentionalDisconnect && this.reconnectAttempts < 5) {
                 const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 5000)
-                console.log(`Reconnecting in ${delay}ms... (Attempt ${this.reconnectAttempts + 1})`)
                 setTimeout(() => {
                     this.reconnectAttempts++
                     this.connect(this.moduleId, this.nickname, this.isHost, this.isProjector, this.eventId)
@@ -159,14 +154,12 @@ class QuizWebSocket {
     }
 
     disconnect() {
-        console.log('[DEBUG] disconnect: Called, intentionalDisconnect=true')
         this.intentionalDisconnect = true
         this.reconnectAttempts = 0
         if (this.socket) {
             this.socket.close()
             this.socket = null
         }
-        console.log('[DEBUG] disconnect: Socket closed and nulled')
     }
 
     clearHandlers() {

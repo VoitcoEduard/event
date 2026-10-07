@@ -459,7 +459,6 @@ const addModule = async () => {
 }
 
 const toggleModuleStatus = async (module) => {
-  console.log('[DEBUG] toggleModuleStatus: Starting for module:', module.id, 'current isActive:', module.isActive)
   
   // If stopping a quiz/wrong_pictures module, reset the quiz session first
   if (module.isActive && (module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz')) {
@@ -467,19 +466,16 @@ const toggleModuleStatus = async (module) => {
       const resetPath = module.type === 'simple_quiz'
         ? `${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/simple-quiz/reset`
         : `${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/quiz/reset`
-      console.log('[DEBUG] toggleModuleStatus: Resetting session for module:', module.id)
       await fetch(resetPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }
       })
-      console.log('[DEBUG] toggleModuleStatus: Quiz session reset complete')
     } catch (err) {
       console.error('Error resetting quiz session:', err)
     }
   }
 
   try {
-    console.log('[DEBUG] toggleModuleStatus: Updating status to:', !module.isActive)
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -487,9 +483,7 @@ const toggleModuleStatus = async (module) => {
     })
 
     if (response.ok) {
-      console.log('[DEBUG] toggleModuleStatus: Status update successful, fetching event details')
       await fetchEventDetails()
-      console.log('[DEBUG] toggleModuleStatus: Event details fetched, new module isActive:', currentEvent.value.modules.find(m => m.id === module.id)?.isActive)
       success(`Module ${!module.isActive ? 'started' : 'stopped'}`)
     } else {
       error('Failed to update module status')

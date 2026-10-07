@@ -73,12 +73,10 @@ export function useQuizStateMachine({ requestBatch = null } = {}) {
 
     function startLocalTimer(timeLimit) {
         // Timer logic to be implemented
-        console.log(`Question active for ${timeLimit} seconds`)
     }
 
     function validateAndScore(data) {
         // Answer validation is handled by the view component
-        // console.log('State machine: validateAndScore triggered', data)
     }
 
     function requestNextBatch() {
