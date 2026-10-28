@@ -83,7 +83,7 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if !client.IsHost || client.ModuleID != moduleID {
+	if h.closed || !client.IsHost || client.ModuleID != moduleID {
 		return
 	}
 
@@ -132,37 +132,7 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
 		})
 
-		// Auto-transition to question-active after explainTime seconds
-		go func(modID string, idx int, delay int) {
-			// Detached goroutine: contain panics so a timer bug cannot kill the server.
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("panic in question-timer for module %s: %v", modID, r)
-				}
-			}()
-			time.Sleep(time.Duration(delay) * time.Second)
-			h.mu.Lock()
-			defer h.mu.Unlock()
-
-			sess := h.sessions[modID]
-			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" && idx < len(sess.Questions) {
-				sess.State = "question-active"
-				sess.StartTime = time.Now().Unix()
-
-				// Update the QuestionWindow start time to now
-				if idx < len(sess.QuestionWindows) {
-					limit := EffectiveTimeLimit(sess.Questions[idx])
-					sess.QuestionWindows[idx].StartTime = sess.StartTime
-					sess.QuestionWindows[idx].EndTime = sess.StartTime + limit
-					sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
-				}
-
-				h.broadcastToSessionLocked(modID, ServerMessage{
-					Type:    "cmd:state",
-					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": EffectiveTimeLimit(sess.Questions[idx])},
-				})
-			}
-		}(moduleID, session.CurrentIndex, explainTime)
+		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
 	}
 }
 
@@ -193,6 +163,9 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		if h.closed || session.State == "finishing" || session.State == "finished" {
+			return
+		}
 		// Advancing past the final question is invalid — the host UI only sends
 		// next_question while another question remains (it sends end/leaderboard
 		// actions past the last one). A double-click, a racing client, or a
@@ -230,37 +203,7 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
 		})
 
-		// Auto-transition to question-active after explainTime seconds
-		go func(modID string, idx int, delay int) {
-			// Detached goroutine: contain panics so a timer bug cannot kill the server.
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("panic in question-timer for module %s: %v", modID, r)
-				}
-			}()
-			time.Sleep(time.Duration(delay) * time.Second)
-			h.mu.Lock()
-			defer h.mu.Unlock()
-
-			sess := h.sessions[modID]
-			if sess != nil && sess.CurrentIndex == idx && sess.State == "question-presenting" && idx < len(sess.Questions) {
-				sess.State = "question-active"
-				sess.StartTime = time.Now().Unix()
-
-				// Update the QuestionWindow start time to now
-				if idx < len(sess.QuestionWindows) {
-					limit := EffectiveTimeLimit(sess.Questions[idx])
-					sess.QuestionWindows[idx].StartTime = sess.StartTime
-					sess.QuestionWindows[idx].EndTime = sess.StartTime + limit
-					sess.QuestionWindows[idx].GraceEndTime = sess.QuestionWindows[idx].EndTime + GracePeriodSeconds
-				}
-
-				h.broadcastToSessionLocked(modID, ServerMessage{
-					Type:    "cmd:state",
-					Payload: map[string]interface{}{"state": "question-active", "currentIndex": idx, "timeLimit": EffectiveTimeLimit(sess.Questions[idx])},
-				})
-			}
-		}(client.ModuleID, session.CurrentIndex, explainTime)
+		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
 	}
 }
 
@@ -270,6 +213,7 @@ func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		h.cancelQuizTransitionLocked(client.ModuleID)
 		session.State = "results"
 
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
@@ -291,6 +235,7 @@ func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) 
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		h.cancelQuizTransitionLocked(client.ModuleID)
 		session.State = "leaderboard"
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
@@ -322,6 +267,8 @@ func (h *QuizHub) processHostEndQuiz(client *Client, msg ClientMessage) {
 	}
 	runID := session.RunID
 	previous := session.State
+	pending := h.quizTimers[moduleID]
+	h.cancelQuizTransitionLocked(moduleID)
 	session.State = "finishing"
 	snapshot := snapshotSession(session)
 	h.mu.Unlock()
@@ -339,6 +286,9 @@ func (h *QuizHub) processHostEndQuiz(client *Client, msg ClientMessage) {
 	}
 	if err != nil {
 		current.State = previous
+		if pending != nil && previous == "question-presenting" {
+			h.scheduleQuizTransitionLocked(current, time.Until(pending.deadline))
+		}
 		log.Printf("Error saving quiz results for module %s: %v", moduleID, err)
 		if _, ok := h.clients[client]; ok {
 			h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "save_failed", "message": "Could not save results. Retry ending the quiz."}}))

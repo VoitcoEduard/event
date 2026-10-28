@@ -128,18 +128,7 @@ func run() error {
 	distDir := "./dist"
 	var spaHandler http.HandlerFunc
 	if _, err := os.Stat(distDir); err == nil {
-		fs := http.FileServer(http.Dir(distDir))
-		spaHandler = func(w http.ResponseWriter, r *http.Request) {
-			utils.DebugLog("Static request: %s %s", r.Method, r.URL.Path)
-			enableCors(w, r)
-			// If the requested file exists in dist/, serve it directly.
-			// Otherwise fall back to index.html for Vue Router history mode.
-			if _, err := os.Stat(distDir + r.URL.Path); os.IsNotExist(err) {
-				http.ServeFile(w, r, distDir+"/index.html")
-				return
-			}
-			fs.ServeHTTP(w, r)
-		}
+		spaHandler = newSPAHandler(distDir)
 	} else {
 		// No dist/ folder — local dev mode, return a simple JSON health check.
 		spaHandler = func(w http.ResponseWriter, r *http.Request) {

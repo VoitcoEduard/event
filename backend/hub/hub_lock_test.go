@@ -227,3 +227,23 @@ func assertMessageType(t *testing.T, messages <-chan []byte, want string) {
 		t.Fatalf("no %s message sent", want)
 	}
 }
+
+type lockCheckingMessage struct {
+	hub *QuizHub
+}
+
+func (m lockCheckingMessage) MarshalJSON() ([]byte, error) {
+	if !m.hub.mu.TryLock() {
+		return nil, errors.New("broadcast marshalled while holding the hub lock")
+	}
+	m.hub.mu.Unlock()
+	return []byte(`{"type":"ping"}`), nil
+}
+
+func TestBroadcastMarshalsOutsideHubLock(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	client := &Client{ModuleID: "m", send: make(chan []byte, 1)}
+	h.Register(client)
+	h.BroadcastToSession("m", lockCheckingMessage{hub: h})
+	assertMessageType(t, client.send, "ping")
+}

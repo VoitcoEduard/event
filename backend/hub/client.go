@@ -185,7 +185,9 @@ func ServeWs(hub *QuizHub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), AdminToken: token}
-	hub.Register(client)
+	if !hub.Register(client) {
+		return
+	}
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.

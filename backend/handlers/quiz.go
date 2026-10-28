@@ -53,22 +53,37 @@ func (h *Handler) UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 
 // GetQuizState - GET /events/{id}/modules/{moduleId}/quiz/state
 func (h *Handler) GetQuizState(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "private, no-store")
 	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 7 {
+	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
+	if eventID == "" || moduleID == "" {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	moduleID := parts[4]
 
 	session := h.deps.QuizHub.GetSession(moduleID)
 	if session == nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(models.QuizSession{State: "inactive"})
+		return
+	}
+	if session.EventID != "" && session.EventID != eventID {
+		http.NotFound(w, r)
+		return
+	}
+	if !h.isAdmin(r) {
+		// Public clients need progress and timing, not other players' identities
+		// or submitted answers. Administrators retain the full state response.
+		writeJSON(w, map[string]any{
+			"eventId": session.EventID, "moduleId": session.ModuleID,
+			"state": session.State, "currentIndex": session.CurrentIndex,
+			"startTime": session.StartTime, "questionWindows": session.QuestionWindows,
+			"totalPlayers": len(session.Players), "answeredCount": len(session.AnsweredPlayerIDs),
+		})
 		return
 	}
 

@@ -206,6 +206,10 @@ func (h *QuizHub) BroadcastSimpleQuiz(moduleID string) {
 
 func (h *QuizHub) scheduleSimpleQuizAutoLock(moduleID string, deadlineUnix int64) {
 	h.mu.Lock()
+	if h.closed || h.simpleQuizSessions[moduleID] == nil {
+		h.mu.Unlock()
+		return
+	}
 	if t, ok := h.simpleQuizTimers[moduleID]; ok && t != nil {
 		t.Stop()
 	}
@@ -232,6 +236,12 @@ func (h *QuizHub) cancelSimpleQuizTimer(moduleID string) {
 }
 
 func (h *QuizHub) autoLockSimpleQuiz(moduleID string) {
+	h.mu.RLock()
+	closed := h.closed
+	h.mu.RUnlock()
+	if closed {
+		return
+	}
 	_, err := h.TryUpdateSimpleQuiz(moduleID, func(s *models.SimpleQuizSession) {
 		if s.Status == models.SimpleQuizStateQuestionOpen {
 			s.Status = models.SimpleQuizStateAnswersLocked

@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/utils"
-	"net/http"
 )
 
 func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
@@ -51,19 +52,21 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL: /events/{id}
-	path := r.URL.Path
-	prefix := "/events/"
-	if len(path) <= len(prefix) {
+	id := r.PathValue("eventID")
+	if id == "" {
 		http.Error(w, "ID required", http.StatusBadRequest)
 		return
 	}
-	id := path[len(prefix):]
 
 	// Check for userId in query
 	userID := r.URL.Query().Get("userId")
+	if len(userID) > 120 {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 
 	admin := h.isAdmin(r)
+	cacheResponse := !admin
 	w.Header().Set("Cache-Control", "private, no-store")
 	cacheKey := eventCacheKey(id, userID)
 	if cached, ok := eventResponseCache.Get(cacheKey); ok && !admin {
@@ -92,6 +95,10 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 			response.ParticipantStatus = &ParticipantStatusResponse{
 				DisplayName: participant.DisplayName, TotalPoints: points,
 			}
+		} else {
+			// Arbitrary identities must not create entries or churn the cache.
+			// Also avoid caching a missing status after a transient lookup error.
+			cacheResponse = false
 		}
 	}
 	if cards, err := eventService.ActiveCards(r.Context(), id); err == nil {
@@ -103,7 +110,7 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
-	if !admin {
+	if cacheResponse {
 		eventResponseCache.Set(cacheKey, data)
 	}
 
@@ -112,9 +119,7 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL (naive approach since using net/http)
-	// Assuming /events/{id}
-	id := r.URL.Path[len("/events/"):]
+	id := r.PathValue("eventID")
 	if id == "" {
 		http.Error(w, "ID required", http.StatusBadRequest)
 		return
@@ -137,7 +142,7 @@ func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Path[len("/events/"):]
+	id := r.PathValue("eventID")
 	if id == "" {
 		http.Error(w, "ID required", http.StatusBadRequest)
 		return
@@ -145,9 +150,23 @@ func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 
 	mediaAccessMu.Lock()
 	defer mediaAccessMu.Unlock()
+	var moduleIDs []string
+	if h.deps.QuizHub != nil {
+		event, err := h.deps.Events.Get(r.Context(), id)
+		if err != nil {
+			writeRequestError(w, err, http.StatusInternalServerError)
+			return
+		}
+		for _, module := range event.Modules {
+			moduleIDs = append(moduleIDs, module.ID)
+		}
+	}
 	if err := h.deps.Events.Delete(r.Context(), id); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
+	}
+	if h.deps.QuizHub != nil {
+		h.deps.QuizHub.ForgetEventSessions(id, moduleIDs)
 	}
 	mediaMemoryCache.Clear()
 	invalidateEventCache(id)
@@ -181,16 +200,11 @@ func (h *Handler) ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL: /events/{id}/status
-	// Simple parsing assuming correct format
-	path := r.URL.Path
-	prefix := "/events/"
-	suffix := "/status"
-	if len(path) <= len(prefix)+len(suffix) {
+	id := r.PathValue("eventID")
+	if id == "" {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	id := path[len(prefix) : len(path)-len(suffix)]
 
 	var input struct {
 		IsActive bool `json:"isActive"`

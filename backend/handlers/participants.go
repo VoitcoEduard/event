@@ -11,13 +11,11 @@ import (
 
 // JoinEvent handles POST /events/{id}/participants/join
 func (h *Handler) JoinEvent(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
-	if len(parts) < 4 {
+	eventID := r.PathValue("eventID")
+	if eventID == "" {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	eventID := parts[1]
 
 	var input struct {
 		UserID      string         `json:"userId"`

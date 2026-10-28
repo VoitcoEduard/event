@@ -110,6 +110,9 @@ func (h *Handler) DeleteModule(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Event or module not found", http.StatusNotFound)
 		return
 	}
+	if h.deps.QuizHub != nil {
+		h.deps.QuizHub.ForgetModuleSessions(moduleID)
+	}
 	mediaMemoryCache.Clear()
 	invalidateEventCache(eventID)
 	w.Header().Set("Content-Type", "application/json")

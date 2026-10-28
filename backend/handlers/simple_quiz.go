@@ -6,14 +6,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
-	"github.com/user/go-expo-sample/backend/postgres"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 )
 
 // RequireSimpleQuizModule prevents a module from being accessed through another event's URL.
@@ -663,17 +665,14 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	qi := -1
-	if v := q.Get("questionIndex"); v != "" && v != "-1" {
-		qi = atoi(v)
+	qi, limit, err := simpleQuizQueueOptions(q, len(s.Questions))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	filter := q.Get("filter")
 	if filter == "" {
 		filter = "pending"
-	}
-	limit := atoi(q.Get("limit"))
-	if limit <= 0 || limit > 100 {
-		limit = 20
 	}
 	cursor := q.Get("cursor")
 	type row struct {
@@ -943,13 +942,19 @@ func progressAll(s *models.SimpleQuizSession) []models.SimpleQuizGradingProgress
 	return out
 }
 
-func atoi(s string) int {
-	n := 0
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return n
+func simpleQuizQueueOptions(q url.Values, totalQuestions int) (index, limit int, err error) {
+	index, limit = -1, 20
+	if value := q.Get("questionIndex"); value != "" {
+		index, err = strconv.Atoi(value)
+		if err != nil || index < -1 || index >= totalQuestions {
+			return 0, 0, errors.New("invalid questionIndex")
 		}
-		n = n*10 + int(c-'0')
 	}
-	return n
+	if value := q.Get("limit"); value != "" {
+		limit, err = strconv.Atoi(value)
+		if err != nil || limit < 1 || limit > 100 {
+			return 0, 0, errors.New("invalid limit")
+		}
+	}
+	return index, limit, nil
 }

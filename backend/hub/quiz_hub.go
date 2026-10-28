@@ -64,12 +64,12 @@ func CalculateBatches(questions []models.QuizQuestion) []models.QuestionBatch {
 
 	// For simplicity, we'll use a fixed number of questions per batch (max 50)
 	var batches []models.QuestionBatch
-	batchSize := Min(MaxQuestionsPerBatch, len(questions))
+	batchSize := min(MaxQuestionsPerBatch, len(questions))
 	totalBatches := (len(questions) + batchSize - 1) / batchSize
 
 	for i := 0; i < totalBatches; i++ {
 		start := i * batchSize
-		end := Min(start+batchSize, len(questions))
+		end := min(start+batchSize, len(questions))
 
 		batch := models.QuestionBatch{
 			BatchIndex:   i,
@@ -85,13 +85,6 @@ func CalculateBatches(questions []models.QuizQuestion) []models.QuestionBatch {
 	return batches
 }
 
-func Min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // QuizHub maintains the set of active clients and broadcasts messages to the
 // clients.
 type QuizHub struct {
@@ -104,9 +97,12 @@ type QuizHub struct {
 	saveTeams       func(string, string, string) (*models.TeamResult, error)
 	// Registered clients.
 	clients map[*Client]bool
+	closed  bool
 
 	// Active quiz sessions
 	sessions map[string]*models.QuizSession
+	// Presentation transitions are cancelled when a question/run is abandoned.
+	quizTimers map[string]*quizTransition
 
 	// Active Simple Quiz sessions (moduleID -> session)
 	simpleQuizSessions map[string]*models.SimpleQuizSession
@@ -144,6 +140,7 @@ func NewQuizHub(deps Dependencies) *QuizHub {
 		quizResults:        deps.QuizResults,
 		clients:            make(map[*Client]bool),
 		sessions:           make(map[string]*models.QuizSession),
+		quizTimers:         make(map[string]*quizTransition),
 		simpleQuizSessions: make(map[string]*models.SimpleQuizSession),
 		simpleQuizUndo:     make(map[string]map[string][]simpleQuizUndoEntry),
 		simpleQuizTimers:   make(map[string]*time.Timer),
@@ -165,18 +162,42 @@ func (h *QuizHub) Run() {
 
 // Shutdown closes upgraded connections, which http.Server.Shutdown does not own.
 func (h *QuizHub) Shutdown() {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.mu.Lock()
+	h.closed = true
+	for moduleID := range h.quizTimers {
+		h.cancelQuizTransitionLocked(moduleID)
+	}
+	for moduleID, timer := range h.simpleQuizTimers {
+		if timer != nil {
+			timer.Stop()
+		}
+		delete(h.simpleQuizTimers, moduleID)
+	}
+	clients := make([]*Client, 0, len(h.clients))
 	for client := range h.clients {
-		_ = client.conn.Close()
+		clients = append(clients, client)
+	}
+	h.mu.Unlock()
+	for _, client := range clients {
+		if client.conn != nil {
+			_ = client.conn.Close()
+		}
 	}
 }
 
-func (h *QuizHub) Register(client *Client) {
+func (h *QuizHub) Register(client *Client) bool {
 	h.mu.Lock()
-	defer h.mu.Unlock()
+	if h.closed {
+		h.mu.Unlock()
+		if client.conn != nil {
+			_ = client.conn.Close()
+		}
+		return false
+	}
 	h.clients[client] = true
+	h.mu.Unlock()
 	log.Println("New client registered")
+	return true
 }
 
 func (h *QuizHub) Unregister(client *Client) {
@@ -194,11 +215,9 @@ func (h *QuizHub) Unregister(client *Client) {
 	}
 }
 
-// Helper to broadcast to specific session
+// BroadcastToSession accepts caller-owned or immutable payloads. Mutable hub
+// state must be snapshotted under h.mu before calling this method.
 func (h *QuizHub) BroadcastToSession(moduleID string, message interface{}) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	// Serialize message
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
@@ -206,6 +225,8 @@ func (h *QuizHub) BroadcastToSession(moduleID string, message interface{}) {
 		return
 	}
 
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	for client := range h.clients {
 		if client.ModuleID == moduleID {
 			select {
@@ -435,6 +456,10 @@ func (h *QuizHub) UpdateSession(moduleID string, updater func(*models.QuizSessio
 	session, ok := h.sessions[moduleID]
 	if ok && session.State != "finishing" {
 		updater(session)
+		if timer := h.quizTimers[moduleID]; timer != nil &&
+			(session.State != "question-presenting" || timer.runID != session.RunID || timer.index != session.CurrentIndex) {
+			h.cancelQuizTransitionLocked(moduleID)
+		}
 		// Broadcast update
 		h.broadcastToSessionLocked(moduleID, ServerMessage{
 			Type:    "state:update",
@@ -476,6 +501,7 @@ func (h *QuizHub) ResetSession(moduleID string) bool {
 // resetSessionLocked is the internal method that assumes the lock is already held
 // Use this when calling from within ProcessMessage (which already holds the lock)
 func (h *QuizHub) resetSessionLocked(moduleID string) {
+	h.cancelQuizTransitionLocked(moduleID)
 	DebugLog("resetSessionLocked: Starting reset for module: %s", moduleID)
 
 	session, exists := h.sessions[moduleID]
