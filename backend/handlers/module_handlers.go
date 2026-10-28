@@ -144,7 +144,12 @@ func (h *Handler) GetModule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(module)
+	w.Header().Set("Cache-Control", "private, no-store")
+	if h.isAdmin(r) {
+		_ = json.NewEncoder(w).Encode(module)
+	} else {
+		_ = json.NewEncoder(w).Encode(publicModule(*module))
+	}
 }
 
 func (h *Handler) GetModuleResponses(w http.ResponseWriter, r *http.Request) {

@@ -63,8 +63,10 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 	// Check for userId in query
 	userID := r.URL.Query().Get("userId")
 
+	admin := h.isAdmin(r)
+	w.Header().Set("Cache-Control", "private, no-store")
 	cacheKey := eventCacheKey(id, userID)
-	if cached, ok := eventResponseCache.Get(cacheKey); ok {
+	if cached, ok := eventResponseCache.Get(cacheKey); ok && !admin {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(cached)
 		return
@@ -79,6 +81,9 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 
 	response := EventWithStatus{
 		Event: *event,
+	}
+	if !admin {
+		response.Event = publicEvent(*event)
 	}
 
 	if userID != "" {
@@ -98,7 +103,9 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
-	eventResponseCache.Set(cacheKey, data)
+	if !admin {
+		eventResponseCache.Set(cacheKey, data)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
@@ -167,7 +174,7 @@ func (h *Handler) ConnectToEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(event)
+	json.NewEncoder(w).Encode(publicEvent(*event))
 }
 
 func (h *Handler) UpdateEventStatus(w http.ResponseWriter, r *http.Request) {

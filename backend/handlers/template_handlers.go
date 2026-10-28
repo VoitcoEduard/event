@@ -36,8 +36,14 @@ func (h *Handler) GetTemplates(w http.ResponseWriter, r *http.Request) {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
+	if !h.isAdmin(r) {
+		for i := range templates {
+			templates[i].Data = publicModule(models.Module{Type: templates[i].ModuleType, Data: templates[i].Data}).Data
+		}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "private, no-store")
 	json.NewEncoder(w).Encode(templates)
 }
 
