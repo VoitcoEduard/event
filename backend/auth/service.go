@@ -12,9 +12,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"golang.org/x/oauth2"
 )
 
@@ -166,7 +164,7 @@ func (s *Service) GoogleStart(w http.ResponseWriter, r *http.Request) {
 	}
 	verifier := oauth2.GenerateVerifier()
 	expiry := time.Now().Add(loginLifetime)
-	_, err = s.Store.Logins().InsertOne(r.Context(), LoginTransaction{Hash: digest(state), Browser: digest(browser), Nonce: nonce, Verifier: verifier, ExpiresAt: expiry})
+	err = s.Store.DB.CreateAuthLogin(r.Context(), LoginTransaction{Hash: digest(state), Browser: digest(browser), Nonce: nonce, Verifier: verifier, ExpiresAt: expiry})
 	if err != nil {
 		http.Error(w, "Login unavailable", 503)
 		return
@@ -193,8 +191,7 @@ func (s *Service) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid login", 400)
 		return
 	}
-	var transaction LoginTransaction
-	err = s.Store.Logins().FindOneAndDelete(r.Context(), bson.M{"_id": digest(state), "browser": digest(browserCookie.Value), "expiresAt": bson.M{"$gt": time.Now().UTC()}}).Decode(&transaction)
+	transaction, err := s.Store.DB.ConsumeAuthLogin(r.Context(), digest(state), digest(browserCookie.Value), time.Now().UTC())
 	if err != nil {
 		http.Error(w, "Invalid or expired login", 400)
 		return
@@ -342,22 +339,8 @@ func (s *Service) ListUsers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid page", 400)
 		return
 	}
-	cursor, err := s.Store.Users().Find(r.Context(), bson.M{"issuer": bson.M{"$ne": "development"}}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: 1}, {Key: "_id", Value: 1}}).SetSkip(int64(page)*50).SetLimit(51))
+	users, err := s.Store.DB.AuthUsers(r.Context(), page*50, 51)
 	if err != nil {
-		http.Error(w, "Users unavailable", 503)
-		return
-	}
-	defer cursor.Close(r.Context())
-	users := make([]User, 0)
-	for cursor.Next(r.Context()) {
-		var user User
-		if err := cursor.Decode(&user); err != nil {
-			http.Error(w, "Users unavailable", 503)
-			return
-		}
-		users = append(users, user)
-	}
-	if cursor.Err() != nil {
 		http.Error(w, "Users unavailable", 503)
 		return
 	}
@@ -383,37 +366,17 @@ func (s *Service) SetUserStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.PathValue("id")
-	var user User
-	err := s.Store.Users().FindOne(r.Context(), bson.M{"_id": id}).Decode(&user)
-	if errors.Is(err, mongo.ErrNoDocuments) {
+	err := s.Store.DB.SetAuthUserStatus(r.Context(), actor.ID, id, input.Status)
+	if errors.Is(err, postgres.ErrNotFound) {
 		http.NotFound(w, r)
 		return
 	}
+	if errors.Is(err, postgres.ErrForbidden) {
+		http.Error(w, "Owner status requires server administration", http.StatusForbidden)
+		return
+	}
 	if err != nil {
-		http.Error(w, "Users unavailable", 503)
-		return
-	}
-	if user.Role == "owner" || user.Issuer == "development" {
-		http.Error(w, "Owner status requires server administration", 403)
-		return
-	}
-	update, err := s.Store.Users().UpdateOne(r.Context(), bson.M{"_id": id, "role": "admin"}, bson.M{"$set": bson.M{"status": input.Status}})
-	if err != nil {
-		http.Error(w, "Users unavailable", 503)
-		return
-	}
-	if update.MatchedCount != 1 {
-		http.Error(w, "Owner status requires server administration", 403)
-		return
-	}
-	if input.Status == "disabled" {
-		if _, err := s.Store.Sessions().DeleteMany(r.Context(), bson.M{"userId": id}); err != nil {
-			http.Error(w, "Users unavailable", 503)
-			return
-		}
-	}
-	if err := s.Store.AuditAction(r.Context(), actor.ID, id, "set-status:"+input.Status); err != nil {
-		http.Error(w, "Audit unavailable", 503)
+		http.Error(w, "Users unavailable", http.StatusServiceUnavailable)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

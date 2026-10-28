@@ -7,10 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/user/go-expo-sample/backend/db"
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 // UpdateQuizQuestions - PUT /events/{id}/modules/{moduleId}/quiz/questions
@@ -41,15 +40,7 @@ func (h *Handler) UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	collection := db.GetCollection("events")
-	filter := bson.M{"_id": eventID, "modules.id": moduleID}
-	update := bson.M{
-		"$set": bson.M{
-			"modules.$.data.questions": questions,
-		},
-	}
-
-	_, err := collection.UpdateOne(r.Context(), filter, update)
+	err := h.deps.DB.PatchModule(r.Context(), eventID, moduleID, map[string]any{"questions": questions})
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -104,9 +95,7 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 	h.deps.QuizHub.CreateSession(moduleID, eventID)
 
 	// Load questions from DB
-	collection := db.GetCollection("events")
-	var event models.Event
-	err := collection.FindOne(r.Context(), bson.M{"_id": eventID, "modules.id": moduleID}).Decode(&event)
+	event, err := h.deps.DB.GetEvent(r.Context(), eventID)
 	var questions []models.QuizQuestion
 	if err == nil {
 		for _, mod := range event.Modules {
@@ -128,8 +117,9 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update session state - reset players and signals when starting new quiz
-	h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
+	if !h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
 		s.State = "question"
+		s.RunID = uuid.NewString()
 		s.CurrentIndex = 0
 		s.PlayerSignals = []models.PlayerSignal{}
 		s.AnswerCounts = make(map[int]int)
@@ -151,7 +141,10 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 			}
 			s.QuestionWindows = []models.QuestionWindow{qWindow}
 		}
-	})
+	}) {
+		http.Error(w, "Quiz results are being saved", http.StatusConflict)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	// Retrieve updated session to return
@@ -178,7 +171,7 @@ func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
+	if !h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
 		s.CurrentIndex++
 		s.State = "question"
 		s.AnswerCounts = make(map[int]int)
@@ -196,7 +189,10 @@ func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
 			}
 			s.QuestionWindows = append(s.QuestionWindows, qWindow)
 		}
-	})
+	}) {
+		http.Error(w, "Quiz results are being saved", http.StatusConflict)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(h.deps.QuizHub.GetSession(moduleID))
@@ -241,7 +237,10 @@ func (h *Handler) ResetQuiz(w http.ResponseWriter, r *http.Request) {
 	moduleID := parts[4]
 
 	// Reset the session
-	h.deps.QuizHub.ResetSession(moduleID)
+	if !h.deps.QuizHub.ResetSession(moduleID) {
+		http.Error(w, "Quiz results are being saved", http.StatusConflict)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Quiz session reset"})

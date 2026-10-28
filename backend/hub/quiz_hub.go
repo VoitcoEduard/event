@@ -14,6 +14,7 @@ import (
 	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/services"
 )
 
@@ -94,11 +95,13 @@ func Min(a, b int) int {
 // QuizHub maintains the set of active clients and broadcasts messages to the
 // clients.
 type QuizHub struct {
-	authService   *auth.Service
-	quizResults   *services.QuizResultService
-	eventByModule func(context.Context, string) (*models.Event, error)
-	teamsByEvent  func(context.Context, string) ([]models.Team, error)
-	saveTeams     func(string, string, string) (*models.TeamResult, error)
+	db              *postgres.Store
+	simpleQuizLocks sync.Map
+	authService     *auth.Service
+	quizResults     *services.QuizResultService
+	eventByModule   func(context.Context, string) (*models.Event, error)
+	teamsByEvent    func(context.Context, string) ([]models.Team, error)
+	saveTeams       func(string, string, string) (*models.TeamResult, error)
 	// Registered clients.
 	clients map[*Client]bool
 
@@ -117,6 +120,7 @@ type QuizHub struct {
 }
 
 type Dependencies struct {
+	DB          *postgres.Store
 	AuthService *auth.Service
 	Events      *services.EventService
 	Teams       *database.TeamRepository
@@ -135,6 +139,7 @@ func (h *QuizHub) AdminActive(token string) bool {
 
 func NewQuizHub(deps Dependencies) *QuizHub {
 	h := &QuizHub{
+		db:                 deps.DB,
 		authService:        deps.AuthService,
 		quizResults:        deps.QuizResults,
 		clients:            make(map[*Client]bool),
@@ -227,7 +232,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		log.Println("Error unmarshalling message:", err)
 		return
 	}
-	// Resolve against MongoDB before taking the hub lock. A client-provided role
+	// Resolve against PostgreSQL before taking the hub lock. A client-provided role
 	// or an earlier host join never authorizes a later privileged message.
 	if strings.HasPrefix(msg.Type, "host:") || msg.Type == "teams:admin_join" {
 		if !h.AdminActive(client.AdminToken) {
@@ -244,8 +249,14 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 	case "host:end_teams":
 		h.processHostEndTeams(client, msg)
 		return
+	case "host:end_quiz":
+		h.processHostEndQuiz(client, msg)
+		return
 	case "participant:join":
 		h.processParticipantJoin(client, msg)
+		return
+	case "player:join":
+		h.processPlayerJoinWithPersistence(client, msg)
 		return
 	case "simple:host_join":
 		h.processSimpleHostJoin(client, msg)
@@ -264,10 +275,11 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 	// Lock for state updates
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if session := h.sessions[client.ModuleID]; session != nil && session.State == "finishing" && strings.HasPrefix(msg.Type, "host:") {
+		return
+	}
 
 	switch msg.Type {
-	case "player:join":
-		h.processPlayerJoin(client, msg)
 	case "host:join":
 		h.processHostJoin(client, msg)
 	case "projector:join":
@@ -284,8 +296,6 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		h.processHostShowResults(client, msg)
 	case "host:show_leaderboard":
 		h.processHostShowLeaderboard(client, msg)
-	case "host:end_quiz":
-		h.processHostEndQuiz(client, msg)
 	case "host:reset_quiz":
 		h.processHostResetQuiz(client, msg)
 	case "teams:admin_join":
@@ -369,6 +379,10 @@ func (h *QuizHub) GetSession(moduleID string) *models.QuizSession {
 	if s == nil {
 		return nil
 	}
+	return snapshotSession(s)
+}
+
+func snapshotSession(s *models.QuizSession) *models.QuizSession {
 	copy := *s
 	copy.Players = make(map[string]*models.Player, len(s.Players))
 	for id, player := range s.Players {
@@ -415,18 +429,20 @@ func cloneQuestions(questions []models.QuizQuestion) []models.QuizQuestion {
 	return cloned
 }
 
-func (h *QuizHub) UpdateSession(moduleID string, updater func(*models.QuizSession)) {
+func (h *QuizHub) UpdateSession(moduleID string, updater func(*models.QuizSession)) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	session, ok := h.sessions[moduleID]
-	if ok {
+	if ok && session.State != "finishing" {
 		updater(session)
 		// Broadcast update
 		h.broadcastToSessionLocked(moduleID, ServerMessage{
 			Type:    "state:update",
 			Payload: session,
 		})
+		return true
 	}
+	return false
 }
 
 func (h *QuizHub) CreateSession(moduleID string, eventID string) {
@@ -447,10 +463,14 @@ func (h *QuizHub) CreateSession(moduleID string, eventID string) {
 
 // ResetSession clears the players and resets the session state for a new quiz
 // This is the public method that acquires the lock - use for REST API calls
-func (h *QuizHub) ResetSession(moduleID string) {
+func (h *QuizHub) ResetSession(moduleID string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if s := h.sessions[moduleID]; s != nil && s.State == "finishing" {
+		return false
+	}
 	h.resetSessionLocked(moduleID)
+	return true
 }
 
 // resetSessionLocked is the internal method that assumes the lock is already held

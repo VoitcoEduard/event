@@ -13,14 +13,14 @@ const (
 )
 
 type EventSession struct {
-	ID             string               `json:"id" bson:"_id"`
-	EventID        string               `json:"eventId" bson:"eventId"`
-	Status         EventSessionStatus   `json:"status" bson:"status"`
-	ActiveModuleID string               `json:"activeModuleId,omitempty" bson:"activeModuleId,omitempty"`
-	ModuleOrder    []string             `json:"moduleOrder" bson:"moduleOrder"`
-	ModuleStates   []ModuleRuntimeState `json:"moduleStates,omitempty" bson:"moduleStates,omitempty"`
-	StartedAt      *time.Time           `json:"startedAt,omitempty" bson:"startedAt,omitempty"`
-	EndedAt        *time.Time           `json:"endedAt,omitempty" bson:"endedAt,omitempty"`
-	CreatedAt      time.Time            `json:"createdAt" bson:"createdAt"`
-	UpdatedAt      time.Time            `json:"updatedAt" bson:"updatedAt"`
+	ID             string               `json:"id"`
+	EventID        string               `json:"eventId"`
+	Status         EventSessionStatus   `json:"status"`
+	ActiveModuleID string               `json:"activeModuleId,omitempty"`
+	ModuleOrder    []string             `json:"moduleOrder"`
+	ModuleStates   []ModuleRuntimeState `json:"moduleStates,omitempty"`
+	StartedAt      *time.Time           `json:"startedAt,omitempty"`
+	EndedAt        *time.Time           `json:"endedAt,omitempty"`
+	CreatedAt      time.Time            `json:"createdAt"`
+	UpdatedAt      time.Time            `json:"updatedAt"`
 }

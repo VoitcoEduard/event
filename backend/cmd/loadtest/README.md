@@ -21,7 +21,7 @@ and answer signals in that session.
    `question-active`.
 3. Use the public Cloudflare hostname, not the NAS LAN address, so the result
    includes the tunnel and normal Internet path.
-4. Open Portainer alongside the test and watch application CPU/RAM, MongoDB
+4. Open Portainer alongside the test and watch application CPU/RAM, PostgreSQL
    CPU/RAM, network throughput, and Docker restarts/log size.
 
 ## Run

@@ -5,15 +5,37 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"github.com/google/uuid"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/bson"
 )
+
+// RequireSimpleQuizModule prevents a module from being accessed through another event's URL.
+func (h *Handler) RequireSimpleQuizModule(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if h.deps.DB == nil {
+			http.Error(w, "Storage unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		eventID, moduleID := simpleQuizIDs(r)
+		module, err := h.deps.DB.GetModule(r.Context(), eventID, moduleID)
+		if errors.Is(err, postgres.ErrNotFound) || (err == nil && module.Type != models.ModuleTypeSimpleQuiz) {
+			http.NotFound(w, r)
+			return
+		}
+		if err != nil {
+			http.Error(w, "Storage unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		next(w, r)
+	}
+}
 
 func simpleQuizIDs(r *http.Request) (eventID, moduleID string) {
 	// Prefer PathValue (Go 1.22+ patterns), fall back to manual split.
@@ -74,6 +96,10 @@ func (h *Handler) LaunchSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := h.simpleQuizHub().EnsureSimpleJudgeToken(ctx, eventID, moduleID)
+	if token == "" {
+		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	now := time.Now()
 	sess := &models.SimpleQuizSession{
 		EventID:      eventID,
@@ -90,7 +116,10 @@ func (h *Handler) LaunchSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	h.simpleQuizHub().SetSimpleQuiz(sess)
+	if err := h.simpleQuizHub().TrySetSimpleQuiz(sess); err != nil {
+		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	writeJSON(w, map[string]any{
 		"session":    publicSimpleQuizState(sess, "host", ""),
 		"judgeToken": token,
@@ -134,13 +163,21 @@ func (h *Handler) OpenSimpleQuizQuestion(w http.ResponseWriter, r *http.Request)
 	if q.TimeLimit > 0 {
 		deadline = time.Now().Add(time.Duration(q.TimeLimit) * time.Second).Unix()
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		sess.CurrentIndex = idx
 		sess.Status = models.SimpleQuizStateQuestionOpen
 		sess.DeadlineUnix = deadline
 		sess.QuestionOpenedAt = time.Now()
 		sess.PausedFrom = ""
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	if deadline > 0 {
 		hub.BroadcastSimpleQuiz(moduleID)
 		// arm timer via exported path: re-schedule by touching hub internals
@@ -168,10 +205,18 @@ func (h *Handler) LockSimpleQuizAnswers(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Question is not open", http.StatusConflict)
 		return
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		sess.Status = models.SimpleQuizStateAnswersLocked
 		sess.DeadlineUnix = 0
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
@@ -192,11 +237,19 @@ func (h *Handler) NextSimpleQuizQuestion(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Last question reached; end answering instead", http.StatusBadRequest)
 		return
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		sess.CurrentIndex++
 		sess.Status = models.SimpleQuizStateBetweenQuestions
 		sess.DeadlineUnix = 0
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
@@ -213,10 +266,18 @@ func (h *Handler) EndSimpleQuizAnswering(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "No session", http.StatusNotFound)
 		return
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		sess.Status = models.SimpleQuizStateWaitingGrading
 		sess.DeadlineUnix = 0
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
@@ -247,12 +308,20 @@ func (h *Handler) ResumeSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 			deadline = time.Now().Add(time.Duration(tl) * time.Second).Unix()
 		}
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		sess.Status = back
 		sess.PausedFrom = ""
 		sess.DeadlineUnix = deadline
 		sess.QuestionOpenedAt = time.Now()
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	if deadline > 0 {
 		armSimpleQuizTimer(hub, moduleID, deadline)
 	}
@@ -292,12 +361,20 @@ func (h *Handler) RevealSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "No public answer set for this question", http.StatusBadRequest)
 		return
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		if sess.Revealed == nil {
 			sess.Revealed = make(map[int]bool)
 		}
 		sess.Revealed[idx] = true
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
@@ -322,7 +399,7 @@ func (h *Handler) PublishSimpleQuizResults(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Every submitted answer must be marked Right or Wrong", http.StatusConflict)
 		return
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		rows := sess.ComputeWorkingResults()
 		sess.PublishedVer++
 		sess.Published = &models.SimpleQuizPublishedSnapshot{
@@ -332,6 +409,14 @@ func (h *Handler) PublishSimpleQuizResults(w http.ResponseWriter, r *http.Reques
 		}
 		sess.Status = models.SimpleQuizStateResultsPublished
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	writeJSON(w, map[string]any{
 		"session":   publicSimpleQuizState(updated, "host", ""),
 		"published": updated.Published,
@@ -355,7 +440,7 @@ func (h *Handler) UpdateSimpleQuizPublished(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Every submitted answer must be marked Right or Wrong", http.StatusConflict)
 		return
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		rows := sess.ComputeWorkingResults()
 		sess.PublishedVer++
 		sess.Published = &models.SimpleQuizPublishedSnapshot{
@@ -364,6 +449,14 @@ func (h *Handler) UpdateSimpleQuizPublished(w http.ResponseWriter, r *http.Reque
 			Players:     rows,
 		}
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	writeJSON(w, map[string]any{
 		"session":   publicSimpleQuizState(updated, "host", ""),
 		"published": updated.Published,
@@ -387,9 +480,17 @@ func (h *Handler) CompleteSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Publish results before completing", http.StatusConflict)
 		return
 	}
-	updated := hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
+	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
 		sess.Status = models.SimpleQuizStateCompleted
 	})
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
@@ -401,12 +502,10 @@ func (h *Handler) ResetSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, moduleID := simpleQuizIDs(r)
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	if db.Client != nil {
-		_, _ = db.GetCollection("simple_quiz_sessions").DeleteOne(ctx, bson.M{"moduleId": moduleID})
+	if err := hub.TryDeleteSimpleQuiz(moduleID); err != nil {
+		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		return
 	}
-	hub.DeleteSimpleQuiz(moduleID)
 	writeJSON(w, map[string]string{"message": "Simple quiz reset"})
 }
 
@@ -444,6 +543,9 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	case hub.SimpleQuizJoinTaken:
 		http.Error(w, "Nickname is already taken", http.StatusConflict)
 		return
+	case hub.SimpleQuizJoinStorageError:
+		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		return
 	}
 	if reconnected {
 		writeJSON(w, map[string]any{"playerId": player.ID, "secret": player.Secret, "nickname": player.Nickname, "reconnected": true})
@@ -480,6 +582,10 @@ func (h *Handler) SubmitSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "answerId (or Idempotency-Key) is required", http.StatusBadRequest)
 		return
 	}
+	if _, err := uuid.Parse(body.AnswerID); err != nil {
+		http.Error(w, "Invalid answer ID", http.StatusBadRequest)
+		return
+	}
 	text := strings.TrimSpace(body.Text)
 	if text == "" {
 		http.Error(w, "Answer must not be empty", http.StatusBadRequest)
@@ -505,6 +611,8 @@ func (h *Handler) SubmitSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Deadline has passed", http.StatusConflict)
 	case hub.SimpleQuizSubmitInvalid:
 		http.Error(w, "Invalid question", http.StatusBadRequest)
+	case hub.SimpleQuizSubmitStorageError:
+		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
 	default:
 		writeJSON(w, map[string]any{"answerId": id})
 	}
@@ -694,9 +802,17 @@ func (h *Handler) GradeSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) 
 	if by == "" {
 		by = "judge"
 	}
-	updated := hub.ApplySimpleGrade(moduleID, body.JudgeToken, by, body.AnswerID, body.Verdict)
-	if updated == nil {
-		http.Error(w, "No session", http.StatusNotFound)
+	updated, updateErr := hub.TryApplySimpleGrade(moduleID, body.JudgeToken, by, body.AnswerID, body.Verdict)
+	if errors.Is(updateErr, postgres.ErrNotFound) {
+		http.Error(w, "Answer not found", http.StatusNotFound)
+		return
+	}
+	if updateErr != nil {
+		if errors.Is(updateErr, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
 		return
 	}
 	writeJSON(w, map[string]any{
@@ -732,30 +848,16 @@ func (h *Handler) UndoSimpleQuizGrade(w http.ResponseWriter, r *http.Request) {
 	if by == "" {
 		by = "judge"
 	}
-	entry, ok := hub.PopSimpleUndo(moduleID, body.JudgeToken, by)
-	if !ok {
+	answerID, previous, updated, err := hub.UndoSimpleGrade(moduleID, body.JudgeToken, by)
+	if errors.Is(err, postgres.ErrNotFound) {
 		http.Error(w, "Nothing to undo", http.StatusBadRequest)
 		return
 	}
-	hub.UpdateSimpleQuiz(moduleID, func(sess *models.SimpleQuizSession) {
-		if entry.Prev == "" {
-			delete(sess.Grades, entry.AnswerID)
-			return
-		}
-		g := sess.Grades[entry.AnswerID]
-		if g == nil {
-			g = &models.SimpleQuizGrade{AnswerID: entry.AnswerID}
-			sess.Grades[entry.AnswerID] = g
-		}
-		g.Verdict = entry.Prev
-		g.UpdatedBy = by + " (undo)"
-		g.UpdatedAt = time.Now()
-		g.History = append(g.History, models.SimpleQuizGradeHistoryEntry{
-			Verdict: entry.Prev, By: g.UpdatedBy, At: g.UpdatedAt,
-		})
-	})
-	s := hub.GetSimpleQuiz(moduleID)
-	writeJSON(w, map[string]any{"undone": entry.AnswerID, "restored": entry.Prev, "gradingComplete": s.GradingComplete()})
+	if err != nil {
+		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	writeJSON(w, map[string]any{"undone": answerID, "restored": previous, "gradingComplete": updated.GradingComplete()})
 }
 
 // GetSimpleQuizResults returns working (host/judge) and published snapshots.
@@ -821,7 +923,7 @@ func (h *Handler) RotateSimpleQuizJudgeToken(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	eventID, moduleID := simpleQuizIDs(r)
-	if db.Client == nil {
+	if h.deps.DB == nil {
 		http.Error(w, "DB unavailable", http.StatusInternalServerError)
 		return
 	}

@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main, develop]
   pull_request:
 
 jobs:
@@ -17,11 +18,11 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - name: Test
-        run: go test -short ./...
+        run: go test -race -short ./...
       - name: Performance fixture smoke test
         run: go test ./hub ./models ./database ./cache -run '^TestPerformance' -bench '^Benchmark' -benchtime=1x -count=1
-      - name: Event PIN integration test
-        run: go test -tags integration -run TestEventPINMigrationAndLookup ./services
+      - name: PostgreSQL integration tests
+        run: go test -race -p 2 -tags integration -count=1 ./...
       - name: Vet
         run: go vet ./...
       - name: Format lint
@@ -42,3 +43,12 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+  image-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build application image
+        run: docker build -t quiz-postgres-migration:local .
+      - name: Fresh installation, recreation and restore
+        run: scripts/smoke-postgres.sh quiz-postgres-migration:local

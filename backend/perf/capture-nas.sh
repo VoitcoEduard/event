@@ -3,7 +3,7 @@
 # Only selected inspect fields are collected; environment variables are excluded.
 set -eu
 if [ "$#" -lt 2 ]; then
-  printf 'Usage: %s OUTPUT_DIR APP_CONTAINER [MONGO_CONTAINER] [TUNNEL_CONTAINER]\n' "$0" >&2
+  printf 'Usage: %s OUTPUT_DIR APP_CONTAINER [POSTGRES_CONTAINER] [TUNNEL_CONTAINER]\n' "$0" >&2
   exit 2
 fi
 capture_out=$1

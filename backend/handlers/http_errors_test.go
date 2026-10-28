@@ -10,7 +10,7 @@ import (
 
 func TestInternalErrorDoesNotExposeDetails(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeRequestError(w, errors.New("mongodb://secret-host:27017"), http.StatusInternalServerError)
+	writeRequestError(w, errors.New("postgres://secret-host:5432"), http.StatusInternalServerError)
 	if w.Code != http.StatusInternalServerError || strings.Contains(w.Body.String(), "secret-host") {
 		t.Fatalf("response = %d %q", w.Code, w.Body.String())
 	}

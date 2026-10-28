@@ -6,6 +6,7 @@ import (
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 )
 
 type QuizResultService struct {
@@ -14,10 +15,10 @@ type QuizResultService struct {
 	TeamResults *database.TeamResultRepository
 }
 
-func NewQuizResultService() *QuizResultService {
+func NewQuizResultService(db *postgres.Store) *QuizResultService {
 	return &QuizResultService{
-		Results: database.NewQuizResultRepository(), Teams: database.NewTeamRepository(),
-		TeamResults: database.NewTeamResultRepository(),
+		Results: database.NewQuizResultRepository(db), Teams: database.NewTeamRepository(db),
+		TeamResults: database.NewTeamResultRepository(db),
 	}
 }
 
@@ -43,7 +44,7 @@ func (s *QuizResultService) SaveQuiz(ctx context.Context, session *models.QuizSe
 		})
 	}
 	return s.Results.Create(ctx, &models.QuizResult{
-		EventID: eventID, ModuleID: session.ModuleID, FinishedAt: time.Now(),
+		RunID: session.RunID, EventID: eventID, ModuleID: session.ModuleID, FinishedAt: time.Now(),
 		Players: players, PlayerSignals: signals,
 	})
 }

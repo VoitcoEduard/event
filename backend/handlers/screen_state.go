@@ -7,10 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
@@ -62,9 +59,7 @@ func (h *Handler) GetScreenState(w http.ResponseWriter, r *http.Request) {
 	}
 	id := path[len(prefix) : len(path)-len(suffix)]
 
-	collection := db.GetCollection("events")
-	var event models.Event
-	err := collection.FindOne(r.Context(), bson.M{"_id": id}).Decode(&event)
+	event, err := h.deps.DB.GetEvent(r.Context(), id)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
@@ -99,15 +94,7 @@ func (h *Handler) UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("events")
-	update := bson.M{
-		"$set": bson.M{
-			"screenState": input,
-		},
-	}
-	opts := options.Update().SetUpsert(true)
-
-	_, err := collection.UpdateOne(r.Context(), bson.M{"_id": id}, update, opts)
+	err := h.deps.DB.SetScreenState(r.Context(), id, input)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -154,9 +141,7 @@ func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
 	defer removeScreenSubscriber(eventID, ch)
 
 	// Send initial state
-	collection := db.GetCollection("events")
-	var event models.Event
-	err := collection.FindOne(r.Context(), bson.M{"_id": eventID}).Decode(&event)
+	event, err := h.deps.DB.GetEvent(r.Context(), eventID)
 	if err == nil {
 		state := event.ScreenState
 		if state == nil {

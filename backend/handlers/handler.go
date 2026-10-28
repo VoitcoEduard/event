@@ -5,12 +5,16 @@ import (
 
 	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/database"
+	"github.com/user/go-expo-sample/backend/filestore"
 	"github.com/user/go-expo-sample/backend/hub"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/services"
 )
 
 // Dependencies are created at startup and shared by all HTTP handlers.
 type Dependencies struct {
+	DB           *postgres.Store
+	Files        *filestore.Store
 	Auth         *auth.Service
 	QuizHub      *hub.QuizHub
 	Events       *services.EventService

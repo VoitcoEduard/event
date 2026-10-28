@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/services"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (h *Handler) AddModule(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +94,8 @@ func (h *Handler) SubmitModuleResponse(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteModule(w http.ResponseWriter, r *http.Request) {
 	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
+	mediaAccessMu.Lock()
+	defer mediaAccessMu.Unlock()
 	found, err := h.deps.Modules.Delete(r.Context(), eventID, moduleID)
 	if err != nil {
 		var teamsErr *services.TeamsError
@@ -108,6 +110,7 @@ func (h *Handler) DeleteModule(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Event or module not found", http.StatusNotFound)
 		return
 	}
+	mediaMemoryCache.Clear()
 	invalidateEventCache(eventID)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Module deleted"})
@@ -136,7 +139,7 @@ func (h *Handler) UpdateModule(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetModule(w http.ResponseWriter, r *http.Request) {
 	module, err := h.deps.Modules.Get(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"))
 	if err != nil {
-		if errors.Is(err, services.ErrModuleNotFound) || errors.Is(err, mongo.ErrNoDocuments) {
+		if errors.Is(err, services.ErrModuleNotFound) || errors.Is(err, database.ErrNotFound) {
 			http.Error(w, "Module not found", http.StatusNotFound)
 		} else {
 			writeRequestError(w, err, http.StatusInternalServerError)
@@ -155,7 +158,7 @@ func (h *Handler) GetModule(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 	results, err := h.deps.Modules.Responses(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"))
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
+		if errors.Is(err, database.ErrNotFound) {
 			http.Error(w, "Event not found", http.StatusNotFound)
 		} else {
 			writeRequestError(w, err, http.StatusInternalServerError)

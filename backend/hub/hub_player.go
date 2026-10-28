@@ -1,11 +1,44 @@
 package hub
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/user/go-expo-sample/backend/models"
 	"log"
+	"strings"
 	"time"
 )
+
+// Resolve the event and participant before taking the shared hub lock.
+func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMessage) {
+	if h.db != nil {
+		data, ok := msg.Payload.(map[string]interface{})
+		if !ok {
+			return
+		}
+		moduleID, _ := data["moduleId"].(string)
+		userID, _ := data["userId"].(string)
+		nickname, _ := data["nickname"].(string)
+		if moduleID == "" || userID == "" || len(userID) > 120 || strings.TrimSpace(nickname) == "" || len(nickname) > 120 {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		event, err := h.db.GetEventByModule(ctx, moduleID)
+		if err != nil {
+			return
+		}
+		now := time.Now().UTC()
+		_, err = h.db.EnsureParticipant(ctx, &models.Participant{ID: userID, EventID: event.ID, DisplayName: nickname, NormalizedName: strings.ToLower(strings.TrimSpace(nickname)), Status: models.ParticipantStatusJoined, CreatedAt: now, UpdatedAt: now})
+		if err != nil {
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_failed", "message": "Could not join the event. Please try again."}}))
+			return
+		}
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.processPlayerJoin(client, msg)
+}
 
 func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 	client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
@@ -147,6 +180,9 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 	}
 
 	session := h.sessions[client.ModuleID]
+	if session != nil && session.State == "finishing" {
+		return
+	}
 	if session != nil {
 		DebugLog("player:signal - Session found, state: %s, currentIndex: %d, questionWindows: %d",
 			session.State, session.CurrentIndex, len(session.QuestionWindows))

@@ -13,21 +13,15 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/testutils"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func TestWebSocketAdminCannotBeSelfAssigned(t *testing.T) {
-	mongoDB := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, mongoDB)
-	store := auth.Store{DB: mongoDB.Client.Database("websocket_auth")}
-	if err := store.EnsureIndexes(context.Background()); err != nil {
-		t.Fatal(err)
-	}
+	store := auth.Store{DB: testutils.SetupPostgres(t)}
 	user, err := store.UpsertGoogleUser(context.Background(), "issuer", "admin", "admin@example.test", "Admin")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = store.Users().UpdateByID(context.Background(), user.ID, bson.M{"$set": bson.M{"status": "active"}})
+	_, err = store.DB.Pool.Exec(context.Background(), `UPDATE auth_users SET status='active' WHERE id=$1`, user.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

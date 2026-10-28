@@ -861,7 +861,7 @@ const enableAudio = () => {
     }
 }
 
-const { success } = useToast()
+const { success, error: showError } = useToast()
 const { t } = useI18n()
 
 const copyProjectorLink = () => {
@@ -903,6 +903,10 @@ onMounted(async () => {
     if (stopped) return
 
     // 2. Register handlers BEFORE connecting (server sends messages immediately)
+    quizWS.on('cmd:error', (payload) => {
+        if (payload?.code === 'save_failed') showError(payload.message)
+    })
+
     quizWS.on('cmd:state', (payload) => {
         // Handle state transitions from server
         const prevState = gameState.value

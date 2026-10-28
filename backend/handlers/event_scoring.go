@@ -7,15 +7,12 @@ import (
 	"net/http"
 
 	"github.com/user/go-expo-sample/backend/database"
-	"github.com/user/go-expo-sample/backend/db"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (h *Handler) GetEventScores(w http.ResponseWriter, r *http.Request) {
-	scores, err := database.LoadEventScores(r.Context(), r.PathValue("eventID"))
+	scores, err := database.LoadEventScores(r.Context(), h.deps.DB, r.PathValue("eventID"))
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
+		if errors.Is(err, database.ErrNotFound) {
 			http.Error(w, "Event not found", http.StatusNotFound)
 			return
 		}
@@ -78,18 +75,26 @@ func (h *Handler) SetManualScore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "This scoring target is disabled for the module", 400)
 		return
 	}
-	collection := "participants"
-	if target == "teams" {
-		collection = "event_teams"
+	count := 0
+	if target == "players" {
+		_, err = h.deps.DB.Participant(r.Context(), eventID, targetID)
+		if err == nil {
+			count = 1
+		}
+	} else {
+		team, teamErr := h.deps.DB.Team(r.Context(), targetID)
+		err = teamErr
+		if err == nil && team.EventID == eventID {
+			count = 1
+		}
 	}
-	count, err := db.GetCollection(collection).CountDocuments(r.Context(), bson.M{"_id": targetID, "eventId": eventID})
-	if err != nil {
+	if err != nil && !errors.Is(err, database.ErrNotFound) {
 		writeRequestError(w, err, 500)
 		return
 	}
 	if count == 0 {
 		if target == "teams" && module.Type == "teams" {
-			activity, activityErr := database.NewTeamsActivityRepository().Get(r.Context(), eventID, moduleID)
+			activity, activityErr := database.NewTeamsActivityRepository(h.deps.DB).Get(r.Context(), eventID, moduleID)
 			if activityErr == nil {
 				for _, team := range activity.Teams {
 					if team.ID == targetID {
@@ -97,7 +102,7 @@ func (h *Handler) SetManualScore(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			if activityErr != nil && !errors.Is(activityErr, mongo.ErrNoDocuments) {
+			if activityErr != nil && !errors.Is(activityErr, database.ErrNotFound) {
 				writeRequestError(w, activityErr, 500)
 				return
 			}
@@ -107,7 +112,7 @@ func (h *Handler) SetManualScore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Player or team not found in this event", 404)
 		return
 	}
-	if err := database.NewScoreEntryRepository().SetManual(r.Context(), eventID, moduleID, target, targetID, *input.Points); err != nil {
+	if err := database.NewScoreEntryRepository(h.deps.DB).SetManual(r.Context(), eventID, moduleID, target, targetID, *input.Points); err != nil {
 		writeRequestError(w, err, 500)
 		return
 	}

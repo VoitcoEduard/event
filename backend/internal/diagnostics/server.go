@@ -22,7 +22,7 @@ type Server struct {
 
 // StartFromEnv returns nil when PERF_ADDR is unset. Profiling sampling also
 // stays disabled unless explicitly requested for a diagnostic run.
-func StartFromEnv() (*Server, error) {
+func StartFromEnv(poolStats ...func() any) (*Server, error) {
 	addr := os.Getenv("PERF_ADDR")
 	if addr == "" {
 		return nil, nil
@@ -35,7 +35,7 @@ func StartFromEnv() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return start(addr, mutex, block)
+	return start(addr, mutex, block, poolStats...)
 }
 
 func sampleRate(key string) (int, error) {
@@ -50,7 +50,7 @@ func sampleRate(key string) (int, error) {
 	return n, nil
 }
 
-func start(addr string, mutex, block int) (*Server, error) {
+func start(addr string, mutex, block int, poolStats ...func() any) (*Server, error) {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, fmt.Errorf("PERF_ADDR: %w", err)
@@ -64,7 +64,7 @@ func start(addr string, mutex, block int) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("profiling listener: %w", err)
 	}
-	mux := newMux()
+	mux := newMux(poolStats...)
 	s := &Server{http: &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}, Addr: listener.Addr().String()}
 	runtime.SetMutexProfileFraction(mutex)
 	runtime.SetBlockProfileRate(block)
@@ -72,7 +72,7 @@ func start(addr string, mutex, block int) (*Server, error) {
 	return s, nil
 }
 
-func newMux() *http.ServeMux {
+func newMux(poolStats ...func() any) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -83,13 +83,17 @@ func newMux() *http.ServeMux {
 		var memory runtime.MemStats
 		runtime.ReadMemStats(&memory)
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		metrics := map[string]any{
 			"goVersion": runtime.Version(), "goos": runtime.GOOS, "goarch": runtime.GOARCH,
 			"numCPU": runtime.NumCPU(), "gomaxprocs": runtime.GOMAXPROCS(0),
 			"goroutines": runtime.NumGoroutine(), "heapAllocBytes": memory.HeapAlloc,
 			"heapSysBytes": memory.HeapSys, "totalAllocBytes": memory.TotalAlloc,
 			"gcCycles": memory.NumGC, "gcPauseTotalNs": memory.PauseTotalNs,
-		})
+		}
+		if len(poolStats) != 0 && poolStats[0] != nil {
+			metrics["databasePool"] = poolStats[0]()
+		}
+		_ = json.NewEncoder(w).Encode(metrics)
 	})
 	return mux
 }

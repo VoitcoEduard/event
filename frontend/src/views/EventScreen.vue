@@ -166,6 +166,7 @@ const dynamicCards = ref([])
 const participantStatus = ref(null)
 const selectedModule = ref(null)
 let pollingInterval = null
+let stopped = false
 
 const fetchEvent = async () => {
   if (!currentEvent.value?.id) return
@@ -220,14 +221,23 @@ const fetchEvent = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (currentEvent.value?.id) {
-    fetchEvent() // Initial fetch
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/participants/join`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userId.value, displayName: userName.value })
+      })
+      if (!response.ok) throw new Error('Participant registration failed')
+    } catch (error) { console.error('Participant registration failed:', error) }
+    if (stopped) return
+    fetchEvent()
     pollingInterval = setInterval(fetchEvent, 3000)
   }
 })
 
 onUnmounted(() => {
+  stopped = true
   if (pollingInterval) {
     clearInterval(pollingInterval)
   }

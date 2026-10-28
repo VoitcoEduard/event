@@ -7,6 +7,7 @@ import (
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
@@ -22,9 +23,9 @@ type EventSessionService struct {
 	SessionRepo EventSessionStore
 }
 
-func NewEventSessionService() *EventSessionService {
+func NewEventSessionService(db *postgres.Store) *EventSessionService {
 	return &EventSessionService{
-		SessionRepo: database.NewEventSessionRepository(),
+		SessionRepo: database.NewEventSessionRepository(db),
 	}
 }
 

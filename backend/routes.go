@@ -87,26 +87,29 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 		{"POST /events/{eventID}/modules/{moduleID}/simple-quiz/undo", h.UndoSimpleQuizGrade, false},
 		{"GET /events/{eventID}/modules/{moduleID}/simple-quiz/results", h.GetSimpleQuizResults, false},
 		{"POST /events/{eventID}/modules/{moduleID}/simple-quiz/judge-token/rotate", h.RotateSimpleQuizJudgeToken, true},
-		{"GET /events/{eventID}/modules/{moduleID}/wrongpictures/preload", handlers.PreloadWrongPictures, false},
+		{"GET /events/{eventID}/modules/{moduleID}/wrongpictures/preload", h.PreloadWrongPictures, false},
 		{"GET /sessions/{sessionID}", h.GetSession, true},
 		{"PUT /sessions/{sessionID}/status", h.UpdateSessionStatus, true},
 		{"PUT /sessions/{sessionID}/active_module", h.AdvanceSessionModule, true},
-		{"GET /screensavers", handlers.GetScreensavers, false},
-		{"POST /screensavers", handlers.CreateScreensaver, true},
-		{"DELETE /screensavers/{screensaverID}", handlers.DeleteScreensaver, true},
-		{"GET /tracks", handlers.GetTracks, false},
-		{"POST /tracks", handlers.CreateTrack, true},
-		{"DELETE /tracks/{trackID}", handlers.DeleteTrack, true},
+		{"GET /screensavers", h.GetScreensavers, false},
+		{"POST /screensavers", h.CreateScreensaver, true},
+		{"DELETE /screensavers/{screensaverID}", h.DeleteScreensaver, true},
+		{"GET /tracks", h.GetTracks, false},
+		{"POST /tracks", h.CreateTrack, true},
+		{"DELETE /tracks/{trackID}", h.DeleteTrack, true},
 		{"GET /templates", h.GetTemplates, false},
 		{"POST /templates", h.SaveTemplate, true},
 		{"PUT /templates/{templateID}", h.UpdateTemplate, true},
 		{"DELETE /templates/{templateID}", h.DeleteTemplate, true},
-		{"POST /media/upload", handlers.UploadMedia, true},
-		{"GET /media/{mediaID}/file", handlers.ServeMedia, false},
-		{"GET /media/{mediaID}", handlers.GetMedia, true},
-		{"DELETE /media/{mediaID}", handlers.DeleteMedia, true},
+		{"POST /media/upload", h.UploadMedia, true},
+		{"GET /media/{mediaID}/file", h.ServeMedia, false},
+		{"GET /media/{mediaID}", h.GetMedia, true},
+		{"DELETE /media/{mediaID}", h.DeleteMedia, true},
 	} {
 		handler := route.handler
+		if strings.Contains(route.pattern, "/simple-quiz/") {
+			handler = h.RequireSimpleQuizModule(handler)
+		}
 		if route.admin {
 			handler = h.VerifyAuth(handler)
 		}

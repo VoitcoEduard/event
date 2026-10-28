@@ -1,0 +1,15 @@
+# Deploy once as a separate Portainer stack using the Web editor.
+services:
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE:-cloudflare/cloudflared:latest}
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set the Cloudflare tunnel token}
+    networks:
+      - edge
+
+networks:
+  edge:
+    external: true
+    name: edge

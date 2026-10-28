@@ -27,3 +27,7 @@ backend/main
 plans/
 *.jpg
 *.md
+
+# Local performance bundles and captures
+backend/perf-kit
+backend/perf/results

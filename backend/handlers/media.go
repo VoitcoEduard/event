@@ -3,47 +3,45 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-
 	"github.com/user/go-expo-sample/backend/cache"
-	"github.com/user/go-expo-sample/backend/db"
+	"github.com/user/go-expo-sample/backend/filestore"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
-var (
-	// mediaMemoryCache stores recently served media items in RAM (up to 256MB)
-	// so 100 concurrent players fetching round images never hit disk or MongoDB.
-	mediaMemoryCache = cache.NewMediaCache(256 * 1024 * 1024)
-)
+var mediaMemoryCache = cache.NewMediaCache(256 * 1024 * 1024)
 
-// InvalidateMediaCache removes a media item from the in-memory cache.
-func InvalidateMediaCache(id string) {
-	mediaMemoryCache.Delete(id)
-}
+// Deletion and cache population are serialized so a concurrent read cannot
+// repopulate a cache entry after its metadata has been deleted.
+var mediaAccessMu sync.RWMutex
 
-func parseMediaID(path string) (string, bool) {
-	prefix := "/media/"
-	if len(path) <= len(prefix) {
-		return "", false
+func InvalidateMediaCache(id string) { mediaMemoryCache.Delete(id) }
+func validMediaID(w http.ResponseWriter, id string) bool {
+	if _, err := uuid.Parse(id); err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return false
 	}
-	rest := path[len(prefix):]
-	for i, c := range rest {
-		if c == '/' {
-			return rest[:i], true
-		}
-	}
-	return rest, true
+	return true
 }
-
-func mimeToExtension(mimeType string) string {
-	switch mimeType {
+func mediaFailure(w http.ResponseWriter, err error) {
+	if errors.Is(err, postgres.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
+		http.Error(w, "Media not found", http.StatusNotFound)
+		return
+	}
+	writeRequestError(w, err, http.StatusInternalServerError)
+}
+func mimeToExtension(m string) string {
+	switch m {
 	case "image/jpeg":
 		return ".jpg"
 	case "image/png":
@@ -56,490 +54,192 @@ func mimeToExtension(mimeType string) string {
 		return ".jpg"
 	}
 }
+func cacheMedia(m postgres.MediaRecord, data []byte) {
+	mediaMemoryCache.Set(m.ID, cache.MediaItem{ID: m.ID, Filename: m.Filename, MimeType: m.MimeType, Data: data, CreatedAt: m.CreatedAt, Size: m.Size})
+}
+func mediaResponse(m postgres.MediaRecord) models.MediaResponse {
+	return models.MediaResponse{ID: m.ID, Filename: m.Filename, OriginalName: m.OriginalName, MimeType: m.MimeType, Size: m.Size, Width: m.Width, Height: m.Height, URL: "/media/" + m.ID + "/file"}
+}
 
-func UploadMedia(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) uploadMedia(w http.ResponseWriter, r *http.Request, kind string) {
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
-	err := r.ParseMultipartForm(32 << 20)
-	if err != nil {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-
+	if r.MultipartForm != nil {
+		defer r.MultipartForm.RemoveAll()
+	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
-
-	eventId := r.FormValue("eventId")
-	moduleId := r.FormValue("moduleId")
-
 	data, err := io.ReadAll(file)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
-
-	_, err = utils.ValidateImage(data)
-	if err != nil {
-		writeRequestError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	processedData, width, height, mimeType, err := utils.ProcessImage(data)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	ext := mimeToExtension(mimeType)
-	fileUUID := uuid.New().String()
-	filename := fileUUID + ext
-
-	bucket := db.GetGridFSBucket()
-	if bucket == nil {
-		http.Error(w, "GridFS not initialized", http.StatusInternalServerError)
-		return
-	}
-
-	uploadStream, err := bucket.OpenUploadStream(filename)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-	defer uploadStream.Close()
-
-	_, err = uploadStream.Write(processedData)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	gridfsID, ok := uploadStream.FileID.(primitive.ObjectID)
-	if !ok {
-		http.Error(w, "Failed to get GridFS file ID", http.StatusInternalServerError)
-		return
-	}
-
-	mediaFile := models.MediaFile{
-		ID:           primitive.NewObjectID(),
-		GridFSID:     gridfsID,
-		Filename:     filename,
-		OriginalName: header.Filename,
-		MimeType:     mimeType,
-		Size:         int64(len(processedData)),
-		Width:        width,
-		Height:       height,
-		EventID:      eventId,
-		ModuleID:     moduleId,
-		CreatedAt:    time.Now(),
-	}
-
-	collection := db.GetCollection("media")
-	_, err = collection.InsertOne(r.Context(), mediaFile)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	// Pre-populate RAM cache so subsequent player fetches never hit disk/DB
-	mediaMemoryCache.Set(mediaFile.ID.Hex(), cache.MediaItem{
-		ID:        mediaFile.ID.Hex(),
-		Filename:  mediaFile.Filename,
-		MimeType:  mediaFile.MimeType,
-		Data:      processedData,
-		CreatedAt: mediaFile.CreatedAt,
-		Size:      int64(len(processedData)),
-	})
-
-	response := models.MediaResponse{
-		ID:           mediaFile.ID.Hex(),
-		Filename:     mediaFile.Filename,
-		OriginalName: mediaFile.OriginalName,
-		MimeType:     mediaFile.MimeType,
-		Size:         mediaFile.Size,
-		Width:        mediaFile.Width,
-		Height:       mediaFile.Height,
-		URL:          "/media/" + mediaFile.ID.Hex() + "/file",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
-}
-
-func GetMedia(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseMediaID(r.URL.Path)
-	if !ok || id == "" {
-		http.Error(w, "ID required", http.StatusBadRequest)
-		return
-	}
-
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
-		return
-	}
-
-	collection := db.GetCollection("media")
-	var mediaFile models.MediaFile
-	err = collection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&mediaFile)
-	if err != nil {
-		http.Error(w, "Media not found", http.StatusNotFound)
-		return
-	}
-
-	response := models.MediaResponse{
-		ID:           mediaFile.ID.Hex(),
-		Filename:     mediaFile.Filename,
-		OriginalName: mediaFile.OriginalName,
-		MimeType:     mediaFile.MimeType,
-		Size:         mediaFile.Size,
-		Width:        mediaFile.Width,
-		Height:       mediaFile.Height,
-		URL:          "/media/" + mediaFile.ID.Hex() + "/file",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
-func ServeMedia(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseMediaID(r.URL.Path)
-	if !ok || id == "" {
-		http.Error(w, "ID required", http.StatusBadRequest)
-		return
-	}
-
-	// 1. FAST PATH: Check RAM cache first
-	if item, found := mediaMemoryCache.Get(id); found {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		if item.MimeType != "" {
-			w.Header().Set("Content-Type", item.MimeType)
-		}
-		w.Header().Set("ETag", `"`+id+`"`)
-		http.ServeContent(w, r, item.Filename, item.CreatedAt, bytes.NewReader(item.Data))
-		return
-	}
-
-	// 2. SLOW PATH: Query MongoDB & GridFS
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
-		return
-	}
-
-	collection := db.GetCollection("media")
-	var mediaFile models.MediaFile
-	err = collection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&mediaFile)
-	if err != nil {
-		http.Error(w, "Media not found", http.StatusNotFound)
-		return
-	}
-
-	bucket := db.GetGridFSBucket()
-	if bucket == nil {
-		http.Error(w, "GridFS not initialized", http.StatusInternalServerError)
-		return
-	}
-
-	downloadStream, err := bucket.OpenDownloadStream(mediaFile.GridFSID)
-	if err != nil {
-		http.Error(w, "File not found in storage", http.StatusNotFound)
-		return
-	}
-	defer downloadStream.Close()
-
-	data, err := io.ReadAll(downloadStream)
-	if err != nil {
-		http.Error(w, "Failed to read file", http.StatusInternalServerError)
-		return
-	}
-
-	// 3. Save into RAM cache for all subsequent requests
-	mediaMemoryCache.Set(id, cache.MediaItem{
-		ID:        id,
-		Filename:  mediaFile.Filename,
-		MimeType:  mediaFile.MimeType,
-		Data:      data,
-		CreatedAt: mediaFile.CreatedAt,
-		Size:      int64(len(data)),
-	})
-
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	if mediaFile.MimeType != "" {
-		w.Header().Set("Content-Type", mediaFile.MimeType)
-	}
-	w.Header().Set("ETag", `"`+id+`"`)
-	// Use ServeContent to automatically support Range / chunked requests
-	http.ServeContent(w, r, mediaFile.Filename, mediaFile.CreatedAt, bytes.NewReader(data))
-}
-
-func DeleteMedia(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseMediaID(r.URL.Path)
-	if !ok || id == "" {
-		http.Error(w, "ID required", http.StatusBadRequest)
-		return
-	}
-
-	// Invalidate RAM cache
-	mediaMemoryCache.Delete(id)
-
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
-		return
-	}
-
-	collection := db.GetCollection("media")
-	var mediaFile models.MediaFile
-	err = collection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&mediaFile)
-	if err != nil {
-		http.Error(w, "Media not found", http.StatusNotFound)
-		return
-	}
-
-	bucket := db.GetGridFSBucket()
-	if bucket != nil {
-		err = bucket.Delete(mediaFile.GridFSID)
-		if err != nil {
-			writeRequestError(w, err, http.StatusInternalServerError)
-			return
-		}
-	}
-
-	_, err = collection.DeleteOne(r.Context(), bson.M{"_id": objectID})
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Media deleted successfully"})
-}
-
-// GetScreensavers returns all screensavers from the global library
-// URL: /screensavers
-func GetScreensavers(w http.ResponseWriter, r *http.Request) {
-	collection := db.GetCollection("screensavers")
-	var screensavers []models.Screensaver
-
-	cursor, err := collection.Find(r.Context(), bson.M{})
-	if err != nil {
-		http.Error(w, "Failed to fetch screensavers", http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(r.Context())
-
-	if err := cursor.All(r.Context(), &screensavers); err != nil {
-		http.Error(w, "Failed to decode screensavers", http.StatusInternalServerError)
-		return
-	}
-
-	// Convert to response format
-	responses := make([]models.ScreensaverResponse, len(screensavers))
-	for i, s := range screensavers {
-		responses[i] = models.ScreensaverResponse{
-			ID:           s.ID.Hex(),
-			Name:         s.Name,
-			MediaID:      s.MediaID.Hex(),
-			ThumbnailURL: s.ThumbnailURL,
-			CreatedAt:    s.CreatedAt.Format(time.RFC3339),
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(responses)
-}
-
-// CreateScreensaver creates a new screensaver in the global library
-// URL: /screensavers
-func CreateScreensaver(w http.ResponseWriter, r *http.Request) {
-	// Parse multipart form
-	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
-	err := r.ParseMultipartForm(32 << 20)
-	if err != nil {
-		writeRequestError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	// Get the file
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		writeRequestError(w, err, http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	// Get name from form, fallback to original filename
 	name := r.FormValue("name")
 	if name == "" {
 		name = header.Filename
 	}
-
-	// Read file data
-	data, err := io.ReadAll(file)
+	mediaType := http.DetectContentType(data)
+	width, height := 0, 0
+	ext := ".mp3"
+	if kind != "track" {
+		if _, err = utils.ValidateImage(data); err != nil {
+			writeRequestError(w, err, http.StatusBadRequest)
+			return
+		}
+		data, width, height, mediaType, err = utils.ProcessImage(data)
+		if err != nil {
+			writeRequestError(w, err, http.StatusInternalServerError)
+			return
+		}
+		ext = mimeToExtension(mediaType)
+	} else {
+		switch mediaType {
+		case "audio/wav", "audio/x-wav":
+			ext = ".wav"
+		case "audio/ogg":
+			ext = ".ogg"
+		case "audio/mpeg":
+			ext = ".mp3"
+		}
+	}
+	in := filestore.Upload{OriginalName: header.Filename, Filename: uuid.NewString() + ext, MimeType: mediaType, Width: width, Height: height, EventID: r.FormValue("eventId"), ModuleID: r.FormValue("moduleId"), Data: data, Kind: kind, Name: name}
+	mediaAccessMu.RLock()
+	result, err := h.deps.Files.Save(r.Context(), in)
+	if err == nil {
+		cacheMedia(result.Media, data)
+	}
+	mediaAccessMu.RUnlock()
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
-
-	// Validate image
-	_, err = utils.ValidateImage(data)
-	if err != nil {
-		writeRequestError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	// Process image (resize, optimize)
-	processedData, width, height, mimeType, err := utils.ProcessImage(data)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	ext := mimeToExtension(mimeType)
-	fileUUID := uuid.New().String()
-	filename := fileUUID + ext
-
-	// Upload to GridFS
-	bucket := db.GetGridFSBucket()
-	if bucket == nil {
-		http.Error(w, "GridFS not initialized", http.StatusInternalServerError)
-		return
-	}
-
-	uploadStream, err := bucket.OpenUploadStream(filename)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-	defer uploadStream.Close()
-
-	_, err = uploadStream.Write(processedData)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	gridfsID, ok := uploadStream.FileID.(primitive.ObjectID)
-	if !ok {
-		http.Error(w, "Failed to get GridFS file ID", http.StatusInternalServerError)
-		return
-	}
-
-	// Save media file metadata
-	mediaFile := models.MediaFile{
-		ID:           primitive.NewObjectID(),
-		GridFSID:     gridfsID,
-		Filename:     filename,
-		OriginalName: header.Filename,
-		MimeType:     mimeType,
-		Size:         int64(len(processedData)),
-		Width:        width,
-		Height:       height,
-		CreatedAt:    time.Now(),
-	}
-
-	mediaCollection := db.GetCollection("media")
-	_, err = mediaCollection.InsertOne(r.Context(), mediaFile)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	// Pre-populate RAM cache
-	mediaMemoryCache.Set(mediaFile.ID.Hex(), cache.MediaItem{
-		ID:        mediaFile.ID.Hex(),
-		Filename:  mediaFile.Filename,
-		MimeType:  mediaFile.MimeType,
-		Data:      processedData,
-		CreatedAt: mediaFile.CreatedAt,
-		Size:      int64(len(processedData)),
-	})
-
-	// Create screensaver entry
-	now := time.Now()
-	screensaver := models.Screensaver{
-		ID:           primitive.NewObjectID(),
-		Name:         name,
-		MediaID:      mediaFile.ID,
-		ThumbnailURL: "/media/" + mediaFile.ID.Hex() + "/file",
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-
-	screensaverCollection := db.GetCollection("screensavers")
-	_, err = screensaverCollection.InsertOne(r.Context(), screensaver)
-	if err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	response := models.ScreensaverResponse{
-		ID:           screensaver.ID.Hex(),
-		Name:         screensaver.Name,
-		MediaID:      screensaver.MediaID.Hex(),
-		ThumbnailURL: screensaver.ThumbnailURL,
-		CreatedAt:    screensaver.CreatedAt.Format(time.RFC3339),
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	switch kind {
+	case "screensaver":
+		v := result.Screen
+		_ = json.NewEncoder(w).Encode(models.ScreensaverResponse{ID: v.ID, Name: v.Name, MediaID: v.MediaID, ThumbnailURL: v.ThumbnailURL, CreatedAt: v.CreatedAt.Format(time.RFC3339)})
+	case "track":
+		v := result.Track
+		_ = json.NewEncoder(w).Encode(models.TrackResponse{ID: v.ID, Name: v.Name, MediaID: v.MediaID, URL: v.URL, CreatedAt: v.CreatedAt.Format(time.RFC3339)})
+	default:
+		_ = json.NewEncoder(w).Encode(mediaResponse(result.Media))
+	}
 }
-
-// DeleteScreensaver deletes a screensaver from the global library
-// URL: /screensavers/{id}
-func DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Path
-	prefix := "/screensavers/"
-	if len(id) <= len(prefix) {
-		http.Error(w, "ID required", http.StatusBadRequest)
+func (h *Handler) UploadMedia(w http.ResponseWriter, r *http.Request) { h.uploadMedia(w, r, "") }
+func (h *Handler) CreateScreensaver(w http.ResponseWriter, r *http.Request) {
+	h.uploadMedia(w, r, "screensaver")
+}
+func (h *Handler) CreateTrack(w http.ResponseWriter, r *http.Request) { h.uploadMedia(w, r, "track") }
+func (h *Handler) GetMedia(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("mediaID")
+	if !validMediaID(w, id) {
 		return
 	}
-	id = id[len(prefix):]
-
-	objectID, err := primitive.ObjectIDFromHex(id)
+	m, err := h.deps.DB.Media(r.Context(), id)
 	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		mediaFailure(w, err)
 		return
 	}
-
-	// Find screensaver first
-	screensaverCollection := db.GetCollection("screensavers")
-	var screensaver models.Screensaver
-	err = screensaverCollection.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&screensaver)
-	if err != nil {
-		http.Error(w, "Screensaver not found", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(mediaResponse(m))
+}
+func (h *Handler) ServeMedia(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("mediaID")
+	if !validMediaID(w, id) {
 		return
 	}
-
-	// Delete from RAM cache
-	mediaMemoryCache.Delete(screensaver.MediaID.Hex())
-
-	// Delete the associated media file
-	mediaCollection := db.GetCollection("media")
-	var mediaFile models.MediaFile
-	err = mediaCollection.FindOne(r.Context(), bson.M{"_id": screensaver.MediaID}).Decode(&mediaFile)
-	if err == nil {
-		// Delete from GridFS
-		bucket := db.GetGridFSBucket()
-		if bucket != nil {
-			bucket.Delete(mediaFile.GridFSID)
+	mediaAccessMu.RLock()
+	item, found := mediaMemoryCache.Get(id)
+	if !found {
+		m, data, err := h.deps.Files.Read(r.Context(), id)
+		if err != nil {
+			mediaAccessMu.RUnlock()
+			mediaFailure(w, err)
+			return
 		}
-		// Delete media metadata
-		mediaCollection.DeleteOne(r.Context(), bson.M{"_id": screensaver.MediaID})
+		cacheMedia(m, data)
+		item = cache.MediaItem{ID: m.ID, Filename: m.Filename, MimeType: m.MimeType, Data: data, CreatedAt: m.CreatedAt, Size: m.Size}
 	}
-
-	// Delete screensaver
-	_, err = screensaverCollection.DeleteOne(r.Context(), bson.M{"_id": objectID})
+	mediaAccessMu.RUnlock()
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	if item.MimeType != "" {
+		w.Header().Set("Content-Type", item.MimeType)
+	}
+	w.Header().Set("ETag", `"`+id+`"`)
+	http.ServeContent(w, r, item.Filename, item.CreatedAt, bytes.NewReader(item.Data))
+}
+func (h *Handler) DeleteMedia(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("mediaID")
+	if !validMediaID(w, id) {
+		return
+	}
+	mediaAccessMu.Lock()
+	err := h.deps.Files.Delete(r.Context(), id)
+	if err == nil {
+		InvalidateMediaCache(id)
+	}
+	mediaAccessMu.Unlock()
+	if err != nil {
+		mediaFailure(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Media deleted successfully"})
+}
+func (h *Handler) GetScreensavers(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.deps.DB.Screensavers(r.Context())
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
-
+	out := make([]models.ScreensaverResponse, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, models.ScreensaverResponse{ID: v.ID, Name: v.Name, MediaID: v.MediaID, ThumbnailURL: v.ThumbnailURL, CreatedAt: v.CreatedAt.Format(time.RFC3339)})
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Screensaver deleted successfully"})
+	_ = json.NewEncoder(w).Encode(out)
+}
+func (h *Handler) GetTracks(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.deps.DB.Tracks(r.Context())
+	if err != nil {
+		writeRequestError(w, err, http.StatusInternalServerError)
+		return
+	}
+	out := make([]models.TrackResponse, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, models.TrackResponse{ID: v.ID, Name: v.Name, MediaID: v.MediaID, URL: v.URL, CreatedAt: v.CreatedAt.Format(time.RFC3339)})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(out)
+}
+func (h *Handler) deleteLibrary(w http.ResponseWriter, r *http.Request, kind, id string) {
+	if !validMediaID(w, id) {
+		return
+	}
+	mediaAccessMu.Lock()
+	mediaID, err := h.deps.Files.DeleteLibrary(r.Context(), kind, id)
+	if err == nil {
+		InvalidateMediaCache(mediaID)
+	}
+	mediaAccessMu.Unlock()
+	if err != nil {
+		mediaFailure(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": strings.TrimSuffix(kind, "s") + " deleted successfully"})
+}
+func (h *Handler) DeleteScreensaver(w http.ResponseWriter, r *http.Request) {
+	h.deleteLibrary(w, r, "screensavers", r.PathValue("screensaverID"))
+}
+func (h *Handler) DeleteTrack(w http.ResponseWriter, r *http.Request) {
+	h.deleteLibrary(w, r, "tracks", r.PathValue("trackID"))
 }

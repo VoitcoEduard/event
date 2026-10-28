@@ -2,10 +2,8 @@ package database
 
 import (
 	"context"
-
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/user/go-expo-sample/backend/postgres"
 )
 
 type EventScores struct {
@@ -25,59 +23,46 @@ type EventScoreParticipant struct {
 	DisplayName string `json:"displayName"`
 }
 
-func LoadEventScores(ctx context.Context, eventID string) (*EventScores, error) {
-	event, err := NewEventRepository().Get(ctx, eventID)
+func LoadEventScores(ctx context.Context, db *postgres.Store, eventID string) (*EventScores, error) {
+	event, err := db.GetEvent(ctx, eventID)
 	if err != nil {
 		return nil, err
 	}
-	moduleIDs := bson.A{}
-	modules := make(map[string]bool)
-	for _, module := range event.Modules {
-		modules[module.ID] = true
-		if module.Type == models.ModuleTypeQuiz || module.Type == models.ModuleTypeWrongPictures {
-			moduleIDs = append(moduleIDs, module.ID)
-		}
+	modules := map[string]bool{}
+	for _, m := range event.Modules {
+		modules[m.ID] = true
 	}
-	cursor, err := db.GetCollection("quiz_results").Aggregate(ctx, []bson.M{
-		{"$match": bson.M{"eventId": eventID, "moduleId": bson.M{"$in": moduleIDs}}},
-		{"$sort": bson.D{{Key: "finishedAt", Value: -1}, {Key: "_id", Value: -1}}},
-		{"$group": bson.M{"_id": "$moduleId", "latest": bson.M{"$first": "$$ROOT"}}},
-		{"$replaceRoot": bson.M{"newRoot": "$latest"}},
-	})
+	games, err := db.LatestQuizResults(ctx, eventID)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
-	result := &EventScores{Games: []models.QuizResult{}, Teams: []EventScoreTeam{}, Participants: []EventScoreParticipant{}}
-	if err = cursor.All(ctx, &result.Games); err != nil {
-		return nil, err
-	}
-	entries, err := NewScoreEntryRepository().GetByEventID(ctx, eventID)
+	entries, err := db.ScoreEntries(ctx, eventID)
 	if err != nil {
 		return nil, err
 	}
-	result.Entries = []models.ScoreEntry{}
+	activities, err := db.TeamsActivities(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	out := &EventScores{Games: games, Entries: []models.ScoreEntry{}, Teams: []EventScoreTeam{}, Participants: []EventScoreParticipant{}}
 	for _, entry := range entries {
 		if modules[entry.ModuleID] {
-			result.Entries = append(result.Entries, entry)
+			out.Entries = append(out.Entries, entry)
 		}
 	}
-	activities, err := NewTeamsActivityRepository().ByEvent(ctx, eventID)
-	if err != nil {
-		return nil, err
-	}
-	for _, activity := range activities {
-		if modules[activity.ModuleID] {
-			result.Entries = append(result.Entries, activity.ScoreEntries()...)
-			for _, team := range activity.Teams {
-				result.Teams = append(result.Teams, EventScoreTeam{team.ID, team.Name, activity.ModuleID})
-			}
-			for _, person := range activity.Entrants {
-				result.Participants = append(result.Participants, EventScoreParticipant{person.ParticipantID, person.Name})
-			}
+	for _, a := range activities {
+		if !modules[a.ModuleID] {
+			continue
+		}
+		out.Entries = append(out.Entries, a.ScoreEntries()...)
+		for _, team := range a.Teams {
+			out.Teams = append(out.Teams, EventScoreTeam{team.ID, team.Name, a.ModuleID})
+		}
+		for _, person := range a.Entrants {
+			out.Participants = append(out.Participants, EventScoreParticipant{person.ParticipantID, person.Name})
 		}
 	}
-	return result, nil
+	return out, nil
 }
 
 func (s *EventScores) PlayerTotal(playerID string) float64 {

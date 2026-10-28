@@ -52,7 +52,8 @@ FROM alpine:latest
 # Install libwebp-tools (cwebp) for WebP image processing
 RUN apk add --no-cache libwebp-tools ca-certificates
 
-RUN addgroup -S app && adduser -S -G app app
+RUN addgroup -S -g 10001 app && adduser -S -u 10001 -G app app
+RUN mkdir -p /app/data/media && chown -R app:app /app/data
 
 WORKDIR /app
 

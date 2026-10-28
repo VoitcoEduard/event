@@ -7,57 +7,57 @@ import (
 )
 
 type TeamsConfig struct {
-	SourceModuleID string `json:"sourceModuleId" bson:"sourceModuleId"`
-	Method         string `json:"method" bson:"method"`
-	TeamCount      int    `json:"teamCount" bson:"teamCount"`
-	TargetSize     int    `json:"targetSize" bson:"targetSize"`
-	Capacity       int    `json:"capacity" bson:"capacity"`
-	Presets        []int  `json:"presets" bson:"presets"`
+	SourceModuleID string `json:"sourceModuleId"`
+	Method         string `json:"method"`
+	TeamCount      int    `json:"teamCount"`
+	TargetSize     int    `json:"targetSize"`
+	Capacity       int    `json:"capacity"`
+	Presets        []int  `json:"presets"`
 }
 
 type ActivityTeam struct {
-	ID       string `json:"id" bson:"id"`
-	Name     string `json:"name" bson:"name"`
-	Color    string `json:"color" bson:"color"`
-	Capacity int    `json:"capacity" bson:"capacity"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Color    string `json:"color"`
+	Capacity int    `json:"capacity"`
 }
 
 type TeamsEntrant struct {
-	ParticipantID string `json:"participantId" bson:"participantId"`
-	Name          string `json:"name" bson:"name"`
-	TeamID        string `json:"teamId" bson:"teamId"`
+	ParticipantID string `json:"participantId"`
+	Name          string `json:"name"`
+	TeamID        string `json:"teamId"`
 }
 
 type TeamAward struct {
-	ID         string    `json:"id" bson:"id"`
-	RequestID  string    `json:"requestId" bson:"requestId"`
-	TeamID     string    `json:"teamId" bson:"teamId"`
-	Points     int       `json:"points" bson:"points"`
-	Reason     string    `json:"reason" bson:"reason"`
-	Recipients []string  `json:"recipients" bson:"recipients"`
-	ActorID    string    `json:"actorId" bson:"actorId"`
-	CreatedAt  time.Time `json:"createdAt" bson:"createdAt"`
-	ReversesID string    `json:"reversesId,omitempty" bson:"reversesId,omitempty"`
+	ID         string    `json:"id"`
+	RequestID  string    `json:"requestId"`
+	TeamID     string    `json:"teamId"`
+	Points     int       `json:"points"`
+	Reason     string    `json:"reason"`
+	Recipients []string  `json:"recipients"`
+	ActorID    string    `json:"actorId"`
+	CreatedAt  time.Time `json:"createdAt"`
+	ReversesID string    `json:"reversesId,omitempty"`
 }
 
 // Roster and award history share one atomic persistence boundary. SourceMembers
 // are invitations from a reused roster, not recipients until they enter.
 type TeamsActivity struct {
-	ID            string         `json:"id" bson:"_id"`
-	EventID       string         `json:"eventId" bson:"eventId"`
-	ModuleID      string         `json:"moduleId" bson:"moduleId"`
-	Name          string         `json:"name" bson:"name"`
-	Status        string         `json:"status" bson:"status"`
-	Revision      int64          `json:"revision" bson:"revision"`
-	Config        TeamsConfig    `json:"config" bson:"config"`
-	Teams         []ActivityTeam `json:"teams" bson:"teams"`
-	Entrants      []TeamsEntrant `json:"entrants" bson:"entrants"`
-	SourceMembers []TeamsEntrant `json:"sourceMembers" bson:"sourceMembers"`
-	Awards        []TeamAward    `json:"awards" bson:"awards"`
-	CreatedAt     time.Time      `json:"createdAt" bson:"createdAt"`
-	UpdatedAt     time.Time      `json:"updatedAt" bson:"updatedAt"`
-	FinishedAt    *time.Time     `json:"finishedAt,omitempty" bson:"finishedAt,omitempty"`
-	Deleted       bool           `json:"-" bson:"deleted,omitempty"`
+	ID            string         `json:"id"`
+	EventID       string         `json:"eventId"`
+	ModuleID      string         `json:"moduleId"`
+	Name          string         `json:"name"`
+	Status        string         `json:"status"`
+	Revision      int64          `json:"revision"`
+	Config        TeamsConfig    `json:"config"`
+	Teams         []ActivityTeam `json:"teams"`
+	Entrants      []TeamsEntrant `json:"entrants"`
+	SourceMembers []TeamsEntrant `json:"sourceMembers"`
+	Awards        []TeamAward    `json:"awards"`
+	CreatedAt     time.Time      `json:"createdAt"`
+	UpdatedAt     time.Time      `json:"updatedAt"`
+	FinishedAt    *time.Time     `json:"finishedAt,omitempty"`
+	Deleted       bool           `json:"-"`
 }
 
 func (a *TeamsActivity) Scores() (map[string]int, map[string]int) {

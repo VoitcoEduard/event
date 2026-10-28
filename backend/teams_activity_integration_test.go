@@ -12,34 +12,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/database"
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/testutils"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
-	container := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, container)
-	previous := db.Client
-	db.Client = container.Client
-	defer func() { db.Client = previous }()
-	t.Setenv("MONGO_DB_NAME", "teams_integration")
+	db := testutils.SetupPostgres(t)
 	ctx := context.Background()
-	db.EnsureIndexes()
-	store := auth.Store{DB: db.Database()}
-	if err := store.EnsureIndexes(ctx); err != nil {
-		t.Fatal(err)
-	}
+	store := auth.Store{DB: db}
+	eventID, otherID, oldTeamID := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	ids := map[string]string{"relay": uuid.NewString(), "build": uuid.NewString(), "reuse": uuid.NewString(), "legacy": uuid.NewString(), "quiz": uuid.NewString()}
 	actor, err := store.UpsertGoogleUser(ctx, "test", "admin", "admin@example.test", "Admin")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = store.Users().UpdateByID(ctx, actor.ID, bson.M{"$set": bson.M{"status": "active", "role": "admin"}})
+	_, err = db.Pool.Exec(ctx, `UPDATE auth_users SET status='active',role='admin' WHERE id=$1`, actor.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,20 +40,26 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	authService := &auth.Service{Config: auth.Config{Mode: "dev", Environment: "development", BaseURL: "http://localhost:3000"}, Store: store}
-	handlerModules := services.NewModuleService()
-	handler := handlers.New(handlers.Dependencies{Auth: authService, Events: services.NewEventService(), Modules: handlerModules, Teams: database.NewTeamRepository(), Participants: services.NewParticipantService()})
+	handlerModules := services.NewModuleService(db)
+	handler := handlers.New(handlers.Dependencies{DB: db, Auth: authService, Events: services.NewEventService(db), Modules: handlerModules, Teams: database.NewTeamRepository(db), Participants: services.NewParticipantService(db)})
 	mux := http.NewServeMux()
 	registerRoutes(mux, handler)
-	modules := []models.Module{{ID: "relay", Type: models.ModuleTypeTeams, Name: "Relay"}, {ID: "build", Type: models.ModuleTypeTeams, Name: "Building"}, {ID: "reuse", Type: models.ModuleTypeTeams, Name: "Reuse"}, {ID: "legacy", Type: models.ModuleTypeTeams, Name: "Legacy"}, {ID: "quiz", Type: models.ModuleTypeQuiz, Name: "Quiz"}}
-	_, err = db.GetCollection("events").InsertOne(ctx, models.Event{ID: "event", Modules: modules})
+	modules := []models.Module{{ID: ids["relay"], Type: models.ModuleTypeTeams, Name: "Relay"}, {ID: ids["build"], Type: models.ModuleTypeTeams, Name: "Building"}, {ID: ids["reuse"], Type: models.ModuleTypeTeams, Name: "Reuse"}, {ID: ids["legacy"], Type: models.ModuleTypeTeams, Name: "Legacy"}, {ID: ids["quiz"], Type: models.ModuleTypeQuiz, Name: "Quiz"}}
+	err = db.CreateEvent(ctx, &models.Event{ID: eventID, Pin: "123456", CreatedAt: time.Now().UTC(), Modules: modules})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.GetCollection("quiz_results").InsertOne(ctx, models.QuizResult{EventID: "event", ModuleID: "quiz", FinishedAt: time.Now(), Players: []models.PlayerResult{{ID: "anna", Nickname: "Anna", Score: 7}}})
+	err = db.SaveQuizResult(ctx, uuid.NewString(), &models.QuizResult{EventID: eventID, ModuleID: ids["quiz"], FinishedAt: time.Now().UTC(), Players: []models.PlayerResult{{ID: "anna", Nickname: "Anna", Score: 7}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	request := func(method, path, body, userID string, admin bool) *httptest.ResponseRecorder {
+		path = strings.ReplaceAll(path, "/events/event/", "/events/"+eventID+"/")
+		path = strings.ReplaceAll(path, "/events/other/", "/events/"+otherID+"/")
+		for name, id := range ids {
+			path = strings.ReplaceAll(path, "/modules/"+name, "/modules/"+id)
+		}
+		body = strings.ReplaceAll(body, `"sourceModuleId":"relay"`, `"sourceModuleId":"`+ids["relay"]+`"`)
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("Origin", authService.Config.BaseURL)
@@ -83,13 +81,13 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 		}
 		return w
 	}
-	base := func(m string) string { return "/events/event/modules/" + m + "/teams" }
+	base := func(m string) string { return "/events/" + eventID + "/modules/" + ids[m] + "/teams" }
 	action := func(m, body string) *httptest.ResponseRecorder {
 		return must(request("POST", base(m)+"/actions", body, "", true))
 	}
 	assertModuleActive := func(moduleID string, want bool) {
 		t.Helper()
-		module, err := handlerModules.Get(ctx, "event", moduleID)
+		module, err := handlerModules.Get(ctx, eventID, ids[moduleID])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -123,8 +121,8 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	award := `{"action":"award","teamId":"blue","points":20,"reason":"Relay win","requestId":"relay-win"}`
 	action("relay", award)
 	action("relay", award)
-	repo := database.NewTeamsActivityRepository()
-	a, err := repo.Get(ctx, "event", "relay")
+	repo := database.NewTeamsActivityRepository(db)
+	a, err := repo.Get(ctx, eventID, ids["relay"])
 	if err != nil || len(a.Awards) != 1 {
 		t.Fatalf("persisted retry %+v %v", a, err)
 	}
@@ -146,7 +144,7 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	// Reusing a roster copies neither entrants nor points until people enter.
 	action("reuse", `{"action":"initialize","config":{"sourceModuleId":"relay","method":"manual"}}`)
 	must(request("POST", base("reuse")+"/join", `{"name":"Anna"}`, "anna", false))
-	reused, err := repo.Get(ctx, "event", "reuse")
+	reused, err := repo.Get(ctx, eventID, ids["reuse"])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +152,7 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 		t.Fatal("reuse copied entrants/awards")
 	}
 	action("reuse", `{"action":"assign","participantId":"anna","teamId":"red"}`)
-	old, _ := repo.Get(ctx, "event", "relay")
+	old, _ := repo.Get(ctx, eventID, ids["relay"])
 	if old.Entrants[0].TeamID != "blue" {
 		t.Fatal("modified source roster")
 	}
@@ -165,7 +163,7 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	action("build", `{"action":"start"}`)
 	action("build", `{"action":"award","teamId":"red","points":15,"reason":"Building win","requestId":"build-win"}`)
 	action("build", `{"action":"complete"}`)
-	scores, err := database.LoadEventScores(ctx, "event")
+	scores, err := database.LoadEventScores(ctx, db, eventID)
 	if err != nil || scores.PlayerTotal("anna") != 42 || scores.PlayerTotal("bob") != 20 {
 		t.Fatalf("expected Anna 35+7: %+v %v", scores, err)
 	}
@@ -193,33 +191,33 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	action("relay", `{"action":"assign","participantId":"anna","teamId":"red"}`)
 	action("relay", fmt.Sprintf(`{"action":"undo","awardId":%q,"requestId":"undo-relay"}`, a.Awards[0].ID))
 	action("relay", `{"action":"complete"}`)
-	scores, err = database.LoadEventScores(ctx, "event")
+	scores, err = database.LoadEventScores(ctx, db, eventID)
 	if err != nil || scores.PlayerTotal("anna") != 22 || scores.PlayerTotal("bob") != 0 {
 		t.Fatal("reversal used current membership")
 	}
 	// Legacy manual team points remain team-only after importing the roster.
-	if err = database.NewTeamRepository().Create(ctx, &models.Team{ID: "oldteam", EventID: "event", Name: "Old", Color: "#22C55E"}); err != nil {
+	if err = database.NewTeamRepository(db).Create(ctx, &models.Team{ID: oldTeamID, EventID: eventID, Name: "Old", Color: "#22C55E"}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.GetCollection("participants").UpdateByID(ctx, "anna", bson.M{"$set": bson.M{"teamId": "oldteam"}})
+	_, err = db.AssignParticipantTeam(ctx, eventID, "anna", oldTeamID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = database.NewScoreEntryRepository().SetManual(ctx, "event", "legacy", "teams", "oldteam", 100); err != nil {
+	if err = database.NewScoreEntryRepository(db).SetManual(ctx, eventID, ids["legacy"], "teams", oldTeamID, 100); err != nil {
 		t.Fatal(err)
 	}
 	action("legacy", `{"action":"initialize","importLegacy":true,"config":{"method":"choice"}}`)
 	must(request("POST", base("legacy")+"/join", `{"name":"Anna"}`, "anna", false))
-	legacy, err := repo.Get(ctx, "event", "legacy")
-	if err != nil || len(legacy.Awards) != 0 || legacy.Entrants[0].TeamID != "oldteam" {
+	legacy, err := repo.Get(ctx, eventID, ids["legacy"])
+	if err != nil || len(legacy.Awards) != 0 || legacy.Entrants[0].TeamID != oldTeamID {
 		t.Fatal("legacy import changed scoring or membership")
 	}
-	scores, err = database.LoadEventScores(ctx, "event")
+	scores, err = database.LoadEventScores(ctx, db, eventID)
 	if err != nil || scores.PlayerTotal("anna") != 22 {
 		t.Fatal("legacy team points distributed retrospectively")
 	}
 	// A new service/repository instance reads the same durable state.
-	reloaded, err := (&services.TeamsActivityService{Store: database.NewTeamsActivityRepository()}).Store.Get(ctx, "event", "build")
+	reloaded, err := (&services.TeamsActivityService{Store: database.NewTeamsActivityRepository(db)}).Store.Get(ctx, eventID, ids["build"])
 	if err != nil || len(reloaded.Awards) != 1 || reloaded.Status != "completed" {
 		t.Fatal("runtime did not survive reload")
 	}

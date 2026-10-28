@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/utils"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var ErrTeamsConflict = errors.New("activity changed; refresh and try again")
@@ -396,11 +396,11 @@ func WholeTeamsPoints(points *float64) (int, error) {
 func GuardTeamsModuleDeletion(ctx context.Context, store TeamsActivityStore, eventID, moduleID string) error {
 	for i := 0; i < 24; i++ {
 		a, err := store.Get(ctx, eventID, moduleID)
-		if errors.Is(err, mongo.ErrNoDocuments) {
+		if errors.Is(err, database.ErrNotFound) {
 			a = NewTeamsActivity(eventID, moduleID, "", models.TeamsConfig{})
 			a.Deleted = true
 			err = store.Create(ctx, a)
-			if mongo.IsDuplicateKeyError(err) {
+			if errors.Is(err, database.ErrConflict) {
 				continue
 			}
 			return err

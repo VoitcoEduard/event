@@ -11,8 +11,9 @@ There are three complementary measurements:
    the real Go handlers and data models, without a database or network.
 2. **Deployment load from another machine:** real WebSockets, participant
    registration, event polling, media downloads and a simultaneous answer burst.
-3. **NAS capture:** app/MongoDB/tunnel CPU, memory, network and disk counters,
-   plus optional Go CPU, heap, goroutine and contention profiles.
+3. **NAS capture:** app/PostgreSQL/tunnel CPU, memory, network and disk counters,
+   plus optional Go CPU, heap, goroutine and contention profiles. The private
+   runtime capture includes PostgreSQL pool wait and connection counters.
 
 Do not equate a microbenchmark with production capacity. Run deployment tests
 against a disposable event in a separate development deployment/database. Tests
@@ -29,7 +30,7 @@ sh backend/perf/build-kit.sh
 
 The output is `backend/perf-kit/linux-amd64/`. Copy this directory to the NAS.
 It includes static Linux binaries, scripts and a build manifest. Go, Node and
-MongoDB do not need to be installed on the NAS for the code benchmarks. The
+PostgreSQL do not need to be installed on the NAS for the code benchmarks. The
 `server` binary is retained for matching profile symbols; the script does not
 replace or restart the deployed app. Rebuild the normal Docker image to enable
 the optional diagnostics code in a deployment.
@@ -71,7 +72,7 @@ Each operation in `BenchmarkQuizAnswerBurst` is a **whole question's burst**
 | `QuizObserverBroadcast` | Scan of 150/600/1,500 connections for a small observer update |
 | `QuizConcurrentGames` | Parallel handlers sharing the hub mutex; includes per-answer fixture reset and channel scheduling |
 | `SimpleQuizWorkingResults` | Grading projection and leaderboard sorting |
-| `SimpleQuizPersistenceBSON` | Encoding the full document replaced on each submission/grade; excludes MongoDB/disk |
+| `SimpleQuizSnapshotJSON` | Encoding an in-memory session snapshot; excludes PostgreSQL/disk |
 | `TeamsScoreProjection` | Replay/materialization of 50/500/2,000 awards with 15 recipients each |
 | `EventPlayerTotal` | In-memory total scan across 5/25/100 modules; excludes query/aggregation |
 | `EventCacheHitParallel`, `MediaCacheHitParallel` | Hot-cache lock/lookup contention |
@@ -174,7 +175,7 @@ Drive those through the normal test UI or run separate burst tests.
 While the laptop generates traffic, run on the NAS (substitute container names):
 
 ```sh
-CAPTURE_SECONDS=90 sh capture-nas.sh ./results/deployment app mongo tunnel
+CAPTURE_SECONDS=90 sh capture-nas.sh ./results/deployment app postgres tunnel
 ```
 
 This captures selected containers, restart counts, host memory and Linux CPU/I/O
@@ -182,7 +183,7 @@ pressure where available, host CPU counters and application quota-throttling
 counters when readable. It does not collect container environment variables,
 credentials or application logs. Container CPU can exceed 100%: one saturated
 core is roughly 100%, so the four-core host can approach 400% before accounting
-for limits/other tasks. Inspect app **and** MongoDB **and** tunnel, and the NAS
+for limits/other tasks. Inspect app **and** PostgreSQL **and** tunnel, and the NAS
 host's overall load; the app alone does not tell the whole story.
 
 For deeper diagnosis add these environment variables to a test app deployment:
@@ -197,7 +198,7 @@ these routes. Profiling is off by default. Capture during a load/soak window:
 
 ```sh
 PROFILES=1 PROFILE_KIND=cpu CAPTURE_SECONDS=30 \
-  sh capture-nas.sh ./results/profile-cpu app mongo tunnel
+  sh capture-nas.sh ./results/profile-cpu app postgres tunnel
 ```
 
 For a separate contention run enable:
@@ -239,11 +240,11 @@ history. Do not extrapolate a safe player count from microbenchmarks alone.
 
 For suspected database bottlenecks inspect the event-score aggregation's query
 plan and the `quiz_results` indexes on a representative test dataset. This suite
-does not automatically run MongoDB explain/profiling commands or seed old runs.
+does not automatically run PostgreSQL explain/profiling commands or seed old runs.
 Populate a representative disposable event, including previous runs and team
 awards, before measuring polling. Simple Quiz submission/grade persistence,
 team mutations and uploads need separate UI-driven deployment scenarios; their
-code benchmarks isolate costs but do not measure MongoDB round trips.
+code benchmarks isolate costs but do not measure PostgreSQL round trips.
 
 Reference: [Go diagnostics](https://go.dev/doc/diagnostics),
 [Docker stats](https://docs.docker.com/reference/cli/docker/container/stats/),

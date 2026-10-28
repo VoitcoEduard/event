@@ -117,3 +117,12 @@ func (c *MediaCache) Len() int {
 	defer c.mu.RUnlock()
 	return len(c.items)
 }
+
+// Clear evicts every cached item after bulk media deletion.
+func (c *MediaCache) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items = make(map[string]*list.Element)
+	c.evictList.Init()
+	c.currentSize = 0
+}

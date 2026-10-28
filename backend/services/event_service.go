@@ -9,8 +9,8 @@ import (
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/utils"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var ErrPINUnavailable = errors.New("could not allocate a unique event PIN")
@@ -19,8 +19,8 @@ type EventService struct {
 	Repo *database.EventRepository
 }
 
-func NewEventService() *EventService {
-	return &EventService{Repo: database.NewEventRepository()}
+func NewEventService(db *postgres.Store) *EventService {
+	return &EventService{Repo: database.NewEventRepository(db)}
 }
 
 func (s *EventService) Create(ctx context.Context, event *models.Event) error {
@@ -58,7 +58,7 @@ func (s *EventService) Create(ctx context.Context, event *models.Event) error {
 		}
 		event.Pin = pin
 		if err := s.Repo.Create(ctx, event); err != nil {
-			if mongo.IsDuplicateKeyError(err) {
+			if errors.Is(err, database.ErrConflict) {
 				continue
 			}
 			return err

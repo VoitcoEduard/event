@@ -1,16 +1,13 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/utils"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func enableCors(w http.ResponseWriter, r *http.Request) {
@@ -163,8 +160,6 @@ func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clearParticipantsTeamAssignment(r.Context(), teamID)
-
 	h.BroadcastTeamUpdate(eventID, "team:deleted", map[string]string{"teamId": teamID})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -204,23 +199,15 @@ func (h *Handler) AssignParticipant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection("participants")
-	filter := bson.M{"_id": input.ParticipantID, "eventId": eventID}
-	update := bson.M{"$set": bson.M{"teamId": input.TeamID, "updatedAt": time.Now()}}
-
-	result, err := collection.UpdateOne(r.Context(), filter, update)
+	if team.EventID != eventID {
+		http.Error(w, "Team not found", http.StatusNotFound)
+		return
+	}
+	participant, err := h.deps.DB.AssignParticipantTeam(r.Context(), eventID, input.ParticipantID, input.TeamID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
-
-	if result.MatchedCount == 0 {
-		http.Error(w, "Participant not found", http.StatusNotFound)
-		return
-	}
-
-	var participant models.Participant
-	collection.FindOne(r.Context(), bson.M{"_id": input.ParticipantID}).Decode(&participant)
 
 	h.BroadcastTeamUpdate(eventID, "participant:assigned", map[string]interface{}{
 		"participant": participant,
@@ -259,43 +246,15 @@ func (h *Handler) AutoAssignParticipants(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	collection := db.GetCollection("participants")
-	cursor, err := collection.Find(r.Context(), bson.M{"eventId": eventID, "teamId": ""})
+	unassigned, err := h.deps.DB.AutoAssignParticipants(r.Context(), eventID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
-	defer cursor.Close(r.Context())
-
-	var unassigned []models.Participant
-	if err := cursor.All(r.Context(), &unassigned); err != nil {
-		writeRequestError(w, err, http.StatusInternalServerError)
-		return
-	}
-
 	if len(unassigned) == 0 {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":       "No unassigned participants",
-			"teams":         teams,
-			"assignedCount": 0,
-		})
+		json.NewEncoder(w).Encode(map[string]interface{}{"message": "No unassigned participants", "teams": teams, "assignedCount": 0})
 		return
-	}
-
-	now := time.Now()
-	for i, participant := range unassigned {
-		teamIndex := i % len(teams)
-		targetTeam := teams[teamIndex]
-
-		update := bson.M{"$set": bson.M{
-			"teamId":    targetTeam.ID,
-			"updatedAt": now,
-		}}
-		collection.UpdateOne(r.Context(), bson.M{"_id": participant.ID}, update)
-
-		participant.TeamID = targetTeam.ID
-		unassigned[i] = participant
 	}
 
 	h.BroadcastTeamUpdate(eventID, "team:auto_assigned", map[string]interface{}{
@@ -311,13 +270,6 @@ func (h *Handler) AutoAssignParticipants(w http.ResponseWriter, r *http.Request)
 		"teams":         teams,
 		"participants":  unassigned,
 	})
-}
-
-func clearParticipantsTeamAssignment(ctx context.Context, teamID string) {
-	collection := db.GetCollection("participants")
-	filter := bson.M{"teamId": teamID}
-	update := bson.M{"$set": bson.M{"teamId": "", "updatedAt": time.Now()}}
-	collection.UpdateMany(ctx, filter, update)
 }
 
 func (h *Handler) BroadcastTeamUpdate(eventID string, messageType string, payload interface{}) {

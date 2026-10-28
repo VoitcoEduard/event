@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
 )
 
@@ -87,7 +88,8 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 	}
 
 	session := h.sessions[moduleID]
-	if session != nil {
+	if session != nil && session.State != "finishing" {
+		session.RunID = uuid.NewString()
 		session.EventID = event.ID // Ensure EventID is set
 		session.State = "question-presenting"
 		session.CurrentIndex = 0
@@ -304,28 +306,48 @@ func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) 
 }
 
 func (h *QuizHub) processHostEndQuiz(client *Client, msg ClientMessage) {
+	h.mu.Lock()
 	if !client.IsHost {
+		h.mu.Unlock()
 		return
 	}
-	session := h.sessions[client.ModuleID]
-	if session != nil {
-		// Save results to DB
-		if err := h.saveQuizResults(session); err != nil {
-			log.Printf("Error saving quiz results for module %s: %v", client.ModuleID, err)
-		}
-
-		session.State = "finished"
-		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
-			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
-		})
-
-		// BROADCAST FULL STATE SO PLAYERS GET FINAL SCORES/RANKS
-		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
-			Type:    "state:update",
-			Payload: session,
-		})
+	moduleID := client.ModuleID
+	session := h.sessions[moduleID]
+	if session == nil || session.State == "finishing" || session.State == "finished" {
+		h.mu.Unlock()
+		return
 	}
+	if session.RunID == "" {
+		session.RunID = uuid.NewString()
+	}
+	runID := session.RunID
+	previous := session.State
+	session.State = "finishing"
+	snapshot := snapshotSession(session)
+	h.mu.Unlock()
+	var err error
+	if h.quizResults == nil {
+		err = fmt.Errorf("quiz result store unavailable")
+	} else {
+		err = h.saveQuizResults(snapshot)
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	current := h.sessions[moduleID]
+	if current != session || current.RunID != runID {
+		return
+	}
+	if err != nil {
+		current.State = previous
+		log.Printf("Error saving quiz results for module %s: %v", moduleID, err)
+		if _, ok := h.clients[client]; ok {
+			h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "save_failed", "message": "Could not save results. Retry ending the quiz."}}))
+		}
+		return
+	}
+	current.State = "finished"
+	h.broadcastToSessionLocked(moduleID, ServerMessage{Type: "cmd:state", Payload: map[string]interface{}{"state": "finished", "currentIndex": current.CurrentIndex}})
+	h.broadcastToSessionLocked(moduleID, ServerMessage{Type: "state:update", Payload: current})
 }
 
 func (h *QuizHub) processHostResetQuiz(client *Client, msg ClientMessage) {

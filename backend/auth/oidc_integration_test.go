@@ -22,12 +22,7 @@ import (
 )
 
 func TestGoogleCallbackWithFakeOIDCProvider(t *testing.T) {
-	mongoDB := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, mongoDB)
-	store := Store{DB: mongoDB.Client.Database("fake_oidc")}
-	if err := store.EnsureIndexes(context.Background()); err != nil {
-		t.Fatal(err)
-	}
+	store := Store{DB: testutils.SetupPostgres(t)}
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +74,7 @@ func TestGoogleCallbackWithFakeOIDCProvider(t *testing.T) {
 	callback := func(name string, mutate func(map[string]any)) int {
 		t.Helper()
 		state, browser, nonce := "state-"+name, "browser-"+name, "nonce-"+name
-		_, err := store.Logins().InsertOne(context.Background(), LoginTransaction{Hash: digest(state), Browser: digest(browser), Nonce: nonce, Verifier: oauth2.GenerateVerifier(), ExpiresAt: time.Now().Add(time.Minute)})
+		err := store.DB.CreateAuthLogin(context.Background(), LoginTransaction{Hash: digest(state), Browser: digest(browser), Nonce: nonce, Verifier: oauth2.GenerateVerifier(), ExpiresAt: time.Now().Add(time.Minute)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -172,7 +167,7 @@ func TestGoogleCallbackWithFakeOIDCProvider(t *testing.T) {
 	if missingResult.Code != 400 {
 		t.Fatalf("wrong state accepted: %d", missingResult.Code)
 	}
-	_, err = store.Logins().UpdateByID(context.Background(), digest(state), map[string]any{"$set": map[string]any{"expiresAt": time.Now().Add(-time.Minute)}})
+	_, err = store.DB.Pool.Exec(context.Background(), `UPDATE auth_logins SET expires_at=$2 WHERE hash=$1`, digest(state), time.Now().Add(-time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}

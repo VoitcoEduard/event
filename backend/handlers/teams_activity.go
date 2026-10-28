@@ -9,14 +9,10 @@ import (
 	"time"
 
 	"github.com/user/go-expo-sample/backend/database"
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/utils"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func teamsIDs(r *http.Request) (string, string) {
@@ -36,13 +32,13 @@ func teamsFailure(w http.ResponseWriter, err error) {
 	if errors.As(err, &validation) || errors.Is(err, services.ErrTeamsConflict) {
 		code = http.StatusConflict
 	}
-	if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, services.ErrModuleNotFound) {
+	if errors.Is(err, database.ErrNotFound) || errors.Is(err, services.ErrModuleNotFound) {
 		code = http.StatusNotFound
 	}
 	http.Error(w, err.Error(), code)
 }
-func teamsService() *services.TeamsActivityService {
-	return &services.TeamsActivityService{Store: database.NewTeamsActivityRepository()}
+func (h *Handler) teamsService() *services.TeamsActivityService {
+	return &services.TeamsActivityService{Store: database.NewTeamsActivityRepository(h.deps.DB)}
 }
 func (h *Handler) teamsChanged(a *models.TeamsActivity) {
 	invalidateEventCache(a.EventID)
@@ -64,64 +60,35 @@ func (h *Handler) setTeamsModuleActive(ctx context.Context, eventID, moduleID st
 	return nil
 }
 
-// Live events use device IDs in participants, while older orchestration code
-// uses event_participants. Prefer live IDs; never match people by their names.
-func teamsParticipants(ctx context.Context, eventID string) ([]models.TeamsEntrant, error) {
-	result := []models.TeamsEntrant{}
-	seen := map[string]bool{}
-	for _, collection := range []string{"participants", "event_participants"} {
-		cursor, err := db.GetCollection(collection).Find(ctx, bson.M{"eventId": eventID})
-		if err != nil {
-			return nil, err
-		}
-		people := []models.Participant{}
-		err = cursor.All(ctx, &people)
-		cursor.Close(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range people {
-			if !seen[p.ID] {
-				result = append(result, models.TeamsEntrant{ParticipantID: p.ID, Name: p.DisplayName, TeamID: p.TeamID})
-				seen[p.ID] = true
-			}
-		}
+// Participants share the same event-scoped identity across all workflows.
+func (h *Handler) teamsParticipants(ctx context.Context, eventID string) ([]models.TeamsEntrant, error) {
+	people, err := h.deps.DB.Participants(ctx, eventID)
+	if err != nil {
+		return nil, err
 	}
-	return result, nil
+	out := make([]models.TeamsEntrant, 0, len(people))
+	for _, p := range people {
+		out = append(out, models.TeamsEntrant{ParticipantID: p.ID, Name: p.DisplayName, TeamID: p.TeamID})
+	}
+	return out, nil
 }
-func resolveTeamsParticipant(ctx context.Context, eventID, userID, name string, create bool) (models.TeamsEntrant, error) {
+func (h *Handler) resolveTeamsParticipant(ctx context.Context, eventID, userID, name string, create bool) (models.TeamsEntrant, error) {
 	if userID == "" || len(userID) > 120 {
 		return models.TeamsEntrant{}, &services.TeamsError{Message: "A device user ID is required"}
 	}
-	var p models.Participant
-	err := db.GetCollection("participants").FindOne(ctx, bson.M{"_id": userID, "eventId": eventID}).Decode(&p)
-	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+	p, err := h.deps.DB.Participant(ctx, eventID, userID)
+	if errors.Is(err, database.ErrNotFound) && create {
+		name = strings.TrimSpace(name)
+		if name == "" || len(name) > 120 {
+			return models.TeamsEntrant{}, &services.TeamsError{Message: "Enter your name before joining"}
+		}
+		now := time.Now().UTC()
+		p, err = h.deps.DB.EnsureParticipant(ctx, &models.Participant{ID: userID, EventID: eventID, DisplayName: name, NormalizedName: strings.ToLower(name), Status: models.ParticipantStatusJoined, CreatedAt: now, UpdatedAt: now})
+	}
+	if err != nil {
 		return models.TeamsEntrant{}, err
 	}
-	if errors.Is(err, mongo.ErrNoDocuments) {
-		var legacy models.Participant
-		err = db.GetCollection("event_participants").FindOne(ctx, bson.M{"eventId": eventID, "$or": bson.A{bson.M{"_id": userID}, bson.M{"joinKey": userID}}}).Decode(&legacy)
-		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-			return models.TeamsEntrant{}, err
-		}
-		if err == nil {
-			p = legacy
-			p.ID = userID
-		} else if !create {
-			return models.TeamsEntrant{}, mongo.ErrNoDocuments
-		} else {
-			name = strings.TrimSpace(name)
-			if name == "" || len(name) > 120 {
-				return models.TeamsEntrant{}, &services.TeamsError{Message: "Enter your name before joining"}
-			}
-			p = models.Participant{ID: userID, EventID: eventID, DisplayName: name, NormalizedName: strings.ToLower(name), Status: models.ParticipantStatusJoined, CreatedAt: time.Now(), UpdatedAt: time.Now()}
-		}
-		_, err = db.GetCollection("participants").UpdateOne(ctx, bson.M{"_id": userID, "eventId": eventID}, bson.M{"$setOnInsert": p}, options.Update().SetUpsert(true))
-		if err != nil {
-			return models.TeamsEntrant{}, err
-		}
-	}
-	return models.TeamsEntrant{ParticipantID: userID, Name: p.DisplayName}, nil
+	return models.TeamsEntrant{ParticipantID: p.ID, Name: p.DisplayName, TeamID: p.TeamID}, nil
 }
 
 type publicTeamsMember struct {
@@ -191,8 +158,8 @@ func (h *Handler) GetTeamsActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	e, m := teamsIDs(r)
-	a, err := database.NewTeamsActivityRepository().Get(r.Context(), e, m)
-	if errors.Is(err, mongo.ErrNoDocuments) {
+	a, err := database.NewTeamsActivityRepository(h.deps.DB).Get(r.Context(), e, m)
+	if errors.Is(err, database.ErrNotFound) {
 		writeJSON(w, map[string]any{"initialized": false, "name": module.Name, "teams": []any{}, "awards": []any{}})
 		return
 	}
@@ -203,7 +170,7 @@ func (h *Handler) GetTeamsActivity(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("X-Teams-Player")
 	total := 0.0
 	if userID != "" {
-		scores, err := database.LoadEventScores(r.Context(), e)
+		scores, err := database.LoadEventScores(r.Context(), h.deps.DB, e)
 		if err != nil {
 			teamsFailure(w, err)
 			return
@@ -219,12 +186,12 @@ func (h *Handler) GetTeamsActivityAdmin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	e, m := teamsIDs(r)
-	a, err := database.NewTeamsActivityRepository().Get(r.Context(), e, m)
-	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+	a, err := database.NewTeamsActivityRepository(h.deps.DB).Get(r.Context(), e, m)
+	if err != nil && !errors.Is(err, database.ErrNotFound) {
 		teamsFailure(w, err)
 		return
 	}
-	people, err := teamsParticipants(r.Context(), e)
+	people, err := h.teamsParticipants(r.Context(), e)
 	if err != nil {
 		teamsFailure(w, err)
 		return
@@ -253,7 +220,7 @@ func (h *Handler) JoinTeamsActivity(w http.ResponseWriter, r *http.Request) {
 	}
 	e, m := teamsIDs(r)
 	// Validate the activity before creating a live participant.
-	existing, err := database.NewTeamsActivityRepository().Get(r.Context(), e, m)
+	existing, err := database.NewTeamsActivityRepository(h.deps.DB).Get(r.Context(), e, m)
 	if err != nil {
 		teamsFailure(w, err)
 		return
@@ -271,12 +238,12 @@ func (h *Handler) JoinTeamsActivity(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	p, err := resolveTeamsParticipant(r.Context(), e, id, input.Name, true)
+	p, err := h.resolveTeamsParticipant(r.Context(), e, id, input.Name, true)
 	if err != nil {
 		teamsFailure(w, err)
 		return
 	}
-	a, err := teamsService().Mutate(r.Context(), e, m, func(a *models.TeamsActivity) error { return services.AddTeamsEntrant(a, p) })
+	a, err := h.teamsService().Mutate(r.Context(), e, m, func(a *models.TeamsActivity) error { return services.AddTeamsEntrant(a, p) })
 	if err != nil {
 		teamsFailure(w, err)
 		return
@@ -302,7 +269,7 @@ func (h *Handler) ChooseTeamsActivity(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device identity required", 403)
 		return
 	}
-	a, err := teamsService().Mutate(r.Context(), e, m, func(a *models.TeamsActivity) error { return services.AssignTeamsEntrant(a, id, input.TeamID, true) })
+	a, err := h.teamsService().Mutate(r.Context(), e, m, func(a *models.TeamsActivity) error { return services.AssignTeamsEntrant(a, id, input.TeamID, true) })
 	if err != nil {
 		teamsFailure(w, err)
 		return
@@ -353,7 +320,7 @@ func (h *Handler) TeamsActivityAction(w http.ResponseWriter, r *http.Request) {
 	}
 	var entrant models.TeamsEntrant
 	if input.Action == "add_participant" {
-		entrant, err = resolveTeamsParticipant(r.Context(), e, input.ParticipantID, "", false)
+		entrant, err = h.resolveTeamsParticipant(r.Context(), e, input.ParticipantID, "", false)
 		if err != nil {
 			teamsFailure(w, err)
 			return
@@ -363,7 +330,7 @@ func (h *Handler) TeamsActivityAction(w http.ResponseWriter, r *http.Request) {
 		input.Team.ID = utils.NewID()
 	}
 	awardID := utils.NewID()
-	a, err := teamsService().Mutate(r.Context(), e, m, func(a *models.TeamsActivity) error {
+	a, err := h.teamsService().Mutate(r.Context(), e, m, func(a *models.TeamsActivity) error {
 		switch input.Action {
 		case "configure":
 			if a.Status != "setup" {
@@ -425,7 +392,7 @@ func (h *Handler) TeamsActivityAction(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) initializeTeams(w http.ResponseWriter, r *http.Request, module *models.Module, input teamsAction) {
 	e, m := teamsIDs(r)
-	repo := database.NewTeamsActivityRepository()
+	repo := database.NewTeamsActivityRepository(h.deps.DB)
 	existing, err := repo.Get(r.Context(), e, m)
 	if err == nil {
 		if err = h.setTeamsModuleActive(r.Context(), e, m, true); err != nil {
@@ -435,7 +402,7 @@ func (h *Handler) initializeTeams(w http.ResponseWriter, r *http.Request, module
 		writeJSON(w, existing)
 		return
 	}
-	if !errors.Is(err, mongo.ErrNoDocuments) {
+	if !errors.Is(err, database.ErrNotFound) {
 		teamsFailure(w, err)
 		return
 	}
@@ -494,7 +461,7 @@ func (h *Handler) initializeTeams(w http.ResponseWriter, r *http.Request, module
 		for _, team := range teams {
 			a.Teams = append(a.Teams, models.ActivityTeam{ID: team.ID, Name: team.Name, Color: team.Color, Capacity: config.Capacity})
 		}
-		people, err := teamsParticipants(r.Context(), e)
+		people, err := h.teamsParticipants(r.Context(), e)
 		if err != nil {
 			teamsFailure(w, err)
 			return
@@ -506,7 +473,7 @@ func (h *Handler) initializeTeams(w http.ResponseWriter, r *http.Request, module
 		}
 	}
 	if err = repo.Create(r.Context(), a); err != nil {
-		if mongo.IsDuplicateKeyError(err) {
+		if errors.Is(err, database.ErrConflict) {
 			existing, err = repo.Get(r.Context(), e, m)
 			if err == nil {
 				if err = h.setTeamsModuleActive(r.Context(), e, m, true); err != nil {

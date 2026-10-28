@@ -143,10 +143,13 @@ func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mediaAccessMu.Lock()
+	defer mediaAccessMu.Unlock()
 	if err := h.deps.Events.Delete(r.Context(), id); err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
+	mediaMemoryCache.Clear()
 	invalidateEventCache(id)
 
 	w.Header().Set("Content-Type", "application/json")

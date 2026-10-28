@@ -30,95 +30,95 @@ const SimpleQuizMaxAnswerChars = 2000
 
 // SimpleQuizQuestionSnapshot is a copy of the template question at launch time.
 type SimpleQuizQuestionSnapshot struct {
-	ID                string  `json:"id" bson:"id"`
-	Text              string  `json:"text" bson:"text"`
-	ImageID           *string `json:"imageId,omitempty" bson:"imageId,omitempty"`
-	ImageAlt          string  `json:"imageAlt,omitempty" bson:"imageAlt,omitempty"`
-	Points            int     `json:"points" bson:"points"`
-	TimeLimit         int     `json:"timeLimit" bson:"timeLimit"` // 0 = no limit
-	JudgeNotes        string  `json:"judgeNotes,omitempty" bson:"judgeNotes,omitempty"`
-	CorrectAnswerText string  `json:"correctAnswerText,omitempty" bson:"correctAnswerText,omitempty"`
+	ID                string  `json:"id"`
+	Text              string  `json:"text"`
+	ImageID           *string `json:"imageId,omitempty"`
+	ImageAlt          string  `json:"imageAlt,omitempty"`
+	Points            int     `json:"points"`
+	TimeLimit         int     `json:"timeLimit"` // 0 = no limit
+	JudgeNotes        string  `json:"judgeNotes,omitempty"`
+	CorrectAnswerText string  `json:"correctAnswerText,omitempty"`
 }
 
 // SimpleQuizPlayer joined with a nickname. Secret is the private reconnect identity.
 type SimpleQuizPlayer struct {
-	ID        string    `json:"id" bson:"id"`
-	Nickname  string    `json:"nickname" bson:"nickname"`
-	Secret    string    `json:"secret,omitempty" bson:"secret,omitempty"`
-	Score     int       `json:"score" bson:"score"`
-	JoinedAt  time.Time `json:"joinedAt" bson:"joinedAt"`
-	Connected bool      `json:"connected" bson:"connected"`
+	ID        string    `json:"id"`
+	Nickname  string    `json:"nickname"`
+	Secret    string    `json:"secret,omitempty"`
+	Score     int       `json:"score"`
+	JoinedAt  time.Time `json:"joinedAt"`
+	Connected bool      `json:"connected"`
 }
 
 // SimpleQuizAnswer is one locked text answer per player per question.
 type SimpleQuizAnswer struct {
-	ID            string    `json:"id" bson:"id"` // client-generated UUID for idempotency
-	PlayerID      string    `json:"playerId" bson:"playerId"`
-	QuestionIndex int       `json:"questionIndex" bson:"questionIndex"`
-	QuestionID    string    `json:"questionId" bson:"questionId"`
-	Text          string    `json:"text" bson:"text"`
-	CreatedAt     time.Time `json:"createdAt" bson:"createdAt"`
+	ID            string    `json:"id"` // client-generated UUID for idempotency
+	PlayerID      string    `json:"playerId"`
+	QuestionIndex int       `json:"questionIndex"`
+	QuestionID    string    `json:"questionId"`
+	Text          string    `json:"text"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 // SimpleQuizGradeHistoryEntry tracks every grading change for undo/audit.
 type SimpleQuizGradeHistoryEntry struct {
-	Verdict string    `json:"verdict" bson:"verdict"`
-	By      string    `json:"by" bson:"by"` // judge session label, e.g. "judge"
-	At      time.Time `json:"at" bson:"at"`
+	Verdict string    `json:"verdict"`
+	By      string    `json:"by"` // judge session label, e.g. "judge"
+	At      time.Time `json:"at"`
 }
 
 // SimpleQuizGrade is the current verdict for one answer.
 type SimpleQuizGrade struct {
-	AnswerID  string                        `json:"answerId" bson:"answerId"`
-	Verdict   string                        `json:"verdict" bson:"verdict"` // right | wrong | review_later
-	UpdatedAt time.Time                     `json:"updatedAt" bson:"updatedAt"`
-	UpdatedBy string                        `json:"updatedBy" bson:"updatedBy"`
-	History   []SimpleQuizGradeHistoryEntry `json:"history" bson:"history"`
+	AnswerID  string                        `json:"answerId"`
+	Verdict   string                        `json:"verdict"` // right | wrong | review_later
+	UpdatedAt time.Time                     `json:"updatedAt"`
+	UpdatedBy string                        `json:"updatedBy"`
+	History   []SimpleQuizGradeHistoryEntry `json:"history"`
 }
 
 // SimpleQuizPerQuestionResult is one cell of working/published results.
 type SimpleQuizPerQuestionResult struct {
-	QuestionIndex int    `json:"questionIndex" bson:"questionIndex"`
-	Verdict       string `json:"verdict" bson:"verdict"` // right | wrong | missing
-	PointsEarned  int    `json:"pointsEarned" bson:"pointsEarned"`
+	QuestionIndex int    `json:"questionIndex"`
+	Verdict       string `json:"verdict"` // right | wrong | missing
+	PointsEarned  int    `json:"pointsEarned"`
 }
 
 // SimpleQuizPlayerResult is a leaderboard row.
 type SimpleQuizPlayerResult struct {
-	PlayerID    string                        `json:"playerId" bson:"playerId"`
-	Nickname    string                        `json:"nickname" bson:"nickname"`
-	TotalScore  int                           `json:"totalScore" bson:"totalScore"`
-	PerQuestion []SimpleQuizPerQuestionResult `json:"perQuestion" bson:"perQuestion"`
+	PlayerID    string                        `json:"playerId"`
+	Nickname    string                        `json:"nickname"`
+	TotalScore  int                           `json:"totalScore"`
+	PerQuestion []SimpleQuizPerQuestionResult `json:"perQuestion"`
 }
 
 // SimpleQuizPublishedSnapshot is the stable version visible to players/projector.
 type SimpleQuizPublishedSnapshot struct {
-	Version     int                      `json:"version" bson:"version"`
-	PublishedAt time.Time                `json:"publishedAt" bson:"publishedAt"`
-	Players     []SimpleQuizPlayerResult `json:"players" bson:"players"`
+	Version     int                      `json:"version"`
+	PublishedAt time.Time                `json:"publishedAt"`
+	Players     []SimpleQuizPlayerResult `json:"players"`
 }
 
 // SimpleQuizSession is the live session. Persisted in simple_quiz_sessions,
 // cached in-memory in the hub. Questions is the launch-time snapshot.
 type SimpleQuizSession struct {
-	EventID          string                       `json:"eventId" bson:"eventId"`
-	ModuleID         string                       `json:"moduleId" bson:"moduleId"`
-	Title            string                       `json:"title,omitempty" bson:"title,omitempty"`
-	Status           string                       `json:"status" bson:"status"`
-	CurrentIndex     int                          `json:"currentIndex" bson:"currentIndex"`
-	Questions        []SimpleQuizQuestionSnapshot `json:"questions" bson:"questions"`
-	Players          map[string]*SimpleQuizPlayer `json:"players" bson:"players"`
-	Answers          []SimpleQuizAnswer           `json:"answers" bson:"answers"`
-	Grades           map[string]*SimpleQuizGrade  `json:"grades" bson:"grades"`
-	Revealed         map[int]bool                 `json:"revealed" bson:"revealed"` // questionIndex -> revealed
-	Published        *SimpleQuizPublishedSnapshot `json:"published,omitempty" bson:"published,omitempty"`
-	PublishedVer     int                          `json:"publishedVersion" bson:"publishedVersion"`
-	AllowReveal      bool                         `json:"allowReveal" bson:"allowReveal"`
-	DeadlineUnix     int64                        `json:"deadlineUnix,omitempty" bson:"deadlineUnix,omitempty"` // 0 = no limit
-	QuestionOpenedAt time.Time                    `json:"questionOpenedAt,omitempty" bson:"questionOpenedAt,omitempty"`
-	PausedFrom       string                       `json:"pausedFrom,omitempty" bson:"pausedFrom,omitempty"`
-	CreatedAt        time.Time                    `json:"createdAt" bson:"createdAt"`
-	UpdatedAt        time.Time                    `json:"updatedAt" bson:"updatedAt"`
+	EventID          string                       `json:"eventId"`
+	ModuleID         string                       `json:"moduleId"`
+	Title            string                       `json:"title,omitempty"`
+	Status           string                       `json:"status"`
+	CurrentIndex     int                          `json:"currentIndex"`
+	Questions        []SimpleQuizQuestionSnapshot `json:"questions"`
+	Players          map[string]*SimpleQuizPlayer `json:"players"`
+	Answers          []SimpleQuizAnswer           `json:"answers"`
+	Grades           map[string]*SimpleQuizGrade  `json:"grades"`
+	Revealed         map[int]bool                 `json:"revealed"` // questionIndex -> revealed
+	Published        *SimpleQuizPublishedSnapshot `json:"published,omitempty"`
+	PublishedVer     int                          `json:"publishedVersion"`
+	AllowReveal      bool                         `json:"allowReveal"`
+	DeadlineUnix     int64                        `json:"deadlineUnix,omitempty"` // 0 = no limit
+	QuestionOpenedAt time.Time                    `json:"questionOpenedAt,omitempty"`
+	PausedFrom       string                       `json:"pausedFrom,omitempty"`
+	CreatedAt        time.Time                    `json:"createdAt"`
+	UpdatedAt        time.Time                    `json:"updatedAt"`
 }
 
 // SnapshotSimpleQuizQuestion copies template fields into a snapshot.

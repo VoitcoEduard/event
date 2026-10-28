@@ -15,109 +15,109 @@ const (
 )
 
 type ModuleInputBinding struct {
-	TargetKey  string `json:"targetKey" bson:"targetKey"`
-	SourceType string `json:"sourceType" bson:"sourceType"`
-	SourceKey  string `json:"sourceKey,omitempty" bson:"sourceKey,omitempty"`
-	Required   bool   `json:"required" bson:"required"`
+	TargetKey  string `json:"targetKey"`
+	SourceType string `json:"sourceType"`
+	SourceKey  string `json:"sourceKey,omitempty"`
+	Required   bool   `json:"required"`
 }
 
 type ModuleOutputDefinition struct {
-	Key       string `json:"key" bson:"key"`
-	Scope     string `json:"scope" bson:"scope"`
-	ValueType string `json:"valueType" bson:"valueType"`
-	Persist   bool   `json:"persist" bson:"persist"`
+	Key       string `json:"key"`
+	Scope     string `json:"scope"`
+	ValueType string `json:"valueType"`
+	Persist   bool   `json:"persist"`
 }
 
 type ActivationRule struct {
-	Type           string `json:"type" bson:"type"`
-	SourceModuleID string `json:"sourceModuleId,omitempty" bson:"sourceModuleId,omitempty"`
-	Key            string `json:"key,omitempty" bson:"key,omitempty"`
-	Operator       string `json:"operator,omitempty" bson:"operator,omitempty"`
-	Value          any    `json:"value,omitempty" bson:"value,omitempty"`
+	Type           string `json:"type"`
+	SourceModuleID string `json:"sourceModuleId,omitempty"`
+	Key            string `json:"key,omitempty"`
+	Operator       string `json:"operator,omitempty"`
+	Value          any    `json:"value,omitempty"`
 }
 
 type Module struct {
-	ID              string                   `json:"id" bson:"id"`
-	Type            ModuleType               `json:"type" bson:"type"`
-	IsActive        bool                     `json:"isActive" bson:"isActive"`
-	Name            string                   `json:"name" bson:"name"`
-	Data            map[string]any           `json:"data" bson:"data"` // Generic data holder, now including timeline configuration
-	Inputs          []ModuleInputBinding     `json:"inputs,omitempty" bson:"inputs,omitempty"`
-	Outputs         []ModuleOutputDefinition `json:"outputs,omitempty" bson:"outputs,omitempty"`
-	ActivationRules []ActivationRule         `json:"activationRules,omitempty" bson:"activationRules,omitempty"`
+	ID              string                   `json:"id"`
+	Type            ModuleType               `json:"type"`
+	IsActive        bool                     `json:"isActive"`
+	Name            string                   `json:"name"`
+	Data            map[string]any           `json:"data"` // Generic data holder, now including timeline configuration
+	Inputs          []ModuleInputBinding     `json:"inputs,omitempty"`
+	Outputs         []ModuleOutputDefinition `json:"outputs,omitempty"`
+	ActivationRules []ActivationRule         `json:"activationRules,omitempty"`
 }
 
 type Template struct {
-	ID          string         `json:"id" bson:"_id"`
-	Name        string         `json:"name" bson:"name"`
-	Description string         `json:"description" bson:"description"`
-	ModuleType  ModuleType     `json:"moduleType" bson:"moduleType"`
-	Data        map[string]any `json:"data" bson:"data"`
-	CreatedAt   time.Time      `json:"createdAt" bson:"createdAt"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	ModuleType  ModuleType     `json:"moduleType"`
+	Data        map[string]any `json:"data"`
+	CreatedAt   time.Time      `json:"createdAt"`
 }
 
 type ScreensaverConfig struct {
-	ImageID  string `json:"imageId" bson:"imageId"`
-	ImageURL string `json:"imageUrl" bson:"imageUrl"` // Computed field for display
+	ImageID  string `json:"imageId"`
+	ImageURL string `json:"imageUrl"` // Computed field for display
 }
 
 type CanvasElement struct {
-	ID         string  `json:"id" bson:"id"`
-	Type       string  `json:"type" bson:"type"` // "text", "image", "qr"
-	X          float64 `json:"x" bson:"x"`
-	Y          float64 `json:"y" bson:"y"`
-	Width      float64 `json:"width" bson:"width"`
-	Height     float64 `json:"height" bson:"height"`
-	Content    string  `json:"content" bson:"content"` // text content or image URL/ID
-	Color      string  `json:"color" bson:"color"`     // text color
-	FontSize   int     `json:"fontSize" bson:"fontSize"`
-	TextAlign  string  `json:"textAlign" bson:"textAlign"`
-	FontWeight string  `json:"fontWeight" bson:"fontWeight"`
+	ID         string  `json:"id"`
+	Type       string  `json:"type"` // "text", "image", "qr"
+	X          float64 `json:"x"`
+	Y          float64 `json:"y"`
+	Width      float64 `json:"width"`
+	Height     float64 `json:"height"`
+	Content    string  `json:"content"` // text content or image URL/ID
+	Color      string  `json:"color"`   // text color
+	FontSize   int     `json:"fontSize"`
+	TextAlign  string  `json:"textAlign"`
+	FontWeight string  `json:"fontWeight"`
 }
 
 type Slide struct {
-	ID              string          `json:"id" bson:"id"`
-	Type            string          `json:"type" bson:"type"` // "welcome", "screensaver", "custom"
-	Name            string          `json:"name" bson:"name"`
-	BackgroundColor string          `json:"backgroundColor" bson:"backgroundColor"`
-	BackgroundImage string          `json:"backgroundImage" bson:"backgroundImage"`
-	Elements        []CanvasElement `json:"elements" bson:"elements"`
+	ID              string          `json:"id"`
+	Type            string          `json:"type"` // "welcome", "screensaver", "custom"
+	Name            string          `json:"name"`
+	BackgroundColor string          `json:"backgroundColor"`
+	BackgroundImage string          `json:"backgroundImage"`
+	Elements        []CanvasElement `json:"elements"`
 }
 
 type ScreenState struct {
-	CurrentView    string `json:"currentView" bson:"currentView"` // e.g., "screensaver", "welcome", "custom_text", "module", "slide"
-	CustomText     string `json:"customText" bson:"customText"`
-	ShowWelcomeQR  bool   `json:"showWelcomeQR" bson:"showWelcomeQR"`
-	ActiveModuleID string `json:"activeModuleId" bson:"activeModuleId"` // ID of the quiz/form if view is "module"
-	ActiveSlide    *Slide `json:"activeSlide" bson:"activeSlide"`
+	CurrentView    string `json:"currentView"` // e.g., "screensaver", "welcome", "custom_text", "module", "slide"
+	CustomText     string `json:"customText"`
+	ShowWelcomeQR  bool   `json:"showWelcomeQR"`
+	ActiveModuleID string `json:"activeModuleId"` // ID of the quiz/form if view is "module"
+	ActiveSlide    *Slide `json:"activeSlide"`
 }
 
 type ParticipantPolicy struct {
-	IdentityMode      string   `json:"identityMode" bson:"identityMode"`
-	RequiredFields    []string `json:"requiredFields" bson:"requiredFields"`
-	DedupeStrategy    string   `json:"dedupeStrategy" bson:"dedupeStrategy"`
-	ReconnectStrategy string   `json:"reconnectStrategy" bson:"reconnectStrategy"`
+	IdentityMode      string   `json:"identityMode"`
+	RequiredFields    []string `json:"requiredFields"`
+	DedupeStrategy    string   `json:"dedupeStrategy"`
+	ReconnectStrategy string   `json:"reconnectStrategy"`
 }
 
 type EventScoringPolicy struct {
-	Aggregation     string             `json:"aggregation" bson:"aggregation"`
-	ModuleWeights   map[string]float64 `json:"moduleWeights" bson:"moduleWeights"`
-	RankingScope    string             `json:"rankingScope" bson:"rankingScope"`
-	TieBreakerRules []string           `json:"tieBreakerRules" bson:"tieBreakerRules"`
+	Aggregation     string             `json:"aggregation"`
+	ModuleWeights   map[string]float64 `json:"moduleWeights"`
+	RankingScope    string             `json:"rankingScope"`
+	TieBreakerRules []string           `json:"tieBreakerRules"`
 }
 
 type Event struct {
-	ID                string              `json:"id" bson:"_id"`
-	Pin               string              `json:"pin,omitempty" bson:"pin,omitempty"`
-	Name              string              `json:"name" bson:"name"`
-	Description       string              `json:"description" bson:"description"`
-	Language          string              `json:"language" bson:"language"`
-	IsActive          bool                `json:"isActive" bson:"isActive"`
-	CreatedAt         time.Time           `json:"createdAt" bson:"createdAt"`
-	Modules           []Module            `json:"modules" bson:"modules"`
-	ScreensaverConfig *ScreensaverConfig  `json:"screensaverConfig" bson:"screensaverConfig"`
-	ScreenState       *ScreenState        `json:"screenState" bson:"screenState"`
-	Slides            []Slide             `json:"slides" bson:"slides"`
-	ParticipantPolicy *ParticipantPolicy  `json:"participantPolicy,omitempty" bson:"participantPolicy,omitempty"`
-	ScoringPolicy     *EventScoringPolicy `json:"scoringPolicy,omitempty" bson:"scoringPolicy,omitempty"`
+	ID                string              `json:"id"`
+	Pin               string              `json:"pin,omitempty"`
+	Name              string              `json:"name"`
+	Description       string              `json:"description"`
+	Language          string              `json:"language"`
+	IsActive          bool                `json:"isActive"`
+	CreatedAt         time.Time           `json:"createdAt"`
+	Modules           []Module            `json:"modules"`
+	ScreensaverConfig *ScreensaverConfig  `json:"screensaverConfig"`
+	ScreenState       *ScreenState        `json:"screenState"`
+	Slides            []Slide             `json:"slides"`
+	ParticipantPolicy *ParticipantPolicy  `json:"participantPolicy,omitempty"`
+	ScoringPolicy     *EventScoringPolicy `json:"scoringPolicy,omitempty"`
 }

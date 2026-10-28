@@ -5,13 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"log"
+	"errors"
+	"github.com/user/go-expo-sample/backend/postgres"
+	"log/slog"
+	"sync"
 	"time"
 
-	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type simpleQuizUndoEntry struct {
@@ -33,92 +33,144 @@ func GenerateJudgeToken() string {
 	return hex.EncodeToString(b)
 }
 
-// persistSimpleQuiz writes the session through to Mongo (best-effort).
-func (h *QuizHub) persistSimpleQuiz(ctx context.Context, s *models.SimpleQuizSession) {
-	if db.Client == nil {
-		return
-	}
-	s.UpdatedAt = time.Now()
-	coll := db.GetCollection("simple_quiz_sessions")
-	filter := bson.M{"moduleId": s.ModuleID}
-	_, err := coll.ReplaceOne(ctx, filter, s, options.Replace().SetUpsert(true))
+func (h *QuizHub) simpleLock(moduleID string) *sync.Mutex {
+	v, _ := h.simpleQuizLocks.LoadOrStore(moduleID, &sync.Mutex{})
+	return v.(*sync.Mutex)
+}
+func copySimple(s *models.SimpleQuizSession) (*models.SimpleQuizSession, error) {
+	raw, err := json.Marshal(s)
 	if err != nil {
-		log.Printf("simple-quiz persist failed for module %s: %v", s.ModuleID, err)
+		return nil, err
 	}
+	var out models.SimpleQuizSession
+	if err = json.Unmarshal(raw, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
-// loadSimpleQuizFromDB restores a session after restart (marks paused if active).
-func (h *QuizHub) loadSimpleQuizFromDB(ctx context.Context, moduleID string) *models.SimpleQuizSession {
-	if db.Client == nil {
-		return nil
-	}
-	coll := db.GetCollection("simple_quiz_sessions")
-	var s models.SimpleQuizSession
-	if err := coll.FindOne(ctx, bson.M{"moduleId": moduleID}).Decode(&s); err != nil {
-		return nil
-	}
-	if s.Status == models.SimpleQuizStateQuestionOpen {
-		s.PausedFrom = s.Status
-		s.Status = models.SimpleQuizStatePaused
-		s.DeadlineUnix = 0
-	}
-	if s.Players == nil {
-		s.Players = make(map[string]*models.SimpleQuizPlayer)
-	}
-	if s.Grades == nil {
-		s.Grades = make(map[string]*models.SimpleQuizGrade)
-	}
-	if s.Revealed == nil {
-		s.Revealed = make(map[int]bool)
-	}
-	return &s
-}
-
-// GetSimpleQuiz returns the in-memory session, falling back to DB.
-func (h *QuizHub) GetSimpleQuiz(moduleID string) *models.SimpleQuizSession {
+// Call only with the per-module lock held. Stored snapshots are immutable.
+func (h *QuizHub) readSimpleLocked(ctx context.Context, moduleID string) (*models.SimpleQuizSession, error) {
 	h.mu.RLock()
-	s, ok := h.simpleQuizSessions[moduleID]
+	s := h.simpleQuizSessions[moduleID]
 	h.mu.RUnlock()
-	if ok {
-		return s
+	if s != nil {
+		return s, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	restored := h.loadSimpleQuizFromDB(ctx, moduleID)
-	if restored == nil {
-		return nil
+	if h.db == nil {
+		return nil, postgres.ErrNotFound
+	}
+	restored, err := h.db.ReadSimpleQuiz(ctx, moduleID)
+	if err != nil {
+		return nil, err
+	}
+	restored, err = h.db.PauseRestoredSimpleQuiz(ctx, restored)
+	if err != nil {
+		return nil, err
 	}
 	h.mu.Lock()
 	h.simpleQuizSessions[moduleID] = restored
 	h.mu.Unlock()
-	return restored
+	return restored, nil
 }
-
-// SetSimpleQuiz stores and persists the session, then broadcasts.
-func (h *QuizHub) SetSimpleQuiz(s *models.SimpleQuizSession) {
-	h.mu.Lock()
-	h.simpleQuizSessions[s.ModuleID] = s
-	h.mu.Unlock()
+func (h *QuizHub) GetSimpleQuiz(moduleID string) *models.SimpleQuizSession {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	h.persistSimpleQuiz(ctx, s)
-	h.BroadcastSimpleQuiz(s.ModuleID)
-}
-
-// UpdateSimpleQuiz mutates the session atomically, persists and broadcasts.
-func (h *QuizHub) UpdateSimpleQuiz(moduleID string, fn func(*models.SimpleQuizSession)) *models.SimpleQuizSession {
-	h.mu.Lock()
-	s, ok := h.simpleQuizSessions[moduleID]
-	if !ok {
-		h.mu.Unlock()
+	lock := h.simpleLock(moduleID)
+	lock.Lock()
+	defer lock.Unlock()
+	s, err := h.readSimpleLocked(ctx, moduleID)
+	if err != nil {
 		return nil
 	}
-	fn(s)
-	h.mu.Unlock()
+	out, err := copySimple(s)
+	if err != nil {
+		return nil
+	}
+	return out
+}
+
+// TrySetSimpleQuiz commits the initial snapshot before making it visible.
+func (h *QuizHub) TrySetSimpleQuiz(s *models.SimpleQuizSession) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	h.persistSimpleQuiz(ctx, s)
-	h.BroadcastSimpleQuiz(moduleID)
+	lock := h.simpleLock(s.ModuleID)
+	lock.Lock()
+	next, err := copySimple(s)
+	if err == nil && h.db != nil {
+		err = h.db.SaveSimpleQuiz(ctx, nil, next)
+	}
+	if err == nil {
+		h.mu.Lock()
+		h.simpleQuizSessions[s.ModuleID] = next
+		delete(h.simpleQuizUndo, s.ModuleID)
+		h.mu.Unlock()
+	}
+	lock.Unlock()
+	if err == nil {
+		h.BroadcastSimpleQuiz(s.ModuleID)
+	}
+	return err
+}
+func (h *QuizHub) SetSimpleQuiz(s *models.SimpleQuizSession) { _ = h.TrySetSimpleQuiz(s) }
+func (h *QuizHub) tryUpdateSimpleLocked(ctx context.Context, moduleID string, fn func(*models.SimpleQuizSession) error) (*models.SimpleQuizSession, error) {
+	old, err := h.readSimpleLocked(ctx, moduleID)
+	if err != nil {
+		return nil, err
+	}
+	next, err := copySimple(old)
+	if err != nil {
+		return nil, err
+	}
+	if err = fn(next); err != nil {
+		return nil, err
+	}
+	next.UpdatedAt = time.Now().UTC()
+	if h.db != nil {
+		if err = h.db.SaveSimpleQuiz(ctx, old, next); err != nil {
+			return nil, err
+		}
+	}
+	h.mu.Lock()
+	h.simpleQuizSessions[moduleID] = next
+	h.mu.Unlock()
+	return copySimple(next)
+}
+
+// TryUpdateSimpleQuizExpected rejects a transition based on an obsolete snapshot.
+func (h *QuizHub) TryUpdateSimpleQuizExpected(moduleID string, expected *models.SimpleQuizSession, fn func(*models.SimpleQuizSession)) (*models.SimpleQuizSession, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	lock := h.simpleLock(moduleID)
+	lock.Lock()
+	next, err := h.tryUpdateSimpleLocked(ctx, moduleID, func(current *models.SimpleQuizSession) error {
+		if expected == nil || !current.CreatedAt.Equal(expected.CreatedAt) || !current.UpdatedAt.Equal(expected.UpdatedAt) {
+			return postgres.ErrConflict
+		}
+		fn(current)
+		return nil
+	})
+	lock.Unlock()
+	if err == nil {
+		h.BroadcastSimpleQuiz(moduleID)
+	}
+	return next, err
+}
+
+func (h *QuizHub) TryUpdateSimpleQuiz(moduleID string, fn func(*models.SimpleQuizSession)) (*models.SimpleQuizSession, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	lock := h.simpleLock(moduleID)
+	lock.Lock()
+	next, err := h.tryUpdateSimpleLocked(ctx, moduleID, func(s *models.SimpleQuizSession) error { fn(s); return nil })
+	lock.Unlock()
+	if err == nil {
+		h.BroadcastSimpleQuiz(moduleID)
+	}
+	return next, err
+}
+func (h *QuizHub) UpdateSimpleQuiz(moduleID string, fn func(*models.SimpleQuizSession)) *models.SimpleQuizSession {
+	s, _ := h.TryUpdateSimpleQuiz(moduleID, fn)
 	return s
 }
 
@@ -180,19 +232,16 @@ func (h *QuizHub) cancelSimpleQuizTimer(moduleID string) {
 }
 
 func (h *QuizHub) autoLockSimpleQuiz(moduleID string) {
-	h.mu.Lock()
-	cur, ok := h.simpleQuizSessions[moduleID]
-	if !ok || cur.Status != models.SimpleQuizStateQuestionOpen {
-		h.mu.Unlock()
-		return
+	_, err := h.TryUpdateSimpleQuiz(moduleID, func(s *models.SimpleQuizSession) {
+		if s.Status == models.SimpleQuizStateQuestionOpen {
+			s.Status = models.SimpleQuizStateAnswersLocked
+			s.DeadlineUnix = 0
+		}
+	})
+	if err != nil && !errors.Is(err, postgres.ErrNotFound) {
+		slog.Error("simple quiz auto-lock failed", "module", moduleID, "error", err)
+		time.AfterFunc(time.Second, func() { h.autoLockSimpleQuiz(moduleID) })
 	}
-	cur.Status = models.SimpleQuizStateAnswersLocked
-	cur.DeadlineUnix = 0
-	h.mu.Unlock()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	h.persistSimpleQuiz(ctx, cur)
-	h.BroadcastSimpleQuiz(moduleID)
 }
 
 // SimpleQuizTemplate loads snapshot questions + reveal/token settings.
@@ -274,7 +323,7 @@ func (h *QuizHub) ValidateSimpleJudgeToken(ctx context.Context, moduleID, token 
 
 // EnsureSimpleJudgeToken generates and persists a token if missing.
 func (h *QuizHub) EnsureSimpleJudgeToken(ctx context.Context, eventID, moduleID string) string {
-	if h.eventByModule == nil || db.Client == nil {
+	if h.eventByModule == nil || h.db == nil {
 		return ""
 	}
 	event, err := h.eventByModule(ctx, moduleID)
@@ -292,10 +341,11 @@ func (h *QuizHub) EnsureSimpleJudgeToken(ctx context.Context, eventID, moduleID 
 			return qd.JudgeToken
 		}
 		token := GenerateJudgeToken()
-		coll := db.GetCollection("events")
-		filter := bson.M{"_id": eventID, "modules.id": moduleID}
-		update := bson.M{"$set": bson.M{"modules.$.data.judgeToken": token}}
-		if _, err := coll.UpdateOne(ctx, filter, update); err != nil {
+		if token == "" {
+			return ""
+		}
+		token, err = h.db.EnsureJudgeToken(ctx, eventID, moduleID, token)
+		if err != nil {
 			return ""
 		}
 		return token

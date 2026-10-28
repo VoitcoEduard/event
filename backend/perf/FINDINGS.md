@@ -1,3 +1,5 @@
+> Historical MongoDB measurements from before the PostgreSQL migration. Rerun the acceptance tests for the new deployment.
+
 # Initial bottleneck audit
 
 These are measurements on an **Apple M1 Pro workstation**, Go 1.25.5,

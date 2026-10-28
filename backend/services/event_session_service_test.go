@@ -89,7 +89,7 @@ func (m *MockEventSessionRepository) Update(ctx context.Context, session *models
 	if session == nil {
 		return errors.New("session is nil")
 	}
-	// Store an independent document, as MongoDB does.
+	// Store an independent document, as PostgreSQL does.
 	copy := *session
 	m.GetByIDResults[session.ID] = &copy
 	return nil

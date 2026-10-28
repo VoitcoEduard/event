@@ -6,6 +6,7 @@ import (
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
@@ -13,8 +14,8 @@ type TemplateService struct {
 	Repo *database.TemplateRepository
 }
 
-func NewTemplateService() *TemplateService {
-	return &TemplateService{Repo: database.NewTemplateRepository()}
+func NewTemplateService(db *postgres.Store) *TemplateService {
+	return &TemplateService{Repo: database.NewTemplateRepository(db)}
 }
 
 func (s *TemplateService) Create(ctx context.Context, template *models.Template) error {

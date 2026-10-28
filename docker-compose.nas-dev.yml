@@ -1,6 +1,30 @@
+# NAS development is isolated from the production database and media folders.
 services:
+  postgres:
+    image: postgres:18.6
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DEV_POSTGRES_PASSWORD:?Set the development PostgreSQL administrator password}
+      POSTGRES_DB: postgres
+      APP_DB_NAME: quiz_dev
+      APP_DB_USER: quiz_app
+      APP_DB_PASSWORD: ${DEV_APP_DB_PASSWORD:?Set the development application database password}
+    volumes:
+      - /volume1/Docker/quiz-dev/postgresql:/var/lib/postgresql
+      - ./deploy/postgres/10-create-app.sh:/docker-entrypoint-initdb.d/10-create-app.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [private]
   app:
     image: ${DEV_IMAGE:?Set the development image}
+    container_name: go_server_app_dev
+    pull_policy: always
     platform: linux/amd64
     restart: unless-stopped
     environment:
@@ -8,7 +32,17 @@ services:
       AUTH_MODE: dev
       PUBLIC_BASE_URL: ${DEV_PUBLIC_BASE_URL:?Set the development public origin}
       DEV_ADMIN_PASSWORD: ${DEV_ADMIN_PASSWORD:?Set a development password}
-      MONGO_URI: ${DEV_MONGO_URI:?Set the development MongoDB URI}
-      MONGO_DB_NAME: ${DEV_MONGO_DB_NAME:-event_dev}
+      DATABASE_URL: ${DEV_DATABASE_URL:?Set the development PostgreSQL URL}
+      MEDIA_ROOT: /app/data/media
+    volumes:
+      - /volume1/Docker/quiz-dev/media:/app/data/media
     ports:
       - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [private, outbound]
+networks:
+  private:
+    internal: true
+  outbound: {}

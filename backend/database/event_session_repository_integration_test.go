@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package database
 
@@ -8,179 +7,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/testutils"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func TestEventSessionRepository_CreateAndGet(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+func TestEventSessionPersistenceAndPartialUpdate(t *testing.T) {
+	db := testutils.SetupPostgres(t)
+	ctx := context.Background()
+	eventID, moduleID := uuid.NewString(), uuid.NewString()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	if err := db.CreateEvent(ctx, &models.Event{ID: eventID, Pin: "123456", CreatedAt: now, Modules: []models.Module{{ID: moduleID, Type: models.ModuleTypeForm}}}); err != nil {
+		t.Fatal(err)
 	}
-
-	mongoContainer := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, mongoContainer)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	collection := mongoContainer.GetCollection("eventdb", "event_sessions")
-
-	session := &models.EventSession{
-		ID:          "test-session-123",
-		EventID:     "test-event-456",
-		Status:      models.EventSessionStatusLive,
-		ModuleOrder: []string{},
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+	repo := NewEventSessionRepository(db)
+	v := &models.EventSession{ID: uuid.NewString(), EventID: eventID, Status: models.EventSessionStatusLive, ActiveModuleID: moduleID, ModuleOrder: []string{moduleID}, StartedAt: &now, CreatedAt: now, UpdatedAt: now}
+	if err := repo.Create(ctx, v); err != nil {
+		t.Fatal(err)
 	}
-
-	_, err := collection.InsertOne(ctx, session)
-	if err != nil {
-		t.Fatalf("Failed to insert session: %v", err)
+	if err := repo.Update(ctx, &models.EventSession{ID: v.ID, Status: models.EventSessionStatusPaused, UpdatedAt: now.Add(time.Minute)}); err != nil {
+		t.Fatal(err)
 	}
-
-	var retrieved models.EventSession
-	err = collection.FindOne(ctx, bson.M{"_id": "test-session-123"}).Decode(&retrieved)
-	if err != nil {
-		t.Fatalf("Failed to find session: %v", err)
+	got, err := repo.GetByID(ctx, v.ID)
+	if err != nil || got.StartedAt == nil || !got.StartedAt.Equal(now) || len(got.ModuleOrder) != 1 || got.Status != models.EventSessionStatusPaused {
+		t.Fatalf("partial update: %+v %v", got, err)
 	}
-
-	if retrieved.Title != "" {
-		t.Errorf("Expected empty title for new session, got %q", retrieved.Title)
-	}
-	if retrieved.EventID != session.EventID {
-		t.Errorf("Expected eventID %q, got %q", session.EventID, retrieved.EventID)
-	}
-}
-
-func TestEventSessionRepository_Update(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	mongoContainer := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, mongoContainer)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	collection := mongoContainer.GetCollection("eventdb", "event_sessions")
-
-	session := &models.EventSession{
-		ID:          "test-session-update",
-		EventID:     "test-event-789",
-		Status:      models.EventSessionStatusDraft,
-		ModuleOrder: []string{},
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-
-	_, err := collection.InsertOne(ctx, session)
-	if err != nil {
-		t.Fatalf("Failed to insert session: %v", err)
-	}
-
-	filter := bson.M{"_id": session.ID}
-	update := bson.M{"$set": bson.M{"status": models.EventSessionStatusLive}}
-	_, err = collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		t.Fatalf("Failed to update session: %v", err)
-	}
-
-	var retrieved models.EventSession
-	err = collection.FindOne(ctx, bson.M{"_id": "test-session-update"}).Decode(&retrieved)
-	if err != nil {
-		t.Fatalf("Failed to find session: %v", err)
-	}
-
-	if retrieved.Status != models.EventSessionStatusLive {
-		t.Errorf("Expected status %q, got %q", models.EventSessionStatusLive, retrieved.Status)
-	}
-}
-
-func TestEventSessionRepository_GetByEventID(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	mongoContainer := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, mongoContainer)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	collection := mongoContainer.GetCollection("eventdb", "event_sessions")
-
-	eventID := "test-event-multiple"
-
-	for i := 0; i < 3; i++ {
-		session := &models.EventSession{
-			ID:          "test-session-" + string(rune('a'+i)),
-			EventID:     eventID,
-			Status:      models.EventSessionStatusLive,
-			ModuleOrder: []string{},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		}
-		_, err := collection.InsertOne(ctx, session)
-		if err != nil {
-			t.Fatalf("Failed to insert session: %v", err)
-		}
-	}
-
-	cursor, err := collection.Find(ctx, bson.M{"eventId": eventID})
-	if err != nil {
-		t.Fatalf("Failed to find sessions: %v", err)
-	}
-	defer cursor.Close(ctx)
-
-	var sessions []models.EventSession
-	if err := cursor.All(ctx, &sessions); err != nil {
-		t.Fatalf("Failed to decode sessions: %v", err)
-	}
-
-	if len(sessions) != 3 {
-		t.Errorf("Expected 3 sessions, got %d", len(sessions))
-	}
-}
-
-func TestEventSessionRepository_Delete(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	mongoContainer := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, mongoContainer)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	collection := mongoContainer.GetCollection("eventdb", "event_sessions")
-
-	session := &models.EventSession{
-		ID:          "test-session-delete",
-		EventID:     "test-event-delete",
-		Status:      models.EventSessionStatusCompleted,
-		ModuleOrder: []string{},
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-
-	_, err := collection.InsertOne(ctx, session)
-	if err != nil {
-		t.Fatalf("Failed to insert session: %v", err)
-	}
-
-	_, err = collection.DeleteOne(ctx, bson.M{"_id": session.ID})
-	if err != nil {
-		t.Fatalf("Failed to delete session: %v", err)
-	}
-
-	var retrieved models.EventSession
-	err = collection.FindOne(ctx, bson.M{"_id": session.ID}).Decode(&retrieved)
-	if err != mongo.ErrNoDocuments {
-		t.Errorf("Expected ErrNoDocuments after deletion, got: %v", err)
+	rows, err := repo.GetByEventID(ctx, eventID)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("event sessions: %+v %v", rows, err)
 	}
 }

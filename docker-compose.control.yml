@@ -1,0 +1,31 @@
+services:
+  deploy-control:
+    image: ${CONTROL_IMAGE:?Set the deployment controller image}
+    container_name: deploy-control
+    pull_policy: always
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      CONTROL_API_TOKEN: ${CONTROL_API_TOKEN:?Set a long controller API token}
+      PORTAINER_URL: ${PORTAINER_URL:?Set the internal Portainer URL}
+      PORTAINER_API_KEY: ${PORTAINER_API_KEY:?Set a Portainer API access token}
+      PORTAINER_INSECURE_SKIP_VERIFY: ${PORTAINER_INSECURE_SKIP_VERIFY:-false}
+      DEV_STACK_NAME: ${DEV_STACK_NAME:-quiz-dev}
+      DEV_ENDPOINT_ID: ${DEV_ENDPOINT_ID:?Set the Portainer environment ID}
+      DEV_IMAGE_VARIABLE: DEV_IMAGE
+      DEV_IMAGE_REPOSITORY: ${APP_IMAGE_REPOSITORY:?Set the GHCR image without a tag}
+      PROD_STACK_NAME: ${PROD_STACK_NAME:-quiz-prod}
+      PROD_ENDPOINT_ID: ${PROD_ENDPOINT_ID:?Set the Portainer environment ID}
+      PROD_IMAGE_VARIABLE: APP_IMAGE
+      PROD_IMAGE_REPOSITORY: ${APP_IMAGE_REPOSITORY:?Set the GHCR image without a tag}
+    volumes:
+      - deploy_control_data:/data
+    networks:
+      - control_net
+
+volumes:
+  deploy_control_data:
+
+networks:
+  control_net:
+    name: deploy_control_net

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"encoding/json"
 )
 
 func simpleBenchmarkFixture(players, questions int) *SimpleQuizSession {
@@ -41,13 +41,12 @@ func BenchmarkSimpleQuizWorkingResults(b *testing.B) {
 	}
 }
 
-// The application replaces this whole BSON document on each submission/grade.
-// This benchmark isolates serialization only; it excludes MongoDB and disk I/O.
-func BenchmarkSimpleQuizPersistenceBSON(b *testing.B) {
+// This benchmark measures the in-memory snapshot serialization cost.
+func BenchmarkSimpleQuizSnapshotJSON(b *testing.B) {
 	for _, questions := range []int{1, 25, 100} {
 		b.Run(fmt.Sprintf("players=150/questions=%d", questions), func(b *testing.B) {
 			s := simpleBenchmarkFixture(150, questions)
-			data, err := bson.Marshal(s)
+			data, err := json.Marshal(s)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -55,7 +54,7 @@ func BenchmarkSimpleQuizPersistenceBSON(b *testing.B) {
 			b.SetBytes(int64(len(data)))
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				if _, err := bson.Marshal(s); err != nil {
+				if _, err := json.Marshal(s); err != nil {
 					b.Fatal(err)
 				}
 			}

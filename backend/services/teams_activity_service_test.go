@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func fixtureTeams() *models.TeamsActivity {
@@ -212,7 +212,7 @@ func (s *memoryTeamsStore) Get(_ context.Context, e, m string) (*models.TeamsAct
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.a == nil || s.a.Deleted || s.a.EventID != e || s.a.ModuleID != m {
-		return nil, mongo.ErrNoDocuments
+		return nil, database.ErrNotFound
 	}
 	return cloneActivity(s.a), nil
 }
@@ -220,7 +220,7 @@ func (s *memoryTeamsStore) Create(_ context.Context, a *models.TeamsActivity) er
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.a != nil {
-		return mongo.WriteException{WriteErrors: mongo.WriteErrors{{Code: 11000}}}
+		return database.ErrConflict
 	}
 	s.a = cloneActivity(a)
 	return nil

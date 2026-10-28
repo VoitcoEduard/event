@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,10 +14,11 @@ import (
 
 	"github.com/user/go-expo-sample/backend/auth"
 	"github.com/user/go-expo-sample/backend/database"
-	"github.com/user/go-expo-sample/backend/db"
+	"github.com/user/go-expo-sample/backend/filestore"
 	"github.com/user/go-expo-sample/backend/handlers"
 	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/internal/diagnostics"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/utils"
 )
@@ -38,7 +38,13 @@ func main() {
 func run() error {
 	utils.DebugLog("Starting server initialization...")
 	if len(os.Args) > 1 {
-		if err := runAuthCommand(os.Args[1:]); err != nil {
+		var err error
+		if os.Args[1] == "migrate" {
+			err = runMigrationCommand(os.Args[1:])
+		} else {
+			err = runAuthCommand(os.Args[1:])
+		}
+		if err != nil {
 			return err
 		}
 		return nil
@@ -48,45 +54,71 @@ func run() error {
 		return err
 	}
 
-	// Connect to MongoDB
-	db.ConnectDB()
-	db.InitGridFS()
-	store := auth.Store{DB: db.Database()}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	if err := store.EnsureIndexes(ctx); err != nil {
-		return fmt.Errorf("authentication indexes: %w", err)
+	db, err := postgres.Open(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return err
 	}
+	defer db.Close()
+	if err = db.Migrate(ctx); err != nil {
+		return err
+	}
+	mediaRoot := os.Getenv("MEDIA_ROOT")
+	if mediaRoot == "" {
+		mediaRoot = "/app/data/media"
+	}
+	files, err := filestore.Open(mediaRoot, db)
+	if err != nil {
+		return err
+	}
+	store := auth.Store{DB: db}
 	authService, err := auth.NewService(ctx, config, store)
 	if err != nil {
 		return err
 	}
-	// Build the HTTP and websocket dependencies once, after MongoDB is ready.
-	events := services.NewEventService()
-	teams := database.NewTeamRepository()
+	// Build the HTTP and websocket dependencies once, after PostgreSQL is ready.
+	events := services.NewEventService(db)
+	teams := database.NewTeamRepository(db)
 	quizResults := &services.QuizResultService{
-		Results:     database.NewQuizResultRepository(),
+		Results:     database.NewQuizResultRepository(db),
 		Teams:       teams,
-		TeamResults: database.NewTeamResultRepository(),
+		TeamResults: database.NewTeamResultRepository(db),
 	}
 	quizHub := hub.NewQuizHub(hub.Dependencies{
+		DB:          db,
 		AuthService: authService,
 		Events:      events,
 		Teams:       teams,
 		QuizResults: quizResults,
 	})
 	handler := handlers.New(handlers.Dependencies{
+		DB: db, Files: files,
 		Auth:         authService,
 		QuizHub:      quizHub,
 		Events:       events,
-		Modules:      services.NewModuleService(),
-		Participants: services.NewParticipantService(),
-		Sessions:     services.NewEventSessionService(),
-		Templates:    services.NewTemplateService(),
+		Modules:      services.NewModuleService(db),
+		Participants: services.NewParticipantService(db),
+		Sessions:     services.NewEventSessionService(db),
+		Templates:    services.NewTemplateService(db),
 		Teams:        teams,
 	})
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health/live", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	mux.HandleFunc("GET /health/ready", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		if err := db.Ready(ctx); err != nil {
+			http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		if err := files.Ready(); err != nil {
+			http.Error(w, "media unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
 	authService.Register(mux)
 	registerRoutes(mux, handler)
 
@@ -125,12 +157,39 @@ func run() error {
 		}
 	}
 
+	workerCtx, stopWorkers := context.WithCancel(context.Background())
+	workersDone := make(chan struct{})
+	go func() {
+		defer close(workersDone)
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			ctx, cancel := context.WithTimeout(workerCtx, 30*time.Second)
+			if err := db.CleanupAuth(ctx, time.Now().UTC()); err != nil && workerCtx.Err() == nil {
+				slog.Error("auth cleanup failed", "error", err)
+			}
+			if err := files.Reconcile(ctx, time.Now()); err != nil && workerCtx.Err() == nil {
+				slog.Error("media cleanup failed", "error", err)
+			}
+			cancel()
+			select {
+			case <-workerCtx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+	defer func() { stopWorkers(); <-workersDone }()
+
 	server := &http.Server{
 		Addr:              ":8080",
 		Handler:           appHandler(mux, spaHandler),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	profiler, err := diagnostics.StartFromEnv()
+	profiler, err := diagnostics.StartFromEnv(func() any {
+		stats := db.Pool.Stat()
+		return map[string]any{"acquireCount": stats.AcquireCount(), "acquireDurationNs": stats.AcquireDuration().Nanoseconds(), "emptyAcquireCount": stats.EmptyAcquireCount(), "emptyAcquireWaitTimeNs": stats.EmptyAcquireWaitTime().Nanoseconds(), "acquiredConns": stats.AcquiredConns(), "totalConns": stats.TotalConns(), "maxConns": stats.MaxConns()}
+	})
 	if err != nil {
 		return err
 	}
@@ -158,9 +217,6 @@ func run() error {
 		serveErr = server.Shutdown(shutdownCtx)
 	}
 	quizHub.Shutdown()
-	if disconnectErr := db.Client.Disconnect(shutdownCtx); disconnectErr != nil {
-		slog.Error("database disconnect failed", "error", disconnectErr)
-	}
 	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 		return serveErr
 	}
@@ -168,7 +224,7 @@ func run() error {
 }
 
 func appHandler(api, spa http.Handler) http.Handler {
-	prefixes := []string{"/auth", "/events", "/sessions", "/screensavers", "/tracks", "/templates", "/media", "/ws"}
+	prefixes := []string{"/health", "/auth", "/events", "/sessions", "/screensavers", "/tracks", "/templates", "/media", "/ws"}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, prefix := range prefixes {
 			if r.URL.Path == prefix || strings.HasPrefix(r.URL.Path, prefix+"/") {

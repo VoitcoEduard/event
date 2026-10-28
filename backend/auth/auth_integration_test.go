@@ -13,26 +13,17 @@ import (
 	"time"
 
 	"github.com/user/go-expo-sample/backend/testutils"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func TestSessionAndApprovalIntegration(t *testing.T) {
-	mongoDB := testutils.SetupMongoDB(t)
-	defer testutils.TeardownMongoDB(t, mongoDB)
 	ctx := context.Background()
-	store := Store{DB: mongoDB.Client.Database("auth_integration")}
-	other := Store{DB: mongoDB.Client.Database("other_environment")}
-	if err := store.EnsureIndexes(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if err := other.EnsureIndexes(ctx); err != nil {
-		t.Fatal(err)
-	}
+	store := Store{DB: testutils.SetupPostgres(t)}
+	other := Store{DB: testutils.SetupPostgres(t)}
 	owner, err := store.UpsertGoogleUser(ctx, "issuer", "owner-sub", "owner@example.test", "Owner")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = store.Users().UpdateByID(ctx, owner.ID, bson.M{"$set": bson.M{"role": "owner", "status": "active"}})
+	_, err = store.DB.Pool.Exec(ctx, `UPDATE auth_users SET role='owner',status='active' WHERE id=$1`, owner.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +98,7 @@ func TestSessionAndApprovalIntegration(t *testing.T) {
 	if err != nil || approvedAgain.ID != member.ID || approvedAgain.Status != "active" {
 		t.Fatalf("profile update changed approval: %#v %v", approvedAgain, err)
 	}
-	_, err = store.Users().InsertOne(ctx, bson.M{"_id": "duplicate", "issuer": "issuer", "subject": "member-sub"})
+	_, err = store.DB.Pool.Exec(ctx, `INSERT INTO auth_users(id,issuer,subject,role,status,created_at) VALUES ('duplicate','issuer','member-sub','admin','pending',now())`)
 	if err == nil {
 		t.Fatal("duplicate Google identity inserted")
 	}
@@ -126,7 +117,7 @@ func TestSessionAndApprovalIntegration(t *testing.T) {
 	if _, _, err := store.Resolve(ctx, memberToken); !errors.Is(err, ErrNoSession) {
 		t.Fatalf("disabled session remained: %v", err)
 	}
-	_, err = store.Sessions().UpdateByID(ctx, digest(ownerToken), bson.M{"$set": bson.M{"expiresAt": time.Now().Add(-time.Minute)}})
+	_, err = store.DB.Pool.Exec(ctx, `UPDATE auth_sessions SET expires_at=$2 WHERE hash=$1`, digest(ownerToken), time.Now().Add(-time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}

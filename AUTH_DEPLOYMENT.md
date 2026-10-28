@@ -11,9 +11,9 @@ The production app uses Google sign-in for administrators. New Google identities
 
 ## Production Compose values
 
-`docker-compose.prod.yml` requires `APP_IMAGE`, `PUBLIC_BASE_URL`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`. Set `MONGO_DB_NAME` explicitly (`eventdb` is the compatibility default), `MONGO_URI`, and `TUNNEL_TOKEN` for your deployment. Keep production and staging databases and OAuth clients separate. The backend and Vue app are served from one public origin, including `/auth/*` and `/ws`.
+`docker-compose.prod.yml` requires `APP_IMAGE`, `PUBLIC_BASE_URL`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`. Set `POSTGRES_PASSWORD`, `APP_DB_PASSWORD`, `DATABASE_URL`, and `TUNNEL_TOKEN` for your deployment; the application password in the URL must match `APP_DB_PASSWORD`. Keep production and staging databases and OAuth clients separate. The backend and Vue app are served from one public origin, including `/auth/*` and `/ws`.
 
-The existing Compose network must be able to resolve and reach the separate MongoDB container named in `MONGO_URI`. Attach MongoDB to the app network or use an appropriate private URI. Do not publish MongoDB to the public internet.
+PostgreSQL runs on the private Compose network without a published port. The application uses its own non-superuser database account.
 
 The production container refuses to start with development authentication, missing Google credentials, or a non-HTTPS `PUBLIC_BASE_URL`.
 
@@ -28,9 +28,9 @@ Only the server command can promote an owner. Keep console access and a producti
 
 ## Development on the NAS
 
-`docker-compose.nas-dev.yml` runs the same bundled image with `AUTH_MODE=dev`. Set `DEV_IMAGE`, `DEV_PUBLIC_BASE_URL`, `DEV_ADMIN_PASSWORD`, and `DEV_MONGO_URI`. It uses the `event_dev` database by default and binds port `8082` on the NAS. The public origin should point to its dedicated development hostname, with HTTPS if exposed outside your private network. Development passwords are only for this deployment and must not be copied to production.
+`docker-compose.nas-dev.yml` runs the same bundled image with `AUTH_MODE=dev`. Set `DEV_IMAGE`, `DEV_PUBLIC_BASE_URL`, `DEV_ADMIN_PASSWORD`, `DEV_POSTGRES_PASSWORD`, `DEV_APP_DB_PASSWORD`, and `DEV_DATABASE_URL`. It uses the separate `quiz_dev` database by default and binds port `8082` on the NAS. The public origin should point to its dedicated development hostname, with HTTPS if exposed outside your private network. Development passwords are only for this deployment and must not be copied to production.
 
-Local `docker-compose.yml` uses the Vite server at `http://localhost:8081`. Set `DEV_ADMIN_PASSWORD` in a local `.env`. Vite proxies API, authentication, and WebSocket requests to the Go backend to preserve same-origin cookies.
+Local `docker-compose.yml` uses the Vite server at `http://localhost:8081`. Set `DEV_ADMIN_PASSWORD`, `DEV_POSTGRES_PASSWORD`, `DEV_APP_DB_PASSWORD`, and `DEV_DATABASE_URL` in a local `.env`. Vite proxies API, authentication, and WebSocket requests to the Go backend to preserve same-origin cookies.
 
 ## Release checks and rollback
 

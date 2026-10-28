@@ -7,8 +7,8 @@ import (
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/utils"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var ErrModuleNotFound = errors.New("module not found")
@@ -17,7 +17,9 @@ type ModuleService struct {
 	Repo *database.ModuleRepository
 }
 
-func NewModuleService() *ModuleService { return &ModuleService{Repo: database.NewModuleRepository()} }
+func NewModuleService(db *postgres.Store) *ModuleService {
+	return &ModuleService{Repo: database.NewModuleRepository(db)}
+}
 
 func (s *ModuleService) Add(ctx context.Context, eventID string, module *models.Module) error {
 	module.ID = utils.NewID()
@@ -48,12 +50,12 @@ func (s *ModuleService) Delete(ctx context.Context, eventID, moduleID string) (b
 	if err != nil {
 		return false, err
 	}
-	if module.Type == models.ModuleTypeTeams {
-		if err := GuardTeamsModuleDeletion(ctx, database.NewTeamsActivityRepository(), eventID, moduleID); err != nil {
-			return false, err
-		}
+	_ = module
+	found, err := s.Repo.Delete(ctx, eventID, moduleID)
+	if errors.Is(err, database.ErrHasAwards) {
+		return false, teamsError("This Teams activity contains awards; deactivate it instead of deleting it")
 	}
-	return s.Repo.Delete(ctx, eventID, moduleID)
+	return found, err
 }
 
 func (s *ModuleService) UpdateData(ctx context.Context, eventID, moduleID string, data map[string]any) error {
@@ -79,11 +81,11 @@ func (s *ModuleService) Responses(ctx context.Context, eventID, moduleID string)
 		return nil, err
 	}
 	if module != nil && module.Type == "teams" {
-		activity, activityErr := database.NewTeamsActivityRepository().Get(ctx, eventID, moduleID)
+		activity, activityErr := database.NewTeamsActivityRepository(s.Repo.DB).Get(ctx, eventID, moduleID)
 		if activityErr == nil {
 			return []any{TeamsActivityResult(activity)}, nil
 		}
-		if !errors.Is(activityErr, mongo.ErrNoDocuments) {
+		if !errors.Is(activityErr, database.ErrNotFound) {
 			return nil, activityErr
 		}
 		return s.Repo.TeamResults(ctx, eventID, moduleID)

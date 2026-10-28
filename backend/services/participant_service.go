@@ -7,6 +7,7 @@ import (
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
@@ -20,9 +21,9 @@ type ParticipantService struct {
 	Repo ParticipantStore
 }
 
-func NewParticipantService() *ParticipantService {
+func NewParticipantService(db *postgres.Store) *ParticipantService {
 	return &ParticipantService{
-		Repo: database.NewParticipantRepository(),
+		Repo: database.NewParticipantRepository(db),
 	}
 }
 
@@ -31,8 +32,12 @@ func normalizeName(name string) string {
 }
 
 func (s *ParticipantService) JoinEvent(ctx context.Context, eventID, joinKey, displayName string, profile map[string]any) (*models.Participant, error) {
+	return s.JoinEventWithID(ctx, eventID, "", joinKey, displayName, profile)
+}
+
+func (s *ParticipantService) JoinEventWithID(ctx context.Context, eventID, userID, joinKey, displayName string, profile map[string]any) (*models.Participant, error) {
 	participant := &models.Participant{
-		ID:             utils.NewID(),
+		ID:             userID,
 		EventID:        eventID,
 		JoinKey:        joinKey,
 		DisplayName:    displayName,
@@ -48,6 +53,9 @@ func (s *ParticipantService) JoinEvent(ctx context.Context, eventID, joinKey, di
 		return nil, err
 	}
 
+	if participant.ID == "" {
+		participant.ID = utils.NewID()
+	}
 	return participant, nil
 }
 
