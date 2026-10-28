@@ -7,6 +7,9 @@ backend/server_debug
 backend/main
 backend/.go/
 backend/.cache/
+backend/perf-kit/
+backend/perf/results/
+*.pprof
 
 # Node / frontend
 frontend/node_modules

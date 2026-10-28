@@ -1,0 +1,73 @@
+File: quiz-hub-profile.test
+Type: cpu
+Time: 2026-10-28 10:04:49 EET
+Duration: 3.64s, Total samples = 3.21s (88.31%)
+Showing nodes accounting for 3.07s, 95.64% of 3.21s total
+Dropped 61 nodes (cum <= 0.02s)
+      flat  flat%   sum%        cum   cum%
+     1.03s 32.09% 32.09%      1.03s 32.09%  runtime.memequal
+     0.93s 28.97% 61.06%      0.93s 28.97%  runtime.duffcopy
+     0.60s 18.69% 79.75%      2.81s 87.54%  github.com/user/go-expo-sample/backend/hub.(*QuizHub).processPlayerSignal
+     0.23s  7.17% 86.92%      0.23s  7.17%  runtime.madvise
+     0.07s  2.18% 89.10%      0.07s  2.18%  runtime.memclrNoHeapPointers
+     0.06s  1.87% 90.97%      0.07s  2.18%  internal/runtime/maps.(*Iter).Next
+     0.02s  0.62% 91.59%      0.02s  0.62%  internal/runtime/atomic.(*UnsafePointer).Load (inline)
+     0.02s  0.62% 92.21%      0.25s  7.79%  runtime.(*mheap).allocSpan
+     0.02s  0.62% 92.83%      0.02s  0.62%  runtime.kevent
+     0.02s  0.62% 93.46%      0.12s  3.74%  runtime.mallocgcSmallScanNoHeader
+     0.02s  0.62% 94.08%      0.02s  0.62%  runtime.mallocgcTiny
+     0.01s  0.31% 94.39%      0.05s  1.56%  encoding/json.(*decodeState).objectInterface
+     0.01s  0.31% 94.70%      0.02s  0.62%  encoding/json.checkValid
+     0.01s  0.31% 95.02%      0.02s  0.62%  encoding/json.valueEncoder
+     0.01s  0.31% 95.33%      0.12s  3.74%  github.com/user/go-expo-sample/backend/hub.(*QuizHub).broadcastToHostsAndProjectorsLocked
+     0.01s  0.31% 95.64%      0.09s  2.80%  runtime.(*mcache).refill
+         0     0% 95.64%      0.07s  2.18%  encoding/json.(*decodeState).object
+         0     0% 95.64%      0.07s  2.18%  encoding/json.(*decodeState).unmarshal
+         0     0% 95.64%      0.07s  2.18%  encoding/json.(*decodeState).value
+         0     0% 95.64%      0.09s  2.80%  encoding/json.(*encodeState).marshal
+         0     0% 95.64%      0.08s  2.49%  encoding/json.(*encodeState).reflectValue
+         0     0% 95.64%      0.12s  3.74%  encoding/json.Marshal
+         0     0% 95.64%      0.09s  2.80%  encoding/json.Unmarshal
+         0     0% 95.64%      0.04s  1.25%  encoding/json.interfaceEncoder
+         0     0% 95.64%      0.07s  2.18%  encoding/json.mapEncoder.encode
+         0     0% 95.64%      0.03s  0.93%  encoding/json.structEncoder.encode
+         0     0% 95.64%      2.91s 90.65%  github.com/user/go-expo-sample/backend/hub.(*QuizHub).ProcessMessage
+         0     0% 95.64%      2.91s 90.65%  github.com/user/go-expo-sample/backend/hub.BenchmarkQuizAnswerBurst.func1
+         0     0% 95.64%      0.06s  1.87%  internal/runtime/maps.(*Map).growToSmall
+         0     0% 95.64%      0.06s  1.87%  internal/runtime/maps.newGroups (inline)
+         0     0% 95.64%      0.06s  1.87%  internal/runtime/maps.newarray
+         0     0% 95.64%      0.02s  0.62%  reflect.(*MapIter).Value
+         0     0% 95.64%      0.02s  0.62%  reflect.copyVal
+         0     0% 95.64%      0.02s  0.62%  reflect.unsafe_New
+         0     0% 95.64%      0.09s  2.80%  runtime.(*mcache).nextFree
+         0     0% 95.64%      0.08s  2.49%  runtime.(*mcentral).cacheSpan
+         0     0% 95.64%      0.08s  2.49%  runtime.(*mcentral).grow
+         0     0% 95.64%      0.02s  0.62%  runtime.(*mheap).alloc
+         0     0% 95.64%      0.25s  7.79%  runtime.(*mheap).alloc.func1
+         0     0% 95.64%      0.06s  1.87%  runtime.(*mspan).initHeapBits
+         0     0% 95.64%      0.02s  0.62%  runtime.gcBgMarkWorker.func2
+         0     0% 95.64%      0.02s  0.62%  runtime.gcDrain
+         0     0% 95.64%      0.02s  0.62%  runtime.gcDrainMarkWorkerDedicated (inline)
+         0     0% 95.64%      0.02s  0.62%  runtime.gopreempt_m (inline)
+         0     0% 95.64%      0.02s  0.62%  runtime.goschedImpl
+         0     0% 95.64%      0.03s  0.93%  runtime.growslice
+         0     0% 95.64%      0.03s  0.93%  runtime.mProf_Malloc
+         0     0% 95.64%      0.02s  0.62%  runtime.makeslice
+         0     0% 95.64%      0.16s  4.98%  runtime.mallocgc
+         0     0% 95.64%      0.02s  0.62%  runtime.mallocgcSmallNoscan
+         0     0% 95.64%      0.05s  1.56%  runtime.mapIterNext
+         0     0% 95.64%      0.06s  1.87%  runtime.mapassign_faststr
+         0     0% 95.64%      0.02s  0.62%  runtime.morestack
+         0     0% 95.64%      0.02s  0.62%  runtime.netpoll
+         0     0% 95.64%      0.06s  1.87%  runtime.newarray
+         0     0% 95.64%      0.02s  0.62%  runtime.newobject
+         0     0% 95.64%      0.02s  0.62%  runtime.newstack
+         0     0% 95.64%      0.03s  0.93%  runtime.profilealloc
+         0     0% 95.64%      0.02s  0.62%  runtime.slicebytetostring
+         0     0% 95.64%      0.02s  0.62%  runtime.startTheWorldWithSema
+         0     0% 95.64%      0.02s  0.62%  runtime.stkbucket
+         0     0% 95.64%      0.23s  7.17%  runtime.sysUsed (inline)
+         0     0% 95.64%      0.23s  7.17%  runtime.sysUsedOS (inline)
+         0     0% 95.64%      0.30s  9.35%  runtime.systemstack
+         0     0% 95.64%      2.90s 90.34%  testing.(*B).launch
+         0     0% 95.64%      2.91s 90.65%  testing.(*B).runN

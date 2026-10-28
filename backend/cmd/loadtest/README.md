@@ -1,6 +1,11 @@
 # Deployment load test
 
-This command simulates the project's actual WebSocket protocol: a host plus a
+The complete NAS benchmark/profiling workflow is in
+[backend/perf/README.md](../../perf/README.md). The tool now uses a public
+projector observer, sends the required Origin header, registers participants
+for personal polling, checks failures/latency gates, and writes JSON reports.
+
+This command simulates the project's actual WebSocket protocol: an observer plus a
 chosen number of players join one module, then every player submits one answer
 at the same moment. It reports connection latency and the time until the host
 observes the answer burst.
@@ -53,6 +58,9 @@ go run ./cmd/loadtest \
   -confirm I_UNDERSTAND_THIS_WRITES_TEST_ANSWERS
 ```
 
-The tool does not test media downloads yet; test those separately with browser
-DevTools or a CDN-aware HTTP load test because Cloudflare cache warmth has a
-large effect on image timings.
+Add `-media-url` to download an existing media item once per player. Compare warm
+and fresh items separately because Cloudflare cache warmth affects image timings.
+Use `-output /tmp/loadtest.json` to retain machine-readable results, `-hold 60s`
+to cover cache expiry, and `-mode idle -require-active=false -hold 30m` for an idle
+soak. Tests return a nonzero exit code on failure; use a fresh unanswered question
+for every burst. For LAN testing set `-origin` to the app's PUBLIC_BASE_URL.

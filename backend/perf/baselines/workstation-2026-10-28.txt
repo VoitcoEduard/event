@@ -1,0 +1,55 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/user/go-expo-sample/backend/hub
+cpu: Apple M1 Pro
+BenchmarkQuizAnswerBurst/players=50/history=0-10         	     517	    224375 ns/op	        50.00 answers/op	  103915 B/op	    2400 allocs/op
+BenchmarkQuizAnswerBurst/players=50/history=25-10        	     222	    543782 ns/op	        50.00 answers/op	  104881 B/op	    2500 allocs/op
+BenchmarkQuizAnswerBurst/players=50/history=100-10       	      87	   1363463 ns/op	        50.00 answers/op	  104917 B/op	    2500 allocs/op
+BenchmarkQuizAnswerBurst/players=150/history=0-10        	     135	    870867 ns/op	       150.0 answers/op	  312270 B/op	    7200 allocs/op
+BenchmarkQuizAnswerBurst/players=150/history=25-10       	      33	   3420307 ns/op	       150.0 answers/op	  315019 B/op	    7501 allocs/op
+BenchmarkQuizAnswerBurst/players=150/history=100-10      	      10	  10578896 ns/op	       150.0 answers/op	  316174 B/op	    7503 allocs/op
+BenchmarkQuizAnswerBurst/players=300/history=0-10        	      50	   2375322 ns/op	       300.0 answers/op	  630435 B/op	   15091 allocs/op
+BenchmarkQuizAnswerBurst/players=300/history=25-10       	       9	  12045972 ns/op	       300.0 answers/op	  638189 B/op	   15695 allocs/op
+BenchmarkQuizAnswerBurst/players=300/history=100-10      	       3	  40547264 ns/op	       300.0 answers/op	  643973 B/op	   15697 allocs/op
+BenchmarkQuizFullStateJSON/players=150/history=0-10      	    3073	     38840 ns/op	 266.58 MB/s	     10354 payload-B	   19463 B/op	     153 allocs/op
+BenchmarkQuizFullStateJSON/players=150/history=25-10     	      92	   1125255 ns/op	 613.31 MB/s	    690129 payload-B	  705253 B/op	     153 allocs/op
+BenchmarkQuizFullStateJSON/players=150/history=100-10    	      24	   4227665 ns/op	 646.68 MB/s	   2733955 payload-B	 3444186 B/op	     155 allocs/op
+BenchmarkQuizObserverBroadcast/connections=150-10        	   56167	      2197 ns/op	     352 B/op	       9 allocs/op
+BenchmarkQuizObserverBroadcast/connections=600-10        	   17625	      6854 ns/op	     352 B/op	       9 allocs/op
+BenchmarkQuizObserverBroadcast/connections=1500-10       	    7340	     15988 ns/op	     352 B/op	       9 allocs/op
+BenchmarkQuizConcurrentGames/games=1-10                  	    4538	     24417 ns/op	    2098 B/op	      50 allocs/op
+BenchmarkQuizConcurrentGames/games=4-10                  	    4966	     24625 ns/op	    2101 B/op	      50 allocs/op
+PASS
+ok  	github.com/user/go-expo-sample/backend/hub	2.595s
+goos: darwin
+goarch: arm64
+pkg: github.com/user/go-expo-sample/backend/models
+cpu: Apple M1 Pro
+BenchmarkSimpleQuizWorkingResults/players=50/questions=50-10         	     236	    511353 ns/op	  337464 B/op	    2637 allocs/op
+BenchmarkSimpleQuizWorkingResults/players=150/questions=50-10        	      55	   1870039 ns/op	 1200024 B/op	    7888 allocs/op
+BenchmarkSimpleQuizWorkingResults/players=300/questions=50-10        	      33	   3884955 ns/op	 2390087 B/op	   15752 allocs/op
+BenchmarkSimpleQuizPersistenceBSON/players=150/questions=1-10        	     399	    299831 ns/op	 184.68 MB/s	     55373 document-B	   92696 B/op	    1208 allocs/op
+BenchmarkSimpleQuizPersistenceBSON/players=150/questions=25-10       	      24	   5011170 ns/op	 215.17 MB/s	   1078231 document-B	 1606702 B/op	   19210 allocs/op
+BenchmarkSimpleQuizPersistenceBSON/players=150/questions=100-10      	       6	  19682542 ns/op	 218.22 MB/s	   4295031 document-B	 6356490 B/op	   75460 allocs/op
+BenchmarkTeamsScoreProjection/awards=50/recipients=15-10             	    1647	     68408 ns/op	  356355 B/op	     911 allocs/op
+BenchmarkTeamsScoreProjection/awards=500/recipients=15-10            	     100	   1264821 ns/op	 4790901 B/op	    9028 allocs/op
+BenchmarkTeamsScoreProjection/awards=2000/recipients=15-10           	      15	   7215289 ns/op	22920765 B/op	   36059 allocs/op
+PASS
+ok  	github.com/user/go-expo-sample/backend/models	1.499s
+goos: darwin
+goarch: arm64
+pkg: github.com/user/go-expo-sample/backend/database
+cpu: Apple M1 Pro
+BenchmarkEventPlayerTotal/modules=5/players=150-10         	   23506	      5127 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEventPlayerTotal/modules=25/players=150-10        	    4507	     26532 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEventPlayerTotal/modules=100/players=150-10       	    1156	    105211 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/user/go-expo-sample/backend/database	0.572s
+goos: darwin
+goarch: arm64
+pkg: github.com/user/go-expo-sample/backend/cache
+cpu: Apple M1 Pro
+BenchmarkEventCacheHitParallel-10    	  794635	       134.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMediaCacheHitParallel-10    	  887217	       133.8 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/user/go-expo-sample/backend/cache	0.322s

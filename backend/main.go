@@ -18,6 +18,7 @@ import (
 	"github.com/user/go-expo-sample/backend/db"
 	"github.com/user/go-expo-sample/backend/handlers"
 	"github.com/user/go-expo-sample/backend/hub"
+	"github.com/user/go-expo-sample/backend/internal/diagnostics"
 	"github.com/user/go-expo-sample/backend/services"
 	"github.com/user/go-expo-sample/backend/utils"
 )
@@ -128,6 +129,14 @@ func run() error {
 		Addr:              ":8080",
 		Handler:           appHandler(mux, spaHandler),
 		ReadHeaderTimeout: 10 * time.Second,
+	}
+	profiler, err := diagnostics.StartFromEnv()
+	if err != nil {
+		return err
+	}
+	defer profiler.Close()
+	if profiler != nil {
+		slog.Info("private profiling listener enabled", "address", profiler.Addr)
 	}
 	serverErrors := make(chan error, 1)
 	go func() { serverErrors <- server.ListenAndServe() }()

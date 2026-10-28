@@ -18,6 +18,8 @@ jobs:
           cache-dependency-path: backend/go.sum
       - name: Test
         run: go test -short ./...
+      - name: Performance fixture smoke test
+        run: go test ./hub ./models ./database ./cache -run '^TestPerformance' -bench '^Benchmark' -benchtime=1x -count=1
       - name: Event PIN integration test
         run: go test -tags integration -run TestEventPINMigrationAndLookup ./services
       - name: Vet
