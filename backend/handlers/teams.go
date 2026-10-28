@@ -102,14 +102,11 @@ func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		return
 	}
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 6 {
+	eventID, teamID := r.PathValue("eventID"), r.PathValue("teamID")
+	if eventID == "" || teamID == "" {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	eventID := parts[2]
-	teamID := parts[4]
 
 	var input struct {
 		Name  string `json:"name"`
@@ -121,7 +118,7 @@ func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	team, err := h.deps.Teams.GetByID(r.Context(), teamID)
-	if err != nil {
+	if err != nil || team.EventID != eventID {
 		http.Error(w, "Team not found", http.StatusNotFound)
 		return
 	}
@@ -149,17 +146,14 @@ func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		return
 	}
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 6 {
+	eventID, teamID := r.PathValue("eventID"), r.PathValue("teamID")
+	if eventID == "" || teamID == "" {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	eventID := parts[2]
-	teamID := parts[4]
 
-	_, err := h.deps.Teams.GetByID(r.Context(), teamID)
-	if err != nil {
+	team, err := h.deps.Teams.GetByID(r.Context(), teamID)
+	if err != nil || team.EventID != eventID {
 		http.Error(w, "Team not found", http.StatusNotFound)
 		return
 	}
