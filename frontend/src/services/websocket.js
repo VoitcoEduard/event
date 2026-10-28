@@ -7,6 +7,7 @@ class QuizWebSocket {
         this.handlers = new Map()
         this.isConnected = false
         this.reconnectAttempts = 0
+        this.reconnectTimer = null
         this.moduleId = null
         this.nickname = null
         this.userId = null
@@ -17,6 +18,9 @@ class QuizWebSocket {
     }
 
     connect(moduleId = null, nickname = null, isHost = false, isProjector = false, eventId = null) {
+        clearTimeout(this.reconnectTimer)
+        this.reconnectTimer = null
+        signalQueue.onDisconnect()
         // Store connection params for reconnection
         this.moduleId = moduleId
         this.nickname = nickname
@@ -53,7 +57,6 @@ class QuizWebSocket {
             signalQueue.setSender((signal) => {
                 this.send('player:signal', signal)
             })
-            signalQueue.onReconnect()
 
             // Send join message based on client type
             let type
@@ -75,6 +78,9 @@ class QuizWebSocket {
             }
 
             this.send(type, payload)
+            // WebSocket messages are ordered, so the server associates this
+            // connection with the player before receiving queued answers.
+            if (!this.isHost && !this.isProjector) signalQueue.onReconnect()
             // Consumers can now safely send follow-up messages (such as
             // player:reconnect) because the server has associated this socket
             // with its player/session.
@@ -107,7 +113,9 @@ class QuizWebSocket {
 
             if (!this.intentionalDisconnect && this.reconnectAttempts < 5) {
                 const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 5000)
-                setTimeout(() => {
+                this.reconnectTimer = setTimeout(() => {
+                    this.reconnectTimer = null
+                    if (this.intentionalDisconnect || this.socket !== socket) return
                     this.reconnectAttempts++
                     this.connect(this.moduleId, this.nickname, this.isHost, this.isProjector, this.eventId)
                 }, delay)
@@ -156,6 +164,11 @@ class QuizWebSocket {
     disconnect() {
         this.intentionalDisconnect = true
         this.reconnectAttempts = 0
+        clearTimeout(this.reconnectTimer)
+        this.reconnectTimer = null
+        this.isConnected = false
+        signalQueue.onDisconnect()
+        signalQueue.clear()
         if (this.socket) {
             this.socket.close()
             this.socket = null
