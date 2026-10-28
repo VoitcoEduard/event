@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"maps"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -363,7 +365,54 @@ func (h *QuizHub) broadcastToHostsAndProjectorsLocked(moduleID string, message i
 func (h *QuizHub) GetSession(moduleID string) *models.QuizSession {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.sessions[moduleID]
+	s := h.sessions[moduleID]
+	if s == nil {
+		return nil
+	}
+	copy := *s
+	copy.Players = make(map[string]*models.Player, len(s.Players))
+	for id, player := range s.Players {
+		if player != nil {
+			p := *player
+			copy.Players[id] = &p
+		} else {
+			copy.Players[id] = nil
+		}
+	}
+	copy.PlayerSignals = slices.Clone(s.PlayerSignals)
+	for i := range copy.PlayerSignals {
+		copy.PlayerSignals[i].AnswerIndices = slices.Clone(s.PlayerSignals[i].AnswerIndices)
+		copy.PlayerSignals[i].Guesses = slices.Clone(s.PlayerSignals[i].Guesses)
+	}
+	copy.AnswerCounts = maps.Clone(s.AnswerCounts)
+	copy.AnsweredPlayerIDs = maps.Clone(s.AnsweredPlayerIDs)
+	copy.QuestionWindows = slices.Clone(s.QuestionWindows)
+	copy.Questions = cloneQuestions(s.Questions)
+	copy.Batches = slices.Clone(s.Batches)
+	for i := range copy.Batches {
+		copy.Batches[i].Questions = cloneQuestions(s.Batches[i].Questions)
+	}
+	return &copy
+}
+
+func cloneQuestions(questions []models.QuizQuestion) []models.QuizQuestion {
+	cloned := slices.Clone(questions)
+	for i := range cloned {
+		q := &cloned[i]
+		q.Answers = slices.Clone(q.Answers)
+		q.CorrectIndices = slices.Clone(q.CorrectIndices)
+		q.ImageOptions = slices.Clone(q.ImageOptions)
+		if q.ImageID != nil {
+			imageID := *q.ImageID
+			q.ImageID = &imageID
+		}
+		if q.WrongPictureConfig != nil {
+			config := *q.WrongPictureConfig
+			config.Targets = slices.Clone(config.Targets)
+			q.WrongPictureConfig = &config
+		}
+	}
+	return cloned
 }
 
 func (h *QuizHub) UpdateSession(moduleID string, updater func(*models.QuizSession)) {
