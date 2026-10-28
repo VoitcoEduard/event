@@ -317,3 +317,83 @@ func TestMigrationsAndConstraints(t *testing.T) {
 		t.Fatalf("future schema migration: %v", err)
 	}
 }
+
+func TestDeletionPreservesSharedMedia(t *testing.T) {
+	ctx, store := startDB(t)
+	if err := store.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	files, err := filestore.Open(t.TempDir(), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, kind := range []string{"module", "event"} {
+		for j, reference := range []string{"template", "module", "url", "library"} {
+			t.Run(kind+"/"+reference, func(t *testing.T) {
+				sourceEvent, sourceModule, otherEvent, otherModule := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+				for k, pair := range [][2]string{{sourceEvent, sourceModule}, {otherEvent, otherModule}} {
+					event := &models.Event{ID: pair[0], Pin: fmt.Sprintf("9%d%d%d00", i, j, k), CreatedAt: time.Now(), Modules: []models.Module{{ID: pair[1], Type: models.ModuleTypeQuiz}}}
+					if err := store.CreateEvent(ctx, event); err != nil {
+						t.Fatal(err)
+					}
+				}
+				upload := filestore.Upload{Filename: "image.png", OriginalName: "image.png", MimeType: "image/png", EventID: sourceEvent, ModuleID: sourceModule, Data: []byte("shared image")}
+				shared, err := files.Save(ctx, upload)
+				if err != nil {
+					t.Fatal(err)
+				}
+				upload.Data = []byte("unused image")
+				unused, err := files.Save(ctx, upload)
+				if err != nil {
+					t.Fatal(err)
+				}
+				data := map[string]any{"questions": []any{map[string]any{"imageId": shared.Media.ID}}}
+				if reference == "url" {
+					data = map[string]any{"nested": []any{map[string]any{"url": "/media/" + shared.Media.ID + "/file"}}}
+				}
+				if reference == "library" {
+					_, err = store.Pool.Exec(ctx, `INSERT INTO tracks(id,name,media_id,url,created_at) VALUES ($1,'Shared track',$2,$3,now())`, uuid.NewString(), shared.Media.ID, "/media/"+shared.Media.ID+"/file")
+				} else if reference == "template" {
+					err = store.CreateTemplate(ctx, &models.Template{ID: uuid.NewString(), Name: "Reusable", ModuleType: models.ModuleTypeQuiz, Data: data, CreatedAt: time.Now()})
+				} else {
+					err = store.PatchModule(ctx, otherEvent, otherModule, data)
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				if kind == "event" {
+					err = store.DeleteEvent(ctx, sourceEvent)
+				} else {
+					var found bool
+					found, err = store.DeleteModule(ctx, sourceEvent, sourceModule)
+					if err == nil && !found {
+						t.Fatal("module was not deleted")
+					}
+				}
+				if err != nil {
+					t.Fatalf("delete %s: %v", kind, err)
+				}
+				if _, err = store.GetModule(ctx, sourceEvent, sourceModule); err != postgres.ErrNotFound {
+					t.Fatalf("source module survived: %v", err)
+				}
+				if _, err = store.Media(ctx, unused.Media.ID); err != postgres.ErrNotFound {
+					t.Fatalf("unused media remains visible: %v", err)
+				}
+				if err = files.Reconcile(ctx, time.Now()); err != nil {
+					t.Fatal(err)
+				}
+				metadata, payload, err := files.Read(ctx, shared.Media.ID)
+				if err != nil || string(payload) != "shared image" {
+					t.Fatalf("shared media lost: %q %v", payload, err)
+				}
+				if metadata.ModuleID != "" || (kind == "event" && metadata.EventID != "") {
+					t.Fatalf("stale ownership: %+v", metadata)
+				}
+				exists, err := store.MediaStorageKeyExists(ctx, unused.Media.StorageKey)
+				if err != nil || exists {
+					t.Fatalf("unused media not reconciled: %v %v", exists, err)
+				}
+			})
+		}
+	}
+}

@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type MediaRecord struct {
@@ -170,4 +172,45 @@ func (s *Store) DeleteLibraryMedia(ctx context.Context, library, id string) (str
 		return "", translate(err)
 	}
 	return mediaID, nil
+}
+
+// Detach ownership before deleting the parent. Clearing both columns together
+// avoids the event foreign key's SET NULL violating the module ownership check.
+func detachOwnedMedia(ctx context.Context, tx pgx.Tx, eventID, moduleID string) ([]string, error) {
+	rows, err := tx.Query(ctx, `UPDATE media SET
+ event_id=CASE WHEN $2='' THEN NULL ELSE event_id END,module_id=NULL
+ WHERE event_id=$1 AND ($2='' OR module_id=NULLIF($2,'')::uuid)
+ RETURNING id::text`, eventID, moduleID)
+	if err != nil {
+		return nil, translate(err)
+	}
+	defer rows.Close()
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// Templates and copied modules share media IDs. Retire detached files only
+// after deleting the parent, so only surviving references keep them alive.
+// Search nested JSON for IDs and media URLs to cover question images, picture
+// options, slides and other configurable content without relying on its shape.
+func retireUnreferencedMedia(ctx context.Context, tx pgx.Tx, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := tx.Exec(ctx, `UPDATE media m SET deleted_at=now()
+ WHERE m.id::text=ANY($1::text[]) AND m.deleted_at IS NULL
+ AND NOT EXISTS (SELECT 1 FROM templates t WHERE jsonb_path_exists(t.data,'$.** ? (@ == $id || @ == $url)',jsonb_build_object('id',m.id::text,'url','/media/'||m.id::text||'/file')))
+ AND NOT EXISTS (SELECT 1 FROM modules v WHERE jsonb_path_exists(to_jsonb(v),'$.** ? (@ == $id || @ == $url)',jsonb_build_object('id',m.id::text,'url','/media/'||m.id::text||'/file')))
+ AND NOT EXISTS (SELECT 1 FROM events e WHERE jsonb_path_exists(to_jsonb(e),'$.** ? (@ == $id || @ == $url)',jsonb_build_object('id',m.id::text,'url','/media/'||m.id::text||'/file')))
+ AND NOT EXISTS (SELECT 1 FROM dynamic_cards c WHERE jsonb_path_exists(c.data,'$.** ? (@ == $id || @ == $url)',jsonb_build_object('id',m.id::text,'url','/media/'||m.id::text||'/file')))
+ AND NOT EXISTS (SELECT 1 FROM screensavers s WHERE s.media_id=m.id)
+ AND NOT EXISTS (SELECT 1 FROM tracks t WHERE t.media_id=m.id)`, ids)
+	return translate(err)
 }

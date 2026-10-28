@@ -240,18 +240,15 @@ func (s *Store) DeleteEvent(ctx context.Context, id string) error {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	// Preserve deletion markers after the foreign key clears event ownership.
-	if _, err = tx.Exec(ctx, `DELETE FROM tracks WHERE media_id IN (SELECT id FROM media WHERE event_id=$1)`, id); err != nil {
-		return translate(err)
-	}
-	if _, err = tx.Exec(ctx, `DELETE FROM screensavers WHERE media_id IN (SELECT id FROM media WHERE event_id=$1)`, id); err != nil {
-		return translate(err)
-	}
-	if _, err = tx.Exec(ctx, `UPDATE media SET deleted_at=now() WHERE event_id=$1 AND deleted_at IS NULL`, id); err != nil {
-		return translate(err)
+	mediaIDs, err := detachOwnedMedia(ctx, tx, id, "")
+	if err != nil {
+		return err
 	}
 	tag, err := tx.Exec(ctx, `DELETE FROM events WHERE id=$1`, id)
 	if err = affected(tag, err); err != nil {
+		return err
+	}
+	if err = retireUnreferencedMedia(ctx, tx, mediaIDs); err != nil {
 		return err
 	}
 	return translate(tx.Commit(ctx))
@@ -330,17 +327,15 @@ func (s *Store) DeleteModule(ctx context.Context, eventID, moduleID string) (boo
 			return false, ErrHasAwards
 		}
 	}
-	if _, err = tx.Exec(ctx, `DELETE FROM tracks WHERE media_id IN (SELECT id FROM media WHERE event_id=$1 AND module_id=$2)`, eventID, moduleID); err != nil {
-		return false, translate(err)
-	}
-	if _, err = tx.Exec(ctx, `DELETE FROM screensavers WHERE media_id IN (SELECT id FROM media WHERE event_id=$1 AND module_id=$2)`, eventID, moduleID); err != nil {
-		return false, translate(err)
-	}
-	if _, err = tx.Exec(ctx, `UPDATE media SET deleted_at=now() WHERE event_id=$1 AND module_id=$2 AND deleted_at IS NULL`, eventID, moduleID); err != nil {
-		return false, translate(err)
+	mediaIDs, err := detachOwnedMedia(ctx, tx, eventID, moduleID)
+	if err != nil {
+		return false, err
 	}
 	if _, err = tx.Exec(ctx, `DELETE FROM modules WHERE event_id=$1 AND id=$2`, eventID, moduleID); err != nil {
 		return false, translate(err)
+	}
+	if err = retireUnreferencedMedia(ctx, tx, mediaIDs); err != nil {
+		return false, err
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return false, translate(err)
