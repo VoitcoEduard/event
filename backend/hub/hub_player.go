@@ -3,10 +3,11 @@ package hub
 import (
 	"context"
 	"encoding/json"
-	"github.com/user/go-expo-sample/backend/models"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/user/go-expo-sample/backend/models"
 )
 
 // Resolve the event and participant before taking the shared hub lock.
@@ -28,6 +29,20 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 		if err != nil {
 			return
 		}
+		if !event.IsActive {
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This event is not accepting players."}}))
+			return
+		}
+		h.mu.RLock()
+		canJoin := h.canJoinQuizLocked(moduleID, userID)
+		if session := h.sessions[moduleID]; canJoin && session != nil && (session.State == "finishing" || session.State == "finished") {
+			nickname = session.Players[userID].Nickname
+		}
+		h.mu.RUnlock()
+		if !canJoin {
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This quiz is not accepting new players."}}))
+			return
+		}
 		now := time.Now().UTC()
 		_, err = h.db.EnsureParticipant(ctx, &models.Participant{ID: userID, EventID: event.ID, DisplayName: nickname, NormalizedName: strings.ToLower(strings.TrimSpace(nickname)), Status: models.ParticipantStatusJoined, CreatedAt: now, UpdatedAt: now})
 		if err != nil {
@@ -38,6 +53,16 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.processPlayerJoin(client, msg)
+}
+
+// Call with h.mu held. Reconnects may read finished results, but must not
+// change the roster while results are being saved or after they are final.
+func (h *QuizHub) canJoinQuizLocked(moduleID, playerID string) bool {
+	session := h.sessions[moduleID]
+	if session == nil || (session.State != "finishing" && session.State != "finished") {
+		return true
+	}
+	return session.Players[playerID] != nil
 }
 
 func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
@@ -61,6 +86,11 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 	playerID := nickname
 	if userID != "" {
 		playerID = userID // Use persistent UUID if available
+	}
+	// Recheck after persistence in case the host ended the quiz during DB I/O.
+	if !h.canJoinQuizLocked(moduleID, playerID) {
+		h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This quiz is not accepting new players."}}))
+		return
 	}
 
 	// Associate client
@@ -86,7 +116,9 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 
 	// Add a new player, or retain the score and history of a reconnecting one.
 	if player, exists := session.Players[playerID]; exists {
-		player.Nickname = nickname
+		if session.State != "finishing" && session.State != "finished" {
+			player.Nickname = nickname
+		}
 	} else {
 		session.Players[playerID] = &models.Player{
 			ID:       playerID,

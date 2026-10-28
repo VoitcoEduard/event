@@ -2,11 +2,22 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/user/go-expo-sample/backend/postgres"
 )
+
+func TestMissingRecordReturnsNotFound(t *testing.T) {
+	w := httptest.NewRecorder()
+	writeRequestError(w, fmt.Errorf("update secret-table: %w", postgres.ErrNotFound), http.StatusInternalServerError)
+	if w.Code != http.StatusNotFound || strings.Contains(w.Body.String(), "secret-table") {
+		t.Fatalf("response = %d %q", w.Code, w.Body.String())
+	}
+}
 
 func TestInternalErrorDoesNotExposeDetails(t *testing.T) {
 	w := httptest.NewRecorder()

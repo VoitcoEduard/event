@@ -272,9 +272,11 @@ func (s *Store) InsertResponse(ctx context.Context, v *models.Response) error {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if v.UserID != "" {
-		name, _ := v.Data["step_welcome_name"].(string)
-		name = strings.TrimSpace(name)
+	// Ordinary forms can be submitted before the welcome/name form. Keep the
+	// response, but only add a roster entry once a display name is available.
+	name, _ := v.Data["step_welcome_name"].(string)
+	name = strings.TrimSpace(name)
+	if v.UserID != "" && name != "" {
 		_, err = tx.Exec(ctx, `INSERT INTO participants(event_id,id,display_name,normalized_name,profile,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'{}','joined',$5,$5) ON CONFLICT(event_id,id) DO UPDATE SET display_name=CASE WHEN participants.display_name='' THEN excluded.display_name ELSE participants.display_name END, normalized_name=CASE WHEN participants.display_name='' THEN excluded.normalized_name ELSE participants.normalized_name END,updated_at=excluded.updated_at`, v.EventID, v.UserID, name, strings.ToLower(name), v.CreatedAt)
 		if err != nil {
 			return translate(err)

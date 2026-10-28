@@ -10,8 +10,15 @@
       </select>
     </div>
 
+    <div v-if="joinError" class="state-container">
+      <div class="card">
+        <p role="alert">{{ joinError }}</p>
+        <button class="exit-btn" @click="goHome">{{ $t('quiz.player.exit_btn') }}</button>
+      </div>
+    </div>
+
     <!-- NICKNAME ENTRY (Pre-Lobby) -->
-    <div v-if="state === States.LOBBY && !joined" class="state-container name-entry-container">
+    <div v-else-if="state === States.LOBBY && !joined" class="state-container name-entry-container">
       <h1 class="logo">{{ $t('quiz.player.logo') }}</h1>
       <div class="card">
         <input
@@ -331,6 +338,7 @@ const router = useRouter()
 const route = useRoute()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
+const joinError = ref('')
 
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
@@ -842,6 +850,15 @@ onMounted(async () => {
     }
 
     // Listen for WS updates
+    quizWS.on('cmd:error', (payload) => {
+        if (payload?.code !== 'join_closed' && payload?.code !== 'join_failed') return
+        joinError.value = payload.message
+        clearInterval(timerInterval)
+        clearInterval(explainTimerInterval)
+        clearTimeout(confirmSelectionTimeout)
+        quizWS.disconnect()
+    })
+
     quizWS.on('cmd:state', (payload) => {
         const newState = payload.state
 

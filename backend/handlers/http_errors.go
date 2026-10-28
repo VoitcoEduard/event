@@ -6,6 +6,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+
+	"github.com/user/go-expo-sample/backend/postgres"
 )
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
@@ -25,6 +27,10 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func writeRequestError(w http.ResponseWriter, err error, status int) {
+	if errors.Is(err, postgres.ErrNotFound) {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
 	slog.Error("request failed", "status", status, "error", err)
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
