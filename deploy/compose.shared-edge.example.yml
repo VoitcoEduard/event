@@ -1,0 +1,19 @@
+# Template for ANOTHER project's HTTP service, not an override for quiz-prod.
+# Customize image, container port, alias, volumes and application settings.
+# Add that project's database only to private; do not publish database ports.
+services:
+  web:
+    image: ${PROJECT_IMAGE:?Set this project's image}
+    restart: unless-stopped
+    networks:
+      private: {}
+      edge:
+        aliases:
+          - ${PROJECT_EDGE_ALIAS:?Set a unique alias, e.g. inventory-prod-web}
+
+networks:
+  private:
+    internal: true
+  edge:
+    external: true
+    name: edge

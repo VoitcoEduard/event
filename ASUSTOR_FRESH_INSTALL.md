@@ -5,6 +5,11 @@ Google administrator login, a shared Cloudflare tunnel, and GitHub-driven releas
 It does not reuse the old GitLab image, old admin password, old containers, or old
 database folder. Keep Portainer and Tailscale running throughout.
 
+See [PORTAINER_NETWORK_PLAN.md](PORTAINER_NETWORK_PLAN.md) for the NAS-wide
+network layout, handling the existing containers, and adding other projects to
+the same tunnel. Use `docker-compose.asustor.yml` with the independent
+infrastructure stack for this installation.
+
 ## 1. Database and media storage
 
 PostgreSQL 18 runs locally on the NAS, on a private Docker network. This is a
@@ -13,15 +18,15 @@ and development use different database and media folders and credentials.
 
 ## 2. Prepare the current code on GitHub
 
-The local checkout currently contains uncommitted deployment and authentication
-configuration changes. Having CI locally does not mean GitHub has these files.
-Review, commit, and push the intended current project, including:
+Having CI locally does not mean GitHub has these files. Review, commit, and push
+the intended current project, including:
 
 - `.github/workflows/ci.yml` and `.github/workflows/publish.yml`
 - `Dockerfile`, backend, frontend, and required dependency files
 - `deploy-control/` (the publishing workflow currently builds this image on main,
   even though running the controller is optional)
 - `docker-compose.asustor.yml`, `deploy/postgres/`, and `scripts/`
+- `docker-compose.infrastructure.yml` and `PORTAINER_NETWORK_PLAN.md`
 
 Never commit `.env` or credentials. This checkout currently has no Git remote
 configured; add your actual GitHub repository as origin if that remains the case.

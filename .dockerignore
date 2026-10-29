@@ -5,6 +5,8 @@
 # Node
 frontend/node_modules
 frontend/dist
+frontend/.npm
+frontend/.vite
 
 # Go build cache and binaries
 backend/.cache
