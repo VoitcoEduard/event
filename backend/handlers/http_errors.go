@@ -27,6 +27,14 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func writeRequestError(w http.ResponseWriter, err error, status int) {
+	if errors.Is(err, postgres.ErrInvalidReference) {
+		http.Error(w, "Invalid reference", http.StatusBadRequest)
+		return
+	}
+	if errors.Is(err, postgres.ErrConflict) {
+		http.Error(w, "Conflict", http.StatusConflict)
+		return
+	}
 	if errors.Is(err, postgres.ErrNotFound) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return

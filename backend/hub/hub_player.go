@@ -383,6 +383,9 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 		return
 	}
 	lastKnownIndex := int(lastKnownIndexFloat)
+	if client.ModuleID != moduleID || client.PlayerID == "" || lastKnownIndex < -1 {
+		return
+	}
 
 	session := h.sessions[moduleID]
 	if session == nil {
@@ -392,11 +395,8 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 		}))
 		return
 	}
+	_ = nickname
 	player := session.Players[client.PlayerID]
-	if player == nil {
-		// Support clients that reconnect without a persistent user ID.
-		player = session.Players[nickname]
-	}
 	if player == nil {
 		return
 	}
@@ -408,8 +408,15 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 	for i := lastKnownIndex + 1; i < currentIndex; i++ {
 		missedQuestions = append(missedQuestions, i)
 
-		// Mark as skipped (0 points, no answer)
-		if player != nil {
+		// Do not duplicate an answer or an earlier missed marker.
+		seen := false
+		for _, previous := range session.PlayerSignals {
+			if previous.PlayerID == player.ID && previous.QuestionIndex == i {
+				seen = true
+				break
+			}
+		}
+		if !seen {
 			session.PlayerSignals = append(session.PlayerSignals, models.PlayerSignal{
 				PlayerID:      player.ID,
 				QuestionIndex: i,

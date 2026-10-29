@@ -13,7 +13,9 @@ async function req(path, opts = {}) {
   }
   if (!res.ok) {
     const msg = data?.message || text || `Request failed (${res.status})`
-    throw new Error(typeof msg === 'string' ? msg : `Request failed (${res.status})`)
+    const error = new Error(typeof msg === 'string' ? msg : `Request failed (${res.status})`)
+    error.status = res.status
+    throw error
   }
   return data
 }

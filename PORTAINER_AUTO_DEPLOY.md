@@ -86,6 +86,12 @@ client. PostgreSQL runs on a private network without a published port. The appli
 password must match the password in DATABASE_URL. For the shared edge tunnel
 setup, follow `ASUSTOR_FRESH_INSTALL.md` and use `docker-compose.asustor.yml`.
 
+The production stack works without the deployment controller. If using the
+optional controller, first deploy `docker-compose.control.yml` to create
+`deploy_control_net`, then deploy production with both
+`docker-compose.prod.yml` and `docker-compose.prod-control.yml` as Compose files.
+The overlay attaches the tunnel to the controller network.
+
 ## Normal release flow
 
 1. Push or merge changes into `develop`.

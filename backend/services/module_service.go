@@ -77,7 +77,7 @@ func (s *ModuleService) Get(ctx context.Context, eventID, moduleID string) (*mod
 
 func (s *ModuleService) Responses(ctx context.Context, eventID, moduleID string) (any, error) {
 	module, err := s.Get(ctx, eventID, moduleID)
-	if err != nil && !errors.Is(err, ErrModuleNotFound) {
+	if err != nil {
 		return nil, err
 	}
 	if module != nil && module.Type == "teams" {

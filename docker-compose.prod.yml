@@ -46,7 +46,7 @@ services:
     command: tunnel run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set the Cloudflare tunnel token}
-    networks: [edge, control_net]
+    networks: [edge]
 volumes:
   postgres_data_prod:
   media_data_prod:
@@ -54,6 +54,3 @@ networks:
   private:
     internal: true
   edge: {}
-  control_net:
-    external: true
-    name: deploy_control_net

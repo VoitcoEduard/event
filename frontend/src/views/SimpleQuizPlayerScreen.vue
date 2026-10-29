@@ -164,6 +164,7 @@ const questionImage = computed(() => question.value?.imageId ? getImageUrl(quest
 
 const storageKey = computed(() => `sq-identity:${eventId}:${moduleId}`)
 
+let pendingAnswer = null
 let pollTimer = null
 let deadlineTimer = null
 
@@ -214,8 +215,12 @@ const tryReconnect = async () => {
     identity.value = { playerId: res.playerId, secret: res.secret, nickname: res.nickname }
     nickname.value = res.nickname
     return true
-  } catch {
-    try { localStorage.removeItem(storageKey.value) } catch { /* ignore */ }
+  } catch (e) {
+    if (e.status === 403) {
+      try { localStorage.removeItem(storageKey.value) } catch { /* ignore */ }
+    } else {
+      error.value = e.message
+    }
     return false
   }
 }
@@ -265,7 +270,9 @@ const submit = async () => {
   if (!text || submitting.value || submitted.value) return
   submitting.value = true
   error.value = ''
-  const answerId = newAnswerId()
+  const signature = `${currentIndex.value}:${text}`
+  if (!pendingAnswer || pendingAnswer.signature !== signature) pendingAnswer = { signature, id: newAnswerId() }
+  const answerId = pendingAnswer.id
   try {
     await simpleQuizApi.submitAnswer(eventId, moduleId, {
       playerId: identity.value.playerId,
@@ -274,6 +281,7 @@ const submit = async () => {
       text,
       answerId
     })
+    pendingAnswer = null
     clearDraft(eventId, moduleId, currentIndex.value)
     draft.value = ''
     submitted.value = true
@@ -285,6 +293,7 @@ const submit = async () => {
 }
 
 watch(currentIndex, () => {
+  pendingAnswer = null
   draft.value = ''
   submitted.value = false
   if (status.value === 'question_open') {

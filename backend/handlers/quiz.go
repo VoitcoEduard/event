@@ -106,15 +106,22 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 	eventID := parts[2]
 	moduleID := parts[4]
 
-	// Create session if not exists
-	h.deps.QuizHub.CreateSession(moduleID, eventID)
-
 	// Load questions from DB
 	event, err := h.deps.DB.GetEvent(r.Context(), eventID)
+	if err != nil {
+		writeRequestError(w, err, http.StatusInternalServerError)
+		return
+	}
 	var questions []models.QuizQuestion
+	foundModule := false
 	if err == nil {
 		for _, mod := range event.Modules {
 			if mod.ID == moduleID {
+				foundModule = true
+				if mod.Type != models.ModuleTypeQuiz && mod.Type != models.ModuleTypeWrongPictures {
+					http.Error(w, "Module is not a quiz", http.StatusBadRequest)
+					return
+				}
 				// unmarshal data
 				dataBytes, _ := json.Marshal(mod.Data)
 				var qData models.QuizModuleData
@@ -130,6 +137,16 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	if !foundModule {
+		http.Error(w, "Module not found", http.StatusNotFound)
+		return
+	}
+	if len(questions) == 0 {
+		http.Error(w, "Quiz has no questions", http.StatusBadRequest)
+		return
+	}
+	h.deps.QuizHub.CreateSession(moduleID, eventID)
 
 	// Update session state - reset players and signals when starting new quiz
 	if !h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {

@@ -365,15 +365,38 @@ func (h *QuizHub) EnsureSimpleJudgeToken(ctx context.Context, eventID, moduleID 
 
 // --- WebSocket joins for Simple Quiz (counts + live updates, no secrets leaked) ---
 
+// simpleJoinModule verifies module type before assigning a WebSocket role.
+func (h *QuizHub) simpleJoinModule(moduleID string) bool {
+	if h.db == nil {
+		return true
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	event, err := h.db.GetEventByModule(ctx, moduleID)
+	if err != nil {
+		return false
+	}
+	for _, module := range event.Modules {
+		if module.ID == moduleID {
+			return module.Type == models.ModuleTypeSimpleQuiz
+		}
+	}
+	return false
+}
+
 func (h *QuizHub) processSimpleHostJoin(client *Client, msg ClientMessage) {
 	data, _ := msg.Payload.(map[string]interface{})
 	moduleID, _ := data["moduleId"].(string)
-	if moduleID == "" {
+	if moduleID == "" || !h.simpleJoinModule(moduleID) {
 		return
 	}
+	h.mu.Lock()
 	client.ModuleID = moduleID
+	client.IsTeamsAdmin = false
 	client.IsHost = true
 	client.IsProjector = false
+	client.PlayerID = ""
+	h.mu.Unlock()
 	s := h.GetSimpleQuiz(moduleID)
 	if s == nil {
 		return
@@ -385,13 +408,16 @@ func (h *QuizHub) processSimplePlayerJoin(client *Client, msg ClientMessage) {
 	data, _ := msg.Payload.(map[string]interface{})
 	moduleID, _ := data["moduleId"].(string)
 	playerID, _ := data["playerId"].(string)
-	if moduleID == "" {
+	if moduleID == "" || !h.simpleJoinModule(moduleID) {
 		return
 	}
+	h.mu.Lock()
 	client.ModuleID = moduleID
+	client.IsTeamsAdmin = false
 	client.IsHost = false
 	client.IsProjector = false
 	client.PlayerID = playerID
+	h.mu.Unlock()
 	s := h.GetSimpleQuiz(moduleID)
 	if s == nil {
 		return
@@ -402,12 +428,16 @@ func (h *QuizHub) processSimplePlayerJoin(client *Client, msg ClientMessage) {
 func (h *QuizHub) processSimpleProjectorJoin(client *Client, msg ClientMessage) {
 	data, _ := msg.Payload.(map[string]interface{})
 	moduleID, _ := data["moduleId"].(string)
-	if moduleID == "" {
+	if moduleID == "" || !h.simpleJoinModule(moduleID) {
 		return
 	}
+	h.mu.Lock()
 	client.ModuleID = moduleID
+	client.IsTeamsAdmin = false
 	client.IsProjector = true
 	client.IsHost = false
+	client.PlayerID = ""
+	h.mu.Unlock()
 	s := h.GetSimpleQuiz(moduleID)
 	if s == nil {
 		return
@@ -419,7 +449,7 @@ func (h *QuizHub) processSimpleJudgeJoin(client *Client, msg ClientMessage) {
 	data, _ := msg.Payload.(map[string]interface{})
 	moduleID, _ := data["moduleId"].(string)
 	token, _ := data["judgeToken"].(string)
-	if moduleID == "" || token == "" {
+	if moduleID == "" || token == "" || !h.simpleJoinModule(moduleID) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -427,9 +457,13 @@ func (h *QuizHub) processSimpleJudgeJoin(client *Client, msg ClientMessage) {
 	if !h.ValidateSimpleJudgeToken(ctx, moduleID, token) {
 		return
 	}
+	h.mu.Lock()
 	client.ModuleID = moduleID
+	client.IsTeamsAdmin = false
 	client.IsHost = false
 	client.IsProjector = false
+	client.PlayerID = ""
+	h.mu.Unlock()
 	s := h.GetSimpleQuiz(moduleID)
 	if s == nil {
 		return

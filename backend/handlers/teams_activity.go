@@ -35,6 +35,10 @@ func teamsFailure(w http.ResponseWriter, err error) {
 	if errors.Is(err, database.ErrNotFound) || errors.Is(err, services.ErrModuleNotFound) {
 		code = http.StatusNotFound
 	}
+	if code == http.StatusInternalServerError {
+		writeRequestError(w, err, code)
+		return
+	}
 	http.Error(w, err.Error(), code)
 }
 func (h *Handler) teamsService() *services.TeamsActivityService {

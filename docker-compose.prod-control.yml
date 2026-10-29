@@ -1,0 +1,9 @@
+# Optional overlay connecting the production tunnel to the deployment controller.
+services:
+  tunnel:
+    networks:
+      - control_net
+networks:
+  control_net:
+    external: true
+    name: deploy_control_net

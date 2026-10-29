@@ -98,6 +98,10 @@ func (h *Handler) DeleteModule(w http.ResponseWriter, r *http.Request) {
 	defer mediaAccessMu.Unlock()
 	found, err := h.deps.Modules.Delete(r.Context(), eventID, moduleID)
 	if err != nil {
+		if errors.Is(err, services.ErrModuleNotFound) {
+			http.Error(w, "Module not found", http.StatusNotFound)
+			return
+		}
 		var teamsErr *services.TeamsError
 		if errors.As(err, &teamsErr) || errors.Is(err, services.ErrTeamsConflict) {
 			teamsFailure(w, err)
@@ -161,8 +165,8 @@ func (h *Handler) GetModule(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetModuleResponses(w http.ResponseWriter, r *http.Request) {
 	results, err := h.deps.Modules.Responses(r.Context(), r.PathValue("eventID"), r.PathValue("moduleID"))
 	if err != nil {
-		if errors.Is(err, database.ErrNotFound) {
-			http.Error(w, "Event not found", http.StatusNotFound)
+		if errors.Is(err, database.ErrNotFound) || errors.Is(err, services.ErrModuleNotFound) {
+			http.Error(w, "Event or module not found", http.StatusNotFound)
 		} else {
 			writeRequestError(w, err, http.StatusInternalServerError)
 		}

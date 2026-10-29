@@ -136,7 +136,7 @@ func (s *Store) CreateEvent(ctx context.Context, e *models.Event) error {
 
 func (s *Store) PINExists(ctx context.Context, pin string) (bool, error) {
 	var exists bool
-	err := s.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM events WHERE pin=$1)`, pin).Scan(&exists)
+	err := s.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM events WHERE pin=$1 OR id::text=$1)`, pin).Scan(&exists)
 	return exists, translate(err)
 }
 
@@ -151,7 +151,7 @@ func (s *Store) GetEvent(ctx context.Context, id string) (*models.Event, error) 
 	return e, nil
 }
 func (s *Store) GetEventByPIN(ctx context.Context, pin string) (*models.Event, error) {
-	e, err := scanEvent(s.Pool.QueryRow(ctx, `SELECT `+eventColumns+` FROM events WHERE pin=$1`, pin))
+	e, err := scanEvent(s.Pool.QueryRow(ctx, `SELECT `+eventColumns+` FROM events WHERE pin=$1 OR id::text=$1 ORDER BY (pin=$1) DESC LIMIT 1`, pin))
 	if err != nil {
 		return nil, err
 	}

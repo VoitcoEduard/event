@@ -255,7 +255,7 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 	}
 	// Resolve against PostgreSQL before taking the hub lock. A client-provided role
 	// or an earlier host join never authorizes a later privileged message.
-	if strings.HasPrefix(msg.Type, "host:") || msg.Type == "teams:admin_join" {
+	if strings.HasPrefix(msg.Type, "host:") || msg.Type == "teams:admin_join" || msg.Type == "simple:host_join" {
 		if !h.AdminActive(client.AdminToken) {
 			client.Reject()
 			return
