@@ -57,11 +57,11 @@ func (r *EventRepository) ParticipantStatus(ctx context.Context, eventID, id str
 	if err != nil {
 		return nil, 0, err
 	}
-	scores, err := LoadEventScores(ctx, r.DB, eventID)
+	total, err := r.DB.PlayerTotal(ctx, eventID, id)
 	if err != nil {
 		return p, 0, err
 	}
-	return p, scores.PlayerTotal(id), nil
+	return p, total, nil
 }
 func (r *EventRepository) ActiveCards(ctx context.Context, eventID string) ([]models.DynamicCard, error) {
 	return r.DB.ActiveCards(ctx, eventID)

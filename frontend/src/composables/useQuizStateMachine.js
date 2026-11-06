@@ -39,8 +39,8 @@ export function useQuizStateMachine({ requestBatch = null } = {}) {
         return transitions[state.value]?.includes(to) ?? false
     }
 
-    function transition(to, data = null) {
-        if (!canTransition(to)) {
+    function transition(to, data = null, { authoritative = false } = {}) {
+        if (!Object.values(States).includes(to) || (!authoritative && !canTransition(to))) {
             console.warn(`Invalid transition: ${state.value} -> ${to}`)
             return
         }

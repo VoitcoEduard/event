@@ -57,6 +57,7 @@
       @touchstart.prevent="onTouchStart"
       @touchmove.prevent="onTouchMove"
       @touchend="onTouchEnd"
+      @touchcancel="onTouchEnd"
       @mousedown="onMouseDown"
       @wheel.prevent="onWheel"
     >
@@ -99,21 +100,22 @@ const hasInteracted = ref(false)
 
 // ── Number helpers ─────────────────────────────────────────
 const formatNumber = (n) => {
-  if (n === null || n === undefined) return ''
+  if (n === null || n === undefined || !Number.isFinite(Number(n))) return ''
   return Number(n).toFixed(props.decimalPlaces)
 }
 const formattedValue = computed(() => formatNumber(props.modelValue))
 
 // ── Percentages ────────────────────────────────────────────
 const range = computed(() => props.max - props.min)
+const interactive = computed(() => !props.readonly && Number.isFinite(props.min) && Number.isFinite(props.max) && Number.isFinite(props.step) && props.max > props.min && props.step > 0)
 
 const fillPercentage = computed(() => {
-  if (range.value === 0) return 0
+  if (!Number.isFinite(range.value) || range.value <= 0) return 0
   return Math.max(0, Math.min(100, ((props.modelValue - props.min) / range.value) * 100))
 })
 
 const correctPercentage = computed(() => {
-  if (props.correctValue === null || range.value === 0) return 0
+  if (props.correctValue === null || !Number.isFinite(range.value) || range.value <= 0) return 0
   return Math.max(0, Math.min(100, ((props.correctValue - props.min) / range.value) * 100))
 })
 
@@ -121,6 +123,9 @@ const correctPercentage = computed(() => {
 const ticks = computed(() => {
   const result = []
   const r = range.value
+  if (!Number.isFinite(r) || r <= 0) {
+    return Number.isFinite(props.min) ? [{ value: props.min, pct: 0, label: formatNumber(props.min), isActive: true }] : []
+  }
   const idealTicks = 6
   let ts = r / idealTicks
   const mag = Math.pow(10, Math.floor(Math.log10(ts)))
@@ -146,6 +151,7 @@ const buzz = () => { if (navigator.vibrate) navigator.vibrate(10) }
 
 // ── Core setter ────────────────────────────────────────────
 const applyValue = (raw) => {
+  if (!interactive.value || !Number.isFinite(raw)) return
   let v = Math.max(props.min, Math.min(props.max, raw))
   if (props.step > 0) {
     v = Math.round((v - props.min) / props.step) * props.step + props.min
@@ -171,7 +177,7 @@ let touchStartY   = null
 let touchStartVal = null
 
 const onTouchStart = (e) => {
-  if (props.readonly) return
+  if (!interactive.value) return
   hasInteracted.value = true
   touchStartY   = e.touches[0].clientY
   touchStartVal = props.modelValue
@@ -194,8 +200,9 @@ const onTouchEnd = () => {
 }
 
 // ── Mouse drag ─────────────────────────────────────────────
+let activeMouseCleanup = null
 const onMouseDown = (e) => {
-  if (props.readonly) return
+  if (!interactive.value) return
   hasInteracted.value = true
   const startY   = e.clientY
   const startVal = props.modelValue
@@ -206,18 +213,24 @@ const onMouseDown = (e) => {
     const delta = (dy / DRAG_PX_PER_FULL_RANGE) * range.value
     applyValue(startVal + delta)
   }
+  if (activeMouseCleanup) activeMouseCleanup()
   const onUp = () => {
     isScrolling.value = false
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
+    window.removeEventListener('blur', onUp)
+    if (activeMouseCleanup === onUp) activeMouseCleanup = null
   }
+  activeMouseCleanup = onUp
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
+  window.addEventListener('blur', onUp)
 }
+onBeforeUnmount(() => { if (activeMouseCleanup) activeMouseCleanup() })
 
 // ── Mouse wheel ────────────────────────────────────────────
 const onWheel = (e) => {
-  if (props.readonly) return
+  if (!interactive.value) return
   hasInteracted.value = true
   const dir  = e.deltaY > 0 ? -1 : 1
   const step = props.step > 0 ? props.step : range.value / 100

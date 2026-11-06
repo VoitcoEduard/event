@@ -151,9 +151,11 @@ type QuizSession struct {
 	AnswerCounts  map[int]int        `json:"answerCounts"`  // answerIndex -> count
 	// AnsweredPlayerIDs tracks unique accepted answers for the active question.
 	// It is runtime-only; PlayerSignals remains the complete result history.
-	AnsweredPlayerIDs map[string]struct{} `json:"-"`
-	QuestionWindows   []QuestionWindow    `json:"questionWindows"`
-	StartTime         int64               `json:"startTime"` // Unix timestamp for when the question started
+	AnsweredPlayerIDs   map[string]struct{} `json:"-"`
+	Streaks             map[string]int      `json:"-"`
+	WrongPictureAspects map[int]float64     `json:"-"`
+	QuestionWindows     []QuestionWindow    `json:"questionWindows"`
+	StartTime           int64               `json:"startTime"` // Unix timestamp for when the question started
 
 	// Batch management
 	Batches []QuestionBatch `json:"-"`

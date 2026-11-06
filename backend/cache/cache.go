@@ -21,6 +21,9 @@ type Cache struct {
 	entries    map[string]entry
 	ttl        time.Duration
 	maxEntries int
+	stop       chan struct{}
+	done       chan struct{}
+	closeOnce  sync.Once
 }
 
 func New(ttl time.Duration) *Cache {
@@ -28,9 +31,20 @@ func New(ttl time.Duration) *Cache {
 		entries:    make(map[string]entry),
 		ttl:        ttl,
 		maxEntries: defaultMaxEntries,
+		stop:       make(chan struct{}),
+		done:       make(chan struct{}),
 	}
 	go c.janitor()
 	return c
+}
+
+// Close stops the cleanup worker. Calling Close more than once is safe.
+func (c *Cache) Close() {
+	if c.stop == nil {
+		return
+	}
+	c.closeOnce.Do(func() { close(c.stop) })
+	<-c.done
 }
 
 // Get returns the cached value. Expired entries are treated as misses.
@@ -82,7 +96,13 @@ func (c *Cache) DeletePrefix(prefix string) {
 func (c *Cache) janitor() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
+	defer close(c.done)
+	for {
+		select {
+		case <-c.stop:
+			return
+		case <-ticker.C:
+		}
 		now := time.Now()
 		c.mu.Lock()
 		for k, e := range c.entries {

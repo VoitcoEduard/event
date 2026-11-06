@@ -17,6 +17,11 @@ var (
 	eventsListCache = cache.New(2 * time.Second)
 )
 
+func CloseEventCaches() {
+	eventResponseCache.Close()
+	eventsListCache.Close()
+}
+
 const eventsListCacheKey = "evt:list"
 
 func eventCacheKey(eventID, userID string) string {

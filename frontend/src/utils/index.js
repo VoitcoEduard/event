@@ -12,21 +12,49 @@ export const normalizeTemplates = (payload) => {
   throw new TypeError('Unexpected /templates response: expected an array')
 }
 
+let temporaryUserId = ''
+
+export const setUserId = (id) => {
+  temporaryUserId = id
+  try { localStorage.setItem('userId', id) } catch { /* Keep this page usable without storage. */ }
+}
+
 export const getUserId = () => {
-  let userId = localStorage.getItem('userId')
-  if (!userId) {
-    userId = crypto.randomUUID()
-    localStorage.setItem('userId', userId)
-  }
-  return userId
+  let userId = ''
+  try { userId = localStorage.getItem('userId') || '' } catch { /* Storage may be disabled. */ }
+  if (userId) return userId
+  if (!temporaryUserId) setUserId(newUUID())
+  return temporaryUserId
+}
+
+export const newUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+const temporaryParticipantSecrets = new Map()
+
+export const setParticipantSecret = (eventId, secret) => {
+  temporaryParticipantSecrets.set(eventId, secret)
+  try { localStorage.setItem(`participantSecret:${eventId}`, secret) } catch { /* Keep it for this page. */ }
+}
+
+export const getParticipantSecret = (eventId) => {
+  try { return localStorage.getItem(`participantSecret:${eventId}`) || temporaryParticipantSecrets.get(eventId) || '' }
+  catch { return temporaryParticipantSecrets.get(eventId) || '' }
 }
 
 export const getUserName = () => {
-  return localStorage.getItem('userName') || ''
+  try { return localStorage.getItem('userName') || '' } catch { return '' }
 }
 
 export const setUserName = (name) => {
-  localStorage.setItem('userName', name)
+  try { localStorage.setItem('userName', name) } catch { /* Storage may be disabled. */ }
 }
 
 // --- Auth helpers ---

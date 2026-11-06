@@ -68,6 +68,16 @@
               <span>{{ i + 1 }}. {{ p.nickname }}</span><span>{{ p.totalScore }}</span>
             </div>
           </div>
+		  <div v-if="playerList.length && participantOptions.length" class="grading-card">
+			<h4>Event identities</h4>
+			<div v-for="p in playerList" :key="p.playerId" class="prog-row">
+				<span>{{ p.nickname }}</span>
+				<select :value="p.participantId || ''" :aria-label="`Link ${p.nickname} to an event participant`" @change="linkPlayer(p.playerId, $event)">
+					<option value="">Separate score row</option>
+					<option v-for="person in participantOptions" :key="person.id" :value="person.id">{{ person.displayName }} ({{ person.id }})</option>
+				</select>
+			</div>
+		  </div>
         </div>
       </div>
 
@@ -95,7 +105,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '../components/AppIcon.vue'
 import { quizWS } from '../services/websocket'
-import { API_BASE_URL } from '../utils'
+import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { simpleQuizApi } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
@@ -114,6 +124,7 @@ const total = ref(0)
 const playersCount = ref(0)
 const answeredCount = ref(0)
 const playerList = ref([])
+const participantOptions = ref([])
 const questions = ref([])
 const progress = ref([])
 const gradingComplete = ref(false)
@@ -213,6 +224,17 @@ const doUpdate = wrap(() => simpleQuizApi.updatePublished(eventId, moduleId))
 const doComplete = wrap(() => simpleQuizApi.complete(eventId, moduleId))
 const doResume = wrap(() => simpleQuizApi.resume(eventId, moduleId))
 
+const linkPlayer = async (playerId, event) => {
+	try {
+		await simpleQuizApi.linkParticipant(eventId, moduleId, playerId, event.target.value)
+		await refresh()
+	} catch (e) {
+		error.value = e.message
+		const player = playerList.value.find(p => p.playerId === playerId)
+		event.target.value = player?.participantId || ''
+	}
+}
+
 const copyJudgeLink = async () => {
   try {
     await navigator.clipboard.writeText(judgeUrl.value)
@@ -236,6 +258,11 @@ onMounted(async () => {
     pinCode.value = data.pin || eventId
   } catch { /* ignore */ }
   if (stopped) return
+	try {
+		const response = await fetch(`${API_BASE_URL}/events/${eventId}/participants`, { headers: getAuthHeaders() })
+		if (response.ok && !stopped) participantOptions.value = await response.json()
+	} catch { /* identity linking is optional */ }
+	if (stopped) return
   await refresh()
   if (stopped) return
   quizWS.on('simple:state', refresh)

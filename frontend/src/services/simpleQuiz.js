@@ -60,10 +60,16 @@ export const simpleQuizApi = {
   reset(eventId, moduleId) {
     return req(`${base(eventId, moduleId)}/reset`, { method: 'POST', headers: { ...getAuthHeaders() } })
   },
-  join(eventId, moduleId, nickname, secret = '') {
+  linkParticipant(eventId, moduleId, playerId, participantId) {
+    return req(`${base(eventId, moduleId)}/players/${encodeURIComponent(playerId)}/participant`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ participantId }),
+    })
+  },
+  join(eventId, moduleId, nickname, secret = '', participant = {}) {
     return req(`${base(eventId, moduleId)}/join`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, secret }),
+      body: JSON.stringify({ nickname, secret, ...participant }),
     })
   },
   submitAnswer(eventId, moduleId, { playerId, secret, questionIndex, text, answerId }) {
@@ -73,9 +79,9 @@ export const simpleQuizApi = {
       body: JSON.stringify({ playerId, secret, questionIndex, text, answerId }),
     })
   },
-  state(eventId, moduleId, { view = 'projector', playerId = '' } = {}) {
+  state(eventId, moduleId, { view = 'projector', playerId = '', secret = '' } = {}) {
     const qs = new URLSearchParams({ view, ...(playerId ? { playerId } : {}) })
-    return req(`${base(eventId, moduleId)}/state?${qs.toString()}`)
+    return req(`${base(eventId, moduleId)}/state?${qs.toString()}`, { headers: secret ? { 'X-Player-Secret': secret } : {} })
   },
   queue(eventId, moduleId, judgeToken, { questionIndex = -1, filter = 'pending', limit = 20, cursor = '' } = {}) {
     const qs = new URLSearchParams({
@@ -97,9 +103,9 @@ export const simpleQuizApi = {
       body: JSON.stringify({ judgeToken, judgeKey }),
     })
   },
-  results(eventId, moduleId, { view = 'projector', playerId = '', judgeToken = '' } = {}) {
+  results(eventId, moduleId, { view = 'projector', playerId = '', judgeToken = '', secret = '' } = {}) {
     const qs = new URLSearchParams({ view, ...(playerId ? { playerId } : {}), ...(judgeToken ? { judgeToken } : {}) })
-    return req(`${base(eventId, moduleId)}/results?${qs.toString()}`)
+    return req(`${base(eventId, moduleId)}/results?${qs.toString()}`, { headers: secret ? { 'X-Player-Secret': secret } : {} })
   },
   rotateJudgeToken(eventId, moduleId) {
     return req(`${base(eventId, moduleId)}/judge-token/rotate`, { method: 'POST', headers: { ...getAuthHeaders() } })

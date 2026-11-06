@@ -398,8 +398,8 @@ const validateQuestions = () => {
     if (q.type === 'range') {
         const config = q.rangeConfig
         if (!config) return t('quiz_config.validation.range_config')
-        if (config.minValue >= config.maxValue) return t('quiz_config.validation.range_min_max')
-        if (config.step <= 0) return t('quiz_config.validation.range_step')
+        if (![config.minValue, config.maxValue, config.step, q.correctValue, q.scoringConfig?.tolerance].every(Number.isFinite) || config.minValue > config.maxValue || q.correctValue < config.minValue || q.correctValue > config.maxValue) return t('quiz_config.validation.range_min_max')
+        if (config.step <= 0 || q.scoringConfig.tolerance < 0) return t('quiz_config.validation.range_step')
     } else if (q.type === 'true_false') {
       // Only check first 2 answers for T/F
       if (q.answers.slice(0, 2).some(a => !a.trim())) return t('quiz_config.validation.tf_options')

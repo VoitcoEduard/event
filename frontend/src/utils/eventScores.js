@@ -1,4 +1,4 @@
-export const isGame = module => ['quiz', 'wrong_pictures'].includes(module.type)
+export const isGame = module => ['quiz', 'wrong_pictures', 'simple_quiz'].includes(module.type)
 export const manualTarget = module => module?.data?.manualScoreTarget || 'both'
 export const allowsManual = (module, target) => ['both', target].includes(manualTarget(module))
 export const manualID = (eventId, moduleId, target, id) => `manual:${JSON.stringify([eventId, moduleId, target, id])}`

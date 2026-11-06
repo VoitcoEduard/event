@@ -186,10 +186,45 @@ func (s *Store) ListEvents(ctx context.Context) ([]models.Event, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(events) == 0 {
+		return events, nil
+	}
+	ids := make([]string, len(events))
+	positions := make(map[string]int, len(events))
 	for i := range events {
-		if err := loadModules(ctx, s.Pool, &events[i]); err != nil {
+		ids[i] = events[i].ID
+		positions[ids[i]] = i
+		events[i].Modules = []models.Module{}
+	}
+	moduleRows, err := s.Pool.Query(ctx, `SELECT event_id::text,`+moduleColumns+` FROM modules WHERE event_id=ANY($1::uuid[]) ORDER BY event_id,position`, ids)
+	if err != nil {
+		return nil, translate(err)
+	}
+	for moduleRows.Next() {
+		var eventID string
+		var m models.Module
+		var data, inputs, outputs, rules []byte
+		if err = moduleRows.Scan(&eventID, &m.ID, &m.Type, &m.IsActive, &m.Name, &data, &inputs, &outputs, &rules); err != nil {
+			moduleRows.Close()
 			return nil, err
 		}
+		for _, item := range []struct {
+			raw []byte
+			dst any
+		}{{data, &m.Data}, {inputs, &m.Inputs}, {outputs, &m.Outputs}, {rules, &m.ActivationRules}} {
+			if err = unmarshal(item.raw, item.dst); err != nil {
+				moduleRows.Close()
+				return nil, err
+			}
+		}
+		if i, ok := positions[eventID]; ok {
+			events[i].Modules = append(events[i].Modules, m)
+		}
+	}
+	err = moduleRows.Err()
+	moduleRows.Close()
+	if err != nil {
+		return nil, err
 	}
 	return events, nil
 }

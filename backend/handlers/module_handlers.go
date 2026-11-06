@@ -20,6 +20,10 @@ func (h *Handler) AddModule(w http.ResponseWriter, r *http.Request) {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
+	if err := validateQuizRangesData(input.Data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	module := models.Module{Type: models.ModuleType(input.Type), Name: input.Name, Data: input.Data}
 	eventID := r.PathValue("eventID")
 	if err := h.deps.Modules.Add(r.Context(), eventID, &module); err != nil {
@@ -60,6 +64,10 @@ func (h *Handler) PublishModule(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
+	if err := validateQuizRangesData(input.Data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
@@ -129,6 +137,10 @@ func (h *Handler) UpdateModule(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
+	if err := validateQuizRangesData(input.Data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	eventID := r.PathValue("eventID")

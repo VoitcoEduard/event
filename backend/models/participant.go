@@ -12,6 +12,7 @@ const (
 )
 
 type Participant struct {
+	JoinSecret     string            `json:"joinSecret,omitempty"`
 	ID             string            `json:"id"`
 	EventID        string            `json:"eventId"`
 	JoinKey        string            `json:"joinKey"`

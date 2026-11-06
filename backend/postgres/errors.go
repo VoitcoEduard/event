@@ -13,6 +13,7 @@ var (
 	ErrNotFound         = errors.New("record not found")
 	ErrConflict         = errors.New("record conflicts with an existing record")
 	ErrInvalidReference = errors.New("invalid record reference")
+	ErrInvalidValue     = errors.New("invalid record value")
 	ErrHasAwards        = errors.New("activity has awards and cannot be deleted")
 )
 
@@ -31,6 +32,10 @@ func translate(err error) error {
 			return fmt.Errorf("%w: %s", ErrConflict, pgerr.ConstraintName)
 		case "23503":
 			return fmt.Errorf("%w: %s", ErrInvalidReference, pgerr.ConstraintName)
+		case "23514":
+			if pgerr.ConstraintName == "score_entries_points_check" {
+				return fmt.Errorf("%w: points must be finite", ErrInvalidValue)
+			}
 		}
 	}
 	return err

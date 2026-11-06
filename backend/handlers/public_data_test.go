@@ -26,8 +26,8 @@ func TestPublicEventFiltersQuizSecretsWithoutChangingOriginal(t *testing.T) {
 			t.Fatalf("public event contains %q: %s", secret, public)
 		}
 	}
-	if !strings.Contains(string(public), `"correctIndex":2`) {
-		t.Fatalf("regular quiz client scoring data missing: %s", public)
+	if strings.Contains(string(public), `"correctIndex"`) || strings.Contains(string(public), `"regular"`) {
+		t.Fatalf("regular quiz questions leaked before start: %s", public)
 	}
 	original, err := json.Marshal(event)
 	if err != nil {

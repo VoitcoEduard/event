@@ -78,6 +78,38 @@ test('pending account becomes active after owner approval', async () => {
   } finally { global.fetch = original }
 })
 
+test('transient session failures remain retryable', async () => {
+  const original = global.fetch
+  session.loaded = false
+  let calls = 0
+  global.fetch = async () => {
+    calls++
+    if (calls === 1) return new Response('unavailable', { status: 503 })
+    return new Response(JSON.stringify({ user: { id: 'restored', status: 'active' }, csrfToken: 'csrf' }), { status: 200 })
+  }
+  try {
+    await assert.rejects(loadSession(true), /Session unavailable/)
+    assert.equal(session.loaded, false)
+    assert.equal((await loadSession()).id, 'restored')
+    assert.equal(calls, 2)
+  } finally { global.fetch = original }
+})
+
+test('a stale load cannot restore a signed-out session', async () => {
+  const original = global.fetch
+  let resolveLoad
+  global.fetch = (url) => url === '/auth/logout'
+    ? Promise.resolve(new Response(null, { status: 204 }))
+    : new Promise(resolve => { resolveLoad = resolve })
+  try {
+    const pending = loadSession(true)
+    await signOut()
+    resolveLoad(new Response(JSON.stringify({ user: { id: 'stale' } }), { status: 200 }))
+    await pending
+    assert.equal(session.user, null)
+  } finally { global.fetch = original }
+})
+
 test('owner management uses session CSRF and updates only the selected user', async () => {
   const original = global.fetch
   session.csrfToken = 'owner-csrf'

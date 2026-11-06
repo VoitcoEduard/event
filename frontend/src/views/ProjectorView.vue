@@ -595,6 +595,16 @@ const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct
 const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
 const isNumber = computed(() => currentQuestion.value?.type === 'number')
 const revealCorrect = ref(false)
+let revealTimer = null
+const leaderboardFrames = new Set()
+const nextLeaderboardFrame = (callback) => {
+  const id = requestAnimationFrame((now) => { leaderboardFrames.delete(id); callback(now) })
+  leaderboardFrames.add(id)
+}
+const stopLeaderboardFrames = () => {
+  for (const id of leaderboardFrames) cancelAnimationFrame(id)
+  leaderboardFrames.clear()
+}
 const wrongPictureTargets = computed(() => currentQuestion.value?.wrongPictureConfig?.targets || [])
 const wrongPictureAspectRatio = ref(1)
 const wrongPictureOverviewSize = computed(() => getOverviewSize(wrongPictureAspectRatio.value))
@@ -640,13 +650,17 @@ const startWrongPicturesResultSequence = () => {
 
 // Watch gameState to trigger animation
 watch(gameState, (newVal) => {
+    clearTimeout(revealTimer)
+    revealTimer = null
+    stopLeaderboardFrames()
     if (newVal === 'results') {
         revealCorrect.value = false
         if (isWrongPictures.value) {
           startWrongPicturesResultSequence()
         } else {
-          setTimeout(() => {
+          revealTimer = setTimeout(() => {
             revealCorrect.value = true
+            revealTimer = null
           }, 1500)
         }
     } else {
@@ -674,7 +688,7 @@ watch(gameState, (newVal) => {
             
             const animate = (currentTime) => {
                 if (currentTime < startTime) {
-                    requestAnimationFrame(animate)
+                    nextLeaderboardFrame(animate)
                     return
                 }
                 const elapsed = currentTime - startTime
@@ -684,12 +698,12 @@ watch(gameState, (newVal) => {
                 displayedScores.value[p.id] = Math.floor(startScore + (pointsGained * easeOut))
                 
                 if (progress < 1) {
-                    requestAnimationFrame(animate)
+                    nextLeaderboardFrame(animate)
                 } else {
                     displayedScores.value[p.id] = targetScore
                 }
             }
-            requestAnimationFrame(animate)
+            nextLeaderboardFrame(animate)
         })
     }
     if (newVal === 'finished') {
@@ -876,13 +890,13 @@ let explainTimerInterval
 const startLocalTimer = (duration) => {
   clearInterval(timerInterval)
   timeRemaining.value = duration
+  const deadline = Date.now() + duration * 1000
   // Only start countdown if state is active
   if (gameState.value !== 'question-active') return
   
   timerInterval = setInterval(() => {
-    if (timeRemaining.value > 0) {
-      timeRemaining.value--
-    } else {
+    timeRemaining.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+    if (timeRemaining.value === 0) {
       clearInterval(timerInterval)
     }
   }, 1000)
@@ -892,10 +906,10 @@ const startExplainTimer = (duration) => {
     clearInterval(explainTimerInterval)
     explainTimeRemaining.value = duration
     if (duration <= 0) return
+    const deadline = Date.now() + duration * 1000
     explainTimerInterval = setInterval(() => {
-        if (explainTimeRemaining.value > 0) {
-            explainTimeRemaining.value--
-        } else {
+        explainTimeRemaining.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+        if (explainTimeRemaining.value === 0) {
             clearInterval(explainTimerInterval)
         }
     }, 1000)
@@ -1071,8 +1085,20 @@ const connectToModule = (module) => {
 
   quizWS.on('data:batch', (batch) => {
     if (batch.questions) {
-      questions.value = batch.questions
+      const updated = [...questions.value]
+      batch.questions.forEach((question, index) => {
+        updated[batch.startIndex + index] = question
+      })
+      questions.value = updated
     }
+  })
+
+  quizWS.on('data:reveal', (payload) => {
+    const question = questions.value[payload.questionIndex]
+    if (!question) return
+    const updated = [...questions.value]
+    updated[payload.questionIndex] = { ...question, ...payload }
+    questions.value = updated
   })
 
   quizWS.on('disconnect', () => {
@@ -1147,6 +1173,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearTimeout(revealTimer)
+  stopLeaderboardFrames()
   stopped = true
   clearInterval(timerInterval)
   clearInterval(explainTimerInterval)

@@ -47,17 +47,39 @@ const router = createRouter({
   routes
 })
 
+const returnKey = 'adminReturnPath'
+const rememberReturnPath = (to) => {
+  if (to.name !== 'pending' && to.name !== 'login') {
+    try { sessionStorage.setItem(returnKey, to.fullPath) } catch { /* storage unavailable */ }
+  }
+}
+const takeReturnPath = () => {
+  try {
+    const path = sessionStorage.getItem(returnKey)
+    sessionStorage.removeItem(returnKey)
+    if (!path || !path.startsWith('/') || path.startsWith('//')) return null
+    const destination = router.resolve(path)
+    if (destination.matched.some(record => record.meta.requiresOwner) && session.user?.role !== 'owner') return null
+    return destination.matched.some(record => record.meta.requiresAuth || record.meta.requiresOwner) ? path : null
+  } catch { return null }
+}
+
 router.beforeEach(async (to) => {
 	if (!to.meta.requiresAuth && !to.meta.requiresOwner && to.name !== 'pending') return true
 	try {
 		await loadSession(true)
 	} catch {
+		rememberReturnPath(to)
 		return { name: 'login' }
 	}
-	if (!session.user) return { name: 'login' }
+	if (!session.user) { rememberReturnPath(to); return { name: 'login' } }
 	if (session.user.status === 'pending') return to.name === 'pending' ? true : { name: 'pending' }
 	if (session.user.status !== 'active') return { name: 'login', query: { error: 'disabled' } }
 	if (to.meta.requiresOwner && session.user.role !== 'owner') return { name: 'admin' }
+	if (to.name === 'admin' || to.name === 'pending') {
+		const destination = takeReturnPath()
+		if (destination && destination !== to.fullPath) return destination
+	}
 	if (to.name === 'pending') return { name: 'admin' }
 	return true
 })

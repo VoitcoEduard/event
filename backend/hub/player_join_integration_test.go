@@ -5,14 +5,12 @@ package hub
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
-	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/testutils"
 )
 
@@ -38,6 +36,10 @@ func TestPlayerJoinValidatesEventAndQuizState(t *testing.T) {
 				t.Fatal(err)
 			}
 			h := NewQuizHub(Dependencies{DB: db})
+			participant, err := db.JoinEventParticipant(ctx, eventID, "player", "", "", nil, "")
+			if err != nil {
+				t.Fatal(err)
+			}
 			h.CreateSession(moduleID, eventID)
 			h.UpdateSession(moduleID, func(s *models.QuizSession) {
 				if tc.reconnect {
@@ -47,7 +49,7 @@ func TestPlayerJoinValidatesEventAndQuizState(t *testing.T) {
 			})
 			client := &Client{send: make(chan []byte, 16)}
 			h.Register(client)
-			h.processPlayerJoinWithPersistence(client, ClientMessage{Type: "player:join", Payload: map[string]interface{}{"moduleId": moduleID, "userId": "player", "nickname": "Changed"}})
+			h.processPlayerJoinWithPersistence(client, ClientMessage{Type: "player:join", Payload: map[string]interface{}{"moduleId": moduleID, "userId": "player", "nickname": "Changed", "participantSecret": participant.JoinSecret}})
 			p, err := db.Participant(ctx, eventID, "player")
 			if tc.accepted {
 				wantName := "Changed"
@@ -57,7 +59,7 @@ func TestPlayerJoinValidatesEventAndQuizState(t *testing.T) {
 				if err != nil || p.DisplayName != wantName || client.ModuleID != moduleID {
 					t.Fatalf("accepted join: participant=%+v error=%v module=%q", p, err, client.ModuleID)
 				}
-			} else if !errors.Is(err, postgres.ErrNotFound) || client.ModuleID != "" {
+			} else if err != nil || client.ModuleID != "" {
 				t.Fatalf("rejected join persisted/associated: participant=%+v error=%v module=%q", p, err, client.ModuleID)
 			}
 			if !tc.accepted {
@@ -85,5 +87,39 @@ func TestPlayerJoinValidatesEventAndQuizState(t *testing.T) {
 				t.Fatal("rejected join changed roster")
 			}
 		})
+	}
+}
+
+func TestPlayerJoinRequiresParticipantProof(t *testing.T) {
+	db := testutils.SetupPostgres(t)
+	ctx := context.Background()
+	eventID, moduleID := uuid.NewString(), uuid.NewString()
+	if err := db.CreateEvent(ctx, &models.Event{ID: eventID, Pin: "456789", IsActive: true, CreatedAt: time.Now().UTC(), Modules: []models.Module{{ID: moduleID, Type: models.ModuleTypeQuiz}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.JoinEventParticipant(ctx, eventID, "player", "", "Player", nil, ""); err != nil {
+		t.Fatal(err)
+	}
+	h := NewQuizHub(Dependencies{DB: db})
+	h.CreateSession(moduleID, eventID)
+	client := &Client{send: make(chan []byte, 16)}
+	h.Register(client)
+	h.processPlayerJoinWithPersistence(client, ClientMessage{Type: "player:join", Payload: map[string]interface{}{"moduleId": moduleID, "userId": "player", "nickname": "Attacker"}})
+	if client.ModuleID != "" || len(h.GetSession(moduleID).Players) != 0 {
+		t.Fatal("player joined without a participant secret")
+	}
+	select {
+	case raw := <-client.send:
+		var message struct {
+			Type    string `json:"type"`
+			Payload struct {
+				Code string `json:"code"`
+			} `json:"payload"`
+		}
+		if err := json.Unmarshal(raw, &message); err != nil || message.Type != "cmd:error" || message.Payload.Code != "invalid_identity" {
+			t.Fatalf("unexpected rejection: %s (%v)", raw, err)
+		}
+	default:
+		t.Fatal("missing identity rejection")
 	}
 }

@@ -30,7 +30,7 @@ test('player timer auto-submits placed wrong-pictures pins on expiry', () => {
   // Expiry must route through the auto-submit helper, not straight to
   // QUESTION_ENDED (which discarded guesses and sent no signal).
   assert.match(script, /const autoSubmitOnTimeout = \(\) => \{/)
-  assert.match(script, /timeRemaining\.value--\s+if \(timeRemaining\.value <= 0\) \{\s+clearInterval\(timerInterval\)\s+autoSubmitOnTimeout\(\)/)
+  assert.match(script, /timeRemaining\.value = Math\.max\(0, Math\.ceil\(\(deadline - Date\.now\(\)\) \/ 1000\)\)\s+if \(timeRemaining\.value <= 0\) \{\s+clearInterval\(timerInterval\)\s+autoSubmitOnTimeout\(\)/)
 
   // Helper submits only placed pins of an unsubmitted wrong_pictures round…
   assert.match(script, /question\?\.type === 'wrong_pictures'/)

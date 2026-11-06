@@ -5,10 +5,9 @@ class SignalQueue {
     }
 
     enqueue(signal) {
+		this.queue.push(signal)
         if (this.isConnected && this.sender) {
             this.flushSingle(signal)
-        } else {
-            this.queue.push(signal)
         }
     }
 
@@ -17,8 +16,7 @@ class SignalQueue {
             return
         }
 
-        while (this.queue.length > 0) {
-            const signal = this.queue.shift()
+        for (const signal of this.queue) {
             this.flushSingle(signal)
         }
     }
@@ -28,17 +26,7 @@ class SignalQueue {
     }
 
     flushSingle(signal) {
-        // Check if signal is still valid (within grace period)
-        const now = Date.now()
-        const signalTime = signal.timestamp || Date.now()
-
-        // If signal is older than 10 seconds, discard it
-        if (now - signalTime > 10000) {
-            console.warn('Discarding expired signal:', signal)
-            return
-        }
-
-        // Send signal to server
+        // The server's question window decides whether a delayed answer counts.
         if (this.sender) {
             this.sender(signal)
         } else {
@@ -54,6 +42,10 @@ class SignalQueue {
     onDisconnect() {
         this.isConnected = false
     }
+
+	settle(submissionId) {
+		this.queue = this.queue.filter(signal => signal.submissionId !== submissionId)
+	}
 
     clear() {
         this.queue = []

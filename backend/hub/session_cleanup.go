@@ -1,18 +1,12 @@
 package hub
 
-import "sync"
-
 // ForgetModuleSessions evicts runtime data after the module has been deleted
 // from storage. Wait for in-flight simple-quiz operations before eviction so
 // they cannot publish a stale snapshot after cleanup.
 func (h *QuizHub) ForgetModuleSessions(moduleID string) {
-	// A module without a lock has no simple-quiz operation in flight. Avoid
-	// allocating permanent lock entries for unrelated module types on deletion.
-	if value, ok := h.simpleQuizLocks.Load(moduleID); ok {
-		lock := value.(*sync.Mutex)
-		lock.Lock()
-		defer lock.Unlock()
-	}
+	lock := h.simpleLock(moduleID)
+	lock.Lock()
+	defer lock.Unlock()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.cancelQuizTransitionLocked(moduleID)

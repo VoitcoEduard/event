@@ -62,6 +62,8 @@
           <h1 class="event-title">{{ currentEvent.name }}</h1>
         </div>
 
+        <p v-if="registrationNotice" class="registration-notice">{{ registrationNotice }}</p>
+
         <div class="list-container">
           <!-- Dynamic Cards (Polling Content) -->
           <div v-if="dynamicCards.length > 0" class="dynamic-section">
@@ -123,28 +125,37 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FormModule from '../components/FormModule.vue'
 import AppIcon from '../components/AppIcon.vue'
-import { API_BASE_URL, getUserId, getUserName, setUserName } from '../utils'
+import { API_BASE_URL, getUserId, setUserId, newUUID, getUserName, setUserName, getParticipantSecret, setParticipantSecret } from '../utils'
 
 const { locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const userId = ref(getUserId())
 const userName = ref(getUserName())
+const registrationNotice = ref('')
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* Storage may be disabled. */ }
 }
 
 // Check for eventId in query params first (for teams/quiz direct routes)
 const params = new URLSearchParams(window.location.search)
 const queryEventId = params.get('id') || params.get('eventId')
-const storedEvent = queryEventId ? null : sessionStorage.getItem('currentEvent')
-const currentEvent = ref(storedEvent ? JSON.parse(storedEvent) : (queryEventId ? { id: queryEventId } : null))
-const theme = ref(localStorage.getItem('userTheme') || 'bold')
+const readStoredEvent = () => {
+  if (queryEventId) return { id: queryEventId }
+  try {
+    const value = JSON.parse(sessionStorage.getItem('currentEvent') || 'null')
+    if (value && typeof value.id === 'string' && value.id) return value
+    sessionStorage.removeItem('currentEvent')
+  } catch { try { sessionStorage.removeItem('currentEvent') } catch { /* unavailable */ } }
+  return null
+}
+const currentEvent = ref(readStoredEvent())
+const theme = ref((() => { try { return localStorage.getItem('userTheme') || 'bold' } catch { return 'bold' } })())
 
 const toggleTheme = () => {
   theme.value = theme.value === 'bold' ? 'material' : 'bold'
-  localStorage.setItem('userTheme', theme.value)
+  try { localStorage.setItem('userTheme', theme.value) } catch { /* Storage may be disabled. */ }
 }
 
 const moduleIcon = (type) => ({
@@ -165,16 +176,27 @@ const activeModules = ref([])
 const dynamicCards = ref([])
 const participantStatus = ref(null)
 const selectedModule = ref(null)
-let pollingInterval = null
+let pollingTimer = null
+let completionTimer = null
+let activeRequest = null
+let joinController = null
 let stopped = false
+let fetchGeneration = 0
 
 const fetchEvent = async () => {
-  if (!currentEvent.value?.id) return
+	if (stopped || !currentEvent.value?.id) return
+	if (pollingTimer) clearTimeout(pollingTimer)
+	if (activeRequest) activeRequest.abort()
+	const controller = new AbortController()
+	activeRequest = controller
+  const generation = ++fetchGeneration
+  const eventId = currentEvent.value.id
 
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}?userId=${userId.value}`)
+    const response = await fetch(`${API_BASE_URL}/events/${eventId}?userId=${userId.value}`, { signal: controller.signal })
     if (response.ok) {
       const data = await response.json()
+      if (stopped || generation !== fetchGeneration || currentEvent.value?.id !== eventId) return
       currentEvent.value = data
 
       // Update status and cards
@@ -217,30 +239,57 @@ const fetchEvent = async () => {
       }
     }
   } catch (error) {
-    console.error('Polling error:', error)
+	if (error?.name !== 'AbortError') console.error('Polling error:', error)
+  } finally {
+	if (activeRequest === controller) {
+		activeRequest = null
+		if (!stopped) pollingTimer = setTimeout(fetchEvent, 3000)
+	}
   }
 }
 
 onMounted(async () => {
   if (currentEvent.value?.id) {
+	joinController = new AbortController()
     try {
-      const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/participants/join`, {
+      const eventId = currentEvent.value.id
+      const previousSecret = getParticipantSecret(eventId)
+      const join = (id, secret) => fetch(`${API_BASE_URL}/events/${eventId}/participants/join`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId.value, displayName: userName.value })
+		body: JSON.stringify({ userId: id, displayName: userName.value, joinSecret: secret }),
+		signal: joinController.signal,
       })
+      let response = await join(userId.value, previousSecret)
+      let replacementId = ''
+      if (response.status === 409 && !previousSecret) {
+        replacementId = newUUID()
+        response = await join(replacementId, '')
+      }
       if (!response.ok) throw new Error('Participant registration failed')
+		const participant = await response.json()
+		if (participant.joinSecret) setParticipantSecret(eventId, participant.joinSecret)
+      if (replacementId && !stopped) {
+        setUserId(replacementId)
+        userId.value = replacementId
+        registrationNotice.value = {
+          en: 'A new player identity was created. Earlier points remain on your previous record. Ask the host for help if needed.',
+          ru: 'Создан новый профиль игрока. Прежние баллы остались в старой записи. При необходимости обратитесь к ведущему.',
+          ro: 'A fost creată o identitate nouă. Punctele vechi rămân în înregistrarea anterioară. Cere ajutorul gazdei dacă este nevoie.',
+        }[locale.value] || 'A new player identity was created.'
+      }
     } catch (error) { console.error('Participant registration failed:', error) }
     if (stopped) return
     fetchEvent()
-    pollingInterval = setInterval(fetchEvent, 3000)
   }
 })
 
 onUnmounted(() => {
   stopped = true
-  if (pollingInterval) {
-    clearInterval(pollingInterval)
-  }
+  fetchGeneration++
+	if (pollingTimer) clearTimeout(pollingTimer)
+	if (completionTimer) clearTimeout(completionTimer)
+	if (activeRequest) activeRequest.abort()
+	if (joinController) joinController.abort()
 })
 
 const selectModule = (module) => {
@@ -281,7 +330,9 @@ const handleModuleComplete = (data) => {
       }).catch(e => console.error('Failed to sync name:', e))
     }
   }
-  setTimeout(() => {
+	if (completionTimer) clearTimeout(completionTimer)
+  completionTimer = setTimeout(() => {
+	if (stopped) return
     selectedModule.value = null
     fetchEvent() // Refresh immediately
   }, 2000)
@@ -518,6 +569,16 @@ const goToMain = () => {
   margin: 0;
   letter-spacing: -1px;
   line-height: 1;
+}
+
+.registration-notice {
+  margin: -12px 0 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 196, 63, 0.14);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 /* ── List Container ── */

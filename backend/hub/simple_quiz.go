@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/user/go-expo-sample/backend/postgres"
+	"hash/fnv"
 	"log/slog"
 	"sync"
 	"time"
@@ -34,8 +35,9 @@ func GenerateJudgeToken() string {
 }
 
 func (h *QuizHub) simpleLock(moduleID string) *sync.Mutex {
-	v, _ := h.simpleQuizLocks.LoadOrStore(moduleID, &sync.Mutex{})
-	return v.(*sync.Mutex)
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(moduleID))
+	return &h.simpleQuizLocks[hash.Sum32()%uint32(len(h.simpleQuizLocks))]
 }
 func copySimple(s *models.SimpleQuizSession) (*models.SimpleQuizSession, error) {
 	raw, err := json.Marshal(s)

@@ -1,29 +1,39 @@
 import { reactive } from 'vue'
 
 export const session = reactive({ loaded: false, user: null, csrfToken: '', expiresAt: null, mode: null })
+let requestVersion = 0
+let pendingLoad = null
 
-export async function loadSession(force = false) {
+export function loadSession(force = false) {
   if (typeof localStorage !== 'undefined') localStorage.removeItem('adminToken')
-  if (session.loaded && !force) return session.user
-  const response = await fetch('/auth/me', { credentials: 'same-origin', cache: 'no-store' })
-  session.loaded = true
-  if (response.status === 401) {
-    session.user = null
-    session.csrfToken = ''
-    session.expiresAt = null
-    return null
-  }
-  if (!response.ok) {
-    session.user = null
-    session.csrfToken = ''
-    session.expiresAt = null
-    throw new Error('Session unavailable')
-  }
-  const data = await response.json()
-  session.user = data.user
-  session.csrfToken = data.csrfToken
-  session.expiresAt = data.expiresAt
-  return session.user
+  if (session.loaded && !force) return Promise.resolve(session.user)
+  if (pendingLoad && !force) return pendingLoad
+  const version = ++requestVersion
+  const load = (async () => {
+    const response = await fetch('/auth/me', { credentials: 'same-origin', cache: 'no-store' })
+    if (response.status === 401) {
+      if (version === requestVersion) {
+        session.loaded = true
+        session.user = null
+        session.csrfToken = ''
+        session.expiresAt = null
+      }
+      return session.user
+    }
+    if (!response.ok) throw new Error('Session unavailable')
+    const data = await response.json()
+    if (!data?.user || typeof data.user !== 'object') throw new Error('Session unavailable')
+    if (version === requestVersion) {
+      session.loaded = true
+      session.user = data.user
+      session.csrfToken = data.csrfToken
+      session.expiresAt = data.expiresAt
+    }
+    return session.user
+  })()
+  pendingLoad = load
+  void load.finally(() => { if (pendingLoad === load) pendingLoad = null }).catch(() => {})
+  return load
 }
 
 export async function loadAuthMode() {
@@ -45,6 +55,7 @@ export async function signOut() {
     headers: { 'X-CSRF-Token': session.csrfToken }
   })
   if (!response.ok && response.status !== 401) throw new Error('Logout failed')
+  ++requestVersion
   session.loaded = true
   session.user = null
   session.csrfToken = ''

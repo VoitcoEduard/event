@@ -9,7 +9,7 @@ import (
 // publicModule returns an independent projection so filtering never changes
 // the data used by the host or stored in the database.
 func publicModule(module models.Module) models.Module {
-	if module.Type != models.ModuleTypeSimpleQuiz && module.Type != models.ModuleTypeQuiz {
+	if module.Type != models.ModuleTypeSimpleQuiz && module.Type != models.ModuleTypeQuiz && module.Type != models.ModuleTypeWrongPictures {
 		return module
 	}
 	data, err := json.Marshal(module.Data)
@@ -26,13 +26,9 @@ func publicModule(module models.Module) models.Module {
 	if module.Type == models.ModuleTypeSimpleQuiz {
 		// The live state endpoint exposes the current question and revealed answer.
 		delete(filtered, "questions")
-	} else if questions, ok := filtered["questions"].([]any); ok {
-		for _, item := range questions {
-			if question, ok := item.(map[string]any); ok {
-				delete(question, "judgeNotes")
-				delete(question, "correctAnswerText")
-			}
-		}
+	} else {
+		// Live questions arrive over the quiz socket one at a time.
+		delete(filtered, "questions")
 	}
 	module.Data = filtered
 	return module

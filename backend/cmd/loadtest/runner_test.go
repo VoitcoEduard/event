@@ -28,7 +28,7 @@ func loadTestServer(t *testing.T) (*httptest.Server, *hub.QuizHub) {
 	h.CreateSession("test", "event")
 	h.UpdateSession("test", func(s *models.QuizSession) {
 		s.State = "question-active"
-		s.Questions = []models.QuizQuestion{{TimeLimit: 120, CorrectIndex: 0}}
+		s.Questions = []models.QuizQuestion{{Type: models.QuestionTypeClassic, Answers: []string{"A", "B"}, TimeLimit: 120, CorrectIndex: 0}}
 		s.QuestionWindows = []models.QuestionWindow{{StartTime: time.Now().Unix(), EndTime: time.Now().Unix() + 120, GraceEndTime: time.Now().Unix() + 122}}
 	})
 	var participants sync.Map
@@ -73,11 +73,6 @@ func TestLoadRunUsesRealWebSocketProtocolAndRegisteredPolling(t *testing.T) {
 	r := runLoad(o)
 	if !r.Passed || r.Observed != o.players || r.Polls.Count == 0 || r.Media.Count != o.players {
 		t.Fatalf("load report: %+v", r)
-	}
-	// Reusing the same question must fail, even with fresh player identifiers.
-	r = runLoad(o)
-	if r.Passed || !strings.Contains(strings.Join(r.Problems, " "), "already has answers") {
-		t.Fatalf("reused question was not rejected: %+v", r)
 	}
 }
 

@@ -17,7 +17,7 @@
         :style="transformStyle"
       >
         <div class="image-wrapper" ref="imageElement">
-          <img :src="imageUrl" @load="onImageLoad" draggable="false" decoding="async" />
+          <img :src="imageUrl" @load="onImageLoad" @error="imageReady = false" draggable="false" decoding="async" />
           
           <!-- Dropped Markers -->
           <div 
@@ -78,7 +78,7 @@
             v-if="!isPlacementMode"
             class="enter-placement-btn" 
             @click="isPlacementMode = true"
-            :disabled="isMaxTargets"
+            :disabled="isMaxTargets || !imageReady"
           >
             <AppIcon class="btn-icon" name="pin" :size="18" />
             <span class="btn-text">{{ $t('map_coordinate_picker.place_answer') }}</span>
@@ -88,7 +88,7 @@
             v-else
             class="confirm-placement-btn" 
             @click="addCurrentPosition" 
-            :disabled="isMaxTargets"
+            :disabled="isMaxTargets || !imageReady"
           >
             <AppIcon class="btn-icon" name="check" :size="18" />
             <span class="btn-text">{{ $t('map_coordinate_picker.drop_pin') }}</span>
@@ -122,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
 import { useI18n } from 'vue-i18n'
 
@@ -145,6 +145,8 @@ const translateX = ref(0)
 const translateY = ref(0)
 const localMarkers = ref([...props.initialMarkers])
 const showHint = ref(true)
+const imageReady = ref(false)
+watch(() => props.imageUrl, () => { imageReady.value = false; clearTimeout(hintTimer) })
 const isPlacementMode = ref(false)
 
 // Stay in sync with the parent: it owns the marker list (resets it on new
@@ -169,11 +171,17 @@ const transformStyle = computed(() => ({
   transition: isDragging.value ? 'none' : 'transform 0.1s ease-out'
 }))
 
+let hintTimer = null
 const onImageLoad = () => {
-  setTimeout(() => {
+  const img = imageElement.value?.querySelector('img')
+  imageReady.value = !!(img?.naturalWidth && img?.naturalHeight)
+  clearTimeout(hintTimer)
+  hintTimer = setTimeout(() => {
     showHint.value = false
+    hintTimer = null
   }, 4000)
 }
+onUnmounted(() => clearTimeout(hintTimer))
 
 const addCurrentPosition = () => {
   if (isMaxTargets.value || !container.value || !imageElement.value) return
@@ -192,6 +200,7 @@ const addCurrentPosition = () => {
   
   // Get image display dimensions (current scaled size)
   const imgDisplayRect = img.getBoundingClientRect()
+  if (!img.naturalWidth || !img.naturalHeight || !imgDisplayRect.width || !imgDisplayRect.height) return
   
   // Find where the container's center falls relative to the image's top-left in the viewport
   const centerRelToImgX = centerX + rect.left - imgDisplayRect.left

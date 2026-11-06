@@ -485,6 +485,16 @@ const isCorrectPicture = computed(() => currentQuestion.value?.type === 'correct
 const isWrongPictures = computed(() => currentQuestion.value?.type === 'wrong_pictures')
 const isNumber = computed(() => currentQuestion.value?.type === 'number')
 const revealCorrect = ref(false)
+let revealTimer = null
+const leaderboardFrames = new Set()
+const nextLeaderboardFrame = (callback) => {
+    const id = requestAnimationFrame((now) => { leaderboardFrames.delete(id); callback(now) })
+    leaderboardFrames.add(id)
+}
+const stopLeaderboardFrames = () => {
+    for (const id of leaderboardFrames) cancelAnimationFrame(id)
+    leaderboardFrames.clear()
+}
 
 // Preload questions whenever loaded
 watch(questions, (newQuestions) => {
@@ -502,10 +512,14 @@ watch(currentQuestionIndex, (newIdx) => {
 
 // Watch gameState to trigger animation
 watch(gameState, (newVal) => {
+    clearTimeout(revealTimer)
+    revealTimer = null
+    stopLeaderboardFrames()
     if (newVal === 'results' && isRange.value) {
         revealCorrect.value = false
-        setTimeout(() => {
+        revealTimer = setTimeout(() => {
             revealCorrect.value = true
+            revealTimer = null
         }, 1500)
     } else {
         revealCorrect.value = false
@@ -529,7 +543,7 @@ watch(gameState, (newVal) => {
             
             const animate = (currentTime) => {
                 if (currentTime < startTime) {
-                    requestAnimationFrame(animate)
+                    nextLeaderboardFrame(animate)
                     return
                 }
                 const elapsed = currentTime - startTime
@@ -539,12 +553,12 @@ watch(gameState, (newVal) => {
                 displayedScores.value[p.id] = Math.floor(startScore + (pointsGained * easeOut))
                 
                 if (progress < 1) {
-                    requestAnimationFrame(animate)
+                    nextLeaderboardFrame(animate)
                 } else {
                     displayedScores.value[p.id] = targetScore
                 }
             }
-            requestAnimationFrame(animate)
+            nextLeaderboardFrame(animate)
         })
     }
     if (newVal === 'finished') {
@@ -741,13 +755,13 @@ let explainTimerInterval
 const startLocalTimer = (duration) => {
     clearInterval(timerInterval)
     timeRemaining.value = duration
+    const deadline = Date.now() + duration * 1000
     // Only start countdown if state is active
     if (gameState.value !== 'question-active') return
     
     timerInterval = setInterval(() => {
-        if (timeRemaining.value > 0) {
-            timeRemaining.value--
-        } else {
+        timeRemaining.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+        if (timeRemaining.value === 0) {
             clearInterval(timerInterval)
             // Auto-transition to Results when timer hits 0
             if (gameState.value === 'question-active') {
@@ -761,10 +775,10 @@ const startExplainTimer = (duration) => {
     clearInterval(explainTimerInterval)
     explainTimeRemaining.value = duration
     if (duration <= 0) return
+    const deadline = Date.now() + duration * 1000
     explainTimerInterval = setInterval(() => {
-        if (explainTimeRemaining.value > 0) {
-            explainTimeRemaining.value--
-        } else {
+        explainTimeRemaining.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+        if (explainTimeRemaining.value === 0) {
             clearInterval(explainTimerInterval)
         }
     }, 1000)
@@ -904,7 +918,7 @@ onMounted(async () => {
 
     // 2. Register handlers BEFORE connecting (server sends messages immediately)
     quizWS.on('cmd:error', (payload) => {
-        if (payload?.code === 'save_failed') showError(payload.message)
+        if (payload?.code === 'save_failed' || payload?.code === 'invalid_image_metadata') showError(payload.message)
     })
 
     quizWS.on('cmd:state', (payload) => {
@@ -1005,6 +1019,8 @@ onMounted(async () => {
  })
 
 onUnmounted(() => {
+    clearTimeout(revealTimer)
+    stopLeaderboardFrames()
     stopped = true
     clearInterval(timerInterval)
     clearInterval(explainTimerInterval)

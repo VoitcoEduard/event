@@ -14,6 +14,13 @@ type quizTransition struct {
 	deadline time.Time
 }
 
+func windowDeadlineMillis(windows []models.QuestionWindow, index int) int64 {
+	if index < 0 || index >= len(windows) {
+		return 0
+	}
+	return windows[index].EndTime * 1000
+}
+
 // All timer-map changes use h.mu, including callbacks already queued by Stop.
 func (h *QuizHub) cancelQuizTransitionLocked(moduleID string) {
 	if pending := h.quizTimers[moduleID]; pending != nil {
@@ -66,7 +73,7 @@ func (h *QuizHub) activateQuizQuestion(moduleID string, pending *quizTransition)
 	h.broadcastToSessionLocked(moduleID, ServerMessage{
 		Type: "cmd:state",
 		Payload: map[string]interface{}{
-			"state": "question-active", "currentIndex": idx, "timeLimit": limit,
+			"state": "question-active", "currentIndex": idx, "timeLimit": limit, "runId": session.RunID, "serverNow": time.Now().UnixMilli(), "deadline": windowDeadlineMillis(session.QuestionWindows, idx),
 		},
 	})
 }

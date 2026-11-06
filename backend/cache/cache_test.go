@@ -7,6 +7,7 @@ import (
 
 func TestCacheGetSet(t *testing.T) {
 	c := New(time.Hour)
+	defer c.Close()
 	c.Set("k", []byte("v"))
 
 	got, ok := c.Get("k")
@@ -20,6 +21,7 @@ func TestCacheGetSet(t *testing.T) {
 
 func TestCacheExpiry(t *testing.T) {
 	c := New(50 * time.Millisecond)
+	defer c.Close()
 	c.Set("k", []byte("v"))
 
 	time.Sleep(80 * time.Millisecond)
@@ -31,6 +33,7 @@ func TestCacheExpiry(t *testing.T) {
 
 func TestCacheDelete(t *testing.T) {
 	c := New(time.Hour)
+	defer c.Close()
 	c.Set("k", []byte("v"))
 	c.Delete("k")
 
@@ -41,6 +44,7 @@ func TestCacheDelete(t *testing.T) {
 
 func TestCacheDeletePrefix(t *testing.T) {
 	c := New(time.Hour)
+	defer c.Close()
 	c.Set("evt:1|u:a", []byte("a"))
 	c.Set("evt:1|u:b", []byte("b"))
 	c.Set("evt:2|u:a", []byte("c"))
@@ -58,6 +62,17 @@ func TestCacheDeletePrefix(t *testing.T) {
 	}
 	if _, ok := c.Get("evt:list"); !ok {
 		t.Fatal("expected hit for untouched key evt:list")
+	}
+}
+
+func TestCloseIsRepeatable(t *testing.T) {
+	c := New(time.Hour)
+	c.Close()
+	c.Close()
+	select {
+	case <-c.done:
+	default:
+		t.Fatal("cleanup worker did not stop")
 	}
 }
 

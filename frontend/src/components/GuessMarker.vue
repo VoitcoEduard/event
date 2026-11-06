@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -47,7 +47,7 @@ const isDragging = ref(false)
 
 const startDrag = (e) => {
   if (props.isCorrect !== null) return // Finalized
-  
+	endDrag()
   e.preventDefault()
   e.stopPropagation() // Don't trigger pan
   isDragging.value = true
@@ -56,18 +56,22 @@ const startDrag = (e) => {
   if (e.type === 'touchstart') {
      window.addEventListener('touchmove', handleDrag, { passive: false })
      window.addEventListener('touchend', endDrag)
+     window.addEventListener('touchcancel', endDrag)
   } else {
      window.addEventListener('mousemove', handleDrag)
      window.addEventListener('mouseup', endDrag)
   }
+	window.addEventListener('blur', endDrag)
 }
 
 const handleDrag = (e) => {
-  if (!isDragging.value || !props.containerRect) return
+	if (!isDragging.value || !props.containerRect?.width || !props.containerRect?.height) return
   e.preventDefault() // prevent scroll on touch
   
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY
+	const pointer = e.touches ? e.touches[0] : e
+	if (!pointer) return
+	const clientX = pointer.clientX
+	const clientY = pointer.clientY
   
   const rect = props.containerRect
   
@@ -91,7 +95,10 @@ const endDrag = (e) => {
   window.removeEventListener('mouseup', endDrag)
   window.removeEventListener('touchmove', handleDrag)
   window.removeEventListener('touchend', endDrag)
+  window.removeEventListener('touchcancel', endDrag)
+	window.removeEventListener('blur', endDrag)
 }
+onUnmounted(endDrag)
 </script>
 
 <style scoped>

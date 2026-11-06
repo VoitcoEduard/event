@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -122,6 +123,7 @@ func (h *Handler) LaunchSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
 		return
 	}
+	invalidateEventCache(eventID)
 	writeJSON(w, map[string]any{
 		"session":    publicSimpleQuizState(sess, "host", ""),
 		"judgeToken": token,
@@ -387,7 +389,7 @@ func (h *Handler) PublishSimpleQuizResults(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
-	_, moduleID := simpleQuizIDs(r)
+	eventID, moduleID := simpleQuizIDs(r)
 	s := hub.GetSimpleQuiz(moduleID)
 	if s == nil {
 		http.Error(w, "No session", http.StatusNotFound)
@@ -419,6 +421,7 @@ func (h *Handler) PublishSimpleQuizResults(w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
+	invalidateEventCache(eventID)
 	writeJSON(w, map[string]any{
 		"session":   publicSimpleQuizState(updated, "host", ""),
 		"published": updated.Published,
@@ -432,7 +435,7 @@ func (h *Handler) UpdateSimpleQuizPublished(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
-	_, moduleID := simpleQuizIDs(r)
+	eventID, moduleID := simpleQuizIDs(r)
 	s := hub.GetSimpleQuiz(moduleID)
 	if s == nil || s.Published == nil {
 		http.Error(w, "Nothing published yet", http.StatusBadRequest)
@@ -459,6 +462,7 @@ func (h *Handler) UpdateSimpleQuizPublished(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
+	invalidateEventCache(eventID)
 	writeJSON(w, map[string]any{
 		"session":   publicSimpleQuizState(updated, "host", ""),
 		"published": updated.Published,
@@ -503,12 +507,65 @@ func (h *Handler) ResetSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
-	_, moduleID := simpleQuizIDs(r)
+	eventID, moduleID := simpleQuizIDs(r)
 	if err := hub.TryDeleteSimpleQuiz(moduleID); err != nil {
 		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
 		return
 	}
+	invalidateEventCache(eventID)
 	writeJSON(w, map[string]string{"message": "Simple quiz reset"})
+}
+
+// LinkSimpleQuizParticipant lets an administrator explicitly merge a legacy
+// Simple Quiz identity into an event participant after reviewing identity.
+func (h *Handler) LinkSimpleQuizParticipant(w http.ResponseWriter, r *http.Request) {
+	if h.simpleQuizHub() == nil || h.deps.DB == nil {
+		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	eventID, moduleID := simpleQuizIDs(r)
+	playerID := r.PathValue("playerID")
+	var body struct {
+		ParticipantID string `json:"participantId"`
+	}
+	if err := decodeJSON(w, r, &body); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
+	if len(body.ParticipantID) > 120 || playerID == "" {
+		http.Error(w, "Invalid player or participant", http.StatusBadRequest)
+		return
+	}
+	if body.ParticipantID != "" {
+		if _, err := h.deps.DB.Participant(r.Context(), eventID, body.ParticipantID); err != nil {
+			http.Error(w, "Participant not found in this event", http.StatusNotFound)
+			return
+		}
+	}
+	s := h.simpleQuizHub().GetSimpleQuiz(moduleID)
+	if s == nil || s.Players[playerID] == nil {
+		http.NotFound(w, r)
+		return
+	}
+	for id, p := range s.Players {
+		if id != playerID && body.ParticipantID != "" && p.ParticipantID == body.ParticipantID {
+			http.Error(w, "Participant already linked to another quiz player", http.StatusConflict)
+			return
+		}
+	}
+	_, err := h.simpleQuizHub().TryUpdateSimpleQuizExpected(moduleID, s, func(next *models.SimpleQuizSession) {
+		next.Players[playerID].ParticipantID = body.ParticipantID
+	})
+	if err != nil {
+		if errors.Is(err, postgres.ErrConflict) {
+			http.Error(w, "Quiz changed; retry", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
+	invalidateEventCache(eventID)
+	writeJSON(w, map[string]string{"playerId": playerID, "participantId": body.ParticipantID})
 }
 
 // JoinSimpleQuiz registers a nickname and returns a private reconnect identity.
@@ -518,10 +575,12 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
-	_, moduleID := simpleQuizIDs(r)
+	eventID, moduleID := simpleQuizIDs(r)
 	var body struct {
-		Nickname string `json:"nickname"`
-		Secret   string `json:"secret"`
+		Nickname          string `json:"nickname"`
+		Secret            string `json:"secret"`
+		ParticipantID     string `json:"participantId"`
+		ParticipantSecret string `json:"participantSecret"`
 	}
 	if err := decodeJSON(w, r, &body); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
@@ -532,9 +591,20 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Nickname required (max 40 chars)", http.StatusBadRequest)
 		return
 	}
+	if body.ParticipantID != "" {
+		if len(body.ParticipantID) > 120 || len(body.ParticipantSecret) > 128 || h.deps.DB == nil {
+			http.Error(w, "Invalid participant proof", http.StatusForbidden)
+			return
+		}
+		hasProof, valid, err := h.deps.DB.CheckParticipantProof(r.Context(), eventID, body.ParticipantID, body.ParticipantSecret)
+		if err != nil || !hasProof || !valid {
+			http.Error(w, "Invalid participant proof", http.StatusForbidden)
+			return
+		}
+	}
 	id := "sq_" + randHex(8)
 	secret := randHex(16)
-	player, reconnected, code := qh.JoinSimpleQuiz(moduleID, nick, body.Secret, id, secret, time.Now())
+	player, reconnected, code := qh.JoinSimpleQuizWithParticipant(moduleID, nick, body.Secret, id, secret, time.Now(), body.ParticipantID)
 	switch code {
 	case hub.SimpleQuizJoinNoSession:
 		http.Error(w, "Quiz is not launched yet", http.StatusNotFound)
@@ -550,9 +620,11 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if reconnected {
+		w.Header().Set("Cache-Control", "private, no-store")
 		writeJSON(w, map[string]any{"playerId": player.ID, "secret": player.Secret, "nickname": player.Nickname, "reconnected": true})
 		return
 	}
+	w.Header().Set("Cache-Control", "private, no-store")
 	writeJSON(w, map[string]any{"playerId": player.ID, "secret": player.Secret, "nickname": player.Nickname})
 }
 
@@ -635,6 +707,9 @@ func (h *Handler) GetSimpleQuizState(w http.ResponseWriter, r *http.Request) {
 	}
 	view := r.URL.Query().Get("view")
 	playerID := r.URL.Query().Get("playerId")
+	if !h.authorizeSimpleQuizView(w, r, s, view, playerID) {
+		return
+	}
 	if view == "" {
 		view = "projector"
 	}
@@ -874,6 +949,9 @@ func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 	}
 	view := r.URL.Query().Get("view")
 	playerID := r.URL.Query().Get("playerId")
+	if !h.authorizeSimpleQuizView(w, r, s, view, playerID) {
+		return
+	}
 	resp := map[string]any{
 		"status":           s.Status,
 		"published":        s.Published,
@@ -912,6 +990,23 @@ func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 		resp["myAnswers"] = mine
 	}
 	writeJSON(w, resp)
+}
+
+func (h *Handler) authorizeSimpleQuizView(w http.ResponseWriter, r *http.Request, s *models.SimpleQuizSession, view, playerID string) bool {
+	w.Header().Set("Cache-Control", "private, no-store")
+	if view == "host" && !h.isAdmin(r) {
+		http.Error(w, "Administrator access required", http.StatusUnauthorized)
+		return false
+	}
+	if view == "player" && playerID != "" {
+		p := s.Players[playerID]
+		secret := r.Header.Get("X-Player-Secret")
+		if p == nil || secret == "" || subtle.ConstantTimeCompare([]byte(p.Secret), []byte(secret)) != 1 {
+			http.Error(w, "Invalid player credentials", http.StatusForbidden)
+			return false
+		}
+	}
+	return true
 }
 
 // RotateSimpleQuizJudgeToken creates a new secret link (host only).

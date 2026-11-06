@@ -7,6 +7,7 @@ package hub
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func newSignalHub(t *testing.T) (*QuizHub, *Client) {
 	s := h.sessions["m1"]
 	s.State = "question-active"
 	s.CurrentIndex = 0
-	s.Questions = []models.QuizQuestion{{ID: "q0", Type: "classic", TimeLimit: 20, CorrectIndex: 1}}
+	s.Questions = []models.QuizQuestion{{ID: "q0", Type: "classic", TimeLimit: 20, CorrectIndex: 1, Answers: []string{"wrong", "right"}}}
 	s.QuestionWindows = []models.QuestionWindow{{
 		QuestionIndex: 0,
 		StartTime:     time.Now().Unix(),
@@ -38,14 +39,14 @@ func send(h *QuizHub, c *Client, payload string) {
 	h.ProcessMessage(c, []byte(`{"type":"player:signal","payload":`+payload+`}`))
 }
 
-// Bug 1: the score is taken verbatim from the client.
-func TestReproClientSuppliedScoreIsTrusted(t *testing.T) {
+// A wrong answer cannot create points by claiming a browser-calculated score.
+func TestClientSuppliedScoreIsIgnored(t *testing.T) {
 	h, c := newSignalHub(t)
 	// Wrong answer (correctIndex is 1), but claims 999999 points.
 	send(h, c, `{"questionIndex":0,"answerIndex":0,"scoreEarned":999999,"timeSpent":1000}`)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if got := h.sessions["m1"].Players["p1"].Score; got != 999999 {
+	if got := h.sessions["m1"].Players["p1"].Score; got != 0 {
 		t.Fatalf("server accepted client-declared score: %d", got)
 	}
 }
@@ -59,8 +60,8 @@ func TestReproDuplicateSignalsAccumulateScore(t *testing.T) {
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if got := h.sessions["m1"].Players["p1"].Score; got != 1000 {
-		t.Fatalf("score after 3 duplicate signals = %d, want 1000 (first answer only)", got)
+	if got := h.sessions["m1"].Players["p1"].Score; got <= 0 || got > 1000 {
+		t.Fatalf("score after 3 duplicate signals = %d, want one bounded award", got)
 	}
 	if len(h.sessions["m1"].PlayerSignals) != 1 {
 		t.Fatalf("duplicate signals recorded = %d, want 1", len(h.sessions["m1"].PlayerSignals))
@@ -154,7 +155,7 @@ func TestStartQuizMissingTimeLimitGetsDefaultWindow(t *testing.T) {
 		return &models.Event{
 			ID: "event-1",
 			Modules: []models.Module{{ID: moduleID, Data: map[string]any{
-				"questions": []models.QuizQuestion{{ID: "q0", Type: "classic", CorrectIndex: 0, ExplainTime: 1}},
+				"questions": []models.QuizQuestion{{ID: "q0", Type: "classic", CorrectIndex: 0, Answers: []string{"yes", "no"}, ExplainTime: 1}},
 			}}},
 		}, nil
 	}
@@ -169,13 +170,15 @@ func TestStartQuizMissingTimeLimitGetsDefaultWindow(t *testing.T) {
 	// And an answer inside that window is accepted and scored.
 	h.mu.Lock()
 	h.sessions["m-time"].Players["p1"] = &models.Player{ID: "p1", Nickname: "P"}
+	h.sessions["m-time"].State = "question-active"
+	runID := h.sessions["m-time"].RunID
 	h.mu.Unlock()
 	h.ProcessMessage(&Client{ModuleID: "m-time", PlayerID: "p1"},
-		[]byte(`{"type":"player:signal","payload":{"questionIndex":0,"answerIndex":0,"scoreEarned":1000,"timeSpent":1000}}`))
+		[]byte(fmt.Sprintf(`{"type":"player:signal","payload":{"questionIndex":0,"answerIndex":0,"submissionId":"00000000-0000-4000-8000-000000000001","runId":%q}}`, runID)))
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if got := h.sessions["m-time"].Players["p1"].Score; got != 1000 {
-		t.Fatalf("answer in default window scored %d, want 1000", got)
+	if got := h.sessions["m-time"].Players["p1"].Score; got <= 0 || got > 1000 {
+		t.Fatalf("answer in default window scored %d, want positive bounded score", got)
 	}
 }
 
@@ -240,9 +243,7 @@ func TestReproNextQuestionPastEndPanics(t *testing.T) {
 	})
 }
 
-// Bug 7: too-late answers are still recorded in PlayerSignals, which is what
-// the host histogram and the persisted results are built from.
-func TestReproTooLateSignalStillRecorded(t *testing.T) {
+func TestTooLateSignalNotRecorded(t *testing.T) {
 	h, c := newSignalHub(t)
 	h.mu.Lock()
 	h.sessions["m1"].QuestionWindows[0].EndTime = time.Now().Unix() - 100
@@ -251,8 +252,8 @@ func TestReproTooLateSignalStillRecorded(t *testing.T) {
 	send(h, c, `{"questionIndex":0,"answerIndex":1,"scoreEarned":1000,"timeSpent":1000}`)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if len(h.sessions["m1"].PlayerSignals) != 1 {
-		t.Fatal("expected the rejected signal to still be appended (this documents the bug)")
+	if len(h.sessions["m1"].PlayerSignals) != 0 {
+		t.Fatal("late signal was recorded")
 	}
 	if got := h.sessions["m1"].Players["p1"].Score; got != 0 {
 		t.Fatalf("too_late signal scored: %d", got)

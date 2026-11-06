@@ -3,11 +3,14 @@ package hub
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 )
 
 // Resolve the event and participant before taking the shared hub lock.
@@ -19,6 +22,7 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 		}
 		moduleID, _ := data["moduleId"].(string)
 		userID, _ := data["userId"].(string)
+		participantSecret, _ := data["participantSecret"].(string)
 		nickname, _ := data["nickname"].(string)
 		if moduleID == "" || userID == "" || len(userID) > 120 || strings.TrimSpace(nickname) == "" || len(nickname) > 120 {
 			return
@@ -31,6 +35,14 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 		}
 		if !event.IsActive {
 			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This event is not accepting players."}}))
+			return
+		}
+		hasProof, validProof, proofErr := h.db.CheckParticipantProof(ctx, event.ID, userID, participantSecret)
+		if proofErr != nil && !errors.Is(proofErr, postgres.ErrNotFound) {
+			return
+		}
+		if !hasProof || !validProof {
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "invalid_identity", "message": "Join the event again to verify this player identity."}}))
 			return
 		}
 		h.mu.RLock()
@@ -128,13 +140,38 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 	}
 
 	// Send state directly to the newly joined player
+	statePayload := map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID}
+	if session.State == "question-active" && session.CurrentIndex >= 0 && session.CurrentIndex < len(session.QuestionWindows) && session.CurrentIndex < len(session.Questions) {
+		statePayload["timeLimit"] = EffectiveTimeLimit(session.Questions[session.CurrentIndex])
+		statePayload["serverNow"] = time.Now().UnixMilli()
+		statePayload["deadline"] = windowDeadlineMillis(session.QuestionWindows, session.CurrentIndex)
+	}
 	if jsonMsg, err := json.Marshal(ServerMessage{
 		Type:    "cmd:state",
-		Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+		Payload: statePayload,
 	}); err == nil {
 		select {
 		case client.send <- jsonMsg:
 		default:
+		}
+	}
+	if session.CurrentIndex >= 0 && session.CurrentIndex/MaxQuestionsPerBatch < len(session.Batches) {
+		batch := session.Batches[session.CurrentIndex/MaxQuestionsPerBatch]
+		select {
+		case client.send <- publicBatchMessage(batch, session.CurrentIndex):
+		default:
+		}
+	}
+	if (session.State == "results" || session.State == "leaderboard" || session.State == "finished") && session.CurrentIndex >= 0 && session.CurrentIndex < len(session.Questions) {
+		select {
+		case client.send <- mustMarshal(ServerMessage{Type: "data:reveal", Payload: revealQuestionPayload(session.Questions[session.CurrentIndex], session.CurrentIndex)}):
+		default:
+		}
+	}
+	if _, registered := h.clients[client]; registered {
+		public := publicSessionMessage(ServerMessage{Type: "state:update", Payload: session}, nil, session, client)
+		if len(public) > 0 {
+			h.sendToClientLocked(client, public)
 		}
 	}
 
@@ -150,72 +187,58 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		DebugLog("player:signal rejected - client is host")
 		return
 	}
-	// Payload: { "questionIndex": 0, "answerIndex": 0, "scoreEarned": 1000, "timeSpent": 5000 }
+	// Payload: { "questionIndex": 0, "answerIndex": 0, "submissionId": "..." }
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		DebugLog("player:signal rejected - invalid payload type")
 		return
 	}
-	dataBytes, _ := json.Marshal(data)
-	DebugLog("player:signal received: %s", string(dataBytes))
-
 	questionIndexFloat, ok := data["questionIndex"].(float64)
-	if !ok {
+	if !ok || questionIndexFloat != float64(int(questionIndexFloat)) {
 		DebugLog("player:signal rejected - questionIndex not found or wrong type")
-		return
-	}
-	// Handle both single choice (legacy/default) and multi-select
-	var answerIndices []int
-
-	// Check for "answerIndices" (multi-select)
-	if indicesInterface, ok := data["answerIndices"].([]interface{}); ok {
-		for _, v := range indicesInterface {
-			if idxFloat, ok := v.(float64); ok {
-				answerIndices = append(answerIndices, int(idxFloat))
-			}
-		}
-	}
-
-	// Fallback to single "answerIndex" if valid (and indices is empty)
-	if len(answerIndices) == 0 {
-		if answerIndexFloat, ok := data["answerIndex"].(float64); ok {
-			answerIndices = append(answerIndices, int(answerIndexFloat))
-		}
-	}
-
-	scoreEarnedFloat, ok := data["scoreEarned"].(float64)
-	if !ok {
-		return
-	}
-	timeSpentFloat, ok := data["timeSpent"].(float64)
-	if !ok {
 		return
 	}
 
 	questionIndex := int(questionIndexFloat)
-	scoreEarned := int(scoreEarnedFloat)
-	timeSpent := int(timeSpentFloat)
-
-	DebugLog("player:signal: User=%s, Q=%d, Score=%d, Time=%d", client.PlayerID, questionIndex, scoreEarned, timeSpent)
-
-	// Extract AnswerValue for range (optional)
-	var answerValue float64
-	if val, ok := data["answerValue"].(float64); ok {
-		answerValue = val
-	}
-
-	// Extract Guesses for wrong_pictures type (optional)
-	var guesses []models.PlayerGuess
-	if guessesInterface, ok := data["guesses"].([]interface{}); ok {
-		guessesBytes, _ := json.Marshal(guessesInterface)
-		json.Unmarshal(guessesBytes, &guesses)
-	}
+	submissionID, _ := data["submissionId"].(string)
+	DebugLog("player:signal: User=%s, Q=%d", client.PlayerID, questionIndex)
 
 	session := h.sessions[client.ModuleID]
 	if session != nil && session.State == "finishing" {
 		return
 	}
 	if session != nil {
+		ack := func(accepted bool, reason string, awarded int) {
+			if client.send == nil || !h.clients[client] {
+				return
+			}
+			total := 0
+			if player := session.Players[client.PlayerID]; player != nil {
+				total = player.Score
+			}
+			h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "answer:ack", Payload: map[string]any{
+				"submissionId": submissionID, "runId": session.RunID,
+				"questionIndex": questionIndex, "accepted": accepted,
+				"reason": reason, "awarded": awarded, "total": total,
+				"streak": session.Streaks[client.PlayerID],
+			}}))
+		}
+		if session.RunID != "" {
+			_, idErr := uuid.Parse(submissionID)
+			runID, _ := data["runId"].(string)
+			if idErr != nil || runID == "" {
+				if client.send != nil && h.clients[client] {
+					h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{
+						"code": "upgrade_required", "message": "This game has been updated. Reload the page to continue.",
+					}}))
+				}
+				return
+			}
+		}
+		if runID, _ := data["runId"].(string); runID != "" && runID != session.RunID {
+			ack(false, "wrong_run", 0)
+			return
+		}
 		DebugLog("player:signal - Session found, state: %s, currentIndex: %d, questionWindows: %d",
 			session.State, session.CurrentIndex, len(session.QuestionWindows))
 
@@ -225,12 +248,14 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		if client.PlayerID == "" {
 			log.Printf("Answer rejected (no player) for module %s: Question %d",
 				client.ModuleID, questionIndex)
+			ack(false, "no_player", 0)
 			return
 		}
 		for _, prev := range session.PlayerSignals {
 			if prev.PlayerID == client.PlayerID && prev.QuestionIndex == questionIndex {
 				log.Printf("Duplicate answer ignored for module %s: player %s already answered question %d",
 					client.ModuleID, client.PlayerID, questionIndex)
+				ack(true, "already_accepted", prev.ScoreEarned)
 				return
 			}
 		}
@@ -243,30 +268,44 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			questionIndex >= len(session.QuestionWindows) {
 			log.Printf("Answer rejected (invalid question) for module %s: Question %d (current %d, windows %d)",
 				client.ModuleID, questionIndex, session.CurrentIndex, len(session.QuestionWindows))
+			ack(false, "wrong_question", 0)
 			return
 		}
 
 		// Check if signal is within acceptance window.
 		// A3: honour AcceptanceResult.Scored — grace-period answers count
 		// for statistics (Valid) but earn no points (Scored == false).
-		acceptance := AcceptanceResult{Valid: true, Scored: true, Reason: "on_time"}
+		qWindow := session.QuestionWindows[questionIndex]
+		acceptance := CanAcceptSignal(qWindow, time.Now().Unix())
 		status := acceptance.Reason
-		if questionIndex < len(session.QuestionWindows) {
-			qWindow := session.QuestionWindows[questionIndex]
-			acceptance = CanAcceptSignal(qWindow, time.Now().Unix())
-			status = acceptance.Reason
-			DebugLog("player:signal - QuestionWindow check: index=%d, startTime=%d, endTime=%d, graceEndTime=%d, now=%d, status=%s",
-				questionIndex, qWindow.StartTime, qWindow.EndTime, qWindow.GraceEndTime, time.Now().Unix(), status)
-		} else {
-			DebugLog("player:signal - No QuestionWindow for index %d (windows count: %d)", questionIndex, len(session.QuestionWindows))
-		}
 
-		// Store the points actually awarded, not the client claim, so the
-		// history and persisted results stay consistent with balances.
-		awarded := scoreEarned
+		if questionIndex >= len(session.Questions) || session.State != "question-active" || !acceptance.Valid {
+			ack(false, status, 0)
+			return
+		}
+		aspect := session.WrongPictureAspects[questionIndex]
+		if session.Questions[questionIndex].Type != models.QuestionTypeWrongPictures {
+			aspect = 1
+		}
+		awarded, answerIndices, answerValue, guesses, validAnswer := scoreQuizAnswer(
+			session.Questions[questionIndex], data, qWindow, time.Now(), session.Streaks[client.PlayerID], aspect,
+		)
+		if !validAnswer {
+			ack(false, "invalid_answer", 0)
+			return
+		}
+		if session.Streaks == nil {
+			session.Streaks = make(map[string]int)
+		}
+		if awarded > 0 && acceptance.Scored {
+			session.Streaks[client.PlayerID]++
+		} else {
+			session.Streaks[client.PlayerID] = 0
+		}
 		if !acceptance.Scored {
 			awarded = 0
 		}
+		timeSpent := int(time.Since(time.Unix(qWindow.StartTime, 0)).Milliseconds())
 		// Create and store signal
 		signal := models.PlayerSignal{
 			PlayerID:      client.PlayerID,
@@ -299,7 +338,7 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			// UPDATE PLAYER SCORE — only when inside the scoring window.
 			if acceptance.Scored {
 				if player, exists := session.Players[client.PlayerID]; exists {
-					player.Score += scoreEarned
+					player.Score += awarded
 				}
 			}
 
@@ -314,6 +353,7 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			log.Printf("Answer rejected (too_late) for module %s: Question %d, Status %s",
 				client.ModuleID, questionIndex, status)
 		}
+		ack(true, status, awarded)
 
 		// Track unique players for the active question instead of scanning the
 		// complete answer history on every submission.
@@ -360,10 +400,7 @@ func (h *QuizHub) processPlayerBatchRequest(client *Client, msg ClientMessage) {
 	session := h.sessions[client.ModuleID]
 	if session != nil && currentBatchIndex >= 0 && currentBatchIndex < len(session.Batches) {
 		// Send the requested batch.
-		h.sendToClientLocked(client, mustMarshal(ServerMessage{
-			Type:    "data:batch",
-			Payload: session.Batches[currentBatchIndex],
-		}))
+		h.sendToClientLocked(client, publicBatchMessage(session.Batches[currentBatchIndex], session.CurrentIndex))
 	}
 }
 
@@ -417,6 +454,10 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 			}
 		}
 		if !seen {
+			if session.Streaks == nil {
+				session.Streaks = make(map[string]int)
+			}
+			session.Streaks[player.ID] = 0
 			session.PlayerSignals = append(session.PlayerSignals, models.PlayerSignal{
 				PlayerID:      player.ID,
 				QuestionIndex: i,

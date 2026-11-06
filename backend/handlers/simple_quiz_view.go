@@ -66,7 +66,7 @@ func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) m
 		base["questions"] = qs
 		names := make([]map[string]any, 0, len(s.Players))
 		for _, p := range s.Players {
-			names = append(names, map[string]any{"playerId": p.ID, "nickname": p.Nickname})
+			names = append(names, map[string]any{"playerId": p.ID, "nickname": p.Nickname, "participantId": p.ParticipantID})
 		}
 		base["playerList"] = names
 		base["gradingComplete"] = s.GradingComplete()

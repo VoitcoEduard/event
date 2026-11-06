@@ -69,7 +69,7 @@ func TestMigrationsAndConstraints(t *testing.T) {
 		t.Fatalf("ready: %v", err)
 	}
 	v, target, err := store.Versions(ctx)
-	if err != nil || v != 1 || target != 1 {
+	if err != nil || v != 2 || target != 2 {
 		t.Fatalf("versions %d/%d: %v", v, target, err)
 	}
 

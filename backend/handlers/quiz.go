@@ -32,6 +32,10 @@ func (h *Handler) UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
+	if err := validateQuizRanges(questions); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Debug: log questions with images
 	for i, q := range questions {

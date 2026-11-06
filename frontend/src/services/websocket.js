@@ -1,4 +1,4 @@
-import { API_BASE_URL, getUserId } from '../utils'
+import { API_BASE_URL, getUserId, getParticipantSecret } from '../utils'
 import { signalQueue } from '../utils/signalQueue'
 
 class QuizWebSocket {
@@ -15,9 +15,18 @@ class QuizWebSocket {
         this.isProjector = false
         this.eventId = null
         this.intentionalDisconnect = false
+		if (typeof window !== 'undefined' && window.addEventListener) {
+			window.addEventListener('online', () => {
+				if (this.intentionalDisconnect || this.isConnected || !this.moduleId) return
+				clearTimeout(this.reconnectTimer)
+				this.reconnectTimer = null
+				this.connect(this.moduleId, this.nickname, this.isHost, this.isProjector, this.eventId)
+			})
+		}
     }
 
     connect(moduleId = null, nickname = null, isHost = false, isProjector = false, eventId = null) {
+		if (this.moduleId && this.moduleId !== moduleId) signalQueue.clear()
         clearTimeout(this.reconnectTimer)
         this.reconnectTimer = null
         signalQueue.onDisconnect()
@@ -42,9 +51,9 @@ class QuizWebSocket {
         }
         const wsUrl = `${protocol}//${host}/ws`
 
-        if (this.socket) {
-            this.socket.close()
-        }
+		const previousSocket = this.socket
+		this.socket = null
+		if (previousSocket) previousSocket.close()
 
         const socket = new WebSocket(wsUrl)
         this.socket = socket
@@ -75,6 +84,7 @@ class QuizWebSocket {
             if (!this.isHost && !this.isProjector) {
                 payload.nickname = this.nickname
                 payload.userId = this.userId
+				if (this.eventId) payload.participantSecret = getParticipantSecret(this.eventId)
             }
 
             this.send(type, payload)
@@ -93,6 +103,9 @@ class QuizWebSocket {
             messages.forEach(messageStr => {
                 try {
                     const message = JSON.parse(messageStr)
+					if (message.type === 'answer:ack' && message.payload?.submissionId) {
+						signalQueue.settle(message.payload.submissionId)
+					}
                     this.dispatch(message.type, message.payload)
                 } catch (e) {
                     console.error('Error parsing WS message:', e, 'Raw:', messageStr)
@@ -106,13 +119,14 @@ class QuizWebSocket {
             signalQueue.onDisconnect()
 			if (event.code === 1008) {
 				this.intentionalDisconnect = true
+				signalQueue.clear()
 				this.dispatch('auth:required')
 				window.location.assign('/login')
 				return
 			}
 
-            if (!this.intentionalDisconnect && this.reconnectAttempts < 5) {
-                const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 5000)
+            if (!this.intentionalDisconnect) {
+				const delay = Math.min(1000 * Math.pow(2, Math.min(this.reconnectAttempts, 4)), 5000) * (0.8 + Math.random() * 0.4)
                 this.reconnectTimer = setTimeout(() => {
                     this.reconnectTimer = null
                     if (this.intentionalDisconnect || this.socket !== socket) return

@@ -27,6 +27,10 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func writeRequestError(w http.ResponseWriter, err error, status int) {
+	if errors.Is(err, postgres.ErrInvalidValue) {
+		http.Error(w, "Points must be finite", http.StatusBadRequest)
+		return
+	}
 	if errors.Is(err, postgres.ErrInvalidReference) {
 		http.Error(w, "Invalid reference", http.StatusBadRequest)
 		return

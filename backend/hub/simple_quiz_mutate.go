@@ -225,6 +225,10 @@ const (
 )
 
 func (h *QuizHub) JoinSimpleQuiz(moduleID, nick, providedSecret, newID, newSecret string, now time.Time) (models.SimpleQuizPlayer, bool, string) {
+	return h.JoinSimpleQuizWithParticipant(moduleID, nick, providedSecret, newID, newSecret, now, "")
+}
+
+func (h *QuizHub) JoinSimpleQuizWithParticipant(moduleID, nick, providedSecret, newID, newSecret string, now time.Time, participantID string) (models.SimpleQuizPlayer, bool, string) {
 	if now.IsZero() {
 		now = time.Now()
 	}
@@ -259,7 +263,7 @@ func (h *QuizHub) JoinSimpleQuiz(moduleID, nick, providedSecret, newID, newSecre
 		if s.Players == nil {
 			s.Players = map[string]*models.SimpleQuizPlayer{}
 		}
-		s.Players[newID] = &models.SimpleQuizPlayer{ID: newID, Nickname: nick, Secret: newSecret, JoinedAt: now, Connected: true}
+		s.Players[newID] = &models.SimpleQuizPlayer{ID: newID, ParticipantID: participantID, Nickname: nick, Secret: newSecret, JoinedAt: now, Connected: true}
 		out = *s.Players[newID]
 		return nil
 	})

@@ -104,10 +104,37 @@ func (s *Store) queryRuns(ctx context.Context, query string, args ...any) ([]mod
 		return nil, err
 	}
 	results := make([]models.QuizResult, 0, len(records))
+	if len(records) == 0 {
+		return results, nil
+	}
+	ids := make([]string, len(records))
+	positions := make(map[string]int, len(records))
 	for i := range records {
-		if err = s.loadRunPlayers(ctx, &records[i]); err != nil {
+		ids[i] = records[i].ID
+		positions[ids[i]] = i
+		records[i].Result.Players = []models.PlayerResult{}
+	}
+	playerRows, err := s.Pool.Query(ctx, `SELECT run_id::text,participant_id,nickname,score FROM quiz_run_players WHERE run_id=ANY($1::uuid[]) ORDER BY run_id,participant_id`, ids)
+	if err != nil {
+		return nil, translate(err)
+	}
+	for playerRows.Next() {
+		var runID string
+		var p models.PlayerResult
+		if err = playerRows.Scan(&runID, &p.ID, &p.Nickname, &p.Score); err != nil {
+			playerRows.Close()
 			return nil, err
 		}
+		if i, ok := positions[runID]; ok {
+			records[i].Result.Players = append(records[i].Result.Players, p)
+		}
+	}
+	err = playerRows.Err()
+	playerRows.Close()
+	if err != nil {
+		return nil, err
+	}
+	for i := range records {
 		results = append(results, records[i].Result)
 	}
 	return results, nil
@@ -120,6 +147,67 @@ func (s *Store) QuizResults(ctx context.Context, eventID, moduleID string) ([]mo
 }
 func (s *Store) LatestQuizResults(ctx context.Context, eventID string) ([]models.QuizResult, error) {
 	return s.queryRuns(ctx, `SELECT DISTINCT ON (r.module_id) r.id::text,r.event_id::text,r.module_id::text,r.finished_at,r.player_signals FROM quiz_runs r JOIN modules m ON m.event_id=r.event_id AND m.id=r.module_id WHERE r.event_id=$1 AND m.type IN ('quiz','wrong_pictures') ORDER BY r.module_id,r.finished_at DESC,r.sequence DESC`, eventID)
+}
+
+// PublishedSimpleQuizResults returns only the current published snapshot of each
+// Simple Quiz. Working grades are deliberately excluded from event totals.
+func (s *Store) PublishedSimpleQuizResults(ctx context.Context, eventID string) ([]models.QuizResult, error) {
+	linked := map[string]map[string]string{}
+	playerRows, err := s.Pool.Query(ctx, `SELECT p.module_id::text,p.id,p.data->>'participantId' FROM simple_quiz_players p JOIN simple_quiz_sessions q ON q.module_id=p.module_id WHERE q.event_id=$1`, eventID)
+	if err != nil {
+		return nil, translate(err)
+	}
+	for playerRows.Next() {
+		var moduleID, playerID string
+		var participantID *string
+		if err = playerRows.Scan(&moduleID, &playerID, &participantID); err != nil {
+			playerRows.Close()
+			return nil, err
+		}
+		if linked[moduleID] == nil {
+			linked[moduleID] = map[string]string{}
+		}
+		if participantID != nil {
+			linked[moduleID][playerID] = *participantID
+		}
+	}
+	if err = playerRows.Err(); err != nil {
+		playerRows.Close()
+		return nil, err
+	}
+	playerRows.Close()
+	rows, err := s.Pool.Query(ctx, `SELECT q.module_id::text,q.data FROM simple_quiz_sessions q JOIN modules m ON m.id=q.module_id AND m.event_id=q.event_id WHERE q.event_id=$1 AND m.type='simple_quiz'`, eventID)
+	if err != nil {
+		return nil, translate(err)
+	}
+	defer rows.Close()
+	results := []models.QuizResult{}
+	for rows.Next() {
+		var moduleID string
+		var raw []byte
+		if err := rows.Scan(&moduleID, &raw); err != nil {
+			return nil, err
+		}
+		var state struct {
+			Published *models.SimpleQuizPublishedSnapshot `json:"published"`
+		}
+		if err := json.Unmarshal(raw, &state); err != nil {
+			return nil, err
+		}
+		if state.Published == nil {
+			continue
+		}
+		result := models.QuizResult{EventID: eventID, ModuleID: moduleID, FinishedAt: state.Published.PublishedAt, Players: []models.PlayerResult{}}
+		for _, p := range state.Published.Players {
+			id := linked[moduleID][p.PlayerID]
+			if id == "" {
+				id = p.PlayerID
+			}
+			result.Players = append(result.Players, models.PlayerResult{ID: id, Nickname: p.Nickname, Score: p.TotalScore})
+		}
+		results = append(results, result)
+	}
+	return results, rows.Err()
 }
 func (s *Store) UpdateLatestScore(ctx context.Context, eventID, moduleID, playerID string, score int) (bool, error) {
 	tx, err := s.Pool.Begin(ctx)

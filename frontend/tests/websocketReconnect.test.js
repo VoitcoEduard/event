@@ -31,10 +31,12 @@ test('queued answers are sent only after joining on reconnect', () => {
   quizWS.connect('m', 'Player')
   sockets[0].onopen()
   sockets[0].onclose({ code: 1006 })
-  signalQueue.enqueue({ questionIndex: 0, scoreEarned: 100, timestamp: Date.now() })
+  signalQueue.enqueue({ submissionId: 'a', questionIndex: 0, timestamp: Date.now() })
   quizWS.connect('m', 'Player')
   sockets[1].onopen()
   assert.deepEqual(sent.map(m => m.type), ['player:join', 'player:join', 'player:signal'])
+  assert.equal(signalQueue.queue.length, 1)
+  sockets[1].onmessage({ data: JSON.stringify({ type: 'answer:ack', payload: { submissionId: 'a', accepted: true } }) })
   assert.equal(signalQueue.queue.length, 0)
 })
 

@@ -36,7 +36,7 @@ test('confirmSelection blocks re-entry during the 300ms delay', () => {
   // another timeout while the first is pending.
   assert.match(
     script,
-    /const confirmSelection = \(\) => \{\s*if \(hasSubmitted\.value \|\| isSubmitting\.value\) return/
+    /const confirmSelection = \(\) => \{\s*if \(hasSubmitted\.value \|\| isSubmitting\.value \|\| [^\n]+\) return/
   )
   // The timeout callback re-checks hasSubmitted (flag may have flipped via
   // another submit path while the timeout was pending).

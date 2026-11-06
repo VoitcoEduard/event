@@ -42,12 +42,13 @@ type SimpleQuizQuestionSnapshot struct {
 
 // SimpleQuizPlayer joined with a nickname. Secret is the private reconnect identity.
 type SimpleQuizPlayer struct {
-	ID        string    `json:"id"`
-	Nickname  string    `json:"nickname"`
-	Secret    string    `json:"secret,omitempty"`
-	Score     int       `json:"score"`
-	JoinedAt  time.Time `json:"joinedAt"`
-	Connected bool      `json:"connected"`
+	ID            string    `json:"id"`
+	ParticipantID string    `json:"participantId,omitempty"`
+	Nickname      string    `json:"nickname"`
+	Secret        string    `json:"secret,omitempty"`
+	Score         int       `json:"score"`
+	JoinedAt      time.Time `json:"joinedAt"`
+	Connected     bool      `json:"connected"`
 }
 
 // SimpleQuizAnswer is one locked text answer per player per question.
@@ -85,10 +86,11 @@ type SimpleQuizPerQuestionResult struct {
 
 // SimpleQuizPlayerResult is a leaderboard row.
 type SimpleQuizPlayerResult struct {
-	PlayerID    string                        `json:"playerId"`
-	Nickname    string                        `json:"nickname"`
-	TotalScore  int                           `json:"totalScore"`
-	PerQuestion []SimpleQuizPerQuestionResult `json:"perQuestion"`
+	PlayerID      string                        `json:"playerId"`
+	ParticipantID string                        `json:"-"`
+	Nickname      string                        `json:"nickname"`
+	TotalScore    int                           `json:"totalScore"`
+	PerQuestion   []SimpleQuizPerQuestionResult `json:"perQuestion"`
 }
 
 // SimpleQuizPublishedSnapshot is the stable version visible to players/projector.
@@ -156,9 +158,10 @@ func (s *SimpleQuizSession) ComputeWorkingResults() []SimpleQuizPlayerResult {
 	byPlayer := make(map[string]*SimpleQuizPlayerResult)
 	for _, p := range s.Players {
 		byPlayer[p.ID] = &SimpleQuizPlayerResult{
-			PlayerID:    p.ID,
-			Nickname:    p.Nickname,
-			PerQuestion: make([]SimpleQuizPerQuestionResult, len(s.Questions)),
+			PlayerID:      p.ID,
+			ParticipantID: p.ParticipantID,
+			Nickname:      p.Nickname,
+			PerQuestion:   make([]SimpleQuizPerQuestionResult, len(s.Questions)),
 		}
 		for i := range s.Questions {
 			byPlayer[p.ID].PerQuestion[i] = SimpleQuizPerQuestionResult{

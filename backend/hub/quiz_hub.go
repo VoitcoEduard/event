@@ -89,7 +89,7 @@ func CalculateBatches(questions []models.QuizQuestion) []models.QuestionBatch {
 // clients.
 type QuizHub struct {
 	db              *postgres.Store
-	simpleQuizLocks sync.Map
+	simpleQuizLocks [256]sync.Mutex
 	authService     *auth.Service
 	quizResults     *services.QuizResultService
 	eventByModule   func(context.Context, string) (*models.Event, error)
@@ -362,8 +362,12 @@ func (h *QuizHub) broadcastToSessionLocked(moduleID string, message interface{})
 
 	for client := range h.clients {
 		if client.ModuleID == moduleID {
+			out := jsonMsg
+			if !client.IsHost {
+				out = publicSessionMessage(message, jsonMsg, h.sessions[moduleID], client)
+			}
 			select {
-			case client.send <- jsonMsg:
+			case client.send <- out:
 			default:
 				close(client.send)
 				delete(h.clients, client)
@@ -381,13 +385,85 @@ func (h *QuizHub) broadcastToHostsAndProjectorsLocked(moduleID string, message i
 
 	for client := range h.clients {
 		if client.ModuleID == moduleID && (client.IsHost || client.IsProjector) {
+			out := jsonMsg
+			if !client.IsHost {
+				out = publicSessionMessage(message, jsonMsg, h.sessions[moduleID], client)
+			}
 			select {
-			case client.send <- jsonMsg:
+			case client.send <- out:
 			default:
 				close(client.send)
 				delete(h.clients, client)
 			}
 		}
+	}
+}
+
+func publicSessionMessage(message interface{}, original []byte, session *models.QuizSession, client *Client) []byte {
+	m, ok := message.(ServerMessage)
+	if !ok {
+		return original
+	}
+	if m.Type == "data:batch" {
+		batch, ok := m.Payload.(models.QuestionBatch)
+		if !ok || session == nil {
+			return nil
+		}
+		return publicBatchMessage(batch, session.CurrentIndex)
+	}
+	if m.Type != "state:update" {
+		return original
+	}
+	s, ok := m.Payload.(*models.QuizSession)
+	if !ok {
+		return original
+	}
+	players := s.Players
+	rank := 0
+	if !client.IsProjector {
+		players = map[string]*models.Player{}
+		if self := s.Players[client.PlayerID]; self != nil {
+			players[client.PlayerID] = self
+			rank = 1
+			for id, other := range s.Players {
+				if id != client.PlayerID && other != nil && other.Score > self.Score {
+					rank++
+				}
+			}
+		}
+	}
+	b, err := json.Marshal(ServerMessage{Type: m.Type, Payload: map[string]any{
+		"eventId": s.EventID, "moduleId": s.ModuleID, "state": s.State,
+		"currentIndex": s.CurrentIndex, "players": players, "rank": rank,
+		"answerCounts": s.AnswerCounts, "questionWindows": s.QuestionWindows,
+		"startTime": s.StartTime,
+	}})
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+func publicBatchMessage(batch models.QuestionBatch, currentIndex int) []byte {
+	questions := []map[string]any{}
+	if currentIndex >= batch.StartIndex && currentIndex <= batch.EndIndex {
+		localIndex := currentIndex - batch.StartIndex
+		if localIndex < len(batch.Questions) {
+			questions = append(questions, models.PublicQuizQuestion(batch.Questions[localIndex]))
+		}
+	}
+	return mustMarshal(ServerMessage{Type: "data:batch", Payload: map[string]any{
+		"batchIndex": batch.BatchIndex, "totalBatches": batch.TotalBatches,
+		"startIndex": currentIndex, "endIndex": currentIndex,
+		"nextBatchAt": currentIndex, "questions": questions,
+	}})
+}
+
+func revealQuestionPayload(q models.QuizQuestion, index int) map[string]any {
+	return map[string]any{
+		"questionIndex": index, "correctIndex": q.CorrectIndex,
+		"correctIndices": q.CorrectIndices, "correctNumber": q.CorrectNumber,
+		"correctValue": q.CorrectValue, "wrongPictureConfig": q.WrongPictureConfig,
 	}
 }
 

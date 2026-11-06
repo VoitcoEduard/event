@@ -36,6 +36,11 @@ func LoadEventScores(ctx context.Context, db *postgres.Store, eventID string) (*
 	if err != nil {
 		return nil, err
 	}
+	simpleGames, err := db.PublishedSimpleQuizResults(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	games = append(games, simpleGames...)
 	entries, err := db.ScoreEntries(ctx, eventID)
 	if err != nil {
 		return nil, err

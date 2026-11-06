@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -36,6 +37,7 @@ func main() {
 }
 
 func run() error {
+	defer handlers.CloseEventCaches()
 	utils.DebugLog("Starting server initialization...")
 	if len(os.Args) > 1 {
 		var err error
@@ -50,6 +52,10 @@ func run() error {
 		return nil
 	}
 	config, err := auth.ConfigFromEnv()
+	if err != nil {
+		return err
+	}
+	port, err := listenPort(os.Getenv("PORT"))
 	if err != nil {
 		return err
 	}
@@ -171,7 +177,7 @@ func run() error {
 	defer func() { stopWorkers(); <-workersDone }()
 
 	server := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":" + strconv.Itoa(port),
 		Handler:           appHandler(mux, spaHandler),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -210,6 +216,17 @@ func run() error {
 		return serveErr
 	}
 	return nil
+}
+
+func listenPort(value string) (int, error) {
+	if value == "" {
+		return 8080, nil
+	}
+	port, err := strconv.Atoi(value)
+	if err != nil || port < 1 || port > 65535 {
+		return 0, errors.New("PORT must be an integer from 1 to 65535")
+	}
+	return port, nil
 }
 
 func appHandler(api, spa http.Handler) http.Handler {

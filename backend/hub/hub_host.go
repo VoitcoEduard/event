@@ -45,6 +45,7 @@ func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 		Payload: map[string]interface{}{
 			"state":        h.sessions[moduleID].State,
 			"currentIndex": h.sessions[moduleID].CurrentIndex,
+			"runId":        h.sessions[moduleID].RunID,
 		},
 	})
 	if !h.sendToClientLocked(client, jsonMsg) {
@@ -81,6 +82,28 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		log.Printf("Cannot start quiz for module %s: %v", moduleID, err)
 		return
 	}
+	aspects := make(map[int]float64)
+	for i, question := range questions {
+		if question.Type != models.QuestionTypeWrongPictures {
+			continue
+		}
+		if h.db == nil {
+			aspects[i] = 1 // In-memory test hubs have no media store.
+			continue
+		}
+		if question.ImageID == nil || *question.ImageID == "" {
+			log.Printf("Cannot start Wrong Pictures question %d without image metadata", i)
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{"code": "invalid_image_metadata", "message": "This image has no dimensions. Reupload it before starting the quiz."}}))
+			return
+		}
+		media, mediaErr := h.db.Media(ctx, *question.ImageID)
+		if mediaErr != nil || media.Width <= 0 || media.Height <= 0 {
+			log.Printf("Cannot start Wrong Pictures question %d with missing dimensions: %v", i, mediaErr)
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{"code": "invalid_image_metadata", "message": "This image has no dimensions. Reupload it before starting the quiz."}}))
+			return
+		}
+		aspects[i] = float64(media.Width) / float64(media.Height)
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed || !client.IsHost || client.ModuleID != moduleID {
@@ -96,6 +119,8 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		session.PlayerSignals = []models.PlayerSignal{}
 		session.AnswerCounts = make(map[int]int)
 		session.AnsweredPlayerIDs = make(map[string]struct{})
+		session.Streaks = make(map[string]int)
+		session.WrongPictureAspects = aspects
 		session.Questions = questions // Assigned loaded questions
 		session.Batches = CalculateBatches(questions)
 		session.StartTime = time.Now().Unix() // Reset timer
@@ -129,7 +154,7 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		}
 		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
+			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime, "runId": session.RunID},
 		})
 
 		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
@@ -175,6 +200,14 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 				client.ModuleID, session.CurrentIndex+1, len(session.Questions))
 			return
 		}
+		if session.Streaks == nil {
+			session.Streaks = make(map[string]int)
+		}
+		for playerID := range session.Players {
+			if _, answered := session.AnsweredPlayerIDs[playerID]; !answered {
+				session.Streaks[playerID] = 0
+			}
+		}
 		// session.State = "question-active" // Will be set after delay
 		session.CurrentIndex++
 		session.AnswerCounts = make(map[int]int)
@@ -191,6 +224,12 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 			State:         "active",
 		}
 		session.QuestionWindows = append(session.QuestionWindows, qWindow)
+		batchIndex := session.CurrentIndex / MaxQuestionsPerBatch
+		if batchIndex < len(session.Batches) {
+			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+				Type: "data:batch", Payload: session.Batches[batchIndex],
+			})
+		}
 
 		// Notify state change - send 'question-presenting' first
 		session.State = "question-presenting"
@@ -200,7 +239,7 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 		}
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime},
+			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime, "runId": session.RunID},
 		})
 
 		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
@@ -215,10 +254,16 @@ func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
 	if session != nil {
 		h.cancelQuizTransitionLocked(client.ModuleID)
 		session.State = "results"
+		if session.CurrentIndex >= 0 && session.CurrentIndex < len(session.Questions) {
+			q := session.Questions[session.CurrentIndex]
+			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+				Type: "data:reveal", Payload: revealQuestionPayload(q, session.CurrentIndex),
+			})
+		}
 
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID},
 		})
 
 		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES/ANSWERS
@@ -239,7 +284,7 @@ func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) 
 		session.State = "leaderboard"
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID},
 		})
 
 		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES
@@ -296,7 +341,7 @@ func (h *QuizHub) processHostEndQuiz(client *Client, msg ClientMessage) {
 		return
 	}
 	current.State = "finished"
-	h.broadcastToSessionLocked(moduleID, ServerMessage{Type: "cmd:state", Payload: map[string]interface{}{"state": "finished", "currentIndex": current.CurrentIndex}})
+	h.broadcastToSessionLocked(moduleID, ServerMessage{Type: "cmd:state", Payload: map[string]interface{}{"state": "finished", "currentIndex": current.CurrentIndex, "runId": current.RunID}})
 	h.broadcastToSessionLocked(moduleID, ServerMessage{Type: "state:update", Payload: current})
 }
 

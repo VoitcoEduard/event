@@ -66,7 +66,7 @@ const getItemStyle = (idx) => {
 }
 
 const onScroll = () => {
-  if (!trackRef.value) return
+  if (!trackRef.value || !props.images.length || !trackRef.value.scrollWidth) return
   
   const track = trackRef.value
   const itemWidth = track.scrollWidth / props.images.length
@@ -83,7 +83,9 @@ const onScroll = () => {
 }
 
 const snapToIndex = (idx) => {
-  if (!trackRef.value) return
+  if (!trackRef.value || !props.images.length || !trackRef.value.scrollWidth) return
+  idx = Math.max(0, Math.min(props.images.length - 1, Math.trunc(idx)))
+  if (!Number.isFinite(idx)) return
   
   const track = trackRef.value
   const itemWidth = track.scrollWidth / props.images.length

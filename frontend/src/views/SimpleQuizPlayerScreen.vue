@@ -135,6 +135,7 @@ import { quizWS } from '../services/websocket'
 import { simpleQuizApi, loadDraft, saveDraft, clearDraft, newAnswerId } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import AppIcon from '../components/AppIcon.vue'
+import { getUserId, getParticipantSecret } from '../utils'
 
 const { locale, t } = useI18n()
 const route = useRoute()
@@ -193,7 +194,8 @@ const join = async () => {
   joining.value = true
   error.value = ''
   try {
-    const res = await simpleQuizApi.join(eventId, moduleId, nick)
+	const participantSecret = getParticipantSecret(eventId)
+    const res = await simpleQuizApi.join(eventId, moduleId, nick, '', participantSecret ? { participantId: getUserId(), participantSecret } : {})
     identity.value = { playerId: res.playerId, secret: res.secret, nickname: res.nickname }
     try { localStorage.setItem(storageKey.value, JSON.stringify(identity.value)) } catch { /* ignore */ }
     await refresh()
@@ -228,7 +230,7 @@ const tryReconnect = async () => {
 const refresh = async () => {
   if (!identity.value) return
   try {
-    const s = await simpleQuizApi.state(eventId, moduleId, { view: 'player', playerId: identity.value.playerId })
+    const s = await simpleQuizApi.state(eventId, moduleId, { view: 'player', playerId: identity.value.playerId, secret: identity.value.secret })
     status.value = s.status || 'lobby'
     currentIndex.value = s.currentIndex || 0
     total.value = s.total || 0
@@ -250,7 +252,7 @@ const refresh = async () => {
 
 const refreshResults = async () => {
   try {
-    const r = await simpleQuizApi.results(eventId, moduleId, { view: 'player', playerId: identity.value.playerId })
+    const r = await simpleQuizApi.results(eventId, moduleId, { view: 'player', playerId: identity.value.playerId, secret: identity.value.secret })
     leaderboard.value = r.published?.players || []
     me.value = r.me || leaderboard.value.find(p => p.playerId === identity.value.playerId) || null
     const mine = r.myAnswers || []
@@ -273,18 +275,21 @@ const submit = async () => {
   const signature = `${currentIndex.value}:${text}`
   if (!pendingAnswer || pendingAnswer.signature !== signature) pendingAnswer = { signature, id: newAnswerId() }
   const answerId = pendingAnswer.id
+  const questionIndex = currentIndex.value
   try {
     await simpleQuizApi.submitAnswer(eventId, moduleId, {
       playerId: identity.value.playerId,
       secret: identity.value.secret,
-      questionIndex: currentIndex.value,
+      questionIndex,
       text,
       answerId
     })
-    pendingAnswer = null
-    clearDraft(eventId, moduleId, currentIndex.value)
-    draft.value = ''
-    submitted.value = true
+    if (pendingAnswer?.id === answerId) pendingAnswer = null
+    if (loadDraft(eventId, moduleId, questionIndex).trim() === text) clearDraft(eventId, moduleId, questionIndex)
+    if (currentIndex.value === questionIndex) {
+      if (draft.value.trim() === text) draft.value = ''
+      submitted.value = true
+    }
   } catch (e) {
     error.value = e.message
   } finally {

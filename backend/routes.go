@@ -79,6 +79,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 		{"POST /events/{eventID}/modules/{moduleID}/simple-quiz/update-published", h.UpdateSimpleQuizPublished, true},
 		{"POST /events/{eventID}/modules/{moduleID}/simple-quiz/complete", h.CompleteSimpleQuiz, true},
 		{"POST /events/{eventID}/modules/{moduleID}/simple-quiz/reset", h.ResetSimpleQuiz, true},
+		{"PUT /events/{eventID}/modules/{moduleID}/simple-quiz/players/{playerID}/participant", h.LinkSimpleQuizParticipant, true},
 		{"POST /events/{eventID}/modules/{moduleID}/simple-quiz/join", h.JoinSimpleQuiz, false},
 		{"POST /events/{eventID}/modules/{moduleID}/simple-quiz/answers", h.SubmitSimpleQuizAnswer, false},
 		{"GET /events/{eventID}/modules/{moduleID}/simple-quiz/state", h.GetSimpleQuizState, false},

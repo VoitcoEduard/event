@@ -7,6 +7,7 @@ import (
 
 	"errors"
 	"github.com/user/go-expo-sample/backend/database"
+	"github.com/user/go-expo-sample/backend/models"
 )
 
 // JoinEvent handles POST /events/{id}/participants/join
@@ -20,6 +21,7 @@ func (h *Handler) JoinEvent(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		UserID      string         `json:"userId"`
 		JoinKey     string         `json:"joinKey"`
+		JoinSecret  string         `json:"joinSecret"`
 		DisplayName string         `json:"displayName"`
 		Profile     map[string]any `json:"profile"`
 	}
@@ -30,11 +32,17 @@ func (h *Handler) JoinEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	svc := h.deps.Participants
-	if len(input.UserID) > 120 || len(input.JoinKey) > 120 || len(input.DisplayName) > 120 {
+	if len(input.UserID) > 120 || len(input.JoinKey) > 120 || len(input.DisplayName) > 120 || len(input.JoinSecret) > 128 {
 		http.Error(w, "Invalid participant", http.StatusBadRequest)
 		return
 	}
-	participant, err := svc.JoinEventWithID(r.Context(), eventID, input.UserID, input.JoinKey, input.DisplayName, input.Profile)
+	var participant *models.Participant
+	var err error
+	if h.deps.DB != nil {
+		participant, err = h.deps.DB.JoinEventParticipant(r.Context(), eventID, input.UserID, input.JoinKey, input.DisplayName, input.Profile, input.JoinSecret)
+	} else {
+		participant, err = svc.JoinEventWithID(r.Context(), eventID, input.UserID, input.JoinKey, input.DisplayName, input.Profile)
+	}
 	if errors.Is(err, database.ErrConflict) {
 		http.Error(w, "Participant identity already in use", http.StatusConflict)
 		return
@@ -45,6 +53,7 @@ func (h *Handler) JoinEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	invalidateParticipantStatus(eventID, participant.ID)
 
+	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(participant)

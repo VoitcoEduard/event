@@ -1,6 +1,7 @@
 <template>
   <div class="quiz-player-screen">
     <div class="bg-layer"></div>
+	<div v-if="!connectionReady && joined" class="connection-status" role="status">Reconnecting… Your answer is still pending.</div>
 
     <div class="language-switcher-container">
       <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
@@ -110,8 +111,8 @@
           v-if="currentQuestion?.imageId"
           :image-url="getImageUrl(currentQuestion.imageId)"
           :max-targets="currentQuestion?.wrongPictureConfig?.showTargetCount
-            ? (currentQuestion?.wrongPictureConfig?.targets?.length || 1)
-            : (currentQuestion?.wrongPictureConfig?.targets?.length || 1) + 3"
+            ? (currentQuestion?.wrongPictureConfig?.targetCount || 1)
+            : (currentQuestion?.wrongPictureConfig?.targetCount || 1) + 3"
           :show-target-count="currentQuestion?.wrongPictureConfig?.showTargetCount"
           :initial-markers="wpGuesses"
           @update:markers="wpGuesses = $event"
@@ -249,7 +250,7 @@
        <div class="answered-content">
           <div class="spinner"></div>
           <h2>{{ $t('quiz.player.submitted') }}</h2>
-          <p>{{ $t('quiz.player.waiting_others') }}</p>
+          <p>{{ answerStatus || $t('quiz.player.waiting_others') }}</p>
        </div>
     </div>
 
@@ -327,10 +328,9 @@ import WrongPictureAnswerReview from '../components/WrongPictureAnswerReview.vue
 import AppIcon from '../components/AppIcon.vue'
 import { questionCache } from '../utils/questionCache'
 import { signalQueue } from '../utils/signalQueue'
-import { getUserName } from '../utils'
+import { getUserName, newUUID } from '../utils'
 import { getImageUrl } from '../services/media'
 import { calculateTotalScore } from '../utils/wrongPicturesScoring'
-import { calculateChoiceScore } from '../utils/choiceScoring'
 import { streakAfterTimeout, streakAfterCatchup } from '../utils/streak'
 
 const { locale } = useI18n()
@@ -339,6 +339,10 @@ const route = useRoute()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
 const joinError = ref('')
+const currentRunId = ref('')
+const pendingAnswerId = ref(null)
+const answerStatus = ref('')
+const submittedGuesses = ref([])
 
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
@@ -360,6 +364,7 @@ const { state, transition, canTransition, currentQuestionIndex, score, streak, S
 // Local state
 const nickname = ref(getUserName())
 const joined = ref(false)
+const connectionReady = ref(false)
 const selectedAnswer = ref(null) // For single choice
 const selectedIndices = ref([])  // For multi select
 const rangeValue = ref(50)      // For slider
@@ -387,14 +392,16 @@ const wpContainerRect = ref(null)
 // tolerance are width-percentage points, so Y deltas are scaled by this.
 const wpAspectRatio = ref(1)
 
+let aspectLoadGeneration = 0
 const loadWpAspectRatio = (question) => {
+    const generation = ++aspectLoadGeneration
     wpAspectRatio.value = 1
     if (question?.type !== 'wrong_pictures' || !question?.imageId) return
     const url = getImageUrl(question.imageId)
     if (!url) return
     const img = new Image()
     img.onload = () => {
-        if (img.naturalWidth && img.naturalHeight) {
+        if (generation === aspectLoadGeneration && img.naturalWidth && img.naturalHeight) {
             wpAspectRatio.value = img.naturalWidth / img.naturalHeight
         }
     }
@@ -436,7 +443,7 @@ const onCarouselSnap = (idx) => {
 }
 
 const confirmSelection = () => {
-    if (hasSubmitted.value || isSubmitting.value) return
+    if (hasSubmitted.value || isSubmitting.value || !currentQuestion.value?.imageOptions?.length || !Number.isInteger(preselectedIndex.value) || preselectedIndex.value < 0 || preselectedIndex.value >= currentQuestion.value.imageOptions.length) return
     isSubmitting.value = true
 
     // Simulate short delay for "working" feel or network
@@ -539,7 +546,7 @@ watch(currentQuestion, (question) => {
 // Actions
 const joinLobby = () => {
     if (!nickname.value.trim()) return
-    quizWS.connect(moduleId, nickname.value, false)
+    quizWS.connect(moduleId, nickname.value, false, false, eventId)
     joined.value = true
 }
 
@@ -598,209 +605,42 @@ let confirmSelectionTimeout = null
 
 // Answer validation and scoring
 const validateAndScore = (answerData) => {
-    // Use questionCache directly instead of the ref from state machine
-
     const question = questionCache.get(currentQuestionIndex.value)
-    if (!question) {
-        console.error('[DEBUG] Question NOT FOUND in cache at index:', currentQuestionIndex.value, 'Cache contents:', JSON.stringify([...questionCache.cache.entries()]))
-        return
-    }
+    if (!question) return
 
-    let isCorrectAnswer = false
-    let answerPayload = {}
-
+    let answerPayload
     if (question.type === 'wrong_pictures') {
-        const guessesData = Array.isArray(answerData) ? answerData : []
-        const config = question.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 1000 }
-
-        const result = calculateTotalScore(guessesData, config.targets, config, wpAspectRatio.value)
-
-        // Update local guesses with feedback
-        wpGuesses.value = result.scoredGuesses
-        wrongPictureReview.value = createWrongPictureReview(question, result)
-
-        answerPayload = { guesses: result.scoredGuesses }
-        currentPoints.value = result.totalScore
-        isCorrectAnswer = result.totalScore > 0
-        score.value += currentPoints.value
-
-        if (isCorrectAnswer) streak.value++
-        else streak.value = 0
-
-        isCorrect.value = isCorrectAnswer
-
-        const timeLimit = question.timeLimit || 20
-        const timeSpent = timeLimit - timeRemaining.value
-        const signal = {
-            questionIndex: currentQuestionIndex.value,
-            ...answerPayload,
-            scoreEarned: currentPoints.value,
-            timeSpent: timeSpent * 1000,
-            timestamp: Date.now(),
-        }
-        signalQueue.enqueue(signal)
-        return
+        const guesses = Array.isArray(answerData) ? answerData : []
+        submittedGuesses.value = guesses.map(({ xPercent, yPercent }) => ({ xPercent, yPercent }))
+        answerPayload = { guesses: submittedGuesses.value }
     } else if (question.type === 'multi_select') {
-        // Strict equality check for arrays
-        const userIndices = Array.isArray(answerData) ? answerData : []
-        // Sort for comparison
-        const sortedUser = [...userIndices].sort((a, b) => a - b)
-        const sortedCorrect = [...(question.correctIndices || [])].sort((a, b) => a - b)
-
-        isCorrectAnswer = JSON.stringify(sortedUser) === JSON.stringify(sortedCorrect)
-        answerPayload = { answerIndices: userIndices }
-    } else if (question.type === 'range') {
-        const val = Number(answerData) || 0
-        answerPayload = { answerValue: val }
-
-        // Slider Scoring Logic
-        const correctValue = Number(question.correctValue !== undefined ? question.correctValue : 0)
-        const scoringConfig = question.scoringConfig || {}
-        const maxPoints = Number(scoringConfig.maxPoints) || 100
-        const tolerance = Number(scoringConfig.tolerance) || 0
-        const mode = scoringConfig.mode || 'symmetric'
-
-        const distance = Math.abs(val - correctValue)
-        let calculatedScore = 0
-
-        if (mode === 'asymmetric') {
-             // Price is Right style
-             if (val <= correctValue) {
-                 if (distance === 0) {
-                     calculatedScore = maxPoints
-                     isCorrectAnswer = true
-                 } else if (tolerance > 0 && distance <= tolerance) {
-                     // Linear dropoff
-                     calculatedScore = Math.round(maxPoints * Math.max(0, 1 - (distance / tolerance)))
-                     if (calculatedScore > 0) isCorrectAnswer = true
-                 }
-             } else {
-                 calculatedScore = 0
-                 isCorrectAnswer = false
-             }
-        } else {
-            // Symmetric
-             if (distance <= tolerance + 0.0001) { // Float safety
-                 if (distance === 0) {
-                     calculatedScore = maxPoints
-                 } else {
-                     calculatedScore = Math.round(maxPoints * Math.max(0, 1 - (distance / tolerance)))
-                 }
-                 isCorrectAnswer = calculatedScore > 0
-             }
-        }
-
-        // Override the generic time-based scoring for slider, or combine them?
-        // Plan says: "score = maxPoints * max(0, 1 - (distance / tolerance))"
-        // This implies distance is the main factor. Time might be secondary or ignored for slider?
-        // Let's assume the calculatedScore IS the score.
-        // But the generic logic below modifies `currentPoints`.
-        // We should signal this is a special case.
-
-        // Let's set a flag or just return early with the score?
-        // The generic logic below applies time decay to `baseScore`.
-        // Slider usually allows full time to think.
-        // Let's assume Slider Score is PURELY based on accuracy, not time.
-
-        currentPoints.value = calculatedScore
-        score.value += currentPoints.value
-        if (calculatedScore > 0) streak.value++
-        else streak.value = 0
-
-        isCorrect.value = isCorrectAnswer
-
-        // Send signal
-        const timeLimit = question.timeLimit || 20
-        const timeSpent = timeLimit - timeRemaining.value
-
-        const signal = {
-            questionIndex: currentQuestionIndex.value,
-            ...answerPayload,
-            scoreEarned: currentPoints.value,
-            timeSpent: timeSpent * 1000,
-            timestamp: Date.now(),
-        }
-        signalQueue.enqueue(signal)
-        return // Exit generic flow
-
-    } else if (question.type === 'number') {
-        const val = Number(answerData)
-        answerPayload = { answerValue: val }
-
-        // Binary scoring for number type
-        const correctNumber = Number(question.correctNumber || 0)
-        const maxPoints = Number(question.scoringConfig?.maxPoints || 1000)
-
-        isCorrectAnswer = val === correctNumber
-        currentPoints.value = isCorrectAnswer ? maxPoints : 0
-        score.value += currentPoints.value
-
-        if (isCorrectAnswer) streak.value++
-        else streak.value = 0
-
-        isCorrect.value = isCorrectAnswer
-
-        // Send signal
-        const timeLimit = question.timeLimit || 20
-        const timeSpent = timeLimit - timeRemaining.value
-
-        const signal = {
-            questionIndex: currentQuestionIndex.value,
-            ...answerPayload,
-            scoreEarned: currentPoints.value,
-            timeSpent: timeSpent * 1000,
-            timestamp: Date.now(),
-        }
-        signalQueue.enqueue(signal)
-        return // Exit generic flow
-
+        answerPayload = { answerIndices: Array.isArray(answerData) ? [...answerData] : [] }
+    } else if (question.type === 'range' || question.type === 'number') {
+        answerPayload = { answerValue: Number(answerData) }
     } else {
-        const idx = typeof answerData === 'number' ? answerData : -1
-        isCorrectAnswer = idx === question.correctIndex
-        answerPayload = { answerIndex: idx }
+        answerPayload = { answerIndex: Number(answerData) }
     }
-
-    isCorrect.value = isCorrectAnswer
-
-    // Calculate score based on time remaining and streak
-    const timeLimit = question.timeLimit || 20
-    const timeSpent = timeLimit - timeRemaining.value // Use actual time limit
-
-    if (isCorrectAnswer) {
-        // A7: time-decayed scoring honours the admin-configured maxPoints
-        // (instant answer = maxPoints, timer expiry = 25% of maxPoints).
-        currentPoints.value = calculateChoiceScore({
-            maxPoints: question.scoringConfig?.maxPoints,
-            timeLimit,
-            timeSpent,
-            streak: streak.value,
-        })
-        score.value += currentPoints.value
-        streak.value++
-    } else {
-        currentPoints.value = 0
-        streak.value = 0
-    }
-
-    // Send signal to server
-    const signal = {
+    const submissionId = newUUID()
+    pendingAnswerId.value = submissionId
+    answerStatus.value = 'Waiting for confirmation…'
+    signalQueue.enqueue({
+        submissionId,
+        runId: currentRunId.value,
         questionIndex: currentQuestionIndex.value,
         ...answerPayload,
-        scoreEarned: currentPoints.value,
-        timeSpent: timeSpent * 1000, // Convert to ms
-        timestamp: Date.now(),
-    }
-    signalQueue.enqueue(signal)
+    })
 }
 
 // Timer logic from countdown - REMOVED as server handles transition now
 
 // Timer logic for question phase
-const startLocalTimer = (timeLimit) => {
+const startLocalTimer = (timeLimit, serverDeadline = 0, serverNow = 0) => {
     clearInterval(timerInterval)
     timeRemaining.value = timeLimit
+	const offset = serverNow ? serverNow - Date.now() : 0
+    const deadline = serverDeadline ? serverDeadline - offset : Date.now() + timeLimit * 1000
     timerInterval = setInterval(() => {
-        timeRemaining.value--
+        timeRemaining.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
         if (timeRemaining.value <= 0) {
             clearInterval(timerInterval)
             autoSubmitOnTimeout()
@@ -851,7 +691,7 @@ onMounted(async () => {
 
     // Listen for WS updates
     quizWS.on('cmd:error', (payload) => {
-        if (payload?.code !== 'join_closed' && payload?.code !== 'join_failed') return
+        if (!['join_closed', 'join_failed', 'invalid_identity', 'upgrade_required'].includes(payload?.code)) return
         joinError.value = payload.message
         clearInterval(timerInterval)
         clearInterval(explainTimerInterval)
@@ -861,8 +701,13 @@ onMounted(async () => {
 
     quizWS.on('cmd:state', (payload) => {
         const newState = payload.state
+		const nextRunId = typeof payload.runId === 'string' ? payload.runId : currentRunId.value
+		const nextIndex = Number.isInteger(payload.currentIndex) ? payload.currentIndex : currentQuestionIndex.value
+		const questionChanged = nextRunId !== currentRunId.value || nextIndex !== currentQuestionIndex.value
+		currentRunId.value = nextRunId
+		currentQuestionIndex.value = nextIndex
 
-        if (newState === States.GET_READY || newState === States.QUESTION_PRESENTING) {
+        if (questionChanged && (newState === States.GET_READY || newState === States.QUESTION_PRESENTING || newState === States.QUESTION_ACTIVE)) {
             // "Get Ready" / "Presenting" phase - Server drives transition now
 
             // Update question index if provided
@@ -879,6 +724,9 @@ onMounted(async () => {
                 rangeValue.value = cachedQuestion.rangeConfig?.minValue ?? 0
             }
             hasSubmitted.value = false
+			pendingAnswerId.value = null
+			answerStatus.value = ''
+			submittedGuesses.value = []
             isCorrect.value = false
             currentPoints.value = 0
 
@@ -917,11 +765,12 @@ onMounted(async () => {
             }
         }
 
-        if (canTransition(newState)) {
-            transition(newState, payload)
+        if (newState === States.QUESTION_ACTIVE && hasSubmitted.value && !questionChanged) return
+		if (Object.values(States).includes(newState)) {
+            transition(newState, payload, { authoritative: true })
 
             if (newState === States.QUESTION_ACTIVE) {
-                 startLocalTimer(payload?.timeLimit || 20)
+				 startLocalTimer(payload?.timeLimit || 20, payload?.deadline, payload?.serverNow)
             } else if (newState === States.QUESTION_PRESENTING) {
                  startExplainTimer(payload?.timeLimit || 5)
             }
@@ -940,6 +789,32 @@ onMounted(async () => {
         requestedBatchIndexes.add(batch.batchIndex)
         questionCacheVersion.value++
     })
+
+    quizWS.on('data:reveal', (payload) => {
+        const question = questionCache.get(payload.questionIndex)
+        if (!question) return
+        Object.assign(question, payload)
+		if (question.type === 'wrong_pictures' && payload.questionIndex === currentQuestionIndex.value) {
+			const config = question.wrongPictureConfig || { targets: [], maxPoints: 0, tolerancePercent: 0 }
+			const review = calculateTotalScore(submittedGuesses.value, config.targets || [], config, wpAspectRatio.value)
+			wrongPictureReview.value = createWrongPictureReview(question, { ...review, totalScore: currentPoints.value })
+		}
+        questionCacheVersion.value++
+    })
+
+	quizWS.on('answer:ack', (payload) => {
+		if (payload?.submissionId !== pendingAnswerId.value || payload.questionIndex !== currentQuestionIndex.value || payload.runId !== currentRunId.value) return
+		pendingAnswerId.value = null
+		if (!payload.accepted) {
+			answerStatus.value = `Answer rejected: ${payload.reason || 'please try again'}`
+			return
+		}
+		answerStatus.value = 'Answer confirmed'
+		currentPoints.value = payload.awarded || 0
+		if (Number.isFinite(payload.total)) score.value = payload.total
+		if (Number.isInteger(payload.streak)) streak.value = payload.streak
+		isCorrect.value = currentPoints.value > 0
+	})
 
     quizWS.on('sync:catchup', (payload) => {
         // Handle reconnection catchup
@@ -960,6 +835,7 @@ onMounted(async () => {
     })
 
     quizWS.on('open', () => {
+		connectionReady.value = true
         if (hasOpenedOnce) {
             quizWS.send('player:reconnect', {
                 moduleId,
@@ -970,6 +846,7 @@ onMounted(async () => {
         }
         hasOpenedOnce = true
     })
+	quizWS.on('disconnect', () => { connectionReady.value = false })
 
     quizWS.on('state:update', (session) => {
         const playersMap = session.Players || session.players
@@ -986,12 +863,14 @@ onMounted(async () => {
             score.value = me.score
 
             const sorted = players.sort((a, b) => b.score - a.score)
-            rank.value = sorted.findIndex(p => p.id === me.id) + 1
+            rank.value = Number.isInteger(session.rank) && session.rank > 0
+                ? session.rank : sorted.findIndex(p => p.id === me.id) + 1
         }
     })
 })
 
 onUnmounted(() => {
+    aspectLoadGeneration++
     clearInterval(timerInterval)
     clearInterval(explainTimerInterval)
     clearTimeout(confirmSelectionTimeout)
@@ -1001,6 +880,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.connection-status {
+    position: absolute;
+    z-index: 30;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    text-align: center;
+    background: #5b3300;
+    color: white;
+}
 .quiz-player-screen {
     width: 100vw;
     height: 100vh;
