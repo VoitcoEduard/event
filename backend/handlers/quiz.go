@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -200,7 +201,6 @@ func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	moduleID := parts[4]
-
 	session := h.deps.QuizHub.GetSession(moduleID)
 	if session == nil {
 		http.Error(w, "Quiz not active", http.StatusBadRequest)
@@ -247,6 +247,15 @@ func (h *Handler) GetQuizResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	moduleID := parts[4]
+	eventID := parts[2]
+	if h.deps.Modules == nil {
+		http.Error(w, "Module service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if _, err := h.deps.Modules.Get(r.Context(), eventID, moduleID); err != nil {
+		http.NotFound(w, r)
+		return
+	}
 
 	session := h.deps.QuizHub.GetSession(moduleID)
 	if session == nil {
@@ -255,7 +264,32 @@ func (h *Handler) GetQuizResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(session)
+	w.Header().Set("Cache-Control", "private, no-store")
+	if h.isAdmin(r) {
+		json.NewEncoder(w).Encode(session)
+		return
+	}
+	response := map[string]any{"state": session.State, "currentIndex": session.CurrentIndex, "playerCount": len(session.Players), "answerCounts": session.AnswerCounts}
+	if session.State == "finished" {
+		type standing struct {
+			Nickname string `json:"nickname"`
+			Score    int    `json:"score"`
+		}
+		leaderboard := make([]standing, 0, len(session.Players))
+		for _, player := range session.Players {
+			if player != nil {
+				leaderboard = append(leaderboard, standing{player.Nickname, player.Score})
+			}
+		}
+		sort.Slice(leaderboard, func(i, j int) bool {
+			if leaderboard[i].Score != leaderboard[j].Score {
+				return leaderboard[i].Score > leaderboard[j].Score
+			}
+			return leaderboard[i].Nickname < leaderboard[j].Nickname
+		})
+		response["leaderboard"] = leaderboard
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 // ResetQuiz - POST /events/{id}/modules/{moduleId}/quiz/reset

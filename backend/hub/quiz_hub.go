@@ -253,6 +253,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		log.Println("Error unmarshalling message:", err)
 		return
 	}
+	// A new role or subscription must never inherit a previous player claim.
+	if strings.HasSuffix(msg.Type, ":join") || strings.HasSuffix(msg.Type, "_join") {
+		h.mu.Lock()
+		client.quizBinding = nil
+		h.mu.Unlock()
+	}
 	// Resolve against PostgreSQL before taking the hub lock. A client-provided role
 	// or an earlier host join never authorizes a later privileged message.
 	if strings.HasPrefix(msg.Type, "host:") || msg.Type == "teams:admin_join" || msg.Type == "simple:host_join" {

@@ -93,10 +93,27 @@ func (h *Handler) UpdateParticipantName(w http.ResponseWriter, r *http.Request) 
 
 	var input struct {
 		DisplayName string `json:"displayName"`
+		JoinSecret  string `json:"joinSecret"`
 	}
-
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
+	if !h.isAdmin(r) {
+		if h.deps.DB == nil {
+			http.Error(w, "Participant verification unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		hasProof, valid, err := h.deps.DB.CheckParticipantProof(r.Context(), eventID, userID, input.JoinSecret)
+		if err != nil && !errors.Is(err, database.ErrNotFound) {
+			writeRequestError(w, err, http.StatusServiceUnavailable)
+			return
+		}
+		if !hasProof || !valid {
+			http.Error(w, "Invalid participant credentials", http.StatusForbidden)
+			return
+		}
+	} else if _, _, ok := h.deps.Auth.Authorize(w, r, false); !ok {
 		return
 	}
 

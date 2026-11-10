@@ -37,7 +37,7 @@ func quizBenchmarkFixture(players, history int, moduleID string) (*QuizHub, []*C
 	for p := range clients {
 		id := fmt.Sprintf("player-%03d", p)
 		s.Players[id] = &models.Player{ID: id, Nickname: id}
-		clients[p] = &Client{ModuleID: moduleID, PlayerID: id, send: make(chan []byte, 4)}
+		clients[p] = &Client{ModuleID: moduleID, PlayerID: id, quizBinding: &quizPlayerBinding{eventID: "bench-event", moduleID: moduleID, playerID: id}, send: make(chan []byte, 4)}
 		h.clients[clients[p]] = true
 		for q := 0; q < history; q++ {
 			s.PlayerSignals = append(s.PlayerSignals, models.PlayerSignal{PlayerID: id, QuestionIndex: q, ScoreEarned: 625, TimeSpent: 10000, AnswerIndices: []int{0}, Status: "on_time"})

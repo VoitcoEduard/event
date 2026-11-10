@@ -47,7 +47,7 @@ func TestReconnectDoesNotDuplicateHistory(t *testing.T) {
 	s.Players["p"] = &models.Player{ID: "p", Nickname: "P"}
 	s.PlayerSignals = []models.PlayerSignal{{PlayerID: "p", QuestionIndex: 1, AnswerIndex: 2}}
 	h.mu.Unlock()
-	c := &Client{ModuleID: "m", PlayerID: "p", send: make(chan []byte, 5)}
+	c := &Client{ModuleID: "m", PlayerID: "p", quizBinding: &quizPlayerBinding{eventID: "e", moduleID: "m", playerID: "p"}, send: make(chan []byte, 5)}
 	msg := []byte(`{"type":"player:reconnect","payload":{"moduleId":"m","lastKnownQuestionIndex":0}}`)
 	h.ProcessMessage(c, msg)
 	h.ProcessMessage(c, msg)

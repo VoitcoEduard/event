@@ -15,6 +15,7 @@ import (
 
 // Resolve the event and participant before taking the shared hub lock.
 func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMessage) {
+	var binding *quizPlayerBinding
 	if h.db != nil {
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
@@ -45,6 +46,7 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "invalid_identity", "message": "Join the event again to verify this player identity."}}))
 			return
 		}
+		binding = &quizPlayerBinding{eventID: event.ID, moduleID: moduleID, playerID: userID}
 		h.mu.RLock()
 		canJoin := h.canJoinQuizLocked(moduleID, userID)
 		if session := h.sessions[moduleID]; canJoin && session != nil && (session.State == "finishing" || session.State == "finished") {
@@ -65,6 +67,9 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.processPlayerJoin(client, msg)
+	if binding != nil && client.ModuleID == binding.moduleID && client.PlayerID == binding.playerID {
+		client.quizBinding = binding
+	}
 }
 
 // Call with h.mu held. Reconnects may read finished results, but must not
@@ -183,7 +188,7 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 }
 
 func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
-	if client.IsHost {
+	if client.quizBinding == nil || client.quizBinding.moduleID != client.ModuleID || client.quizBinding.playerID != client.PlayerID {
 		DebugLog("player:signal rejected - client is host")
 		return
 	}
@@ -204,6 +209,9 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 	DebugLog("player:signal: User=%s, Q=%d", client.PlayerID, questionIndex)
 
 	session := h.sessions[client.ModuleID]
+	if session != nil && client.quizBinding.eventID != session.EventID {
+		return
+	}
 	if session != nil && session.State == "finishing" {
 		return
 	}
@@ -405,7 +413,7 @@ func (h *QuizHub) processPlayerBatchRequest(client *Client, msg ClientMessage) {
 }
 
 func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
-	if client.IsHost {
+	if client.quizBinding == nil || client.quizBinding.moduleID != client.ModuleID || client.quizBinding.playerID != client.PlayerID {
 		return
 	}
 	// Payload: { "moduleId": "...", "nickname": "...", "lastKnownQuestionIndex": 0, "lastKnownState": "question" }
@@ -425,6 +433,9 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 	}
 
 	session := h.sessions[moduleID]
+	if session != nil && client.quizBinding.eventID != session.EventID {
+		return
+	}
 	if session == nil {
 		h.sendToClientLocked(client, mustMarshal(ServerMessage{
 			Type:    "sync:quiz_ended",

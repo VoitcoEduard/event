@@ -32,7 +32,7 @@ func newSignalHub(t *testing.T) (*QuizHub, *Client) {
 	}}
 	s.Players["p1"] = &models.Player{ID: "p1", Nickname: "P"}
 	h.mu.Unlock()
-	return h, &Client{ModuleID: "m1", PlayerID: "p1"}
+	return h, &Client{ModuleID: "m1", PlayerID: "p1", quizBinding: &quizPlayerBinding{eventID: "e1", moduleID: "m1", playerID: "p1"}}
 }
 
 func send(h *QuizHub, c *Client, payload string) {
@@ -173,7 +173,7 @@ func TestStartQuizMissingTimeLimitGetsDefaultWindow(t *testing.T) {
 	h.sessions["m-time"].State = "question-active"
 	runID := h.sessions["m-time"].RunID
 	h.mu.Unlock()
-	h.ProcessMessage(&Client{ModuleID: "m-time", PlayerID: "p1"},
+	h.ProcessMessage(&Client{ModuleID: "m-time", PlayerID: "p1", quizBinding: &quizPlayerBinding{eventID: "event-1", moduleID: "m-time", playerID: "p1"}},
 		[]byte(fmt.Sprintf(`{"type":"player:signal","payload":{"questionIndex":0,"answerIndex":0,"submissionId":"00000000-0000-4000-8000-000000000001","runId":%q}}`, runID)))
 	h.mu.RLock()
 	defer h.mu.RUnlock()

@@ -21,7 +21,7 @@ import (
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
-const schemaVersion int64 = 1
+const schemaVersion int64 = 2
 const migrationLockID int64 = 0x70676d6967726174
 
 // Store owns the connection pool. Construct one per application and close it at shutdown.

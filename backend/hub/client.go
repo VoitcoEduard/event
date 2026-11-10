@@ -51,7 +51,10 @@ type Client struct {
 	IsProjector  bool   // True if this client is a projector display
 	IsTeamsAdmin bool   // True if this client is a teams admin
 	AdminToken   string
+	quizBinding  *quizPlayerBinding
 }
+
+type quizPlayerBinding struct{ eventID, moduleID, playerID string }
 
 // readPump pumps messages from the websocket connection to the hub.
 //
