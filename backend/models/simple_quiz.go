@@ -70,11 +70,12 @@ type SimpleQuizGradeHistoryEntry struct {
 
 // SimpleQuizGrade is the current verdict for one answer.
 type SimpleQuizGrade struct {
-	AnswerID  string                        `json:"answerId"`
-	Verdict   string                        `json:"verdict"` // right | wrong | review_later
-	UpdatedAt time.Time                     `json:"updatedAt"`
-	UpdatedBy string                        `json:"updatedBy"`
-	History   []SimpleQuizGradeHistoryEntry `json:"history"`
+	AnswerID   string                        `json:"answerId"`
+	Verdict    string                        `json:"verdict"` // right | wrong | review_later
+	MutationID string                        `json:"mutationId,omitempty"`
+	UpdatedAt  time.Time                     `json:"updatedAt"`
+	UpdatedBy  string                        `json:"updatedBy"`
+	History    []SimpleQuizGradeHistoryEntry `json:"history"`
 }
 
 // SimpleQuizPerQuestionResult is one cell of working/published results.
@@ -185,7 +186,7 @@ func (s *SimpleQuizSession) ComputeWorkingResults() []SimpleQuizPlayerResult {
 				continue
 			}
 			g, ok := s.Grades[ans.ID]
-			if !ok || g.Verdict == SimpleQuizVerdictReviewLater {
+			if !ok || g.Verdict == "" || g.Verdict == SimpleQuizVerdictReviewLater {
 				row.PerQuestion[qi] = SimpleQuizPerQuestionResult{QuestionIndex: qi, Verdict: SimpleQuizVerdictReviewLater}
 				continue
 			}

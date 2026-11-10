@@ -267,16 +267,17 @@ func runLoad(o options) (r report) {
 				time.Sleep(time.Duration(int64(o.spread) * int64(i) / int64(o.players)))
 			}
 			id := fmt.Sprintf("%s-%03d", runID, i)
+			secret := ""
 			joinStart := time.Now()
 			if o.registerURL != "" {
 				var err error
-				id, err = registerParticipant(registrationClient, o.registerURL, id)
+				id, secret, err = registerParticipant(registrationClient, o.registerURL, id)
 				if err != nil {
 					joins.fail()
 					return
 				}
 			}
-			c, elapsed, err := joinPlayer(o.wsURL, o.origin, o.module, id, o.timeout)
+			c, elapsed, err := joinPlayer(o.wsURL, o.origin, o.module, id, secret, o.timeout)
 			if err != nil {
 				joins.fail()
 				return
@@ -457,24 +458,25 @@ func validResponse(headers http.Header) bool {
 	return contentType != "" // includes JSON, image, audio and binary media types
 }
 
-func registerParticipant(client *http.Client, endpoint, name string) (string, error) {
+func registerParticipant(client *http.Client, endpoint, name string) (string, string, error) {
 	body, _ := json.Marshal(map[string]string{"joinKey": name, "displayName": name})
 	response, err := client.Post(endpoint, "application/json", bytes.NewReader(body))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("participant registration: HTTP %d", response.StatusCode)
+		return "", "", fmt.Errorf("participant registration: HTTP %d", response.StatusCode)
 	}
 	var p struct {
-		ID string `json:"id"`
+		ID         string `json:"id"`
+		JoinSecret string `json:"joinSecret"`
 	}
 	if err := json.NewDecoder(io.LimitReader(response.Body, 1024*1024)).Decode(&p); err != nil {
-		return "", err
+		return "", "", err
 	}
-	if p.ID == "" {
-		return "", errors.New("participant registration returned no ID")
+	if p.ID == "" || p.JoinSecret == "" {
+		return "", "", errors.New("participant registration returned no ID or secret")
 	}
-	return p.ID, nil
+	return p.ID, p.JoinSecret, nil
 }

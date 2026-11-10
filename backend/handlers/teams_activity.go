@@ -205,7 +205,7 @@ func (h *Handler) GetTeamsActivityAdmin(w http.ResponseWriter, r *http.Request) 
 		teamsFailure(w, err)
 		return
 	}
-	if a.ID == "" {
+	if a != nil && a.ID == "" {
 		a = nil
 	}
 	writeJSON(w, map[string]any{"activity": a, "module": module, "participants": people, "legacyTeams": legacy})

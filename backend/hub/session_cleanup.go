@@ -14,6 +14,7 @@ func (h *QuizHub) ForgetModuleSessions(moduleID string) {
 		timer.Stop()
 	}
 	delete(h.simpleQuizTimers, moduleID)
+	h.simpleQuizTimerGeneration[moduleID]++
 	delete(h.sessions, moduleID)
 	delete(h.simpleQuizSessions, moduleID)
 	delete(h.simpleQuizUndo, moduleID)

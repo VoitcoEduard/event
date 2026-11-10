@@ -16,22 +16,35 @@ import (
 )
 
 func fixtureOptions(wsURL string) options {
-	return options{wsURL: wsURL, module: "test", mode: "burst", players: 5,
+	return options{wsURL: wsURL, registerURL: "http" + strings.TrimPrefix(strings.TrimSuffix(wsURL, "/ws"), "ws") + "/events/event/participants/join", module: "test", mode: "burst", players: 5,
 		timeout: 2 * time.Second, pollInterval: 5 * time.Millisecond, hold: 20 * time.Millisecond,
 		maxBurst: time.Second, maxJoinP95: time.Second, maxPollP95: time.Second, requireActive: true}
+}
+
+type fixtureIdentity struct{ participants *sync.Map }
+
+func (f fixtureIdentity) GetEventByModule(_ context.Context, module string) (*models.Event, error) {
+	return &models.Event{ID: "event", IsActive: true, Modules: []models.Module{{ID: module, Type: models.ModuleTypeQuiz}}}, nil
+}
+func (f fixtureIdentity) CheckParticipantProof(_ context.Context, event, id, secret string) (bool, bool, error) {
+	_, ok := f.participants.Load(id)
+	return ok, ok && event == "event" && secret == "secret-"+id, nil
+}
+func (f fixtureIdentity) EnsureParticipant(_ context.Context, p *models.Participant) (*models.Participant, error) {
+	return p, nil
 }
 
 func loadTestServer(t *testing.T) (*httptest.Server, *hub.QuizHub) {
 	t.Helper()
 	service := &auth.Service{}
-	h := hub.NewQuizHub(hub.Dependencies{AuthService: service})
+	var participants sync.Map
+	h := hub.NewQuizHub(hub.Dependencies{AuthService: service, PlayerIdentity: fixtureIdentity{participants: &participants}})
 	h.CreateSession("test", "event")
 	h.UpdateSession("test", func(s *models.QuizSession) {
 		s.State = "question-active"
 		s.Questions = []models.QuizQuestion{{Type: models.QuestionTypeClassic, Answers: []string{"A", "B"}, TimeLimit: 120, CorrectIndex: 0}}
 		s.QuestionWindows = []models.QuestionWindow{{StartTime: time.Now().Unix(), EndTime: time.Now().Unix() + 120, GraceEndTime: time.Now().Unix() + 122}}
 	})
-	var participants sync.Map
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { hub.ServeWs(h, w, r) })
 	mux.HandleFunc("POST /events/event/participants/join", func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +56,7 @@ func loadTestServer(t *testing.T) (*httptest.Server, *hub.QuizHub) {
 		participants.Store(id, true)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": id, "joinSecret": "secret-" + id})
 	})
 	mux.HandleFunc("GET /events/event", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

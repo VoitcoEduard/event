@@ -94,15 +94,27 @@ func (s *Store) MarkMediaDeleted(ctx context.Context, id string) error {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	tag, err := tx.Exec(ctx, `UPDATE media SET deleted_at=now() WHERE id=$1 AND deleted_at IS NULL`, id)
-	if err = affected(tag, err); err != nil {
-		return err
+	var exists bool
+	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM media WHERE id=$1 AND deleted_at IS NULL)`, id).Scan(&exists); err != nil {
+		return translate(err)
+	}
+	if !exists {
+		return ErrNotFound
 	}
 	if _, err = tx.Exec(ctx, `DELETE FROM screensavers WHERE media_id=$1`, id); err != nil {
 		return translate(err)
 	}
 	if _, err = tx.Exec(ctx, `DELETE FROM tracks WHERE media_id=$1`, id); err != nil {
 		return translate(err)
+	}
+	if err = retireUnreferencedMedia(ctx, tx, []string{id}); err != nil {
+		return err
+	}
+	if err = tx.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM media WHERE id=$1`, id).Scan(&exists); err != nil {
+		return translate(err)
+	}
+	if !exists {
+		return ErrConflict
 	}
 	return translate(tx.Commit(ctx))
 }
@@ -165,8 +177,15 @@ func (s *Store) DeleteLibraryMedia(ctx context.Context, library, id string) (str
 	if _, err = tx.Exec(ctx, `DELETE FROM screensavers WHERE media_id=$1`, mediaID); err != nil {
 		return "", translate(err)
 	}
-	if _, err = tx.Exec(ctx, `UPDATE media SET deleted_at=COALESCE(deleted_at,now()) WHERE id=$1`, mediaID); err != nil {
+	if err = retireUnreferencedMedia(ctx, tx, []string{mediaID}); err != nil {
+		return "", err
+	}
+	var deleted bool
+	if err = tx.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM media WHERE id=$1`, mediaID).Scan(&deleted); err != nil {
 		return "", translate(err)
+	}
+	if !deleted {
+		return "", ErrConflict
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return "", translate(err)

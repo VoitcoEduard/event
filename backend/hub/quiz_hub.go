@@ -89,6 +89,7 @@ func CalculateBatches(questions []models.QuizQuestion) []models.QuestionBatch {
 // clients.
 type QuizHub struct {
 	db              *postgres.Store
+	playerIdentity  PlayerIdentityStore
 	simpleQuizLocks [256]sync.Mutex
 	authService     *auth.Service
 	quizResults     *services.QuizResultService
@@ -109,18 +110,26 @@ type QuizHub struct {
 	// Per-judge undo stacks (moduleID -> judgeKey -> stack of undo entries)
 	simpleQuizUndo map[string]map[string][]simpleQuizUndoEntry
 	// Active auto-lock timers (moduleID -> timer)
-	simpleQuizTimers map[string]*time.Timer
+	simpleQuizTimers          map[string]*time.Timer
+	simpleQuizTimerGeneration map[string]uint64
 
 	// Mutex for thread-safe access
 	mu sync.RWMutex
 }
 
+type PlayerIdentityStore interface {
+	GetEventByModule(context.Context, string) (*models.Event, error)
+	CheckParticipantProof(context.Context, string, string, string) (bool, bool, error)
+	EnsureParticipant(context.Context, *models.Participant) (*models.Participant, error)
+}
+
 type Dependencies struct {
-	DB          *postgres.Store
-	AuthService *auth.Service
-	Events      *services.EventService
-	Teams       *database.TeamRepository
-	QuizResults *services.QuizResultService
+	DB             *postgres.Store
+	PlayerIdentity PlayerIdentityStore
+	AuthService    *auth.Service
+	Events         *services.EventService
+	Teams          *database.TeamRepository
+	QuizResults    *services.QuizResultService
 }
 
 func (h *QuizHub) AdminActive(token string) bool {
@@ -134,16 +143,22 @@ func (h *QuizHub) AdminActive(token string) bool {
 }
 
 func NewQuizHub(deps Dependencies) *QuizHub {
+	identity := deps.PlayerIdentity
+	if identity == nil && deps.DB != nil {
+		identity = deps.DB
+	}
 	h := &QuizHub{
-		db:                 deps.DB,
-		authService:        deps.AuthService,
-		quizResults:        deps.QuizResults,
-		clients:            make(map[*Client]bool),
-		sessions:           make(map[string]*models.QuizSession),
-		quizTimers:         make(map[string]*quizTransition),
-		simpleQuizSessions: make(map[string]*models.SimpleQuizSession),
-		simpleQuizUndo:     make(map[string]map[string][]simpleQuizUndoEntry),
-		simpleQuizTimers:   make(map[string]*time.Timer),
+		db:                        deps.DB,
+		playerIdentity:            identity,
+		authService:               deps.AuthService,
+		quizResults:               deps.QuizResults,
+		clients:                   make(map[*Client]bool),
+		sessions:                  make(map[string]*models.QuizSession),
+		quizTimers:                make(map[string]*quizTransition),
+		simpleQuizSessions:        make(map[string]*models.SimpleQuizSession),
+		simpleQuizUndo:            make(map[string]map[string][]simpleQuizUndoEntry),
+		simpleQuizTimers:          make(map[string]*time.Timer),
+		simpleQuizTimerGeneration: make(map[string]uint64),
 	}
 	if deps.Events != nil {
 		h.eventByModule = deps.Events.GetByModule

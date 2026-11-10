@@ -64,7 +64,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { uploadImage, getImageUrl, deleteImage } from '../services/media'
+import { uploadImage, getImageUrl } from '../services/media'
 import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
@@ -142,14 +142,6 @@ async function uploadFile(file) {
 
 async function removeImage() {
   if (props.disabled) return
-  
-  if (props.modelValue) {
-    try {
-      await deleteImage(props.modelValue)
-    } catch (error) {
-      console.warn('Could not delete image from server:', error)
-    }
-  }
   
   emit('update:modelValue', null)
   emit('update:altText', '')

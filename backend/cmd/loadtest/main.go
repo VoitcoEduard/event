@@ -122,13 +122,13 @@ func waitForState(c *client, timeout time.Duration) (string, error) {
 	}
 }
 
-func joinPlayer(wsURL, origin, moduleID, id string, timeout time.Duration) (*client, time.Duration, error) {
+func joinPlayer(wsURL, origin, moduleID, id, secret string, timeout time.Duration) (*client, time.Duration, error) {
 	started := time.Now()
 	c, err := newClient(wsURL, origin, timeout)
 	if err != nil {
 		return nil, 0, err
 	}
-	if err := c.send("player:join", map[string]any{"moduleId": moduleID, "nickname": id, "userId": id}); err != nil {
+	if err := c.send("player:join", map[string]any{"moduleId": moduleID, "nickname": id, "userId": id, "participantSecret": secret}); err != nil {
 		c.close()
 		return nil, 0, err
 	}

@@ -3,6 +3,7 @@ package hub
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,13 +17,15 @@ import (
 )
 
 type simpleQuizUndoEntry struct {
-	AnswerID   string    `json:"answerId"`
-	Prev       string    `json:"prev"`
-	PrevBy     string    `json:"prevBy"`
-	PrevAt     time.Time `json:"prevAt"`
-	NewVerdict string    `json:"newVerdict"`
-	At         time.Time `json:"at"`
-	By         string    `json:"by"`
+	AnswerID       string    `json:"answerId"`
+	Prev           string    `json:"prev"`
+	PrevBy         string    `json:"prevBy"`
+	PrevAt         time.Time `json:"prevAt"`
+	PrevMutationID string    `json:"prevMutationId"`
+	MutationID     string    `json:"mutationId"`
+	NewVerdict     string    `json:"newVerdict"`
+	At             time.Time `json:"at"`
+	By             string    `json:"by"`
 }
 
 // GenerateJudgeToken creates an unguessable token for secret judge links.
@@ -107,6 +110,7 @@ func (h *QuizHub) TrySetSimpleQuiz(s *models.SimpleQuizSession) error {
 		h.simpleQuizSessions[s.ModuleID] = next
 		delete(h.simpleQuizUndo, s.ModuleID)
 		h.mu.Unlock()
+		h.reconcileSimpleQuizTimer(next)
 	}
 	lock.Unlock()
 	if err == nil {
@@ -136,6 +140,7 @@ func (h *QuizHub) tryUpdateSimpleLocked(ctx context.Context, moduleID string, fn
 	h.mu.Lock()
 	h.simpleQuizSessions[moduleID] = next
 	h.mu.Unlock()
+	h.reconcileSimpleQuizTimer(next)
 	return copySimple(next)
 }
 
@@ -207,29 +212,40 @@ func (h *QuizHub) BroadcastSimpleQuiz(moduleID string) {
 }
 
 func (h *QuizHub) scheduleSimpleQuizAutoLock(moduleID string, deadlineUnix int64) {
-	h.mu.Lock()
-	if h.closed || h.simpleQuizSessions[moduleID] == nil {
-		h.mu.Unlock()
-		return
+	h.mu.RLock()
+	s := h.simpleQuizSessions[moduleID]
+	h.mu.RUnlock()
+	if s != nil {
+		h.reconcileSimpleQuizTimer(s)
 	}
+}
+
+func (h *QuizHub) reconcileSimpleQuizTimer(s *models.SimpleQuizSession) {
+	moduleID := s.ModuleID
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	if t, ok := h.simpleQuizTimers[moduleID]; ok && t != nil {
 		t.Stop()
 	}
-	delay := time.Until(time.Unix(deadlineUnix, 0))
-	if delay <= 0 {
-		h.mu.Unlock()
-		go h.autoLockSimpleQuiz(moduleID)
+	delete(h.simpleQuizTimers, moduleID)
+	h.simpleQuizTimerGeneration[moduleID]++
+	generation := h.simpleQuizTimerGeneration[moduleID]
+	if h.closed || s.Status != models.SimpleQuizStateQuestionOpen || s.DeadlineUnix <= 0 {
 		return
 	}
-	mID := moduleID
+	created, opened, index, deadline := s.CreatedAt, s.QuestionOpenedAt, s.CurrentIndex, s.DeadlineUnix
+	delay := time.Until(time.Unix(deadline, 0))
+	if delay < 0 {
+		delay = 0
+	}
 	h.simpleQuizTimers[moduleID] = time.AfterFunc(delay, func() {
-		h.autoLockSimpleQuiz(mID)
+		h.autoLockSimpleQuiz(moduleID, generation, created, opened, index, deadline)
 	})
-	h.mu.Unlock()
 }
 
 func (h *QuizHub) cancelSimpleQuizTimer(moduleID string) {
 	h.mu.Lock()
+	h.simpleQuizTimerGeneration[moduleID]++
 	if t, ok := h.simpleQuizTimers[moduleID]; ok && t != nil {
 		t.Stop()
 		delete(h.simpleQuizTimers, moduleID)
@@ -237,22 +253,32 @@ func (h *QuizHub) cancelSimpleQuizTimer(moduleID string) {
 	h.mu.Unlock()
 }
 
-func (h *QuizHub) autoLockSimpleQuiz(moduleID string) {
+func (h *QuizHub) autoLockSimpleQuiz(moduleID string, generation uint64, created, opened time.Time, index int, deadline int64) {
+	lock := h.simpleLock(moduleID)
+	lock.Lock()
+	defer lock.Unlock()
 	h.mu.RLock()
-	closed := h.closed
+	closed := h.closed || h.simpleQuizTimerGeneration[moduleID] != generation
 	h.mu.RUnlock()
 	if closed {
 		return
 	}
-	_, err := h.TryUpdateSimpleQuiz(moduleID, func(s *models.SimpleQuizSession) {
-		if s.Status == models.SimpleQuizStateQuestionOpen {
-			s.Status = models.SimpleQuizStateAnswersLocked
-			s.DeadlineUnix = 0
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := h.tryUpdateSimpleLocked(ctx, moduleID, func(s *models.SimpleQuizSession) error {
+		if s.Status != models.SimpleQuizStateQuestionOpen || !s.CreatedAt.Equal(created) || !s.QuestionOpenedAt.Equal(opened) || s.CurrentIndex != index || s.DeadlineUnix != deadline {
+			return errNoSimpleChange
 		}
+		s.Status = models.SimpleQuizStateAnswersLocked
+		s.DeadlineUnix = 0
+		return nil
 	})
-	if err != nil && !errors.Is(err, postgres.ErrNotFound) {
+	if err == nil {
+		go h.BroadcastSimpleQuiz(moduleID)
+	}
+	if err != nil && !errors.Is(err, postgres.ErrNotFound) && !errors.Is(err, errNoSimpleChange) {
 		slog.Error("simple quiz auto-lock failed", "module", moduleID, "error", err)
-		time.AfterFunc(time.Second, func() { h.autoLockSimpleQuiz(moduleID) })
+		time.AfterFunc(time.Second, func() { h.autoLockSimpleQuiz(moduleID, generation, created, opened, index, deadline) })
 	}
 }
 
@@ -410,7 +436,12 @@ func (h *QuizHub) processSimplePlayerJoin(client *Client, msg ClientMessage) {
 	data, _ := msg.Payload.(map[string]interface{})
 	moduleID, _ := data["moduleId"].(string)
 	playerID, _ := data["playerId"].(string)
+	secret, _ := data["secret"].(string)
 	if moduleID == "" || !h.simpleJoinModule(moduleID) {
+		return
+	}
+	s := h.GetSimpleQuiz(moduleID)
+	if s == nil || secret == "" || s.Players[playerID] == nil || subtle.ConstantTimeCompare([]byte(s.Players[playerID].Secret), []byte(secret)) != 1 {
 		return
 	}
 	h.mu.Lock()
@@ -420,10 +451,6 @@ func (h *QuizHub) processSimplePlayerJoin(client *Client, msg ClientMessage) {
 	client.IsProjector = false
 	client.PlayerID = playerID
 	h.mu.Unlock()
-	s := h.GetSimpleQuiz(moduleID)
-	if s == nil {
-		return
-	}
 	h.sendToClient(client, mustMarshal(ServerMessage{Type: "simple:state", Payload: simpleStatePayload(s)}))
 }
 

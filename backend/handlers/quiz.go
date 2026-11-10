@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -9,8 +10,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/services"
 )
 
 // UpdateQuizQuestions - PUT /events/{id}/modules/{moduleId}/quiz/questions
@@ -253,7 +256,11 @@ func (h *Handler) GetQuizResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := h.deps.Modules.Get(r.Context(), eventID, moduleID); err != nil {
-		http.NotFound(w, r)
+		if errors.Is(err, database.ErrNotFound) || errors.Is(err, services.ErrModuleNotFound) {
+			http.NotFound(w, r)
+		} else {
+			writeRequestError(w, err, http.StatusServiceUnavailable)
+		}
 		return
 	}
 

@@ -16,7 +16,7 @@ import (
 // Resolve the event and participant before taking the shared hub lock.
 func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMessage) {
 	var binding *quizPlayerBinding
-	if h.db != nil {
+	if h.playerIdentity != nil {
 		data, ok := msg.Payload.(map[string]interface{})
 		if !ok {
 			return
@@ -30,15 +30,25 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		event, err := h.db.GetEventByModule(ctx, moduleID)
+		event, err := h.playerIdentity.GetEventByModule(ctx, moduleID)
 		if err != nil {
+			return
+		}
+		quizModule := false
+		for _, module := range event.Modules {
+			if module.ID == moduleID && module.Type == models.ModuleTypeQuiz {
+				quizModule = true
+				break
+			}
+		}
+		if !quizModule {
 			return
 		}
 		if !event.IsActive {
 			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This event is not accepting players."}}))
 			return
 		}
-		hasProof, validProof, proofErr := h.db.CheckParticipantProof(ctx, event.ID, userID, participantSecret)
+		hasProof, validProof, proofErr := h.playerIdentity.CheckParticipantProof(ctx, event.ID, userID, participantSecret)
 		if proofErr != nil && !errors.Is(proofErr, postgres.ErrNotFound) {
 			return
 		}
@@ -58,7 +68,7 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 			return
 		}
 		now := time.Now().UTC()
-		_, err = h.db.EnsureParticipant(ctx, &models.Participant{ID: userID, EventID: event.ID, DisplayName: nickname, NormalizedName: strings.ToLower(strings.TrimSpace(nickname)), Status: models.ParticipantStatusJoined, CreatedAt: now, UpdatedAt: now})
+		_, err = h.playerIdentity.EnsureParticipant(ctx, &models.Participant{ID: userID, EventID: event.ID, DisplayName: nickname, NormalizedName: strings.ToLower(strings.TrimSpace(nickname)), Status: models.ParticipantStatusJoined, CreatedAt: now, UpdatedAt: now})
 		if err != nil {
 			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_failed", "message": "Could not join the event. Please try again."}}))
 			return
@@ -66,9 +76,17 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	client.ModuleID, client.PlayerID = "", ""
 	h.processPlayerJoin(client, msg)
 	if binding != nil && client.ModuleID == binding.moduleID && client.PlayerID == binding.playerID {
-		client.quizBinding = binding
+		if session := h.sessions[binding.moduleID]; session != nil {
+			if session.EventID == "" {
+				session.EventID = binding.eventID
+			}
+			if session.EventID == binding.eventID {
+				client.quizBinding = binding
+			}
+		}
 	}
 }
 

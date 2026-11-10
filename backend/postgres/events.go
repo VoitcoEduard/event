@@ -275,15 +275,12 @@ func (s *Store) DeleteEvent(ctx context.Context, id string) error {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	mediaIDs, err := detachOwnedMedia(ctx, tx, id, "")
+	_, err = detachOwnedMedia(ctx, tx, id, "")
 	if err != nil {
 		return err
 	}
 	tag, err := tx.Exec(ctx, `DELETE FROM events WHERE id=$1`, id)
 	if err = affected(tag, err); err != nil {
-		return err
-	}
-	if err = retireUnreferencedMedia(ctx, tx, mediaIDs); err != nil {
 		return err
 	}
 	return translate(tx.Commit(ctx))
@@ -362,15 +359,12 @@ func (s *Store) DeleteModule(ctx context.Context, eventID, moduleID string) (boo
 			return false, ErrHasAwards
 		}
 	}
-	mediaIDs, err := detachOwnedMedia(ctx, tx, eventID, moduleID)
+	_, err = detachOwnedMedia(ctx, tx, eventID, moduleID)
 	if err != nil {
 		return false, err
 	}
 	if _, err = tx.Exec(ctx, `DELETE FROM modules WHERE event_id=$1 AND id=$2`, eventID, moduleID); err != nil {
 		return false, translate(err)
-	}
-	if err = retireUnreferencedMedia(ctx, tx, mediaIDs); err != nil {
-		return false, err
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return false, translate(err)

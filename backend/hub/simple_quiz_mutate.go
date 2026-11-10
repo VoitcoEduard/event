@@ -6,11 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/postgres"
 )
 
 var errNoSimpleChange = errors.New("no change")
+var ErrStaleSimpleGrade = errors.New("grade changed by another judge")
 
 func (h *QuizHub) TryDeleteSimpleQuiz(moduleID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -37,6 +39,10 @@ func (h *QuizHub) TryDeleteSimpleQuiz(moduleID string) error {
 func (h *QuizHub) DeleteSimpleQuiz(moduleID string) { _ = h.TryDeleteSimpleQuiz(moduleID) }
 
 func (h *QuizHub) TryApplySimpleGrade(moduleID, judgeToken, by, answerID, verdict string) (*models.SimpleQuizSession, error) {
+	mutationID, idErr := uuid.NewRandom()
+	if idErr != nil {
+		return nil, idErr
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	lock := h.simpleLock(moduleID)
@@ -54,17 +60,19 @@ func (h *QuizHub) TryApplySimpleGrade(moduleID, judgeToken, by, answerID, verdic
 		if !found {
 			return postgres.ErrNotFound
 		}
-		entry = simpleQuizUndoEntry{AnswerID: answerID, NewVerdict: verdict, At: time.Now().UTC(), By: by}
+		entry = simpleQuizUndoEntry{AnswerID: answerID, NewVerdict: verdict, At: time.Now().UTC(), By: by, MutationID: mutationID.String()}
 		g := s.Grades[answerID]
 		if g != nil {
 			entry.Prev = g.Verdict
 			entry.PrevBy = g.UpdatedBy
 			entry.PrevAt = g.UpdatedAt
+			entry.PrevMutationID = g.MutationID
 		} else {
 			g = &models.SimpleQuizGrade{AnswerID: answerID}
 			s.Grades[answerID] = g
 		}
 		g.Verdict = verdict
+		g.MutationID = entry.MutationID
 		g.UpdatedBy = by
 		g.UpdatedAt = entry.At
 		g.History = append(g.History, models.SimpleQuizGradeHistoryEntry{Verdict: verdict, By: by, At: entry.At})
@@ -108,22 +116,18 @@ func (h *QuizHub) UndoSimpleGrade(moduleID, judgeToken, by string) (string, stri
 		return "", "", nil, postgres.ErrNotFound
 	}
 	next, err := h.tryUpdateSimpleLocked(ctx, moduleID, func(s *models.SimpleQuizSession) error {
-		if entry.Prev == "" {
-			delete(s.Grades, entry.AnswerID)
-			return nil
-		}
 		g := s.Grades[entry.AnswerID]
-		if g == nil {
-			g = &models.SimpleQuizGrade{AnswerID: entry.AnswerID}
-			s.Grades[entry.AnswerID] = g
+		if g == nil || g.MutationID != entry.MutationID {
+			return ErrStaleSimpleGrade
 		}
 		g.Verdict = entry.Prev
+		g.MutationID = entry.PrevMutationID
 		g.UpdatedBy = by + " (undo)"
 		g.UpdatedAt = time.Now().UTC()
 		g.History = append(g.History, models.SimpleQuizGradeHistoryEntry{Verdict: entry.Prev, By: g.UpdatedBy, At: g.UpdatedAt})
 		return nil
 	})
-	if err == nil {
+	if err == nil || errors.Is(err, ErrStaleSimpleGrade) {
 		h.mu.Lock()
 		h.simpleQuizUndo[moduleID][key] = h.simpleQuizUndo[moduleID][key][:len(stack)-1]
 		h.mu.Unlock()
@@ -133,10 +137,6 @@ func (h *QuizHub) UndoSimpleGrade(moduleID, judgeToken, by string) (string, stri
 		h.BroadcastSimpleQuiz(moduleID)
 	}
 	return entry.AnswerID, entry.Prev, next, err
-}
-
-func (h *QuizHub) ArmSimpleQuizTimer(moduleID string, deadlineUnix int64) {
-	h.scheduleSimpleQuizAutoLock(moduleID, deadlineUnix)
 }
 
 const (

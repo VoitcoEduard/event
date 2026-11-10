@@ -182,13 +182,6 @@ func (h *Handler) OpenSimpleQuizQuestion(w http.ResponseWriter, r *http.Request)
 		}
 		return
 	}
-	if deadline > 0 {
-		hub.BroadcastSimpleQuiz(moduleID)
-		// arm timer via exported path: re-schedule by touching hub internals
-		// (schedule is unexported; emulate by goroutine here is avoided —
-		// call SetSimpleQuiz path already broadcast; use hub method via Update + timer)
-		armSimpleQuizTimer(hub, moduleID, deadline)
-	}
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
@@ -325,9 +318,6 @@ func (h *Handler) ResumeSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
 		}
 		return
-	}
-	if deadline > 0 {
-		armSimpleQuizTimer(hub, moduleID, deadline)
 	}
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
@@ -772,6 +762,9 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 		if graded {
 			verdict = g.Verdict
 		}
+		if verdict == "" {
+			graded = false
+		}
 		if filter == "pending" && (graded && verdict != models.SimpleQuizVerdictReviewLater) {
 			// pending = ungraded + review_later? Spec: review_later prevents publication,
 			// judge can view only pending. Keep review_later in pending.
@@ -873,8 +866,9 @@ func (h *Handler) GradeSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	by := body.JudgeKey
-	if by == "" {
-		by = "judge"
+	if strings.TrimSpace(by) == "" {
+		http.Error(w, "Judge key required", http.StatusBadRequest)
+		return
 	}
 	updated, updateErr := hub.TryApplySimpleGrade(moduleID, body.JudgeToken, by, body.AnswerID, body.Verdict)
 	if errors.Is(updateErr, postgres.ErrNotFound) {
@@ -898,8 +892,8 @@ func (h *Handler) GradeSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) 
 
 // UndoSimpleQuizGrade reverts the latest grading action for one judge key.
 func (h *Handler) UndoSimpleQuizGrade(w http.ResponseWriter, r *http.Request) {
-	hub := h.simpleQuizHub()
-	if hub == nil {
+	quizHub := h.simpleQuizHub()
+	if quizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
 		return
 	}
@@ -914,20 +908,25 @@ func (h *Handler) UndoSimpleQuizGrade(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	if !hub.ValidateSimpleJudgeToken(ctx, moduleID, body.JudgeToken) {
+	if !quizHub.ValidateSimpleJudgeToken(ctx, moduleID, body.JudgeToken) {
 		http.Error(w, "Invalid judge token", http.StatusForbidden)
 		return
 	}
 	by := body.JudgeKey
-	if by == "" {
-		by = "judge"
+	if strings.TrimSpace(by) == "" {
+		http.Error(w, "Judge key required", http.StatusBadRequest)
+		return
 	}
-	answerID, previous, updated, err := hub.UndoSimpleGrade(moduleID, body.JudgeToken, by)
+	answerID, previous, updated, err := quizHub.UndoSimpleGrade(moduleID, body.JudgeToken, by)
 	if errors.Is(err, postgres.ErrNotFound) {
 		http.Error(w, "Nothing to undo", http.StatusBadRequest)
 		return
 	}
 	if err != nil {
+		if errors.Is(err, hub.ErrStaleSimpleGrade) {
+			http.Error(w, "Another judge changed this answer; refresh the queue", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
 		return
 	}

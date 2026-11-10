@@ -318,6 +318,15 @@ func TestMigrationsAndConstraints(t *testing.T) {
 	}
 }
 
+func TestUpgradeFromVersionOne(t *testing.T) {
+	ctx, store := startDB(t)
+	if err := store.Migrate(ctx); err != nil { t.Fatal(err) }
+	if _, err := store.Pool.Exec(ctx, `ALTER TABLE participants DROP COLUMN secret_hash; DELETE FROM goose_db_version WHERE version_id=2`); err != nil { t.Fatal(err) }
+	if err := store.Migrate(ctx); err != nil { t.Fatalf("upgrade: %v", err) }
+	if err := store.Ready(ctx); err != nil { t.Fatalf("ready after upgrade: %v", err) }
+	if err := store.Migrate(ctx); err != nil { t.Fatalf("restart at version 2: %v", err) }
+}
+
 func TestDeletionPreservesSharedMedia(t *testing.T) {
 	ctx, store := startDB(t)
 	if err := store.Migrate(ctx); err != nil {
@@ -376,8 +385,8 @@ func TestDeletionPreservesSharedMedia(t *testing.T) {
 				if _, err = store.GetModule(ctx, sourceEvent, sourceModule); err != postgres.ErrNotFound {
 					t.Fatalf("source module survived: %v", err)
 				}
-				if _, err = store.Media(ctx, unused.Media.ID); err != postgres.ErrNotFound {
-					t.Fatalf("unused media remains visible: %v", err)
+				if _, err = store.Media(ctx, unused.Media.ID); err != nil {
+					t.Fatalf("unused media was removed: %v", err)
 				}
 				if err = files.Reconcile(ctx, time.Now()); err != nil {
 					t.Fatal(err)
@@ -390,8 +399,16 @@ func TestDeletionPreservesSharedMedia(t *testing.T) {
 					t.Fatalf("stale ownership: %+v", metadata)
 				}
 				exists, err := store.MediaStorageKeyExists(ctx, unused.Media.StorageKey)
-				if err != nil || exists {
-					t.Fatalf("unused media not reconciled: %v %v", exists, err)
+				if err != nil || !exists {
+					t.Fatalf("unused media was reconciled: %v %v", exists, err)
+				}
+				if err = files.Delete(ctx, unused.Media.ID); err != nil {
+					t.Fatalf("delete unused media: %v", err)
+				}
+				if reference != "library" {
+					if err = files.Delete(ctx, shared.Media.ID); err != postgres.ErrConflict {
+						t.Fatalf("delete referenced media: %v", err)
+					}
 				}
 			})
 		}

@@ -3,16 +3,8 @@ package handlers
 import (
 	"strings"
 
-	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/models"
 )
-
-func armSimpleQuizTimer(h *hub.QuizHub, moduleID string, deadlineUnix int64) {
-	if h == nil || deadlineUnix <= 0 {
-		return
-	}
-	h.ArmSimpleQuizTimer(moduleID, deadlineUnix)
-}
 
 // publicSimpleQuizState filters the session per role.
 // host: full except player secrets/answer texts? Host sees counts + progress + questions without notes.

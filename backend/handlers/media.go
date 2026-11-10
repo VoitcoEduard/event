@@ -34,6 +34,10 @@ func validMediaID(w http.ResponseWriter, id string) bool {
 	return true
 }
 func mediaFailure(w http.ResponseWriter, err error) {
+	if errors.Is(err, postgres.ErrConflict) {
+		http.Error(w, "media_in_use", http.StatusConflict)
+		return
+	}
 	if errors.Is(err, postgres.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
 		http.Error(w, "Media not found", http.StatusNotFound)
 		return

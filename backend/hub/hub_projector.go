@@ -69,6 +69,12 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 			}
 			DebugLog("projector:join: Sent data:batch to projector for module: %s", moduleID)
 		}
+		s := h.sessions[moduleID]
+		if (s.State == "results" || s.State == "leaderboard" || s.State == "finished") && s.CurrentIndex >= 0 && s.CurrentIndex < len(s.Questions) {
+			if !h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "data:reveal", Payload: revealQuestionPayload(s.Questions[s.CurrentIndex], s.CurrentIndex)})) {
+				return
+			}
+		}
 
 		DebugLog("projector:join: Sent state:update to projector for module: %s", moduleID)
 	} else {

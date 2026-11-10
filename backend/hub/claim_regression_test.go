@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 
@@ -26,6 +27,32 @@ func TestSimpleJoinMembershipSynchronized(t *testing.T) {
 		}
 	}()
 	wg.Wait()
+}
+
+func TestProjectorReceivesCurrentRevealOnReconnect(t *testing.T) {
+	for _, state := range []string{"results", "leaderboard", "finished"} {
+		h := NewQuizHub(Dependencies{})
+		h.CreateSession("m", "e")
+		h.UpdateSession("m", func(s *models.QuizSession) {
+			s.State = state
+			s.Questions = []models.QuizQuestion{{ID: "q", Type: models.QuestionTypeClassic, Answers: []string{"yes", "no"}, CorrectIndex: 0}, {ID: "future", Type: models.QuestionTypeClassic, Answers: []string{"hidden"}}}
+			s.Batches = CalculateBatches(s.Questions)
+		})
+		c := &Client{send: make(chan []byte, 10)}
+		h.Register(c)
+		h.ProcessMessage(c, []byte(`{"type":"projector:join","payload":{"moduleId":"m","eventId":"e"}}`))
+		var types []string
+		for len(c.send) > 0 {
+			var msg ServerMessage
+			if err := json.Unmarshal(<-c.send, &msg); err != nil {
+				t.Fatal(err)
+			}
+			types = append(types, msg.Type)
+		}
+		if len(types) < 4 || types[len(types)-2] != "data:batch" || types[len(types)-1] != "data:reveal" {
+			t.Fatalf("%s messages: %v", state, types)
+		}
+	}
 }
 
 func TestSimpleHostJoinRequiresAdmin(t *testing.T) {
@@ -54,5 +81,27 @@ func TestReconnectDoesNotDuplicateHistory(t *testing.T) {
 	got := h.GetSession("m")
 	if len(got.PlayerSignals) != 2 || got.PlayerSignals[0].AnswerIndex != 2 {
 		t.Fatalf("history: %+v", got.PlayerSignals)
+	}
+}
+
+func TestChangingRoleRevokesQuizPlayerBinding(t *testing.T) {
+	for _, join := range []string{
+		`{"type":"projector:join","payload":{"moduleId":"m","eventId":"e"}}`,
+		`{"type":"participant:join","payload":{"eventId":"e","userId":"p"}}`,
+		`{"type":"simple:player_join","payload":{"moduleId":"m","playerId":"p"}}`,
+	} {
+		h := NewQuizHub(Dependencies{})
+		h.CreateSession("m", "e")
+		h.mu.Lock()
+		h.sessions["m"].CurrentIndex = 2
+		h.sessions["m"].Players["p"] = &models.Player{ID: "p"}
+		h.mu.Unlock()
+		c := &Client{ModuleID: "m", PlayerID: "p", quizBinding: &quizPlayerBinding{eventID: "e", moduleID: "m", playerID: "p"}, send: make(chan []byte, 20)}
+		h.Register(c)
+		h.ProcessMessage(c, []byte(join))
+		h.ProcessMessage(c, []byte(`{"type":"player:reconnect","payload":{"moduleId":"m","lastKnownQuestionIndex":0}}`))
+		if len(h.GetSession("m").PlayerSignals) != 0 {
+			t.Fatalf("%s allowed reconnect to change history", join)
+		}
 	}
 }

@@ -99,22 +99,23 @@ func (h *Handler) UpdateParticipantName(w http.ResponseWriter, r *http.Request) 
 		writeRequestError(w, err, http.StatusBadRequest)
 		return
 	}
-	if !h.isAdmin(r) {
-		if h.deps.DB == nil {
-			http.Error(w, "Participant verification unavailable", http.StatusServiceUnavailable)
-			return
-		}
-		hasProof, valid, err := h.deps.DB.CheckParticipantProof(r.Context(), eventID, userID, input.JoinSecret)
-		if err != nil && !errors.Is(err, database.ErrNotFound) {
-			writeRequestError(w, err, http.StatusServiceUnavailable)
-			return
-		}
-		if !hasProof || !valid {
+	if h.deps.DB == nil {
+		http.Error(w, "Participant verification unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	hasProof, valid, err := h.deps.DB.CheckParticipantProof(r.Context(), eventID, userID, input.JoinSecret)
+	if err != nil && !errors.Is(err, database.ErrNotFound) {
+		writeRequestError(w, err, http.StatusServiceUnavailable)
+		return
+	}
+	if !hasProof || !valid {
+		if !h.isAdmin(r) {
 			http.Error(w, "Invalid participant credentials", http.StatusForbidden)
 			return
 		}
-	} else if _, _, ok := h.deps.Auth.Authorize(w, r, false); !ok {
-		return
+		if _, _, ok := h.deps.Auth.Authorize(w, r, false); !ok {
+			return
+		}
 	}
 
 	name := strings.TrimSpace(input.DisplayName)
@@ -122,7 +123,7 @@ func (h *Handler) UpdateParticipantName(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid name", http.StatusBadRequest)
 		return
 	}
-	err := h.deps.DB.SetParticipantName(r.Context(), eventID, userID, name, strings.ToLower(name))
+	err = h.deps.DB.SetParticipantName(r.Context(), eventID, userID, name, strings.ToLower(name))
 	if errors.Is(err, database.ErrNotFound) {
 		http.NotFound(w, r)
 		return
