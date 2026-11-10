@@ -199,8 +199,7 @@ const join = async () => {
     identity.value = { playerId: res.playerId, secret: res.secret, nickname: res.nickname }
     try { localStorage.setItem(storageKey.value, JSON.stringify(identity.value)) } catch { /* ignore */ }
     await refresh()
-    quizWS.connect(moduleId, nick, false)
-    quizWS.send('simple:player_join', { moduleId, playerId: res.playerId })
+    quizWS.connect(moduleId, nick, false, false, eventId, { type: 'simple:player_join', payload: { moduleId, playerId: res.playerId, secret: res.secret } })
   } catch (e) {
     error.value = e.message
   } finally {
@@ -313,8 +312,7 @@ onMounted(async () => {
   if (ok) {
     await refresh()
     if (stopped) return
-    quizWS.connect(moduleId, identity.value.nickname, false)
-    quizWS.send('simple:player_join', { moduleId, playerId: identity.value.playerId })
+    quizWS.connect(moduleId, identity.value.nickname, false, false, eventId, { type: 'simple:player_join', payload: { moduleId, playerId: identity.value.playerId, secret: identity.value.secret } })
   }
   quizWS.on('simple:state', refresh)
   pollTimer = setInterval(refresh, 4000)

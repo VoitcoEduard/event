@@ -14,18 +14,19 @@ class QuizWebSocket {
         this.isHost = false
         this.isProjector = false
         this.eventId = null
+        this.joinDescriptor = null
         this.intentionalDisconnect = false
 		if (typeof window !== 'undefined' && window.addEventListener) {
 			window.addEventListener('online', () => {
 				if (this.intentionalDisconnect || this.isConnected || !this.moduleId) return
 				clearTimeout(this.reconnectTimer)
 				this.reconnectTimer = null
-				this.connect(this.moduleId, this.nickname, this.isHost, this.isProjector, this.eventId)
+				this.connect(this.moduleId, this.nickname, this.isHost, this.isProjector, this.eventId, this.joinDescriptor)
 			})
 		}
     }
 
-    connect(moduleId = null, nickname = null, isHost = false, isProjector = false, eventId = null) {
+    connect(moduleId = null, nickname = null, isHost = false, isProjector = false, eventId = null, joinDescriptor = null) {
 		if (this.moduleId && this.moduleId !== moduleId) signalQueue.clear()
         clearTimeout(this.reconnectTimer)
         this.reconnectTimer = null
@@ -36,6 +37,7 @@ class QuizWebSocket {
         this.isHost = isHost
         this.isProjector = isProjector
         this.eventId = eventId
+        this.joinDescriptor = joinDescriptor
         this.intentionalDisconnect = false
         this.userId = getUserId() // Get or generate userId
 
@@ -81,16 +83,16 @@ class QuizWebSocket {
             if (this.eventId) {
                 payload.eventId = this.eventId
             }
-            if (!this.isHost && !this.isProjector) {
+            if (!this.joinDescriptor && !this.isHost && !this.isProjector) {
                 payload.nickname = this.nickname
                 payload.userId = this.userId
 				if (this.eventId) payload.participantSecret = getParticipantSecret(this.eventId)
             }
 
-            this.send(type, payload)
+            this.send(this.joinDescriptor?.type || type, this.joinDescriptor?.payload || payload)
             // WebSocket messages are ordered, so the server associates this
             // connection with the player before receiving queued answers.
-            if (!this.isHost && !this.isProjector) signalQueue.onReconnect()
+            if (!this.joinDescriptor && !this.isHost && !this.isProjector) signalQueue.onReconnect()
             // Consumers can now safely send follow-up messages (such as
             // player:reconnect) because the server has associated this socket
             // with its player/session.
@@ -131,7 +133,7 @@ class QuizWebSocket {
                     this.reconnectTimer = null
                     if (this.intentionalDisconnect || this.socket !== socket) return
                     this.reconnectAttempts++
-                    this.connect(this.moduleId, this.nickname, this.isHost, this.isProjector, this.eventId)
+                    this.connect(this.moduleId, this.nickname, this.isHost, this.isProjector, this.eventId, this.joinDescriptor)
                 }, delay)
             }
 

@@ -32,10 +32,11 @@ it('an update arriving during an in-flight fetch triggers a fresh read, and stre
 })
 it('a lost award response retries with the original request ID', async () => {
   setup()
+  vi.stubGlobal('crypto', { getRandomValues: bytes => { bytes.fill(7); return bytes } })
   const fetch = vi.fn().mockRejectedValueOnce(new TypeError('Disconnected')).mockResolvedValueOnce(new Response(JSON.stringify({ revision: 2 })))
   vi.stubGlobal('fetch', fetch)
   await teamsActivity.action('e', 'm', { action: 'award', points: 20, teamId: 'blue' })
   expect(fetch).toHaveBeenCalledTimes(2)
   const first = JSON.parse(fetch.mock.calls[0][1].body), second = JSON.parse(fetch.mock.calls[1][1].body)
-  expect(first.requestId).toBeTruthy(); expect(second).toEqual(first)
+  expect(first.requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/); expect(second).toEqual(first)
 })

@@ -65,3 +65,18 @@ test('a pending retry cannot replace a newer connection', () => {
   assert.equal(sockets.length, 2)
   assert.equal(quizWS.moduleId, 'new')
 })
+
+test('explicit Simple Quiz subscriptions are sent on open and reconnect', () => {
+  for (const descriptor of [
+    { type: 'simple:player_join', payload: { moduleId: 'm', playerId: 'p', secret: 'secret' } },
+    { type: 'simple:judge_join', payload: { moduleId: 'm', judgeToken: 'token' } },
+  ]) {
+    const { quizWS, sockets, sent, timers } = setup()
+    quizWS.connect('m', '', false, false, 'e', descriptor)
+    sockets[0].onopen()
+    sockets[0].onclose({ code: 1006 })
+    ;[...timers.values()][0]()
+    sockets[1].onopen()
+    assert.deepEqual(sent, [descriptor, descriptor])
+  }
+})

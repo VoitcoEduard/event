@@ -103,6 +103,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTeamsActivity } from '../composables/useTeamsActivity'
 import { teamsActivity } from '../services/teamsActivity'
+import { newUUID } from '../utils'
 import { activityTotals, defaultTeamsConfig } from '../utils/teamsActivity'
 import TeamsConfigFields from './TeamsConfigFields.vue'
 import '../styles/teams-activity.css'
@@ -135,12 +136,14 @@ const pending = new Map()
 async function act(payload) {
   if (busy.value) return false
   const key = JSON.stringify(payload)
-  if (['award', 'undo'].includes(payload.action)) {
-    if (!pending.has(key)) pending.set(key, { ...payload, requestId: crypto.randomUUID() })
-    payload = pending.get(key)
-  }
   busy.value = true; message.value = ''
-  try { await teamsActivity.action(props.eventId, props.module.id, payload); pending.delete(key); await load(); return true }
+  try {
+    if (['award', 'undo'].includes(payload.action)) {
+      if (!pending.has(key)) pending.set(key, { ...payload, requestId: newUUID() })
+      payload = pending.get(key)
+    }
+    await teamsActivity.action(props.eventId, props.module.id, payload); pending.delete(key); await load(); return true
+  }
   catch (err) { message.value = err.message; return false }
   finally { busy.value = false }
 }

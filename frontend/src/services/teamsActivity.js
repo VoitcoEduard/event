@@ -1,4 +1,4 @@
-import { API_BASE_URL, getAuthHeaders, getUserId } from '../utils'
+import { API_BASE_URL, getAuthHeaders, getUserId, newUUID } from '../utils'
 
 export const teamsBase = (eventId, moduleId) => `${API_BASE_URL}/events/${encodeURIComponent(eventId)}/modules/${encodeURIComponent(moduleId)}/teams`
 async function request(eventId, moduleId, path, body, admin = false) {
@@ -37,7 +37,7 @@ export const teamsActivity = {
   action: async (e, m, body) => {
     // Keep the same request ID through ambiguous network failures. Caller may
     // retain this payload for a later retry, without issuing the award twice.
-    if (['award', 'undo'].includes(body.action) && !body.requestId) body.requestId = crypto.randomUUID()
+    if (['award', 'undo'].includes(body.action) && !body.requestId) body.requestId = newUUID()
     try { return await request(e, m, 'actions', body, true) }
     catch (error) {
       if (error.status) throw error

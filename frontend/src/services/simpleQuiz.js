@@ -91,13 +91,13 @@ export const simpleQuizApi = {
     })
     return req(`${base(eventId, moduleId)}/queue?${qs.toString()}`)
   },
-  grade(eventId, moduleId, { answerId, verdict, judgeToken, judgeKey = 'judge' }) {
+  grade(eventId, moduleId, { answerId, verdict, judgeToken, judgeKey }) {
     return req(`${base(eventId, moduleId)}/grade`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answerId, verdict, judgeToken, judgeKey }),
     })
   },
-  undo(eventId, moduleId, { judgeToken, judgeKey = 'judge' }) {
+  undo(eventId, moduleId, { judgeToken, judgeKey }) {
     return req(`${base(eventId, moduleId)}/undo`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ judgeToken, judgeKey }),

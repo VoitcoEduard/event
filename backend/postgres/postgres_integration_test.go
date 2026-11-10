@@ -320,11 +320,21 @@ func TestMigrationsAndConstraints(t *testing.T) {
 
 func TestUpgradeFromVersionOne(t *testing.T) {
 	ctx, store := startDB(t)
-	if err := store.Migrate(ctx); err != nil { t.Fatal(err) }
-	if _, err := store.Pool.Exec(ctx, `ALTER TABLE participants DROP COLUMN secret_hash; DELETE FROM goose_db_version WHERE version_id=2`); err != nil { t.Fatal(err) }
-	if err := store.Migrate(ctx); err != nil { t.Fatalf("upgrade: %v", err) }
-	if err := store.Ready(ctx); err != nil { t.Fatalf("ready after upgrade: %v", err) }
-	if err := store.Migrate(ctx); err != nil { t.Fatalf("restart at version 2: %v", err) }
+	if err := store.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Pool.Exec(ctx, `ALTER TABLE participants DROP COLUMN secret_hash; DELETE FROM goose_db_version WHERE version_id=2`); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Migrate(ctx); err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+	if err := store.Ready(ctx); err != nil {
+		t.Fatalf("ready after upgrade: %v", err)
+	}
+	if err := store.Migrate(ctx); err != nil {
+		t.Fatalf("restart at version 2: %v", err)
+	}
 }
 
 func TestDeletionPreservesSharedMedia(t *testing.T) {

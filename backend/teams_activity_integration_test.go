@@ -95,6 +95,16 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 			t.Fatalf("module %s active = %v, want %v", moduleID, module.IsActive, want)
 		}
 	}
+	initial := must(request("GET", base("relay")+"/admin", "", "", true))
+	var initialState struct {
+		Activity     json.RawMessage `json:"activity"`
+		Module       json.RawMessage `json:"module"`
+		Participants json.RawMessage `json:"participants"`
+		LegacyTeams  json.RawMessage `json:"legacyTeams"`
+	}
+	if err := json.Unmarshal(initial.Body.Bytes(), &initialState); err != nil || string(initialState.Activity) != "null" || len(initialState.Module) == 0 || len(initialState.Participants) == 0 || len(initialState.LegacyTeams) == 0 {
+		t.Fatalf("uninitialized admin state: %s (%v)", initial.Body.String(), err)
+	}
 	for _, path := range []string{base("relay") + "/admin", base("relay") + "/actions"} {
 		method := "GET"
 		if strings.HasSuffix(path, "actions") {

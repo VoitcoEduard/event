@@ -64,6 +64,7 @@ import { useRoute } from 'vue-router'
 import { simpleQuizApi } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import { quizWS } from '../services/websocket'
+import { newUUID } from '../utils'
 import AppIcon from '../components/AppIcon.vue'
 
 const route = useRoute()
@@ -81,6 +82,7 @@ const pendingFilter = ref('pending')
 const queueIndex = ref(0)
 const error = ref('')
 const gradingBusy = ref(false)
+let judgeKey = ''
 
 const current = computed(() => queue.value[queueIndex.value] || null)
 const currentIdx = computed(() => current.value?.questionIndex ?? questionFilter.value)
@@ -133,7 +135,8 @@ const grade = async (verdict) => {
   gradingBusy.value = true
   const answerId = current.value.answerId
   try {
-    await simpleQuizApi.grade(eventId, moduleId, { answerId, verdict, judgeToken: token.value })
+    if (!judgeKey) judgeKey = newUUID()
+    await simpleQuizApi.grade(eventId, moduleId, { answerId, verdict, judgeToken: token.value, judgeKey })
     await loadQueue()
     // Next pending takes its place: keep index, list shrinks in pending mode.
     if (queueIndex.value >= queue.value.length) queueIndex.value = Math.max(0, queue.value.length - 1)
@@ -147,9 +150,11 @@ const grade = async (verdict) => {
 const undo = async () => {
   gradingBusy.value = true
   try {
-    await simpleQuizApi.undo(eventId, moduleId, { judgeToken: token.value })
+    if (!judgeKey) judgeKey = newUUID()
+    await simpleQuizApi.undo(eventId, moduleId, { judgeToken: token.value, judgeKey })
     await loadQueue()
   } catch (e) {
+    if (e.status === 409) await loadQueue()
     error.value = e.message
   } finally {
     gradingBusy.value = false
@@ -177,8 +182,7 @@ onMounted(async () => {
     loadState()
     loadQueue()
   })
-  quizWS.connect(moduleId, '', false)
-  if (token.value) quizWS.send('simple:judge_join', { moduleId, judgeToken: token.value })
+  if (token.value) quizWS.connect(moduleId, '', false, false, eventId, { type: 'simple:judge_join', payload: { moduleId, judgeToken: token.value } })
   poll = setInterval(loadQueue, 5000)
 })
 onUnmounted(() => {

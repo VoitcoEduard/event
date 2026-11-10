@@ -266,8 +266,7 @@ onMounted(async () => {
   await refresh()
   if (stopped) return
   quizWS.on('simple:state', refresh)
-  quizWS.connect(moduleId, '', true)
-  quizWS.send('simple:host_join', { moduleId })
+  quizWS.connect(moduleId, '', true, false, eventId, { type: 'simple:host_join', payload: { moduleId } })
   deadlineTimer = setInterval(tick, 1000)
   void router
 })

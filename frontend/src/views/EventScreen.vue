@@ -312,24 +312,26 @@ const selectModule = (module) => {
   selectedModule.value = module
 }
 
-const handleModuleComplete = (data) => {
-  if (selectedModule.value) {
-    localStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true')
-  }
-
+const handleModuleComplete = async (data) => {
   if (selectedModule.value?.name === 'Welcome' && data) {
     const name = data['step_welcome_name']
     if (name) {
-      setUserName(name)
-      userName.value = name
-      // Sync name to server
-      fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/participants/${userId.value}/name`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName: name })
-      }).catch(e => console.error('Failed to sync name:', e))
+      try {
+        const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/participants/${userId.value}/name`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ displayName: name, joinSecret: getParticipantSecret(currentEvent.value.id) })
+        })
+        if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`)
+        setUserName(name)
+        userName.value = name
+      } catch (error) {
+        window.alert(`Could not update your name: ${error.message}`)
+        return
+      }
     }
   }
+	if (selectedModule.value) localStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true')
 	if (completionTimer) clearTimeout(completionTimer)
   completionTimer = setTimeout(() => {
 	if (stopped) return
