@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────
 # Stage 1 – Build the Vue frontend
 # ────────────────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:26-alpine3.24 AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -20,7 +20,7 @@ RUN VITE_API_URL="" npm run build
 # ────────────────────────────────────────────────────────────────────
 # Stage 2 – Build the Go backend for the requested image platform
 # ────────────────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM golang:alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine3.24 AS backend-builder
 
 WORKDIR /app/backend
 
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/go-mod \
 # ────────────────────────────────────────────────────────────────────
 # Stage 3 – Minimal final image
 # ────────────────────────────────────────────────────────────────────
-FROM alpine:latest
+FROM alpine:3.24.4
 
 # Install libwebp-tools (cwebp) for WebP image processing
 RUN apk add --no-cache libwebp-tools ca-certificates

@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine3.24 AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN if [ "$DEBUG_MODE" = "true" ]; then \
     CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o main .; \
     fi
 
-FROM alpine:latest
+FROM alpine:3.24.4
 
 RUN apk add --no-cache ca-certificates libwebp-tools
 
