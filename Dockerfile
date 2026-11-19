@@ -20,7 +20,7 @@ RUN VITE_API_URL="" npm run build
 # ────────────────────────────────────────────────────────────────────
 # Stage 2 – Build the Go backend for the requested image platform
 # ────────────────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine3.24 AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine3.24 AS backend-builder
 
 WORKDIR /app/backend
 
