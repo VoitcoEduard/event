@@ -140,6 +140,8 @@
   },
   "library": {
     "title": "Librărie",
+    "back_btn": "Înapoi",
+    "language_label": "Limba interfeței",
     "manage_templates": "Gestionare Șabloane",
     "new_form": "+ Șablon Formular Nou",
     "new_quiz": "+ Șablon Quiz Nou",
@@ -168,6 +170,7 @@
       "no_desc": "Fără descriere"
     },
     "actions": {
+      "export_btn": "Exportă",
       "delete_confirm": "Ștergi {name}?",
       "discard_confirm": "Renunți la modificări?",
       "save_btn": "Salvează Șablonul",

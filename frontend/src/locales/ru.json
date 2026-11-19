@@ -140,6 +140,8 @@
   },
   "library": {
     "title": "Библиотека",
+    "back_btn": "Назад",
+    "language_label": "Язык интерфейса",
     "manage_templates": "Управление шаблонами",
     "new_form": "+ Новый шаблон формы",
     "new_quiz": "+ Новый шаблон викторины",
@@ -168,6 +170,7 @@
       "no_desc": "Нет описания"
     },
     "actions": {
+      "export_btn": "Экспорт",
       "delete_confirm": "Удалить {name}?",
       "discard_confirm": "Отменить изменения?",
       "save_btn": "Сохранить шаблон",

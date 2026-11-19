@@ -1,4 +1,16 @@
 /* Shared, route-scoped appearance for administrative workflows. */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 html[data-admin-appearance="true"] {
   --admin-bg: #f5f6f8;
   --admin-surface: #ffffff;
@@ -178,6 +190,7 @@ html[data-admin-appearance="true"] :is(
   .judge-screen
 ) :is(.card, .form-card, .event-card, .login-card, .user-row, .module-card, .module-item,
   section, article, .panel, .props-panel, .slide-item, .template-card, .library-card,
+  .screensaver-card, .track-card,
   .question-card, .answer-card, .judge-card, .submission-card, .teams-panel) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border) !important;
@@ -382,6 +395,82 @@ html[data-admin-appearance="true"] .admin-screen .back-button {
   html[data-admin-appearance="true"] .admin-screen .form-card { padding: 20px; }
 }
 
+/* Library screen appearance */
+html[data-admin-appearance="true"] .library-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+html[data-admin-appearance="true"] .library-screen .header-eyebrow {
+  color: var(--admin-text-dim) !important;
+}
+html[data-admin-appearance="true"] .library-screen .header-heading {
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .library-screen .back-link {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] .library-screen .back-link:hover {
+  background: var(--admin-surface-hover) !important;
+  border-color: var(--admin-border) !important;
+}
+html[data-admin-appearance="true"] .library-screen .tab-btn {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] .library-screen .tab-btn:hover {
+  background: var(--admin-surface-hover) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .library-screen .tab-btn[aria-selected="true"] {
+  background: var(--admin-primary-soft) !important;
+  color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] .library-screen .edit-btn {
+  background: var(--admin-primary-soft) !important;
+  border-color: color-mix(in srgb, var(--admin-primary) 30%, var(--admin-border)) !important;
+  color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] .library-screen .export-btn {
+  background: var(--admin-surface-subtle) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .library-screen .track-icon {
+  background: var(--admin-primary-soft) !important;
+  color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] .library-screen .screensaver-image-container {
+  background: var(--admin-surface-subtle) !important;
+}
+html[data-admin-appearance="true"] .library-screen .template-meta,
+html[data-admin-appearance="true"] .library-screen .card-actions {
+  border-color: var(--admin-border) !important;
+}
+html[data-admin-appearance="true"] .library-screen .template-meta,
+html[data-admin-appearance="true"] .library-screen .screensaver-date,
+html[data-admin-appearance="true"] .library-screen .track-date,
+html[data-admin-appearance="true"] .library-screen .empty-state {
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] .library-screen .template-name-input {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .library-screen .template-desc-input {
+  background: var(--admin-surface-subtle) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .library-screen .close-btn {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--admin-text-muted) !important;
+}
+
 html[data-admin-appearance="true"] :is(.modal-overlay, .dialog-overlay, .overlay, .config-modal-overlay) {
   background: var(--admin-overlay) !important;
   backdrop-filter: none !important;
@@ -557,7 +646,17 @@ html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content,
 }
 
 @media (max-width: 900px) {
-  .admin-theme-control { right: 12px; bottom: 12px; }
+  .admin-theme-control {
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (pointer: coarse) {
+  .admin-theme-option {
+    min-block-size: 40px;
+    min-inline-size: 40px;
+  }
 }
 
 @media (max-width: 480px) {

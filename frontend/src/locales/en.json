@@ -142,6 +142,8 @@
   },
   "library": {
     "title": "Library",
+    "back_btn": "Back",
+    "language_label": "Interface language",
     "manage_templates": "Manage Templates",
     "new_form": "+ New Form Template",
     "new_quiz": "+ New Quiz Template",
@@ -170,6 +172,7 @@
       "no_desc": "No description"
     },
     "actions": {
+      "export_btn": "Export",
       "delete_confirm": "Delete {name}?",
       "discard_confirm": "Discard changes?",
       "save_btn": "Save Template",
