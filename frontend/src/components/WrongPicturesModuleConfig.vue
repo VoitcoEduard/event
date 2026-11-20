@@ -322,7 +322,7 @@ const addRound = () => {
     explainTime: 5,
     wrongPictureConfig: {
       targets: [],
-      maxPoints: 1000,
+      maxPoints: 50,
       tolerancePercent: 5,
       showTargetCount: false
     }

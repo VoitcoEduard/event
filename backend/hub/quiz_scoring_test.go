@@ -17,15 +17,15 @@ func TestServerScoresQuizAnswers(t *testing.T) {
 		want   int
 		valid  bool
 	}{
-		{"choice", models.QuizQuestion{Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 1, TimeLimit: 20}, map[string]interface{}{"answerIndex": float64(1), "scoreEarned": float64(999999)}, 625, true},
+		{"choice", models.QuizQuestion{Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 1, TimeLimit: 20}, map[string]interface{}{"answerIndex": float64(1), "scoreEarned": float64(999999)}, 31, true},
 		{"wrong choice", models.QuizQuestion{Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 1}, map[string]interface{}{"answerIndex": float64(0), "scoreEarned": float64(999999)}, 0, true},
-		{"multi", models.QuizQuestion{Type: "multi_select", Answers: []string{"A", "B", "C"}, CorrectIndices: []int{0, 2}}, map[string]interface{}{"answerIndices": []interface{}{float64(2), float64(0)}}, 625, true},
+		{"multi", models.QuizQuestion{Type: "multi_select", Answers: []string{"A", "B", "C"}, CorrectIndices: []int{0, 2}}, map[string]interface{}{"answerIndices": []interface{}{float64(2), float64(0)}}, 31, true},
 		{"duplicate choice", models.QuizQuestion{Type: "multi_select", Answers: []string{"A", "B"}, CorrectIndices: []int{0}}, map[string]interface{}{"answerIndices": []interface{}{float64(0), float64(0)}}, 0, false},
 		{"empty multi answer", models.QuizQuestion{Type: "multi_select", Answers: []string{"A", "B"}}, map[string]interface{}{"answerIndices": []interface{}{}}, 0, false},
-		{"number zero", models.QuizQuestion{Type: "number", CorrectNumber: 0}, map[string]interface{}{"answerValue": float64(0)}, 1000, true},
-		{"range exact zero", models.QuizQuestion{Type: "range", CorrectValue: 0, RangeConfig: models.RangeConfig{MinValue: -10, MaxValue: 10}}, map[string]interface{}{"answerValue": float64(0)}, 1000, true},
+		{"number zero", models.QuizQuestion{Type: "number", CorrectNumber: 0}, map[string]interface{}{"answerValue": float64(0)}, 50, true},
+		{"range exact zero", models.QuizQuestion{Type: "range", CorrectValue: 0, RangeConfig: models.RangeConfig{MinValue: -10, MaxValue: 10}}, map[string]interface{}{"answerValue": float64(0)}, 50, true},
 		{"range out of bounds", models.QuizQuestion{Type: "range", RangeConfig: models.RangeConfig{MinValue: 0, MaxValue: 10}}, map[string]interface{}{"answerValue": float64(11)}, 0, false},
-		{"picture", models.QuizQuestion{Type: "correct_picture", CorrectIndex: 1, ImageOptions: []models.ImageOption{{}, {}}}, map[string]interface{}{"answerIndex": float64(1)}, 625, true},
+		{"picture", models.QuizQuestion{Type: "correct_picture", CorrectIndex: 1, ImageOptions: []models.ImageOption{{}, {}}}, map[string]interface{}{"answerIndex": float64(1)}, 31, true},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

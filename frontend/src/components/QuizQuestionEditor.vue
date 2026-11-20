@@ -53,7 +53,7 @@
           <label>
             {{ $t('quiz_config.question_editor.points') }}
             <span v-if="localMaxPoints === 100 && localQuestion.type === 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
-            <span v-if="localMaxPoints === 1000 && localQuestion.type !== 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
+            <span v-if="localMaxPoints === 50 && localQuestion.type !== 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
           </label>
           <input type="number" v-model.number="localMaxPoints" class="select-input" @input="emitUpdate" />
         </div>
@@ -344,11 +344,11 @@ const localQuestion = reactive({
       unit: '',
       decimalPlaces: 0
   },
-  // A7: default maxPoints is 100 for range, 1000 for every other
+  // A7: default maxPoints is 100 for range, 50 for every other
   // scoringConfig-based type, so the Points field matches game scoring.
   scoringConfig: props.question.scoringConfig || {
       mode: 'symmetric',
-      maxPoints: props.question.type === 'range' ? 100 : 1000,
+      maxPoints: props.question.type === 'range' ? 100 : 50,
       tolerance: 10,
       partialPercent: 0
   },
@@ -363,7 +363,7 @@ const localQuestion = reactive({
   wrongPictureConfig: props.question.wrongPictureConfig || {
       targets: [],
       tolerancePercent: 10,
-      maxPoints: 1000
+      maxPoints: 50
   },
   judgeNotes: props.question.judgeNotes || '',
   correctAnswerText: props.question.correctAnswerText || ''
@@ -419,14 +419,14 @@ watch(() => props.question, (newVal) => {
           ...newVal,
           type: newVal.type || 'classic',
           rangeConfig: newVal.rangeConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
-          scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: newVal.type === 'range' ? 100 : 1000, tolerance: 10, partialPercent: 0 },
+          scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: newVal.type === 'range' ? 100 : 50, tolerance: 10, partialPercent: 0 },
           explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 5,
           correctValue: newVal.correctValue !== undefined ? newVal.correctValue : 0,
           correctNumber: newVal.correctNumber !== undefined ? newVal.correctNumber : 0,
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',
           imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }],
-          wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 1000 }
+          wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 50 }
       })
       if (typeChanged) {
           handleTypeChange()
@@ -444,16 +444,16 @@ const handleTypeChange = () => {
         if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
         // A7: choice scoring reads scoringConfig.maxPoints.
         if (!localQuestion.scoringConfig) {
-            localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+            localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
         } else if (!localQuestion.scoringConfig.maxPoints) {
-            localQuestion.scoringConfig.maxPoints = 1000
+            localQuestion.scoringConfig.maxPoints = 50
         }
     } else if (localQuestion.type === 'range') {
         // Ensure defaults are set
         if (!localQuestion.rangeConfig.maxValue) localQuestion.rangeConfig.maxValue = 100
         if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 100
     } else if (localQuestion.type === 'number') {
-        if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 1000
+        if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 50
     } else if (localQuestion.type === 'correct_picture') {
         // Ensure image options exist
         if (!localQuestion.imageOptions || localQuestion.imageOptions.length === 0) {
@@ -464,13 +464,13 @@ const handleTypeChange = () => {
         }
         // A7: choice scoring reads scoringConfig.maxPoints, so it must exist.
         if (!localQuestion.scoringConfig) {
-            localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+            localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
         } else if (!localQuestion.scoringConfig.maxPoints) {
-            localQuestion.scoringConfig.maxPoints = 1000
+            localQuestion.scoringConfig.maxPoints = 50
         }
     } else if (localQuestion.type === 'wrong_pictures') {
         if (!localQuestion.wrongPictureConfig) {
-             localQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 1000 }
+             localQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 50 }
         }
     } else if (localQuestion.type === 'simple_text') {
         if (!localQuestion.scoringConfig) {
@@ -490,9 +490,9 @@ const handleTypeChange = () => {
         // scoringConfig.maxPoints, so backfill it when missing.
         if (['classic', 'true_false', 'multi_select'].includes(localQuestion.type)) {
             if (!localQuestion.scoringConfig) {
-                localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+                localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
             } else if (!localQuestion.scoringConfig.maxPoints) {
-                localQuestion.scoringConfig.maxPoints = 1000
+                localQuestion.scoringConfig.maxPoints = 50
             }
         }
     }

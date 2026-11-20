@@ -805,23 +805,23 @@ const handleAddQuestion = (type = 'classic') => {
         newQuestion.correctValue = 0
     } else if (finalType === 'number') {
         newQuestion.correctNumber = 0
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
     } else if (finalType === 'correct_picture') {
         newQuestion.imageOptions = [
             { id: Date.now().toString(), imageId: '', label: '' },
             { id: (Date.now() + 1).toString(), imageId: '', label: '' }
         ]
         // A7: choice scoring reads scoringConfig.maxPoints.
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
     } else if (finalType === 'wrong_pictures') {
-        newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 5, maxPoints: 1000 }
+        newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 5, maxPoints: 50 }
     } else if (finalType === 'true_false') {
         newQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
         // A7: choice scoring reads scoringConfig.maxPoints.
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
     } else if (finalType === 'multi_select' || finalType === 'classic') {
         // A7: choice scoring reads scoringConfig.maxPoints.
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
     }
 
     currentTemplate.value.questions.push(newQuestion)

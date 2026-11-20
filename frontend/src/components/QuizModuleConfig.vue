@@ -288,7 +288,7 @@ watch(() => [props.visible, props.module], ([visible, mod]) => {
             }
             if (q.type === 'number') {
                 if (q.correctNumber === undefined) q.correctNumber = 0
-                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
             }
             if (q.explainTime === undefined) q.explainTime = 5
             return q
@@ -341,7 +341,7 @@ const loadTemplate = (template) => {
             }
             if (q.type === 'number') {
                 if (q.correctNumber === undefined) q.correctNumber = 0
-                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+                if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
             }
             if (q.explainTime === undefined) q.explainTime = 5
             return q
@@ -399,7 +399,7 @@ const addQuestion = (type = 'classic') => {
     newQuestion.correctValue = 0
   } else if (type === 'number') {
     newQuestion.correctNumber = 0
-    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
   } else if (type === 'simple_text') {
     newQuestion.timeLimit = 0
     newQuestion.explainTime = 0
@@ -412,16 +412,16 @@ const addQuestion = (type = 'classic') => {
       { id: (Date.now() + 1).toString(), imageId: '', label: '' }
     ]
     // A7: choice scoring reads scoringConfig.maxPoints.
-    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
   } else if (type === 'wrong_pictures') {
-    newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 1000 }
+    newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 50 }
   } else if (type === 'true_false') {
     newQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
     // A7: choice scoring reads scoringConfig.maxPoints.
-    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
   } else if (type === 'multi_select' || type === 'classic') {
     // A7: choice scoring reads scoringConfig.maxPoints.
-    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+    newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
   }
 
   questions.value.push(newQuestion)
@@ -585,7 +585,7 @@ const handleFileUpload = (event) => {
                     }
                     if (q.type === 'number') {
                         if (q.correctNumber === undefined) q.correctNumber = 0
-                        if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 1000, tolerance: 0, partialPercent: 0 }
+                        if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
                     }
                     if (q.explainTime === undefined) q.explainTime = 5
                     return q

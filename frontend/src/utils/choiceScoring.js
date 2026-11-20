@@ -5,7 +5,7 @@
 // It decays linearly to 25% of maxPoints when the timer runs out, mirroring
 // the historical 1000 -> 250 curve. The streak bonus scales the same way:
 // +10% of maxPoints per streak step, capped at +50%.
-export const DEFAULT_CHOICE_MAX_POINTS = 1000
+export const DEFAULT_CHOICE_MAX_POINTS = 50
 
 export function normalizeChoiceMaxPoints(value) {
     const maxPoints = Number(value)

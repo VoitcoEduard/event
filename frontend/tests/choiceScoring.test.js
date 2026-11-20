@@ -24,13 +24,13 @@ describe('A7 choice scoring honours admin maxPoints', () => {
         assert.equal(calculateChoiceScore({ maxPoints: 500, timeLimit: 20, timeSpent: 0, streak: 3 }), 650)
     })
 
-    it('falls back to 1000 for missing or invalid maxPoints', () => {
-        assert.equal(normalizeChoiceMaxPoints(undefined), 1000)
-        assert.equal(normalizeChoiceMaxPoints(0), 1000)
-        assert.equal(normalizeChoiceMaxPoints('abc'), 1000)
+    it('falls back to 50 for missing or invalid maxPoints', () => {
+        assert.equal(normalizeChoiceMaxPoints(undefined), 50)
+        assert.equal(normalizeChoiceMaxPoints(0), 50)
+        assert.equal(normalizeChoiceMaxPoints('abc'), 50)
         assert.equal(
             calculateChoiceScore({ maxPoints: undefined, timeLimit: 20, timeSpent: 0, streak: 0 }),
-            1000
+            50
         )
     })
 })

@@ -15,7 +15,7 @@ func scoreQuizAnswer(q models.QuizQuestion, data map[string]interface{}, window 
 	spent := math.Max(0, now.Sub(time.Unix(window.StartTime, 0)).Seconds())
 	maxPoints := q.ScoringConfig.MaxPoints
 	if maxPoints <= 0 {
-		maxPoints = 1000
+		maxPoints = 50
 	}
 	var indices []int
 	var value float64
