@@ -164,6 +164,18 @@
   color:#8e8e93;
   background:#8e8e9324
 }
+html[data-admin-appearance="true"] .teams-admin .teams-status.setup{
+  color:var(--admin-warning);
+  background:var(--admin-warning-soft)
+}
+html[data-admin-appearance="true"] .teams-admin .teams-status.live{
+  color:var(--admin-success);
+  background:var(--admin-success-soft)
+}
+html[data-admin-appearance="true"] .teams-admin .teams-status.completed{
+  color:var(--admin-text-muted);
+  background:var(--admin-surface-subtle)
+}
 .teams-admin .teams-panel{
   background:#1e1e1e;
   border-color:#333;

@@ -90,8 +90,8 @@
         <p v-if="message" class="teams-error" role="alert">{{ message }}</p>
         <div class="teams-actions">
           <button v-if="assignableParticipants.length" class="primary" :disabled="busy || !assignParticipantId">{{ $t('teams_module.assign_participant') }}</button>
-          <button v-else type="button" @click="closeAssignDialog(); showParticipants()">{{ $t('teams_module.add_participants') }}</button>
-          <button type="button" :disabled="busy" @click="closeAssignDialog">{{ $t('teams_module.cancel') }}</button>
+          <button v-else type="button" @click="closeAssignDialog({ restoreFocus: false }); showParticipants()">{{ $t('teams_module.add_participants') }}</button>
+          <button type="button" :disabled="busy" @click="closeAssignDialog()">{{ $t('teams_module.cancel') }}</button>
         </div>
       </form>
     </div>
@@ -128,7 +128,11 @@ const scoringPanel = ref(null), participantPanel = ref(null), participantSearch 
 const showAllHistory = ref(false), assignTeam = ref(null), assignParticipantId = ref('')
 const assignDialogRef = ref(null), teamDialogRef = ref(null)
 let previousFocus = null
-function closeAssignDialog() { assignTeam.value = null }
+let skipNextFocusRestore = false
+function closeAssignDialog({ restoreFocus = true } = {}) {
+  if (!restoreFocus) skipNextFocusRestore = true
+  assignTeam.value = null
+}
 function closeTeamDialog() { teamForm.value = null }
 function closeActiveDialog() {
   if (teamForm.value) teamForm.value = null
@@ -186,8 +190,8 @@ async function toggleVisibility() {
   finally { busy.value = false }
 }
 function focusPanel(panel) {
-  panel?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
-  panel?.focus({ preventScroll: true })
+  panel?.scrollIntoView?.({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+  panel?.focus?.({ preventScroll: true })
 }
 function manageScores() { focusPanel(scoringPanel.value) }
 async function showParticipants() { await nextTick(); focusPanel(participantPanel.value); participantSearch.value?.focus({ preventScroll: true }) }
@@ -209,8 +213,10 @@ watch(() => Boolean(assignTeam.value || teamForm.value), async (isOpen, wasOpen)
     const target = dialog?.querySelector?.('select, input, button') || dialog
     target?.focus?.({ preventScroll: true })
   } else if (!isOpen && wasOpen) {
+    const shouldRestore = !skipNextFocusRestore
+    skipNextFocusRestore = false
     await nextTick()
-    if (previousFocus && previousFocus.isConnected !== false && typeof previousFocus.focus === 'function') {
+    if (shouldRestore && previousFocus && previousFocus.isConnected !== false && typeof previousFocus.focus === 'function') {
       previousFocus.focus({ preventScroll: true })
     }
     previousFocus = null

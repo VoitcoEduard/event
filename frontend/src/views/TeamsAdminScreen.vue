@@ -107,7 +107,7 @@ onMounted(async () => {
 }
 
 .teams-admin-context span {
-  color: #888;
+  color: var(--admin-text-muted, #888);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -129,7 +129,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #888;
+  color: var(--admin-text-muted, #888);
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -162,9 +162,9 @@ onMounted(async () => {
 }
 
 .teams-picker-message {
-  color: #888;
-  background: #1e1e1e;
-  border: 1px solid #333;
+  color: var(--admin-text-muted, #888);
+  background: var(--admin-surface, #1e1e1e);
+  border: 1px solid var(--admin-border, #333);
   border-radius: 12px;
 }
 
