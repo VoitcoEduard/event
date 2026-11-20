@@ -14,7 +14,8 @@
     "loadMore": "Load more",
     "disabled": "Your administrator access is disabled.",
     "cancelled": "Google sign-in was cancelled.",
-    "unavailable": "The request failed. Please try again."
+    "unavailable": "The request failed. Please try again.",
+    "noUsers": "No administrators found."
   },
   "main": {
     "title": "Hello",
@@ -137,7 +138,7 @@
     "live_preview": "Live Preview",
     "toast_pushed": "Successfully pushed to Projector",
     "editor": {
-      "title": "Slide Editor", "push_current": "Push Current Slide", "save_all": "Save All", "slides": "Slides", "add_custom_slide": "+ Add Custom Slide", "text": "Text", "properties": "Properties", "element": "Element", "text_content": "Text Content", "text_color": "Text Color", "font_size": "Font Size", "image": "Image", "select_image": "Select an Image", "delete_element": "Delete Element", "slide": "Slide", "name": "Name", "background_color": "Background Color", "background_image": "Background Image", "select_background": "Select Background", "clear_image": "Clear Image", "add_elements": "Add Elements", "add_text": "+ Add Text", "add_image": "+ Add Image", "add_qr": "+ Add QR Code", "template_options": "Template Options", "save_template": "Save as Template", "apply_template": "Apply Template", "no_templates": "No templates saved.", "template_name_prompt": "Enter a name for this template:", "template_saved": "Saved as template successfully", "template_save_failed": "Failed to save template", "apply_confirm": "Apply template \"{name}\"? This will overwrite the current slide.", "template_applied": "Template applied", "load_failed": "Failed to load slides", "saved": "Slides saved successfully", "save_failed": "Failed to save slides", "pushed": "Pushed to Big Screen", "push_failed": "Failed to push to screen", "new_custom_slide": "New Custom Slide", "delete_slide_confirm": "Delete this slide?"
+      "title": "Slide Editor", "push_current": "Push Current Slide", "save_all": "Save All", "slides": "Slides", "add_custom_slide": "+ Add Custom Slide", "text": "Text", "properties": "Properties", "mobile_slides": "Slides", "mobile_properties": "Properties", "element": "Element", "text_content": "Text Content", "text_color": "Text Color", "font_size": "Font Size", "image": "Image", "select_image": "Select an Image", "delete_element": "Delete Element", "slide": "Slide", "name": "Name", "background_color": "Background Color", "background_image": "Background Image", "select_background": "Select Background", "clear_image": "Clear Image", "add_elements": "Add Elements", "add_text": "+ Add Text", "add_image": "+ Add Image", "add_qr": "+ Add QR Code", "template_options": "Template Options", "save_template": "Save as Template", "apply_template": "Apply Template", "no_templates": "No templates saved.", "template_name_prompt": "Enter a name for this template:", "template_saved": "Saved as template successfully", "template_save_failed": "Failed to save template", "apply_confirm": "Apply template \"{name}\"? This will overwrite the current slide.", "template_applied": "Template applied", "load_failed": "Failed to load slides", "saved": "Slides saved successfully", "save_failed": "Failed to save slides", "pushed": "Pushed to Big Screen", "push_failed": "Failed to push to screen", "new_custom_slide": "New Custom Slide", "delete_slide_confirm": "Delete this slide?"
     }
   },
   "library": {
@@ -182,7 +183,7 @@
     }
   },
   "data_library": {
-    "back_to_event": "← Back to event",
+    "back_to_event": "Back to event",
     "title": "Event Data Tables: {name}",
     "unified_view": "Unified View",
     "loading": "Loading data...",
@@ -290,7 +291,7 @@
       "selector": {
         "title": "Choose Question Type",
         "cancel": "Cancel",
-        "description_hint": "Hover over a type to see what it does"
+        "description_hint": "Select a type to see what it does"
       },
       "number": {
         "configuration": "Number Configuration",

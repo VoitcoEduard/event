@@ -9,11 +9,11 @@
           :class="toast.type"
         >
           <span class="toast-icon">
-            <AppIcon :name="getIcon(toast.type)" :size="15" />
+            <AppIcon :name="getIcon(toast.type)" :size="15" aria-hidden="true" />
           </span>
           <span class="toast-message">{{ toast.message }}</span>
           <button class="toast-close" @click="remove(toast.id)" aria-label="Close notification">
-            <AppIcon name="close" :size="16" />
+            <AppIcon name="close" :size="16" aria-hidden="true" />
           </button>
         </div>
       </TransitionGroup>
@@ -54,31 +54,34 @@ const getIcon = (type) => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background-color: #1E1E1E;
+  min-width: 0;
+  max-width: 100%;
+  background-color: var(--admin-surface, #1E1E1E);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  border: 1px solid #333;
+  border: 1px solid var(--admin-border, #333);
 }
 
 .toast.success {
-  border-left: 4px solid #30D158;
+  border-left: 4px solid var(--admin-success, #30D158);
 }
 
 .toast.error {
-  border-left: 4px solid #FF453A;
+  border-left: 4px solid var(--admin-danger, #FF453A);
 }
 
 .toast.warning {
-  border-left: 4px solid #FF9F0A;
+  border-left: 4px solid var(--admin-warning, #FF9F0A);
 }
 
 .toast.info {
-  border-left: 4px solid #007AFF;
+  border-left: 4px solid var(--admin-primary, #007AFF);
 }
 
 .toast-icon {
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -88,36 +91,42 @@ const getIcon = (type) => {
 }
 
 .toast.success .toast-icon {
-  background-color: rgba(48, 209, 88, 0.2);
-  color: #30D158;
+  background-color: var(--admin-success-soft, rgba(48, 209, 88, 0.2));
+  color: var(--admin-success, #30D158);
 }
 
 .toast.error .toast-icon {
-  background-color: rgba(255, 69, 58, 0.2);
-  color: #FF453A;
+  background-color: var(--admin-danger-soft, rgba(255, 69, 58, 0.2));
+  color: var(--admin-danger, #FF453A);
 }
 
 .toast.warning .toast-icon {
-  background-color: rgba(255, 159, 10, 0.2);
-  color: #FF9F0A;
+  background-color: var(--admin-warning-soft, rgba(255, 159, 10, 0.2));
+  color: var(--admin-warning, #FF9F0A);
 }
 
 .toast.info .toast-icon {
-  background-color: rgba(0, 122, 255, 0.2);
-  color: #007AFF;
+  background-color: var(--admin-primary-soft, rgba(0, 122, 255, 0.2));
+  color: var(--admin-primary, #007AFF);
 }
 
 .toast-message {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 14px;
-  color: #FFF;
+  color: var(--admin-text, #FFF);
   font-weight: 500;
 }
 
 .toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   background: none;
   border: none;
-  color: #666;
+  color: var(--admin-text-muted, #A1A1AA);
   font-size: 14px;
   cursor: pointer;
   padding: 4px;
@@ -126,8 +135,25 @@ const getIcon = (type) => {
 }
 
 .toast-close:hover {
-  color: #FFF;
-  background-color: #333;
+  color: var(--admin-text, #FFF);
+  background-color: var(--admin-surface-hover, #333);
+}
+
+@media (max-width: 640px) {
+  .toast-container {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: auto;
+    max-width: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .toast-close {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
 }
 
 .toast-enter-active {

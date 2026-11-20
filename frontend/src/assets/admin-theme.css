@@ -12,6 +12,8 @@
 }
 
 html[data-admin-appearance="true"] {
+  --target-size: 24px;
+  scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   --admin-bg: #f5f6f8;
   --admin-surface: #ffffff;
   --admin-surface-subtle: #f8f9fb;
@@ -102,7 +104,7 @@ html[data-admin-appearance="true"] :focus-visible {
 
 .admin-theme-control {
   position: fixed;
-  z-index: 10020;
+  z-index: 500;
   right: 18px;
   bottom: 18px;
   display: flex;
@@ -137,6 +139,7 @@ html[data-admin-appearance="true"] :is(
   .quiz-host-screen, .judge-screen
 ) {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--admin-bg) !important;
   color: var(--admin-text) !important;
 }
@@ -326,27 +329,66 @@ html[data-admin-appearance="true"] .admin-details-screen .control-group {
 /* Reference layout: event administration landing page. */
 html[data-admin-appearance="true"] .admin-screen > .header {
   min-height: 112px;
-  padding: 24px clamp(24px, 4vw, 64px) !important;
+  padding: 24px clamp(16px, 4vw, 64px) !important;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto;
-  grid-template-areas: "title actions" "subtitle actions";
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "title actions lang" "subtitle actions lang";
   align-items: center;
-  gap: 2px 28px;
+  gap: 2px 20px;
 }
-html[data-admin-appearance="true"] .admin-screen .header-title { grid-area: title; margin: 0; }
-html[data-admin-appearance="true"] .admin-screen .header-subtitle { grid-area: subtitle; margin: 0; }
+html[data-admin-appearance="true"] .admin-screen .header-title {
+  grid-area: title;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+html[data-admin-appearance="true"] .admin-screen .header-subtitle {
+  grid-area: subtitle;
+  margin: 0;
+  min-width: 0;
+}
 html[data-admin-appearance="true"] .admin-screen .header-actions {
   grid-area: actions;
   width: auto;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
   padding-right: 0;
 }
+html[data-admin-appearance="true"] .admin-screen .header-actions .library-btn,
+html[data-admin-appearance="true"] .admin-screen .header-actions a.library-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: max(38px, var(--target-size, 24px));
+  padding: 8px 16px;
+  border: 1px solid var(--admin-border-strong) !important;
+  border-radius: 8px;
+  background: var(--admin-surface) !important;
+  color: var(--admin-text) !important;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+html[data-admin-appearance="true"] .admin-screen .header-actions .library-btn:hover,
+html[data-admin-appearance="true"] .admin-screen .header-actions a.library-btn:hover {
+  background: var(--admin-surface-hover) !important;
+}
 html[data-admin-appearance="true"] .admin-screen .language-switcher {
-  position: fixed;
-  z-index: 10010;
-  top: 16px;
-  right: 16px;
+  grid-area: lang;
+  position: static;
+  top: auto;
+  right: auto;
+  margin-inline-start: auto;
+  z-index: auto;
+}
+html[data-admin-appearance="true"] .admin-screen .language-switcher select {
+  min-height: max(38px, var(--target-size, 24px));
 }
 html[data-admin-appearance="true"] .admin-screen .scroll-content {
   padding: 40px clamp(24px, 4vw, 64px) 48px;
@@ -384,8 +426,13 @@ html[data-admin-appearance="true"] .admin-screen .back-button {
 @media (max-width: 900px) {
   html[data-admin-appearance="true"] .admin-screen .events-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html[data-admin-appearance="true"] .admin-screen > .header {
-    grid-template-columns: 1fr;
-    grid-template-areas: "title" "subtitle" "actions";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title lang"
+      "subtitle subtitle"
+      "actions actions";
+    gap: 4px 12px;
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px)) !important;
   }
   html[data-admin-appearance="true"] .admin-screen .header-actions { justify-content: flex-start; flex-wrap: wrap; margin-top: 12px; }
 }
@@ -471,14 +518,33 @@ html[data-admin-appearance="true"] .library-screen .close-btn {
   color: var(--admin-text-muted) !important;
 }
 
-html[data-admin-appearance="true"] :is(.modal-overlay, .dialog-overlay, .overlay, .config-modal-overlay) {
+.modal-container,
+.modal-content,
+.library-modal,
+.teams-config-modal,
+.add-module-container,
+.team-editor,
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+:is(.modal-container, .modal-content, .library-modal) :is(.scroll-content, .modal-body, .library-content, .template-list) {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+html[data-admin-appearance="true"] :is(.modal-overlay, .dialog-overlay, .overlay, .config-modal-overlay, .library-modal-overlay, .teams-config-overlay) {
   background: var(--admin-overlay) !important;
   backdrop-filter: none !important;
 }
 
 html[data-admin-appearance="true"] :is(
   .modal, .dialog, .modal-content, .modal-container, .config-modal, .selector-modal,
-  .library-modal, .teams-config-modal, .toast
+  .library-modal, .teams-config-modal, .add-module-container, .team-editor, .toast
 ) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border) !important;
@@ -487,9 +553,24 @@ html[data-admin-appearance="true"] :is(
   backdrop-filter: none !important;
 }
 
+html[data-admin-appearance="true"] .toast.success { border-left-color: var(--admin-success) !important; }
+html[data-admin-appearance="true"] .toast.error { border-left-color: var(--admin-danger) !important; }
+html[data-admin-appearance="true"] .toast.warning { border-left-color: var(--admin-warning) !important; }
+html[data-admin-appearance="true"] .toast.info { border-left-color: var(--admin-primary) !important; }
+html[data-admin-appearance="true"] .toast-message { color: var(--admin-text) !important; }
+html[data-admin-appearance="true"] .toast-close {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] .toast-close:hover {
+  background: var(--admin-surface-hover) !important;
+  color: var(--admin-text) !important;
+}
+
 html[data-admin-appearance="true"] :is(
   .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) :is(input, textarea, select) {
+) :is(input, textarea, select):not(.template-name-input):not(.template-desc-input) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border-strong) !important;
   color: var(--admin-text) !important;
@@ -497,10 +578,441 @@ html[data-admin-appearance="true"] :is(
 
 html[data-admin-appearance="true"] :is(
   .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) :is(.header, .selector-header, .modal-header, .settings-bar, .action-bar, .selector-footer, .description-area, .type-card, .template-item) {
+) :is(input, textarea)::placeholder {
+  color: var(--admin-text-dim) !important;
+  opacity: 1;
+}
+
+html[data-admin-appearance="true"] :is(
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.header, .selector-header, .modal-header, .library-header, .settings-bar, .action-bar, .selector-footer, .description-area, .template-item) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border) !important;
   color: var(--admin-text) !important;
+}
+
+/* Embedded editor cards, panels, buttons, and accessible Light/Dark typography
+   inside admin screens and Teleport-to-body modals. */
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .access-page, .login-page,
+  .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
+  .quiz-host-screen, .judge-screen,
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.step-card, .question-editor, .round-card) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .library-screen, .screen-manager,
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .step-header {
+  background: var(--admin-surface-subtle) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .step-header.field-step {
+  border-left-color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .step-header.message-step {
+  border-left-color: var(--admin-warning) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .library-screen, .screen-manager,
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(
+  .range-config-panel, .number-config-panel, .wrong-pictures-config, .simple-text-config,
+  .targets-list-container, .judge-link-bar, .upload-zone, .image-option-card,
+  .type-card, .description-content, .description-placeholder, .screensaver-name
+) {
+  background: var(--admin-surface-subtle) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.preview-box, .number-input-preview, .target-row, .image-preview-container) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .coordinate-picker {
+  background: transparent !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.editor-header, .text-group, .coordinate-picker-wrapper, .coordinate-picker-container, .predefined-answers-section, .image-options-editor) {
+  border-color: var(--admin-border) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .upload-zone {
+  border-color: var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .upload-zone:hover:not(.disabled) {
+  background: var(--admin-surface-hover) !important;
+  border-color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .upload-zone.drag-over {
+  background: var(--admin-primary-soft) !important;
+  border-color: var(--admin-primary) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .image-option-card.is-correct {
+  background: var(--admin-success-soft) !important;
+  border-color: var(--admin-success) !important;
+  box-shadow: none !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .option-number {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .target-row:hover {
+  border-color: var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .target-row.selected {
+  background: var(--admin-primary-soft) !important;
+  border-color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .target-index {
+  background: var(--admin-surface-hover) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .target-row.selected .target-index {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .template-item:hover {
+  background: var(--admin-surface-hover) !important;
+  border-color: var(--admin-primary) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.type-card:hover, .type-card.active) {
+  background: var(--admin-primary-soft) !important;
+  border-color: var(--admin-primary) !important;
+  color: var(--admin-primary) !important;
+}
+
+/* Range preview readability inside Light/Dark .preview-box */
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .value-num {
+  color: var(--admin-text) !important;
+  text-shadow: none !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box :is(.value-unit, .tick-label) {
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .tick-label.active {
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .tick-mark {
+  background: var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .tick-mark.active {
+  background: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .track-bar {
+  background: var(--admin-border) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .thumb {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .thumb-lines span {
+  background: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .scroll-zone {
+  background: var(--admin-surface-subtle) !important;
+  border-color: var(--admin-border) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .notch {
+  background: var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .preview-box .notch.center {
+  background: var(--admin-text-muted) !important;
+}
+
+/* Primary & muted typography inside editors & modals (WCAG AA contrast) */
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .library-screen, .screen-manager,
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(
+  h1, h2, h3, h4, .title, .dialog-title, .section-title, .step-type-label,
+  .t-name, .template-item-name, .upload-text, .round-header h3, .library-header h3,
+  .targets-header h4, .coordinate-picker-wrapper > label, .toggle-label,
+  .checkbox-label, .reveal-toggle, .radio-label, .shape-icon, .type-label, .answer-input
+) {
+  color: var(--admin-text) !important;
+  opacity: 1 !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .admin-screen, .admin-details-screen, .library-screen, .screen-manager,
+  .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(
+  .label, .input-label, .input-group label, .setting-item label, .image-section label,
+  .range-preview-container label, .alt-text-input label, .options-header label,
+  .default-hint, .preview-note, .config-note, .upload-hint, .question-number,
+  .step-index, .t-count, .t-desc, .template-item-desc, .subtitle, .status-text,
+  .reveal-hint, .setting-desc, .judge-label, .target-params, .input-placeholder,
+  .empty-text, .empty-targets, .empty-state, .uploading-content
+) {
+  color: var(--admin-text-muted) !important;
+  opacity: 1 !important;
+}
+
+html[data-admin-appearance="true"] :is(.modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal) :is(label, .hint) {
+  color: var(--admin-text-muted) !important;
+  opacity: 1 !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .answer-card .answer-input {
+  background: transparent !important;
+  border: none !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .answer-card .answer-input:focus {
+  background: color-mix(in srgb, var(--admin-text) 6%, transparent) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .step-card .answer-input {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .correct-value-input {
+  background: var(--admin-success-soft) !important;
+  border-color: var(--admin-success) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .judge-link {
+  color: var(--admin-primary) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .checkmark {
+  background-color: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .correct-toggle input:checked ~ .checkmark {
+  background-color: var(--admin-success-solid) !important;
+  border-color: var(--admin-success-solid) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.slider-round, .switch .slider) {
+  background-color: var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.switch-small input:checked + .slider-round, .switch input:checked + .slider) {
+  background-color: var(--admin-success-solid) !important;
+}
+
+/* Editor interactive controls, tags, and semantic warnings */
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .type-selector {
+  flex-wrap: wrap;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn) {
+  background: var(--admin-surface-subtle) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+  box-shadow: none !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn):hover:not(:disabled) {
+  background: var(--admin-surface-hover) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.action-icon.delete-btn, .remove-answer-btn, .remove-btn-compact) {
+  background: var(--admin-danger-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--admin-danger) 35%, var(--admin-border)) !important;
+  color: var(--admin-danger) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.close-btn, .remove-btn-small, .round-header .remove-btn, .image-option-card .remove-btn) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.close-btn, .remove-btn-small, .round-header .remove-btn, .image-option-card .remove-btn):hover {
+  background: var(--admin-surface-hover) !important;
+  color: var(--admin-danger) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .add-answer-btn {
+  background: var(--admin-success-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--admin-success) 35%, var(--admin-border)) !important;
+  color: var(--admin-success) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .add-option-btn {
+  background: var(--admin-success-solid) !important;
+  border: 1px solid var(--admin-success-solid) !important;
+  color: #fff !important;
+}
+
+html[data-admin-appearance="true"] .teams-config-modal header button {
+  background: var(--admin-surface-subtle) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .teams-config-modal footer button {
+  background: var(--admin-surface-subtle) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .teams-config-modal footer button:first-child {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .question-type-tag {
+  background: var(--admin-primary-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--admin-primary) 30%, var(--admin-border)) !important;
+  color: var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .question-type-tag:hover {
+  background: var(--admin-surface-hover) !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .type-option {
+  background: var(--admin-surface-subtle) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .type-option:hover {
+  background: var(--admin-surface-hover) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .type-option.active {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) :is(.image-required-warning, .multi-select-warning) {
+  background: var(--admin-warning-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--admin-warning) 40%, var(--admin-border)) !important;
+  color: var(--admin-warning) !important;
+}
+html[data-admin-appearance="true"] :is(
+  .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
+) .multi-select-warning strong {
+  color: var(--admin-warning) !important;
+}
+
+html[data-admin-appearance="true"] :is(.modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal) :is(.template-error, .error) {
+  color: var(--admin-danger) !important;
+}
+html[data-admin-appearance="true"] .teams-config-modal .error {
+  background: var(--admin-danger-soft) !important;
+  padding: 10px 12px;
+  border-radius: 8px;
 }
 
 html[data-admin-appearance="true"] table {
@@ -517,7 +1029,6 @@ html[data-admin-appearance="true"] .data-page {
   --line: var(--admin-border);
   --ink: var(--admin-text);
   --muted: var(--admin-text-muted);
-  overflow-x: hidden;
 }
 html[data-admin-appearance="true"] .data-page :is(.table-wrap, .toolbar, .sheet-status, article) {
   background: var(--admin-surface) !important;
@@ -653,9 +1164,12 @@ html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content,
 }
 
 @media (pointer: coarse) {
+  html[data-admin-appearance="true"] {
+    --target-size: 44px;
+  }
   .admin-theme-option {
-    min-block-size: 40px;
-    min-inline-size: 40px;
+    min-block-size: var(--target-size, 44px);
+    min-inline-size: var(--target-size, 44px);
   }
 }
 

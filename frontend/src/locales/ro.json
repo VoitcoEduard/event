@@ -14,7 +14,8 @@
     "loadMore": "Încarcă mai mult",
     "disabled": "Accesul de administrator este dezactivat.",
     "cancelled": "Conectarea cu Google a fost anulată.",
-    "unavailable": "Cererea a eșuat. Încearcă din nou."
+    "unavailable": "Cererea a eșuat. Încearcă din nou.",
+    "noUsers": "Nu s-au găsit administratori."
   },
   "main": {
     "title": "Salut",
@@ -136,7 +137,7 @@
     "custom_text_placeholder": "Introduceți text personalizat...",
     "live_preview": "Previzualizare Live",
     "toast_pushed": "Afișat cu succes pe proiector",
-    "editor": {"title":"Editor de diapozitive","push_current":"Afișează diapozitivul curent","save_all":"Salvează tot","slides":"Diapozitive","add_custom_slide":"+ Adaugă diapozitiv","text":"Text","properties":"Proprietăți","element":"Element","text_content":"Conținut text","text_color":"Culoare text","font_size":"Dimensiune font","image":"Imagine","select_image":"Selectează o imagine","delete_element":"Șterge elementul","slide":"Diapozitiv","name":"Nume","background_color":"Culoare fundal","background_image":"Imagine de fundal","select_background":"Selectează fundalul","clear_image":"Șterge imaginea","add_elements":"Adaugă elemente","add_text":"+ Adaugă text","add_image":"+ Adaugă imagine","add_qr":"+ Adaugă cod QR","template_options":"Opțiuni șablon","save_template":"Salvează ca șablon","apply_template":"Aplică șablonul","no_templates":"Nu există șabloane salvate.","template_name_prompt":"Introdu numele șablonului:","template_saved":"Șablon salvat","template_save_failed":"Salvarea șablonului a eșuat","apply_confirm":"Aplici șablonul \"{name}\"? Diapozitivul curent va fi înlocuit.","template_applied":"Șablon aplicat","load_failed":"Încărcarea diapozitivelor a eșuat","saved":"Diapozitive salvate","save_failed":"Salvarea diapozitivelor a eșuat","pushed":"Afișat pe ecranul mare","push_failed":"Afișarea pe ecran a eșuat","new_custom_slide":"Diapozitiv personalizat nou","delete_slide_confirm":"Ștergi acest diapozitiv?"}
+    "editor": {"title":"Editor de diapozitive","push_current":"Afișează diapozitivul curent","save_all":"Salvează tot","slides":"Diapozitive","add_custom_slide":"+ Adaugă diapozitiv","text":"Text","properties":"Proprietăți","mobile_slides":"Diapozitive","mobile_properties":"Proprietăți","element":"Element","text_content":"Conținut text","text_color":"Culoare text","font_size":"Dimensiune font","image":"Imagine","select_image":"Selectează o imagine","delete_element":"Șterge elementul","slide":"Diapozitiv","name":"Nume","background_color":"Culoare fundal","background_image":"Imagine de fundal","select_background":"Selectează fundalul","clear_image":"Șterge imaginea","add_elements":"Adaugă elemente","add_text":"+ Adaugă text","add_image":"+ Adaugă imagine","add_qr":"+ Adaugă cod QR","template_options":"Opțiuni șablon","save_template":"Salvează ca șablon","apply_template":"Aplică șablonul","no_templates":"Nu există șabloane salvate.","template_name_prompt":"Introdu numele șablonului:","template_saved":"Șablon salvat","template_save_failed":"Salvarea șablonului a eșuat","apply_confirm":"Aplici șablonul \"{name}\"? Diapozitivul curent va fi înlocuit.","template_applied":"Șablon aplicat","load_failed":"Încărcarea diapozitivelor a eșuat","saved":"Diapozitive salvate","save_failed":"Salvarea diapozitivelor a eșuat","pushed":"Afișat pe ecranul mare","push_failed":"Afișarea pe ecran a eșuat","new_custom_slide":"Diapozitiv personalizat nou","delete_slide_confirm":"Ștergi acest diapozitiv?"}
   },
   "library": {
     "title": "Librărie",
@@ -180,7 +181,7 @@
     }
   },
   "data_library": {
-    "back_to_event": "← Înapoi la eveniment",
+    "back_to_event": "Înapoi la eveniment",
     "title": "Tabele Date Eveniment: {name}",
     "unified_view": "Vizualizare Unificată",
     "loading": "Se încarcă datele...",
@@ -286,7 +287,7 @@
       "selector": {
         "title": "Alege Tipul Întrebării",
         "cancel": "Anulează",
-        "description_hint": "Treci cu cursorul peste un tip pentru a vedea ce face"
+        "description_hint": "Selectează un tip pentru a vedea ce face"
       },
       "number": {
         "configuration":"Configurare răspuns numeric","configuration_hint":"Jucătorii trebuie să introducă exact acest număr. Nu se aplică bonus pentru timp.","correct_answer": "Răspuns Corect",
