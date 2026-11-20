@@ -1,47 +1,59 @@
 <template>
-  <div class="admin-details-screen">
-    <div class="header">
+  <div ref="screenRef" class="admin-details-screen">
+    <header class="header">
       <div class="header-content">
-        <div class="header-left">
+        <div class="header-top">
+          <button type="button" class="nav-button back-btn" @click="goBack">
+            {{ $t('admin.details.back_btn') }}
+          </button>
+          <div class="language-switcher">
+            <select
+              v-model="$i18n.locale"
+              :aria-label="$t('library.language_label')"
+              @change="changeLanguage"
+            >
+              <option value="en">English</option>
+              <option value="ru">Русский</option>
+              <option value="ro">Română</option>
+            </select>
+          </div>
+        </div>
+        <div class="header-main">
           <div class="event-info">
-            <div class="language-switcher">
-              <select v-model="$i18n.locale" @change="changeLanguage">
-                <option value="en">English</option>
-                <option value="ru">Русский</option>
-                <option value="ro">Română</option>
-              </select>
-            </div>
             <h1 class="event-title">{{ currentEvent?.name }}</h1>
             <span class="event-status" :class="currentEvent?.isActive ? 'active' : 'inactive'">
               {{ currentEvent?.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
             </span>
           </div>
-        </div>
-        <div class="header-right">
-          
-          <button class="nav-button screen-manager-btn" @click="goToScreenManager">
-            {{ $t('admin.details.screen_manager') }}
-          </button>
-          <button class="nav-button copy-link-btn" @click="copyProjectorLink" :title="$t('quiz.host.copy_link')">
-             <AppIcon name="link" :size="18" />
-          </button>
-          <button class="nav-button library-btn" @click="goToLibrary">
-            {{ $t('admin.details.library_btn') }}
-          </button>
-          <button class="nav-button data-btn" @click="goToDataView">
-            {{ $t('common.data_btn') }}
-          </button>
-          <button class="nav-button back-btn" @click="goBack">
-            {{ $t('admin.details.back_btn') }}
-          </button>
+          <div class="header-right">
+            <button type="button" class="nav-button screen-manager-btn" @click="goToScreenManager">
+              {{ $t('admin.details.screen_manager') }}
+            </button>
+            <button
+              type="button"
+              class="nav-button copy-link-btn"
+              @click="copyProjectorLink"
+              :title="$t('quiz.host.copy_link')"
+              :aria-label="$t('quiz.host.copy_link')"
+            >
+              <AppIcon name="link" :size="18" aria-hidden="true" />
+              <span class="copy-link-label">{{ copyProjectorLabel }}</span>
+            </button>
+            <button type="button" class="nav-button library-btn" @click="goToLibrary">
+              {{ $t('admin.details.library_btn') }}
+            </button>
+            <button type="button" class="nav-button data-btn" @click="goToDataView">
+              {{ $t('common.data_btn') }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </header>
 
-    <div class="scroll-content">
+    <main class="scroll-content">
       <div class="card event-sidebar">
         <div class="card-header">
-          <div>
+          <div class="card-header-text">
             <p class="card-title">{{ $t('admin.details.overview') }}</p>
             <p class="card-description">{{ $t('admin.details.overview_desc') }}</p>
           </div>
@@ -68,14 +80,15 @@
             <div class="qr-wrapper">
               <QRCodeVue :value="qrCodeValue" :size="120" level="H" />
             </div>
-            <button class="copy-btn" @click="copyLink">
+            <button type="button" class="copy-btn" @click="copyLink">
               {{ $t('admin.details.copy_link') }}
             </button>
           </div>
 
           <div class="control-group">
             <p class="section-label">{{ $t('admin.details.controls') }}</p>
-            <button 
+            <button
+              type="button"
               class="action-button"
               :class="currentEvent?.isActive ? 'stop-button' : 'start-button'"
               @click="toggleStatus"
@@ -95,14 +108,14 @@
       <div class="card modules-card">
         <div class="card-header">
           <p class="card-title">{{ $t('admin.details.modules') }}</p>
-          <button class="add-button" @click="showModuleModal = true">
+          <button type="button" class="add-button" @click="openModuleModal($event)">
             {{ $t('admin.details.add_module') }}
           </button>
         </div>
         <p class="card-description">{{ $t('admin.details.modules_desc') }}</p>
 
         <div v-if="currentEvent?.modules && currentEvent.modules.length > 0" class="modules-list">
-          <div v-for="(module, index) in currentEvent.modules" :key="index" class="module-item">
+          <div v-for="(module, index) in currentEvent.modules" :key="module.id ?? index" class="module-item">
             <div class="module-info">
               <p class="module-name">{{ module.name }}</p>
               <p class="module-type">{{ module.type.toUpperCase() }}</p>
@@ -117,11 +130,17 @@
               </span>
             </div>
                         <div class="module-actions">
-                          <button class="module-btn config-btn" @click="configureModule(module)">
+                          <button
+                            type="button"
+                            class="module-btn config-btn"
+                            :data-config-module-id="module.id"
+                            @click="configureModule(module, $event)"
+                          >
                             {{ $t('admin.details.configure') }}
                           </button>
                           <button
                             v-if="module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz' || module.type === 'teams'"
+                            type="button"
                             class="module-btn host-btn"
                             @click="hostQuiz(module)"
                           >
@@ -129,6 +148,7 @@
                           </button>
                           
                           <button
+                            type="button"
                             class="module-btn"
                             :class="module.isActive ? 'stop-button' : 'start-button'"
                             @click="toggleModuleStatus(module)"
@@ -136,6 +156,7 @@
                             {{ module.isActive ? $t('admin.details.stop') : $t('admin.details.start') }}
                           </button>
                           <button
+                            type="button"
                             class="module-btn delete-btn"
                             @click="deleteModule(module)"
                           >
@@ -149,7 +170,7 @@
           <p class="empty-modules-text">{{ $t('admin.details.no_modules') }}</p>
         </div>
       </div>
-    </div>
+    </main>
 
     <FormModuleConfig
       v-if="showConfigModal && selectedModule?.type === 'form'"
@@ -193,23 +214,44 @@
       @update="fetchEventDetails"
     />
 
-    <div v-if="showModuleModal" class="modal-overlay" @click.self="showModuleModal = false">
-      <div class="add-module-container">
+    <div v-if="showModuleModal" class="modal-overlay" @click.self="closeModuleModal">
+      <div
+        ref="addModuleDialogRef"
+        class="add-module-container"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="$t('admin.details.add_modal_title')"
+        tabindex="-1"
+        @keydown.escape.stop.prevent="closeModuleModal"
+      >
         <div class="add-module-header">
           <p class="form-title">{{ $t('admin.details.add_modal_title') }}</p>
-          <button @click="showModuleModal = false" class="close-btn" aria-label="Close"><AppIcon name="close" :size="18" /></button>
+          <button
+            type="button"
+            @click="closeModuleModal"
+            class="close-btn"
+            :aria-label="$t('common.close')"
+          >
+            <AppIcon name="close" :size="18" aria-hidden="true" />
+          </button>
         </div>
 
-        <p class="input-label">{{ $t('admin.details.module_name_label') }}</p>
+        <label for="new-module-name" class="input-label">{{ $t('admin.details.module_name_label') }}</label>
         <input
+          id="new-module-name"
           v-model="newModuleName"
           type="text"
           :placeholder="$t('admin.details.module_name_placeholder')"
           class="module-input"
         />
 
-        <p class="input-label">{{ $t('admin.details.module_type_label') }}</p>
-        <select v-model="selectedModuleType" class="dropdown-select" :aria-label="$t('admin.details.module_type_label')">
+        <label for="new-module-type" class="input-label">{{ $t('admin.details.module_type_label') }}</label>
+        <select
+          id="new-module-type"
+          v-model="selectedModuleType"
+          class="dropdown-select"
+          :aria-label="$t('admin.details.module_type_label')"
+        >
           <option value="form">{{ $t('admin.details.form_option') }}</option>
           <option value="quiz">{{ $t('admin.details.quiz_option') }}</option>
           <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
@@ -217,7 +259,7 @@
           <option value="teams">{{ $t('admin.details.teams_option') }}</option>
         </select>
 
-        <button class="add-module-button" @click="addModule">
+        <button type="button" class="add-module-button" @click="addModule">
           {{ $t('admin.details.add_modal_title') }}
         </button>
       </div>
@@ -228,7 +270,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FormModuleConfig from '../components/FormModuleConfig.vue'
@@ -248,12 +290,18 @@ const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
+const screenRef = ref(null)
+const addModuleDialogRef = ref(null)
 const currentEvent = ref(null)
 const showModuleModal = ref(false)
 const newModuleName = ref('')
 const selectedModuleType = ref('form')
 const showConfigModal = ref(false)
 const selectedModule = ref(null)
+
+let moduleModalTriggerEl = null
+let configModalTriggerEl = null
+let configModalTriggerModuleId = null
 
 // Screensaver state
 const screensaverPreview = ref('')
@@ -262,6 +310,8 @@ const screensavers = ref([])
 const showLibrarySelector = ref(false)
 
 const { success, error, info } = useToast()
+
+const copyProjectorLabel = computed(() => t('quiz.host.copy_link').replace(/^🔗\s*/, ''))
 
 const changeLanguage = () => {
   localStorage.setItem('userLanguage', locale.value)
@@ -291,9 +341,83 @@ const fetchEventDetails = async () => {
   }
 }
 
+const openModuleModal = (event) => {
+  if (typeof document !== 'undefined') {
+    moduleModalTriggerEl = event?.currentTarget || document.activeElement
+  }
+  showModuleModal.value = true
+}
+
+const closeModuleModal = () => {
+  showModuleModal.value = false
+}
+
+const restoreConfigFocus = () => {
+  if (typeof document === 'undefined') return
+  const target = configModalTriggerEl
+  const modId = configModalTriggerModuleId
+  configModalTriggerEl = null
+  configModalTriggerModuleId = null
+  if (target && typeof target.focus === 'function' && target.isConnected) {
+    target.focus()
+    return
+  }
+  if (modId != null && screenRef.value) {
+    const fallback = Array.from(screenRef.value.querySelectorAll('[data-config-module-id]'))
+      .find((el) => el.dataset.configModuleId === String(modId))
+    fallback?.focus?.()
+  }
+}
+
+watch(showModuleModal, (isOpen, wasOpen) => {
+  if (typeof document === 'undefined') return
+  if (isOpen && !wasOpen) {
+    if (!moduleModalTriggerEl) {
+      moduleModalTriggerEl = document.activeElement
+    }
+    if (addModuleDialogRef.value && !addModuleDialogRef.value.contains(document.activeElement)) {
+      addModuleDialogRef.value.focus?.()
+    }
+  } else if (!isOpen && wasOpen) {
+    const target = moduleModalTriggerEl
+    moduleModalTriggerEl = null
+    if (target && typeof target.focus === 'function' && target.isConnected) {
+      target.focus()
+    }
+  }
+}, { flush: 'post' })
+
+watch(showConfigModal, (isOpen, wasOpen) => {
+  if (typeof document === 'undefined') return
+  if (isOpen && !wasOpen) {
+    if (!configModalTriggerEl) {
+      configModalTriggerEl = document.activeElement
+      configModalTriggerModuleId = selectedModule.value?.id ?? null
+    }
+  } else if (!isOpen && wasOpen) {
+    restoreConfigFocus()
+  }
+}, { flush: 'post' })
+
+const handleGlobalKeydown = (event) => {
+  if (event.key === 'Escape' && showModuleModal.value && !event.defaultPrevented) {
+    event.preventDefault()
+    closeModuleModal()
+  }
+}
+
 onMounted(() => {
   fetchEventDetails()
   fetchScreensaverConfig()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', handleGlobalKeydown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleGlobalKeydown)
+  }
 })
 
 // Screensaver functions
@@ -402,7 +526,11 @@ const copyLink = () => {
   success(t('admin.details.toast.event_link_copied'))
 }
 
-const configureModule = (module) => {
+const configureModule = (module, event) => {
+  if (typeof document !== 'undefined') {
+    configModalTriggerEl = event?.currentTarget || document.activeElement
+  }
+  configModalTriggerModuleId = module?.id ?? null
   selectedModule.value = module
   showConfigModal.value = true
 }
@@ -548,12 +676,20 @@ const copyProjectorLink = () => {
 
 <style scoped>
 .admin-details-screen {
+  container: event-details / inline-size;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: #121212;
+  scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+.admin-details-screen,
+.admin-details-screen * {
+  box-sizing: border-box;
 }
 
 .language-switcher {
-  margin-right: 20px;
+  margin-inline-start: auto;
 }
 
 .language-switcher select {
@@ -564,10 +700,12 @@ const copyProjectorLink = () => {
   border-radius: 8px;
   cursor: pointer;
   outline: none;
+  min-block-size: 38px;
+  font-size: 14px;
 }
 
 .header {
-  padding: 20px 40px;
+  padding: 16px clamp(20px, 3vw, 40px) 20px;
   background-color: #1E1E1E;
   border-bottom: 1px solid #333;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
@@ -575,28 +713,45 @@ const copyProjectorLink = () => {
 
 .header-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 14px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.header-left {
-  flex: 1;
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 20px;
 }
 
 .event-info {
   display: flex;
   align-items: center;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1 1 280px;
+  min-inline-size: 0;
 }
 
 .event-title {
-  font-size: 32px;
+  font-size: clamp(1.35rem, 1rem + 2.5vw, 2rem);
   font-weight: 700;
   color: #ffffff;
   margin: 0;
   line-height: 1.2;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  min-inline-size: 0;
 }
 
 .event-status {
@@ -606,6 +761,7 @@ const copyProjectorLink = () => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .event-status.active {
@@ -622,22 +778,36 @@ const copyProjectorLink = () => {
 
 .header-right {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .nav-button {
-  padding: 12px 24px;
+  padding: 10px 18px;
+  min-block-size: 40px;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   text-decoration: none;
+  min-inline-size: 0;
+}
+
+.header-top .back-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  min-block-size: 38px;
+}
+
+.copy-link-label {
+  display: none;
 }
 
 .library-btn {
@@ -698,7 +868,7 @@ const copyProjectorLink = () => {
 }
 
 .scroll-content {
-  padding: 24px;
+  padding: 24px 24px 84px;
   display: grid;
   grid-template-columns: minmax(300px, 1fr) minmax(400px, 2.5fr);
   gap: 24px;
@@ -707,31 +877,57 @@ const copyProjectorLink = () => {
   align-items: start;
 }
 
-@media (max-width: 900px) {
-  .scroll-content {
-    grid-template-columns: 1fr;
-  }
-}
-
 .card {
   background-color: #1E1E1E;
   border-radius: 16px;
   padding: 24px;
   border: 1px solid #333;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  min-inline-size: 0;
 }
 
 .event-sidebar {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-inline-size: 0;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 12px;
+}
+
+.card-header-text {
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.status-badge.active {
+  background-color: #d4edda;
+  color: #155724;
+  border-color: #c3e6cb;
+}
+
+.status-badge.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
 }
 
 .card-title {
@@ -750,12 +946,14 @@ const copyProjectorLink = () => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-inline-size: 0;
 }
 
 .info-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-inline-size: 0;
 }
 
 .label {
@@ -769,6 +967,8 @@ const copyProjectorLink = () => {
 .value {
   font-size: 15px;
   color: #FFF;
+  overflow-wrap: break-word;
+  min-inline-size: 0;
 }
 
 .pin-display {
@@ -780,11 +980,12 @@ const copyProjectorLink = () => {
 }
 
 .pin-text {
-  font-size: 28px;
+  font-size: clamp(1.25rem, 0.9rem + 3vw, 1.75rem);
   color: #FFF;
   font-weight: bold;
-  letter-spacing: 4px;
+  letter-spacing: clamp(2px, 0.8vw, 4px);
   font-family: monospace;
+  overflow-wrap: anywhere;
 }
 
 .qr-wrapper {
@@ -792,20 +993,27 @@ const copyProjectorLink = () => {
   padding: 12px;
   border-radius: 12px;
   align-self: center;
+  max-width: 100%;
+  display: inline-flex;
+  justify-content: center;
 }
 
 .copy-btn {
   margin-top: 8px;
   background-color: #333;
-  padding: 10px;
+  padding: 10px 16px;
   border-radius: 8px;
   width: 100%;
+  min-block-size: 44px;
   color: #FFF;
   font-weight: 600;
   font-size: 13px;
   border: 1px solid #444;
   cursor: pointer;
   transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .copy-btn:hover {
@@ -828,14 +1036,18 @@ const copyProjectorLink = () => {
 }
 
 .action-button {
-  padding: 14px;
+  padding: 12px 16px;
   border-radius: 8px;
   width: 100%;
+  min-block-size: 44px;
   font-weight: 700;
   font-size: 14px;
   color: #FFF;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .start-button {
@@ -900,7 +1112,6 @@ const copyProjectorLink = () => {
   margin-top: 8px;
 }
 
-/* Library Selector Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -911,7 +1122,9 @@ const copyProjectorLink = () => {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 12px;
   z-index: 1000;
+  overscroll-behavior: contain;
 }
 
 .modal-content {
@@ -945,6 +1158,12 @@ const copyProjectorLink = () => {
   color: #888;
   font-size: 20px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  min-block-size: 36px;
+  min-inline-size: 36px;
 }
 
 .close-btn:hover {
@@ -1005,15 +1224,30 @@ const copyProjectorLink = () => {
 
 .modules-card {
   min-height: 400px;
+  min-inline-size: 0;
+}
+
+.modules-card .card-header {
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .add-button {
   background-color: #007AFF;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 20px;
+  border: none;
   color: #FFF;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  min-block-size: 40px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modules-list {
@@ -1024,22 +1258,28 @@ const copyProjectorLink = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 16px;
   background-color: #2C2C2E;
   border-radius: 12px;
   margin-bottom: 12px;
+  min-inline-size: 0;
 }
 
 .module-info {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
+  min-inline-size: 0;
 }
 
 .module-name {
   font-size: 16px;
   font-weight: 600;
   color: #FFF;
+  overflow-wrap: break-word;
+  min-inline-size: 0;
 }
 
 .module-type {
@@ -1049,6 +1289,7 @@ const copyProjectorLink = () => {
 
 .module-status-badge {
   display: inline-block;
+  align-self: flex-start;
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 10px;
@@ -1067,14 +1308,21 @@ const copyProjectorLink = () => {
 
 .module-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .module-btn {
   padding: 6px 12px;
   border-radius: 6px;
+  border: none;
   font-size: 12px;
   font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .module-btn.config-btn {
@@ -1107,7 +1355,8 @@ const copyProjectorLink = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px;
+  padding: 48px 16px;
+  text-align: center;
 }
 
 .empty-modules-text {
@@ -1115,31 +1364,28 @@ const copyProjectorLink = () => {
   font-size: 14px;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-}
-
 .add-module-container {
   background-color: #1E1E1E;
   border-radius: 16px;
   padding: 24px;
-  width: 85%;
-  max-width: 400px;
+  width: calc(100% - 24px);
+  max-width: 420px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+}
+
+.add-module-container:focus {
+  outline: none;
 }
 
 .add-module-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -1147,17 +1393,11 @@ const copyProjectorLink = () => {
   font-size: 18px;
   font-weight: 700;
   color: #FFF;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 20px;
-  cursor: pointer;
+  margin: 0;
 }
 
 .input-label {
+  display: block;
   font-size: 12px;
   color: #888;
   margin-bottom: 8px;
@@ -1204,7 +1444,7 @@ const copyProjectorLink = () => {
   padding: 12px 16px;
   margin-bottom: 16px;
   color: #FFF;
-  font-size: 14px;
+  font-size: 16px;
   border: 1px solid #3A3A3C;
   width: 100%;
   appearance: none;
@@ -1223,10 +1463,12 @@ const copyProjectorLink = () => {
   background-color: #007AFF;
   padding: 14px;
   border-radius: 8px;
+  border: none;
   width: 100%;
   color: #FFF;
   font-weight: 600;
   font-size: 16px;
+  cursor: pointer;
 }
 
 .data-view-modal-content {
@@ -1246,5 +1488,115 @@ const copyProjectorLink = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+@container event-details (inline-size <= 900px) {
+  .scroll-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container event-details (inline-size <= 768px) {
+  .header {
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .header-content {
+    gap: 12px;
+  }
+
+  .header-top .back-btn,
+  .header-top .language-switcher select {
+    min-block-size: 44px;
+  }
+
+  .header-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .event-info {
+    flex-wrap: wrap;
+    gap: 10px;
+    flex: none;
+  }
+
+  .header-right {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .header-right .nav-button {
+    min-block-size: 44px;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.25;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .copy-link-label {
+    display: inline;
+  }
+
+  .scroll-content {
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    gap: 16px;
+  }
+
+  .card {
+    padding: 18px;
+  }
+
+  .modules-card {
+    min-height: auto;
+  }
+}
+
+@container event-details (inline-size <= 640px) {
+  .module-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .module-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .module-btn {
+    min-block-size: 44px;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .module-btn.delete-btn {
+    margin-left: 0;
+  }
+}
+
+@media (pointer: coarse) {
+  .nav-button,
+  .language-switcher select,
+  .copy-btn,
+  .action-button,
+  .add-button,
+  .module-btn,
+  .close-btn,
+  .module-input,
+  .dropdown-select,
+  .add-module-button {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
 }
 </style>
