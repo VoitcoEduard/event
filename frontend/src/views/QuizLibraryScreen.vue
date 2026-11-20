@@ -3,7 +3,7 @@
     <header class="header">
       <div class="header-top">
         <button type="button" class="back-link" @click="goBack">
-          <AppIcon name="arrowLeft" :size="18" />
+          <AppIcon name="arrowLeft" :size="18" aria-hidden="true" />
           <span>{{ $t('library.back_btn') }}</span>
         </button>
         <div class="language-switcher">
@@ -83,14 +83,16 @@
 
     <div class="content-wrapper">
       <!-- Navigation Tabs (Vertical sidebar on desktop, horizontal scrollable bar on mobile) -->
-      <div class="sidebar">
+      <div class="sidebar" :class="{ 'more-start': hasMoreStart, 'more-end': hasMoreEnd }">
         <div
           ref="tablistRef"
           class="library-tabs"
+          :class="{ 'more-start': hasMoreStart, 'more-end': hasMoreEnd }"
           role="tablist"
           :aria-label="$t('library.title')"
           :aria-orientation="isCompactLayout ? 'horizontal' : 'vertical'"
           @keydown="handleTabKeydown"
+          @scroll.passive="updateTabScrollCues"
         >
           <button
             v-for="tab in tabs"
@@ -105,7 +107,7 @@
             :tabindex="activeTab === tab.id ? 0 : -1"
             @click="selectTab(tab.id)"
           >
-            <AppIcon class="tab-icon" :name="tab.icon" :size="20" />
+            <AppIcon class="tab-icon" :name="tab.icon" :size="20" aria-hidden="true" />
             <span class="tab-label">{{ $t(tab.labelKey) }}</span>
           </button>
         </div>
@@ -124,7 +126,7 @@
         <!-- Screensavers Tab Content -->
         <div v-else-if="activeTab === 'screensaver'" class="screensaver-view">
           <div v-if="screensavers.length === 0" class="empty-state">
-            <AppIcon class="empty-icon" name="image" :size="48" />
+            <AppIcon class="empty-icon" name="image" :size="48" aria-hidden="true" />
             <p class="empty-text">{{ $t('library.empty.no_screensavers') }}</p>
             <p class="empty-hint">{{ $t('library.empty.screensaver_hint') }}</p>
           </div>
@@ -146,7 +148,7 @@
                     @click="handleDeleteScreensaver(screensaver)"
                     :aria-label="`${$t('admin.delete_btn')} ${screensaver.name}`"
                   >
-                    <AppIcon name="trash" :size="17" />
+                    <AppIcon name="trash" :size="17" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -157,7 +159,7 @@
         <!-- Music Tab Content -->
         <div v-else-if="activeTab === 'music'" class="music-view">
           <div v-if="tracks.length === 0" class="empty-state">
-            <AppIcon class="empty-icon" name="music" :size="48" />
+            <AppIcon class="empty-icon" name="music" :size="48" aria-hidden="true" />
             <p class="empty-text">{{ $t('library.empty.no_music') }}</p>
             <p class="empty-hint">{{ $t('library.empty.music_hint') }}</p>
           </div>
@@ -165,7 +167,7 @@
           <div v-else class="tracks-list">
             <div v-for="track in tracks" :key="track.id" class="track-card">
               <div class="track-icon">
-                <AppIcon name="music" :size="22" />
+                <AppIcon name="music" :size="22" aria-hidden="true" />
               </div>
               <div class="track-info">
                 <h2 class="track-name">{{ track.name }}</h2>
@@ -178,7 +180,7 @@
                   @click="handleDeleteTrack(track)"
                   :aria-label="`${$t('admin.delete_btn')} ${track.name}`"
                 >
-                  <AppIcon name="trash" :size="17" />
+                  <AppIcon name="trash" :size="17" aria-hidden="true" />
                 </button>
               </div>
               <div class="track-preview">
@@ -189,8 +191,8 @@
         </div>
 
         <div v-else-if="filteredTemplates.length === 0" class="empty-state">
-          <AppIcon class="empty-icon" :name="activeTab === 'form' ? 'form' : (activeTab === 'wrong_pictures' ? 'image' : 'quiz')" :size="48" />
-          <p class="empty-text">{{ $t('library.empty.no_templates', { type: activeTab }) }}</p>
+          <AppIcon class="empty-icon" :name="activeTab === 'form' ? 'form' : (activeTab === 'wrong_pictures' ? 'image' : 'quiz')" :size="48" aria-hidden="true" />
+          <p class="empty-text">{{ $t('library.empty.no_templates', { type: activeTabLabel }) }}</p>
         </div>
 
         <div v-else class="templates-grid">
@@ -209,7 +211,7 @@
                 @click="editTemplate(template)"
                 :aria-label="`${$t('admin.edit_btn')} ${template.name}`"
               >
-                <AppIcon name="edit" :size="16" />
+                <AppIcon name="edit" :size="16" aria-hidden="true" />
                 <span>{{ $t('admin.edit_btn') }}</span>
               </button>
               <button
@@ -218,7 +220,7 @@
                 @click="exportTemplate(template)"
                 :aria-label="`${$t('library.actions.export_btn')} ${template.name}`"
               >
-                <AppIcon name="download" :size="16" />
+                <AppIcon name="download" :size="16" aria-hidden="true" />
                 <span>{{ $t('library.actions.export_btn') }}</span>
               </button>
               <button
@@ -227,7 +229,7 @@
                 @click="deleteTemplate(template)"
                 :aria-label="`${$t('admin.delete_btn')} ${template.name}`"
               >
-                <AppIcon name="trash" :size="16" />
+                <AppIcon name="trash" :size="16" aria-hidden="true" />
                 <span>{{ $t('admin.delete_btn') }}</span>
               </button>
             </div>
@@ -238,18 +240,29 @@
 
     <!-- Edit Template Modal -->
     <div v-if="showEditor" class="modal-overlay" @click.self="closeEditor">
-      <div class="modal-container">
+      <div
+        ref="modalContainerRef"
+        class="modal-container"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="currentTemplate.name || $t('library.manage_templates')"
+        tabindex="-1"
+        @keydown.escape.stop.prevent="closeEditor"
+      >
         <div class="modal-header">
           <input
             v-model="currentTemplate.name"
             class="template-name-input"
+            :aria-label="$t('library.actions.template_name_placeholder')"
             :placeholder="$t('library.actions.template_name_placeholder')"
           />
           <div class="header-buttons">
             <button type="button" class="save-btn" @click="saveTemplate" :disabled="saving">
               {{ saving ? $t('library.actions.saving_btn') : $t('library.actions.save_btn') }}
             </button>
-            <button type="button" class="close-btn" @click="closeEditor" :aria-label="$t('common.close')"><AppIcon name="close" :size="18" /></button>
+            <button type="button" class="close-btn" @click="closeEditor" :aria-label="$t('common.close')">
+              <AppIcon name="close" :size="18" aria-hidden="true" />
+            </button>
           </div>
         </div>
 
@@ -326,9 +339,30 @@ const tabs = [
 ]
 
 const activeTab = ref('form')
+const activeTabLabel = computed(() => {
+  const currentTab = tabs.find(tab => tab.id === activeTab.value)
+  return t(currentTab?.labelKey || 'library.tabs.forms')
+})
 const tablistRef = ref(null)
+const modalContainerRef = ref(null)
 const tabRefs = {}
 const isCompactLayout = ref(false)
+const hasMoreStart = ref(false)
+const hasMoreEnd = ref(false)
+
+const updateTabScrollCues = () => {
+  const scroller = tablistRef.value
+  if (!scroller) return
+  const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
+  if (maxScrollLeft <= 1) {
+    hasMoreStart.value = false
+    hasMoreEnd.value = false
+    return
+  }
+  const scrollLeft = Math.max(0, scroller.scrollLeft)
+  hasMoreStart.value = scrollLeft > 2
+  hasMoreEnd.value = scrollLeft < maxScrollLeft - 2
+}
 
 const setTabRef = (tabId, el) => {
   if (el) {
@@ -338,10 +372,21 @@ const setTabRef = (tabId, el) => {
   }
 }
 
+const scrollTabIntoView = (el) => {
+  if (!el) return
+  const scroller = tablistRef.value
+  const shouldCenter = isCompactLayout.value || (scroller && scroller.scrollWidth > scroller.clientWidth)
+  el.scrollIntoView({
+    block: 'nearest',
+    inline: shouldCenter ? 'center' : 'nearest'
+  })
+  updateTabScrollCues()
+}
+
 const selectTab = (tabId) => {
   activeTab.value = tabId
   nextTick(() => {
-    tabRefs[tabId]?.scrollIntoView({ block: 'nearest', inline: 'nearest', container: 'nearest' })
+    scrollTabIntoView(tabRefs[tabId])
   })
 }
 
@@ -370,7 +415,7 @@ const handleTabKeydown = (event) => {
   const targetEl = tabRefs[tabs[nextIndex].id]
   if (targetEl) {
     targetEl.focus()
-    targetEl.scrollIntoView({ block: 'nearest', inline: 'nearest', container: 'nearest' })
+    scrollTabIntoView(targetEl)
   }
 }
 
@@ -510,7 +555,38 @@ const handleDeleteTrack = async (track) => {
 
 let mediaQueryList = null
 let handleMediaChange = null
-let tabObserver = null
+let tabResizeObserver = null
+let previouslyFocusedEl = null
+
+const handleGlobalKeydown = (event) => {
+  if (event.key === 'Escape' && showEditor.value && !event.defaultPrevented) {
+    if (typeof document !== 'undefined' && document.querySelector('body > .modal-overlay')) {
+      return
+    }
+    event.preventDefault()
+    closeEditor()
+  }
+}
+
+watch(showEditor, (isOpen) => {
+  if (typeof document === 'undefined') return
+  if (isOpen) {
+    previouslyFocusedEl = document.activeElement
+    nextTick(() => {
+      modalContainerRef.value?.focus()
+    })
+  } else if (previouslyFocusedEl && typeof previouslyFocusedEl.focus === 'function') {
+    const target = previouslyFocusedEl
+    previouslyFocusedEl = null
+    nextTick(() => {
+      if (target.isConnected) target.focus()
+    })
+  }
+})
+
+watch(locale, () => {
+  nextTick(updateTabScrollCues)
+})
 
 onMounted(() => {
   fetchTemplates()
@@ -520,31 +596,30 @@ onMounted(() => {
     isCompactLayout.value = mediaQueryList.matches
     handleMediaChange = (event) => {
       isCompactLayout.value = event.matches
+      nextTick(updateTabScrollCues)
     }
     mediaQueryList.addEventListener('change', handleMediaChange)
   }
 
   const scroller = tablistRef.value
-  const supportsScrollTimeline =
-    typeof CSS !== 'undefined' &&
-    typeof CSS.supports === 'function' &&
-    CSS.supports('animation-timeline', 'scroll()')
-  if (scroller && !supportsScrollTimeline && typeof IntersectionObserver !== 'undefined') {
-    const first = scroller.firstElementChild
-    const last = scroller.lastElementChild
-    if (first && last) {
-      tabObserver = new IntersectionObserver(
-        (entries) => {
-          for (const { target, intersectionRatio } of entries) {
-            if (target === first) scroller.classList.toggle('more-start', intersectionRatio < 1)
-            if (target === last) scroller.classList.toggle('more-end', intersectionRatio < 1)
-          }
-        },
-        { root: scroller, threshold: 1, rootMargin: '1px' }
-      )
-      tabObserver.observe(first)
-      tabObserver.observe(last)
+  if (scroller) {
+    nextTick(updateTabScrollCues)
+    if (typeof ResizeObserver !== 'undefined') {
+      tabResizeObserver = new ResizeObserver(() => {
+        updateTabScrollCues()
+      })
+      tabResizeObserver.observe(scroller)
+      Array.from(scroller.children).forEach((child) => tabResizeObserver.observe(child))
     }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateTabScrollCues, { passive: true })
+    window.addEventListener('keydown', handleGlobalKeydown)
+  }
+
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
+    document.fonts.ready.then(() => updateTabScrollCues()).catch(() => {})
   }
 })
 
@@ -552,8 +627,12 @@ onUnmounted(() => {
   if (mediaQueryList && handleMediaChange) {
     mediaQueryList.removeEventListener('change', handleMediaChange)
   }
-  if (tabObserver) {
-    tabObserver.disconnect()
+  if (tabResizeObserver) {
+    tabResizeObserver.disconnect()
+  }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateTabScrollCues)
+    window.removeEventListener('keydown', handleGlobalKeydown)
   }
 })
 
@@ -1299,6 +1378,7 @@ const exportTemplate = (template) => {
   justify-content: center;
   align-items: flex-end;
   z-index: 1000;
+  overscroll-behavior: contain;
 }
 
 .modal-container {
@@ -1312,7 +1392,9 @@ const exportTemplate = (template) => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+  overscroll-behavior: contain;
 }
+.modal-container:focus { outline: none; }
 
 .modal-header {
   padding: 20px;
@@ -1332,6 +1414,11 @@ const exportTemplate = (template) => {
   width: 100%;
   min-inline-size: 0;
   outline: none;
+}
+.template-name-input:focus-visible {
+  outline: 2px solid var(--admin-primary, #007AFF);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 .template-name-input::placeholder { color: #555; }
 
@@ -1369,6 +1456,7 @@ const exportTemplate = (template) => {
 
 .modal-body {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1411,8 +1499,16 @@ const exportTemplate = (template) => {
   .header-actions {
     width: 100%;
     display: flex;
+    align-items: stretch;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .create-btn,
+  .import-btn {
+    min-block-size: 44px;
+    text-wrap: balance;
+    line-height: 1.25;
   }
 
   .create-btn {
@@ -1437,24 +1533,81 @@ const exportTemplate = (template) => {
     border-bottom: 1px solid #2C2C2C;
   }
 
+  .sidebar::before,
+  .sidebar::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inline-size: 28px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+    background: linear-gradient(
+      var(--edge-dir, to right),
+      var(--admin-surface, #1E1E1E) 0%,
+      color-mix(in srgb, var(--admin-surface, #1E1E1E) 75%, transparent) 45%,
+      transparent 100%
+    );
+    box-shadow: inset var(--edge-shadow-x, 8px) 0 10px -10px rgba(0, 0, 0, 0.35);
+  }
+
+  .sidebar::before {
+    --edge-dir: to right;
+    --edge-shadow-x: 8px;
+    inset-inline-start: 0;
+  }
+
+  .sidebar::after {
+    --edge-dir: to left;
+    --edge-shadow-x: -8px;
+    inset-inline-end: 0;
+  }
+
+  .sidebar.more-start::before,
+  .sidebar.more-end::after {
+    opacity: 1;
+  }
+
   .library-tabs {
     flex-direction: row;
     flex-wrap: nowrap;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px));
+    padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
     gap: 4px;
     scroll-snap-type: inline proximity;
     scrollbar-width: none;
-    --fade-size: 2rem;
+    --fade-size: 2.25rem;
     scroll-padding-inline: var(--fade-size);
-    mask:
-      linear-gradient(black, black) no-clip subtract,
-      linear-gradient(to right, black, transparent) 0 0 / var(--fade-start) 100% no-repeat no-clip,
-      linear-gradient(to right, transparent, black) 100% 0 / var(--fade-end) 100% no-repeat no-clip;
-    animation: reveal-fade-start linear both, hide-fade-end linear both;
-    animation-timeline: scroll(self inline);
-    animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black var(--fade-start, 0px),
+      black calc(100% - var(--fade-end, 0px)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black var(--fade-start, 0px),
+      black calc(100% - var(--fade-end, 0px)),
+      transparent 100%
+    );
+    transition: --fade-start 0.18s ease, --fade-end 0.18s ease;
+  }
+
+  .library-tabs::after {
+    content: "";
+    flex: 0 0 max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .library-tabs.more-start {
+    --fade-start: var(--fade-size);
+  }
+
+  .library-tabs.more-end {
+    --fade-end: var(--fade-size);
   }
 
   .library-tabs::-webkit-scrollbar {
@@ -1518,35 +1671,6 @@ const exportTemplate = (template) => {
   }
 }
 
-@supports not (animation-timeline: scroll()) {
-  @container library (inline-size <= 768px) {
-    .library-tabs {
-      animation: none;
-      transition: --fade-start 0.2s, --fade-end 0.2s;
-    }
-
-    .library-tabs.more-start {
-      --fade-start: var(--fade-size);
-    }
-
-    .library-tabs.more-end {
-      --fade-end: var(--fade-size);
-    }
-  }
-}
-
-@keyframes reveal-fade-start {
-  to {
-    --fade-start: var(--fade-size);
-  }
-}
-
-@keyframes hide-fade-end {
-  from {
-    --fade-end: var(--fade-size);
-  }
-}
-
 @media (max-width: 768px) {
   .modal-container {
     height: 100vh;
@@ -1555,16 +1679,40 @@ const exportTemplate = (template) => {
   }
 
   .modal-header {
-    padding: max(12px, env(safe-area-inset-top, 0px)) 14px 12px;
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 8px;
+  }
+
+  .header-buttons {
+    order: 1;
+    width: 100%;
+    justify-content: space-between;
     gap: 8px;
   }
 
   .template-name-input {
-    font-size: 18px;
+    order: 2;
+    flex: 1 0 100%;
+    width: 100%;
+    font-size: clamp(16px, 4.5vw, 18px);
+    line-height: 1.3;
+    padding: 4px 0;
   }
 
-  .header-buttons {
-    gap: 8px;
+  .template-desc-input {
+    padding: 12px max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
+    font-size: 16px;
+  }
+
+  .save-btn {
+    min-block-size: 44px;
+  }
+
+  .close-btn {
+    min-block-size: 44px;
+    min-inline-size: 44px;
   }
 }
 
