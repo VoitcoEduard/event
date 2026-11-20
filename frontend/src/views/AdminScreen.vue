@@ -1,24 +1,30 @@
 <template>
   <div class="admin-screen">
-    <div class="header">
+    <header class="header">
+      <div class="header-brand">
+        <h1 class="header-title">{{ $t('admin.title') }}</h1>
+        <p class="header-subtitle">{{ $t('admin.subtitle') }}</p>
+      </div>
       <div class="language-switcher">
-        <select v-model="$i18n.locale" @change="changeLanguage">
+        <select
+          v-model="$i18n.locale"
+          :aria-label="$t('library.language_label')"
+          @change="changeLanguage"
+        >
           <option value="en">English</option>
           <option value="ru">Русский</option>
           <option value="ro">Română</option>
         </select>
       </div>
-      <h1 class="header-title">{{ $t('admin.title') }}</h1>
       <div class="header-actions">
-          <button class="library-btn" @click="goToLibrary">{{ $t('admin.library_btn') }}</button>
-		  <RouterLink v-if="session.user?.role === 'owner'" class="library-btn" to="/admin/users">{{ $t('auth.manageUsers') }}</RouterLink>
-		  <button class="library-btn" @click="leave">{{ $t('auth.signOut') }}</button>
+        <button type="button" class="library-btn" @click="goToLibrary">{{ $t('admin.library_btn') }}</button>
+        <RouterLink v-if="session.user?.role === 'owner'" class="library-btn" to="/admin/users">{{ $t('auth.manageUsers') }}</RouterLink>
+        <button type="button" class="library-btn" @click="leave">{{ $t('auth.signOut') }}</button>
       </div>
-      <p class="header-subtitle">{{ $t('admin.subtitle') }}</p>
-    </div>
+    </header>
 
-    <div class="scroll-content">
-      <div class="form-card">
+    <main class="scroll-content">
+      <form class="form-card" @submit.prevent="handleSubmit">
         <h2 class="form-title">{{ editingId ? $t('admin.edit_event') : $t('admin.new_event') }}</h2>
         
         <label class="field-label" for="admin-event-name">{{ $t('admin.event_name_placeholder') }}</label>
@@ -49,16 +55,17 @@
         <div class="form-actions">
           <button 
             v-if="editingId" 
+            type="button"
             class="cancel-button" 
             @click="cancelEdit"
           >
             {{ $t('admin.cancel_btn') }}
           </button>
-          <button class="submit-button" @click="handleSubmit">
+          <button type="submit" class="submit-button">
             {{ editingId ? $t('admin.update_btn') : $t('admin.create_btn') }}
           </button>
         </div>
-      </div>
+      </form>
 
       <h2 class="section-title">{{ $t('admin.upcoming_events') }}</h2>
 
@@ -67,7 +74,7 @@
         <template v-else>
           <div v-for="event in events" :key="event.id" class="event-card">
             <div class="card-header" @click="viewDetails(event)">
-              <div>
+              <div class="card-title-group">
                 <p class="event-name">{{ event.name }}</p>
                 <p class="event-id">ID: {{ event.id }}</p>
               </div>
@@ -82,13 +89,13 @@
             <p class="event-description">{{ event.description }}</p>
             
             <div class="card-actions">
-              <button class="card-action view-action" @click="viewDetails(event)">
+              <button type="button" class="card-action view-action" @click="viewDetails(event)">
                 {{ $t('admin.manage_btn') }}
               </button>
-              <button class="card-action edit-action" @click="editEvent(event)">
+              <button type="button" class="card-action edit-action" @click="editEvent(event)">
                 {{ $t('admin.edit_btn') }}
               </button>
-              <button class="card-action delete-action" @click="deleteEvent(event.id)">
+              <button type="button" class="card-action delete-action" @click="deleteEvent(event.id)">
                 {{ $t('admin.delete_btn') }}
               </button>
             </div>
@@ -100,10 +107,10 @@
         </template>
       </div>
 
-      <button class="back-button" @click="goToMain">
+      <button type="button" class="back-button" @click="goToMain">
         {{ $t('admin.back_to_main') }}
       </button>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -237,24 +244,41 @@ const goToLibrary = () => {
 
 <style scoped>
 .admin-screen {
+  container: admin-dashboard / inline-size;
+  width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: #121212;
+  scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+.admin-screen,
+.admin-screen * {
+  box-sizing: border-box;
 }
 
 .header {
-  padding-top: 60px;
-  padding-bottom: 20px;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding: 24px clamp(16px, 4vw, 64px);
   background-color: #1E1E1E;
   border-bottom: 1px solid #2C2C2C;
-  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "title actions lang"
+    "subtitle actions lang";
+  align-items: center;
+  gap: 2px 20px;
+}
+
+.header-brand {
+  display: contents;
 }
 
 .language-switcher {
-  position: absolute;
-  top: 20px;
-  right: 20px;
+  grid-area: lang;
+  position: static;
+  margin-inline-start: auto;
+  flex-shrink: 0;
 }
 
 .language-switcher select {
@@ -265,46 +289,74 @@ const goToLibrary = () => {
   border-radius: 8px;
   cursor: pointer;
   outline: none;
+  font-size: 14px;
+  min-block-size: 40px;
+  max-inline-size: 100%;
 }
 
 .header-title {
-  font-size: 28px;
+  grid-area: title;
+  font-size: clamp(1.375rem, 1.1rem + 1.4vw, 1.75rem);
   font-weight: 800;
   color: #FFFFFF;
-  letter-spacing: -0.5;
-  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+  min-inline-size: 0;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
 
 .header-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
+  grid-area: actions;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .library-btn {
-    background-color: #333;
-    border: 1px solid #555;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #333;
+  border: 1px solid #555;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  text-align: center;
+  min-block-size: 40px;
+  transition: background 0.2s;
 }
 .library-btn:hover { background-color: #444; }
 
+:global(html[data-admin-appearance="true"] .admin-screen .header .header-actions .library-btn) {
+  min-block-size: max(40px, var(--target-size, 24px));
+}
+
 .header-subtitle {
+  grid-area: subtitle;
   font-size: 14px;
   color: #888888;
   text-transform: uppercase;
   letter-spacing: 1px;
   font-weight: 600;
+  margin: 0;
+  min-inline-size: 0;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
-.scroll-content {
-  padding: 24px;
-  padding-bottom: 40px;
+.scroll-content,
+:global(html[data-admin-appearance="true"] .admin-screen > main.scroll-content) {
+  padding: 40px max(clamp(24px, 4vw, 64px), env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(clamp(24px, 4vw, 64px), env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -313,22 +365,34 @@ const goToLibrary = () => {
 .form-card {
   background-color: #1E1E1E;
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 28px;
+  margin-bottom: 38px;
   border: 1px solid #2C2C2C;
-  width: 100%;
-  max-width: 500px;
+  width: min(100%, 540px);
+  max-width: 540px;
 }
 
 .form-title {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   color: #FFF;
-  margin-bottom: 16px;
+  margin: 0 0 16px;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .input {
+  width: 100%;
+  min-inline-size: 0;
+  font-size: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background-color: #121212;
+  color: #fff;
   margin-bottom: 12px;
+  min-block-size: 44px;
 }
 
 .field-label {
@@ -347,25 +411,34 @@ const goToLibrary = () => {
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
+  margin-top: 4px;
+}
+
+.submit-button,
+.cancel-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.25;
+  min-block-size: 40px;
 }
 
 .submit-button {
   background-color: #007AFF;
-  padding: 12px 20px;
-  border-radius: 8px;
+  border: 1px solid #007AFF;
   color: #FFF;
-  font-weight: 600;
-  font-size: 15px;
 }
 
 .cancel-button {
-  padding: 12px 20px;
-  border-radius: 8px;
   border: 1px solid #333;
   color: #AAA;
-  font-weight: 600;
-  font-size: 15px;
   background: none;
 }
 
@@ -373,16 +446,17 @@ const goToLibrary = () => {
   font-size: 20px;
   font-weight: 700;
   color: #FFFFFF;
-  margin-bottom: 20px;
-  margin-top: 10px;
+  margin: 10px 0 20px;
   width: 100%;
   max-width: 1200px;
   text-align: left;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .events-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
   max-width: 1200px;
@@ -391,12 +465,14 @@ const goToLibrary = () => {
 .event-card {
   background-color: #1E1E1E;
   border-radius: 12px;
-  padding: 16px;
-  min-width: 250px;
-  flex: 1;
-  max-width: 350px;
+  padding: 20px;
+  min-width: 0;
+  min-inline-size: 0;
+  max-width: none;
   border: 1px solid #2C2C2C;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
 }
 
 .event-card:hover {
@@ -407,23 +483,31 @@ const goToLibrary = () => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 10px;
   margin-bottom: 8px;
   cursor: pointer;
+}
+
+.card-title-group {
+  flex: 1;
+  min-inline-size: 0;
 }
 
 .event-name {
   font-size: 20px;
   font-weight: 600;
   color: #FFFFFF;
-  flex: 1;
-  margin-right: 10px;
-  margin-bottom: 8px;
+  margin: 0 0 6px;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 .event-id {
   font-size: 12px;
   color: #666;
   font-family: monospace;
+  margin: 0;
+  overflow-wrap: break-word;
 }
 
 .status-badge {
@@ -431,6 +515,8 @@ const goToLibrary = () => {
   border-radius: 4px;
   font-size: 10px;
   font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .status-active {
@@ -447,7 +533,9 @@ const goToLibrary = () => {
   font-size: 14px;
   color: #AAAAAA;
   line-height: 1.5;
-  margin-bottom: 12px;
+  margin: 0 0 12px;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
@@ -457,15 +545,21 @@ const goToLibrary = () => {
 
 .card-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-top: auto;
 }
 
 .card-action {
-  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 12px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
+  min-block-size: 36px;
 }
 
 .view-action {
@@ -487,6 +581,7 @@ const goToLibrary = () => {
 }
 
 .empty-text {
+  grid-column: 1 / -1;
   color: #666;
   font-style: italic;
   text-align: center;
@@ -495,16 +590,111 @@ const goToLibrary = () => {
 }
 
 .back-button {
-  background-color: #FFFFFF;
-  padding: 18px;
-  border-radius: 14px;
+  display: inline-flex;
   align-items: center;
-  margin-top: 10px;
+  justify-content: center;
+  background-color: #FFFFFF;
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-top: 24px;
   width: 100%;
   max-width: 1200px;
+  min-block-size: 48px;
   color: #000000;
   font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.5;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+@container admin-dashboard (inline-size <= 900px) {
+  .header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title lang"
+      "subtitle subtitle"
+      "actions actions";
+    gap: 4px 12px;
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .events-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container admin-dashboard (inline-size <= 600px) {
+  .events-grid,
+  :global(html[data-admin-appearance="true"] .admin-screen > main.scroll-content .events-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-card {
+    padding: 20px;
+  }
+}
+
+@container admin-dashboard (inline-size <= 560px) {
+  .scroll-content,
+  :global(html[data-admin-appearance="true"] .admin-screen > main.scroll-content) {
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .language-switcher select {
+    font-size: 16px;
+  }
+
+  .input {
+    width: 100%;
+    min-inline-size: 0;
+    font-size: 16px;
+  }
+
+  .form-actions {
+    flex-wrap: wrap;
+  }
+
+  .form-actions > button {
+    flex: 1 1 140px;
+    min-block-size: 44px;
+  }
+
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .card-action {
+    flex: 1 1 auto;
+    min-block-size: 44px;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+@media (pointer: coarse) {
+  .library-btn,
+  .language-switcher select,
+  .submit-button,
+  .cancel-button,
+  .card-action,
+  .back-button,
+  .input,
+  input,
+  select,
+  textarea {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .language-switcher select {
+    font-size: 16px;
+  }
 }
 </style>
