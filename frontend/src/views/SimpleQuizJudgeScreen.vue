@@ -11,18 +11,18 @@
           <option value="pending">{{ $t('simple_quiz.judge.pending') }}</option>
           <option value="all">{{ $t('simple_quiz.judge.all') }}</option>
         </select>
-        <button class="judge-btn" @click="undo" :disabled="gradingBusy">{{ $t('simple_quiz.judge.undo') }}</button>
+        <button type="button" class="judge-btn" @click="undo" :disabled="gradingBusy">{{ $t('simple_quiz.judge.undo') }}</button>
       </div>
     </div>
 
-    <p v-if="error" class="judge-error">{{ error }}</p>
-    <p v-if="!token" class="judge-error">{{ $t('simple_quiz.judge.missing_token') }}</p>
+    <p v-if="error" class="judge-error" role="alert">{{ error }}</p>
+    <p v-if="!token" class="judge-error" role="alert">{{ $t('simple_quiz.judge.missing_token') }}</p>
 
     <div class="judge-progress">
       <div v-for="p in progress" :key="p.questionIndex" class="prog-card" :class="{ active: p.questionIndex === currentIdx }">
         <strong>Q{{ p.questionIndex + 1 }}</strong>
         <span>{{ p.received }} {{ $t('simple_quiz.judge.received') }} · {{ p.graded }} {{ $t('simple_quiz.judge.graded') }} · {{ p.ungraded }} {{ $t('simple_quiz.judge.ungraded') }} · {{ p.reviewLater }} {{ $t('simple_quiz.judge.review') }}</span>
-        <button class="link-btn" @click="questionFilter = p.questionIndex">{{ $t('common.open') }}</button>
+        <button type="button" class="link-btn" @click="questionFilter = p.questionIndex">{{ $t('common.open') }}</button>
       </div>
     </div>
 
@@ -42,19 +42,19 @@
       <div class="judge-points">{{ questionPoints(current.questionIndex) }} pts</div>
       <p class="judge-answer">{{ current.text }}</p>
       <div class="judge-actions">
-        <button class="grade-right" @click="grade('right')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.right') }}</button>
-        <button class="grade-wrong" @click="grade('wrong')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.wrong') }}</button>
-        <button class="grade-later" @click="grade('review_later')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.review_later') }}</button>
+        <button type="button" class="grade-right" @click="grade('right')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.right') }}</button>
+        <button type="button" class="grade-wrong" @click="grade('wrong')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.wrong') }}</button>
+        <button type="button" class="grade-later" @click="grade('review_later')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.review_later') }}</button>
       </div>
       <div class="judge-nav">
-        <button @click="step(-1)" :aria-label="$t('common.previous')"><AppIcon name="arrowLeft" :size="18" /></button>
+        <button type="button" @click="step(-1)" :aria-label="$t('common.previous')"><AppIcon name="arrowLeft" :size="18" aria-hidden="true" /></button>
         <span>{{ queueIndex + 1 }} / {{ queue.length }}</span>
-        <button @click="step(1)" :aria-label="$t('common.next')"><AppIcon name="arrowRight" :size="18" /></button>
+        <button type="button" @click="step(1)" :aria-label="$t('common.next')"><AppIcon name="arrowRight" :size="18" aria-hidden="true" /></button>
       </div>
       <p class="judge-hint">{{ $t('simple_quiz.judge.next_pending') }}</p>
     </div>
 
-    <p class="publish-hint">{{ $t('simple_quiz.judge.publish_hint') }} <AppIcon v-if="gradingComplete" name="check" :size="16" /></p>
+    <p class="publish-hint">{{ $t('simple_quiz.judge.publish_hint') }} <AppIcon v-if="gradingComplete" name="check" :size="16" aria-hidden="true" /></p>
   </div>
 </template>
 
@@ -194,7 +194,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.judge-screen { background: #1C1C1E; color: #fff; min-height: 100vh; padding: 20px; max-width: 760px; margin: 0 auto; }
+.judge-screen {
+  container: judge-screen / inline-size;
+  background: #1C1C1E;
+  color: #fff;
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  max-width: 760px;
+  margin: 0 auto;
+}
 .judge-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .judge-filters { display: flex; gap: 8px; align-items: center; }
 .judge-select { background: #2C2C2E; color: #fff; border: 1px solid #3A3A3C; border-radius: 8px; padding: 8px; }
@@ -222,4 +232,70 @@ onUnmounted(() => {
 .judge-nav button { background: #1C1C1E; color: #fff; border: 1px solid #3A3A3C; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
 .judge-hint { color: #8E8E93; font-size: 12px; }
 .publish-hint { color: #8E8E93; font-size: 13px; margin-top: 16px; }
+
+@container judge-screen (inline-size <= 540px) {
+  .judge-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .judge-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .judge-select {
+    width: 100%;
+    min-block-size: 44px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+
+  .judge-btn {
+    grid-column: 1 / -1;
+    min-block-size: 44px;
+    font-size: 16px;
+  }
+
+  .prog-card {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .prog-card span {
+    order: 3;
+    flex: 1 0 100%;
+  }
+
+  .judge-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .grade-right,
+  .grade-wrong,
+  .grade-later {
+    flex: 1 1 110px;
+    min-block-size: 48px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .judge-nav button {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+}
+
+@media (pointer: coarse) {
+  .judge-select,
+  .judge-btn,
+  .link-btn,
+  .judge-actions button,
+  .judge-nav button {
+    min-block-size: 44px;
+  }
+}
 </style>

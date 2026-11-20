@@ -10,21 +10,21 @@
           <span class="pin-code">{{ pinCode }}</span>
         </div>
         <div class="lobby-actions">
-          <button class="copy-link-btn" @click="copyProjectorLink">{{ $t('simple_quiz.host.copy_projector') }}</button>
-          <button v-if="judgeToken" class="copy-link-btn" @click="copyJudgeLink">{{ $t('simple_quiz.host.copy_judge') }}</button>
+          <button type="button" class="copy-link-btn" @click="copyProjectorLink">{{ $t('simple_quiz.host.copy_projector') }}</button>
+          <button v-if="judgeToken" type="button" class="copy-link-btn" @click="copyJudgeLink">{{ $t('simple_quiz.host.copy_judge') }}</button>
         </div>
         <p v-if="judgeToken" class="judge-url">{{ judgeUrl }}</p>
       </div>
       <div class="players-area">
-        <div class="players-count"><span><AppIcon name="teams" :size="18" /> {{ playersCount }}</span> {{ $t('simple_quiz.host.players') }}</div>
+        <div class="players-count"><span><AppIcon name="teams" :size="18" aria-hidden="true" /> {{ playersCount }}</span> {{ $t('simple_quiz.host.players') }}</div>
         <div class="players-grid">
           <div v-for="p in playerList" :key="p.playerId" class="player-chip">{{ p.nickname }}</div>
         </div>
       </div>
       <p v-if="error" class="host-error">{{ error }}</p>
       <div class="lobby-footer" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-        <button v-if="!launched || stateStatus === 'inactive'" class="start-btn" @click="doLaunch">{{ $t('simple_quiz.host.start') }}</button>
-        <button v-else class="start-btn" @click="doOpen">{{ $t('simple_quiz.host.open') }} (Q{{ currentIndex + 1 }})</button>
+        <button v-if="!launched || stateStatus === 'inactive'" type="button" class="start-btn" @click="doLaunch">{{ $t('simple_quiz.host.start') }}</button>
+        <button v-else type="button" class="start-btn" @click="doOpen">{{ $t('simple_quiz.host.open') }} (Q{{ currentIndex + 1 }})</button>
       </div>
     </div>
 
@@ -46,7 +46,7 @@
               <h2 class="question-text">{{ currentQuestion?.text }}</h2>
             </div>
           </div>
-          <div v-if="revealedAnswer" class="reveal-card"><AppIcon name="check" :size="16" /> {{ revealedAnswer }}</div>
+          <div v-if="revealedAnswer" class="reveal-card"><AppIcon name="check" :size="16" aria-hidden="true" /> {{ revealedAnswer }}</div>
         </div>
         <div class="answers-column">
           <div class="answer-counter-widget">
@@ -57,9 +57,9 @@
             <h4>{{ $t('simple_quiz.host.grading_progress') }}</h4>
             <div v-for="p in progress" :key="p.questionIndex" class="prog-row">
               <span>Q{{ p.questionIndex + 1 }}</span>
-              <span>{{ p.received }} / {{ p.graded }} <AppIcon name="check" :size="14" /> / {{ p.reviewLater }}…</span>
+              <span>{{ p.received }} / {{ p.graded }} <AppIcon name="check" :size="14" aria-hidden="true" /> / {{ p.reviewLater }}…</span>
             </div>
-            <p v-if="gradingComplete"><AppIcon name="check" :size="16" /> {{ $t('simple_quiz.host.waiting_grading') }} ready</p>
+            <p v-if="gradingComplete"><AppIcon name="check" :size="16" aria-hidden="true" /> {{ $t('simple_quiz.host.waiting_grading') }} ready</p>
             <p v-else>{{ $t('simple_quiz.host.waiting_grading') }}</p>
           </div>
           <div v-if="leaderboard.length" class="grading-card">
@@ -85,15 +85,15 @@
       <p class="reveal-hint">{{ $t('simple_quiz.host.reveal_hint') }}</p>
 
       <div class="host-controls">
-        <button class="control-btn" @click="doOpen">{{ $t('simple_quiz.host.open') }}</button>
-        <button class="control-btn" @click="doLock">{{ $t('simple_quiz.host.lock') }}</button>
-        <button class="control-btn" @click="doNext">{{ $t('simple_quiz.host.next') }}</button>
-        <button class="control-btn" @click="doReveal">{{ $t('simple_quiz.host.reveal') }}</button>
-        <button class="control-btn" @click="doEnd">{{ $t('simple_quiz.host.end_answering') }}</button>
-        <button class="control-btn primary" @click="doPublish">{{ $t('simple_quiz.host.publish') }}</button>
-        <button class="control-btn" @click="doUpdate">{{ $t('simple_quiz.host.update_published') }}</button>
-        <button class="control-btn" @click="doComplete">{{ $t('simple_quiz.host.complete') }}</button>
-        <button v-if="stateStatus === 'paused'" class="control-btn primary" @click="doResume">{{ $t('simple_quiz.host.resume') }}</button>
+        <button type="button" class="control-btn" @click="doOpen">{{ $t('simple_quiz.host.open') }}</button>
+        <button type="button" class="control-btn" @click="doLock">{{ $t('simple_quiz.host.lock') }}</button>
+        <button type="button" class="control-btn" @click="doNext">{{ $t('simple_quiz.host.next') }}</button>
+        <button type="button" class="control-btn" @click="doReveal">{{ $t('simple_quiz.host.reveal') }}</button>
+        <button type="button" class="control-btn" @click="doEnd">{{ $t('simple_quiz.host.end_answering') }}</button>
+        <button type="button" class="control-btn primary" @click="doPublish">{{ $t('simple_quiz.host.publish') }}</button>
+        <button type="button" class="control-btn" @click="doUpdate">{{ $t('simple_quiz.host.update_published') }}</button>
+        <button type="button" class="control-btn" @click="doComplete">{{ $t('simple_quiz.host.complete') }}</button>
+        <button v-if="stateStatus === 'paused'" type="button" class="control-btn primary" @click="doResume">{{ $t('simple_quiz.host.resume') }}</button>
       </div>
     </div>
   </div>
@@ -282,10 +282,83 @@ onUnmounted(() => {
 <style scoped src="../styles/quiz-host.css"></style>
 <style scoped>
 .host-error { color: #ff9090; text-align: center; }
-.judge-url { font-size: 11px; color: #0A84FF; word-break: break-all; }
+.lobby-actions { flex-wrap: wrap; gap: 10px; }
+.judge-url { font-size: 11px; color: #0A84FF; word-break: break-all; overflow-wrap: anywhere; }
 .reveal-card { background: rgba(50,215,75,0.15); border: 1px solid #32D74B; border-radius: 8px; padding: 12px; margin-top: 12px; font-weight: 700; }
 .grading-card { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; margin-top: 12px; }
 .grading-card h4 { margin: 0 0 8px; }
-.prog-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+.prog-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
 .reveal-hint { text-align: center; color: #8E8E93; font-size: 12px; }
+
+@media (max-width: 900px) {
+  .quiz-host-screen,
+  .state-container,
+  .question-container {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: clip;
+    box-sizing: border-box;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .answer-counter-widget {
+    position: static;
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .lobby-footer {
+    width: 100%;
+  }
+
+  .start-btn {
+    width: 100%;
+    min-block-size: 44px;
+  }
+
+  .prog-row:has(select) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .prog-row select {
+    width: 100%;
+    min-block-size: 44px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+
+  .host-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    padding: 12px 0;
+    box-sizing: border-box;
+  }
+
+  .control-btn {
+    min-block-size: 44px;
+    width: 100%;
+    padding: 10px 12px;
+  }
+
+  .control-btn.primary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (pointer: coarse) {
+  .copy-link-btn,
+  .start-btn,
+  .control-btn,
+  .prog-row select {
+    min-block-size: 44px;
+  }
+}
 </style>
