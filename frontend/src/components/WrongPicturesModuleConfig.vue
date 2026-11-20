@@ -1,18 +1,33 @@
 <template>
   <Teleport to="body">
     <div v-if="visible" class="modal-overlay" @click.self="handleClose">
-      <div class="modal-container" :style="modalStyle">
+      <div
+        ref="modalContainerRef"
+        class="modal-container"
+        :style="modalStyle"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="$t('quiz_config.question_editor.types.wrong_pictures')"
+        tabindex="-1"
+        @keydown.escape="handleModalEscape"
+      >
         <div class="header">
-          <div>
+          <div class="header-title-block">
             <p class="title">{{ $t('quiz_config.question_editor.types.wrong_pictures') }} Config</p>
-            <p class="subtitle">{{ module?.name || 'Untitled' }}</p>
+            <p class="subtitle">{{ module?.name || $t('quiz_config.untitled') }}</p>
           </div>
           <div class="header-buttons">
-            <button class="icon-button" @click="showLibraryModal = true" :title="$t('quiz_config.load_library')">
-              <AppIcon name="download" :size="18" />
+            <button
+              type="button"
+              class="icon-button"
+              @click="showLibraryModal = true"
+              :title="$t('quiz_config.load_library')"
+              :aria-label="$t('quiz_config.load_library')"
+            >
+              <AppIcon name="download" :size="18" aria-hidden="true" />
             </button>
-            <button class="close-button" @click="handleClose">
-              <AppIcon name="close" :size="18" />
+            <button type="button" class="close-button" @click="handleClose" :aria-label="$t('common.close')">
+              <AppIcon name="close" :size="18" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -26,7 +41,7 @@
             >
               <div class="round-header">
                 <h3>Round {{ index + 1 }}</h3>
-                <button class="remove-btn" @click="removeRound(index)" :aria-label="$t('quiz_config.question_editor.wrong_pictures.remove_round')"><AppIcon name="close" :size="16" /></button>
+                <button type="button" class="remove-btn" @click="removeRound(index)" :aria-label="$t('quiz_config.question_editor.wrong_pictures.remove_round')"><AppIcon name="close" :size="16" aria-hidden="true" /></button>
               </div>
               
               <div class="config-compact-row">
@@ -81,14 +96,14 @@
                   />
                 </div>
                 <div v-else class="image-required-warning">
-                  <AppIcon name="alert" :size="16" /> {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+                  <AppIcon name="alert" :size="16" aria-hidden="true" /> {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
                 </div>
               </div>
             </div>
           </div>
           
           <div class="add-round-container">
-            <button class="add-round-btn" @click="addRound">{{ $t('quiz_config.question_editor.wrong_pictures.add_round') }}</button>
+            <button type="button" class="add-round-btn" @click="addRound">{{ $t('quiz_config.question_editor.wrong_pictures.add_round') }}</button>
           </div>
 
           <div class="settings-bar mt-auto">
@@ -116,10 +131,10 @@
               {{ questions.length }} Rounds
             </div>
             <div class="action-buttons">
-                <button class="save-template-btn" @click="saveAsTemplate" :disabled="questions.length === 0">
+                <button type="button" class="save-template-btn" @click="saveAsTemplate" :disabled="questions.length === 0">
                     {{ $t('quiz_config.save_template') }}
                 </button>
-                <button class="publish-btn" @click="handleSave" :disabled="loading">
+                <button type="button" class="publish-btn" @click="handleSave" :disabled="loading">
                   {{ loading ? $t('quiz_config.saving') : $t('quiz_config.save_quiz') }}
                 </button>
             </div>
@@ -132,10 +147,18 @@
   <!-- Library Modal -->
   <Teleport to="body">
     <div v-if="showLibraryModal" class="library-modal-overlay" @click.self="showLibraryModal = false">
-      <div class="library-modal">
+      <div
+        ref="libraryModalRef"
+        class="library-modal"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="$t('quiz_config.select_template')"
+        tabindex="-1"
+        @keydown.escape.stop.prevent="showLibraryModal = false"
+      >
           <div class="library-header">
               <h3>{{ $t('quiz_config.select_template') }}</h3>
-              <button class="close-btn" @click="showLibraryModal = false" aria-label="Close"><AppIcon name="close" :size="18" /></button>
+              <button type="button" class="close-btn" @click="showLibraryModal = false" :aria-label="$t('common.close')"><AppIcon name="close" :size="18" aria-hidden="true" /></button>
           </div>
           <div class="library-content">
               <div v-if="loadingTemplates" class="loading">{{ $t('common.loading') }}</div>
@@ -156,7 +179,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, nextTick, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
@@ -184,6 +207,87 @@ const audioOutput = ref('projector')
 const showLibraryModal = ref(false)
 const templates = ref([])
 const loadingTemplates = ref(false)
+const modalContainerRef = ref(null)
+const libraryModalRef = ref(null)
+
+let previouslyFocusedEl = null
+let previousLibraryTriggerEl = null
+
+const handleModalEscape = (event) => {
+  if (!props.visible || event.defaultPrevented) return
+  if (showLibraryModal.value) {
+    event.preventDefault()
+    event.stopPropagation()
+    showLibraryModal.value = false
+    return
+  }
+  event.preventDefault()
+  event.stopPropagation()
+  handleClose()
+}
+
+const handleGlobalKeydown = (event) => {
+  if (event.key !== 'Escape' || !props.visible || event.defaultPrevented) return
+  if (showLibraryModal.value) {
+    event.preventDefault()
+    showLibraryModal.value = false
+    return
+  }
+  event.preventDefault()
+  handleClose()
+}
+
+watch(() => props.visible, (isVisible, wasVisible) => {
+  if (typeof window !== 'undefined') {
+    if (isVisible) {
+      window.addEventListener('keydown', handleGlobalKeydown)
+    } else {
+      window.removeEventListener('keydown', handleGlobalKeydown)
+    }
+  }
+  if (typeof document === 'undefined') return
+  if (isVisible && !wasVisible) {
+    previouslyFocusedEl = document.activeElement
+    nextTick(() => {
+      if (modalContainerRef.value && !modalContainerRef.value.contains(document.activeElement)) {
+        modalContainerRef.value.focus?.()
+      }
+    })
+  } else if (!isVisible && wasVisible) {
+    showLibraryModal.value = false
+    const target = previouslyFocusedEl
+    previouslyFocusedEl = null
+    if (target && typeof target.focus === 'function') {
+      nextTick(() => {
+        if (target.isConnected) target.focus()
+      })
+    }
+  }
+}, { immediate: true })
+
+watch(showLibraryModal, (isOpen, wasOpen) => {
+  if (typeof document === 'undefined') return
+  if (isOpen && !wasOpen) {
+    previousLibraryTriggerEl = document.activeElement
+    nextTick(() => {
+      libraryModalRef.value?.focus?.()
+    })
+  } else if (!isOpen && wasOpen) {
+    const target = previousLibraryTriggerEl
+    previousLibraryTriggerEl = null
+    if (props.visible && target && typeof target.focus === 'function') {
+      nextTick(() => {
+        if (target.isConnected) target.focus()
+      })
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleGlobalKeydown)
+  }
+})
 
 const fetchTemplates = async () => {
     loadingTemplates.value = true
@@ -401,6 +505,8 @@ const modalStyle = computed(() => ({
   border-top-right-radius: 20px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
 }
 
 .header {
@@ -409,10 +515,16 @@ const modalStyle = computed(() => ({
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid #2C2C2E;
+  gap: 12px;
 }
 
-.title { font-size: 22px; font-weight: bold; color: #FFF; }
-.subtitle { font-size: 14px; color: #8E8E93; margin-top: 2px; }
+.header-title-block {
+  min-inline-size: 0;
+  flex: 1 1 auto;
+}
+
+.title { font-size: 22px; font-weight: bold; color: #FFF; overflow-wrap: anywhere; }
+.subtitle { font-size: 14px; color: #8E8E93; margin-top: 2px; overflow-wrap: anywhere; }
 
 .header-buttons { display: flex; gap: 10px; align-items: center; }
 
@@ -423,13 +535,18 @@ const modalStyle = computed(() => ({
   color: #FFF;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .content {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .rounds-container {
@@ -444,6 +561,8 @@ const modalStyle = computed(() => ({
   border-radius: 12px;
   padding: 20px;
   border: 1px solid #444;
+  min-inline-size: 0;
+  box-sizing: border-box;
 }
 
 .round-header {
@@ -465,6 +584,9 @@ const modalStyle = computed(() => ({
   color: #FF453A;
   cursor: pointer;
   font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .config-compact-row {
@@ -499,6 +621,7 @@ const modalStyle = computed(() => ({
   border-radius: 6px;
   font-size: 13px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .image-management-section {
@@ -721,6 +844,8 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-sizing: border-box;
+    overscroll-behavior: contain;
 }
 
 .library-header {
@@ -736,9 +861,19 @@ input:checked + .slider:before {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
+    overscroll-behavior: contain;
 }
 
-.close-btn { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; }
+.close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .template-list {
     display: flex;
@@ -755,8 +890,149 @@ input:checked + .slider:before {
 }
 .template-item:hover { border-color: #0A84FF; }
 
-.template-info { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.template-info { display: flex; justify-content: space-between; margin-bottom: 4px; gap: 8px; }
 .t-name { color: white; font-weight: 600; }
-.t-count { color: #888; font-size: 12px; }
+.t-count { color: #888; font-size: 12px; flex-shrink: 0; }
 .t-desc { color: #aaa; font-size: 12px; margin: 0; }
+
+@media (max-width: 768px) {
+  .modal-container {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .header-buttons {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-inline-start: auto;
+  }
+
+  .settings-bar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .setting-item {
+    min-inline-size: 0;
+  }
+
+  .setting-select {
+    min-inline-size: 0;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 16px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .action-buttons {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .save-template-btn {
+    flex: 1 1 140px;
+    min-inline-size: 0;
+    text-align: center;
+  }
+
+  .publish-btn {
+    flex: 1 0 100%;
+    width: 100%;
+  }
+
+  .library-modal {
+    width: calc(100% - 24px);
+    max-height: 85vh;
+    max-height: 85dvh;
+  }
+}
+
+@media (max-width: 640px) {
+  .rounds-container {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  .round-card {
+    padding: 14px;
+  }
+
+  .add-round-container {
+    padding: 0 12px 16px;
+  }
+
+  .config-compact-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: end;
+  }
+
+  .config-compact-row .flex-grow {
+    grid-column: 1 / -1;
+    min-inline-size: 0;
+  }
+
+  .config-compact-row .mini {
+    width: auto;
+    min-inline-size: 0;
+  }
+
+  .config-compact-row .mini.center {
+    align-items: flex-start;
+  }
+
+  .input-group label {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .setting-input {
+    font-size: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  .icon-button,
+  .close-button,
+  .remove-btn,
+  .close-btn {
+    min-block-size: var(--target-size, 44px);
+    min-inline-size: var(--target-size, 44px);
+  }
+
+  .add-round-btn,
+  .save-template-btn,
+  .publish-btn,
+  .setting-select,
+  .setting-input,
+  .template-item {
+    min-block-size: var(--target-size, 44px);
+  }
+
+  .switch.small::after {
+    content: '';
+    position: absolute;
+    inset: -12px -4px;
+  }
+}
 </style>

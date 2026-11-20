@@ -34,5 +34,41 @@ function update(key, value) {
 }
 </script>
 <style scoped>
-.teams-config-fields{display:grid;gap:14px}label{display:grid;gap:6px;font-weight:600}select,input{width:100%;box-sizing:border-box;background:#101725;border:1px solid #43516a;border-radius:8px;padding:10px;color:#fff;font:inherit}.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.hint{font-size:13px;line-height:1.5;color:#aab9ce;margin:0}
+.teams-config-fields {
+  display: grid;
+  gap: 14px;
+}
+label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  min-inline-size: 0;
+}
+select, input {
+  width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  background: #101725;
+  border: 1px solid #43516a;
+  border-radius: 8px;
+  padding: 10px;
+  color: #fff;
+  font: inherit;
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 14px;
+}
+.hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #aab9ce;
+  margin: 0;
+}
+@media (pointer: coarse) {
+  select, input {
+    min-block-size: var(--target-size, 44px);
+  }
+}
 </style>

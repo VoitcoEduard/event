@@ -1,14 +1,23 @@
 <template>
   <Teleport to="body">
-    <div v-if="visible" class="modal-overlay" @click.self="handleClose">
-      <div class="modal-container" :style="modalStyle">
+    <div v-if="visible" ref="overlayRef" class="modal-overlay" @click.self="handleClose">
+      <div
+        ref="modalContainerRef"
+        class="modal-container"
+        :style="modalStyle"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="$t('simple_quiz.config.title')"
+        tabindex="-1"
+        @keydown.escape="handleModalEscape"
+      >
         <div class="header">
-          <div>
+          <div class="header-title-block">
             <p class="title">{{ $t('simple_quiz.config.title') }}</p>
             <p class="subtitle">{{ module?.name || $t('quiz_config.untitled') }}</p>
           </div>
           <div class="header-buttons">
-            <button class="close-button" @click="handleClose" aria-label="Close"><AppIcon name="close" :size="18" /></button>
+            <button type="button" class="close-button" @click="handleClose" :aria-label="$t('common.close')"><AppIcon name="close" :size="18" aria-hidden="true" /></button>
           </div>
         </div>
 
@@ -34,7 +43,7 @@
           <div v-if="judgeToken" class="judge-link-bar">
             <span class="judge-label">{{ $t('simple_quiz.config.judge_link') }}</span>
             <code class="judge-link">{{ judgeUrl }}</code>
-            <button class="copy-btn" @click="copyJudgeLink">{{ $t('simple_quiz.config.copy') }}</button>
+            <button type="button" class="copy-btn" @click="copyJudgeLink">{{ $t('simple_quiz.config.copy') }}</button>
           </div>
 
           <div class="action-bar">
@@ -42,7 +51,7 @@
               {{ $t('quiz_config.status', { count: questions.length }) }}
             </div>
             <div class="action-buttons">
-              <button class="publish-btn" @click="handleSave" :disabled="loading">
+              <button type="button" class="publish-btn" @click="handleSave" :disabled="loading">
                 {{ loading ? $t('quiz_config.saving') : $t('quiz_config.save_quiz') }}
               </button>
             </div>
@@ -54,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, nextTick, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppIcon from './AppIcon.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
@@ -74,6 +83,63 @@ const questions = ref([])
 const allowReveal = ref(true)
 const judgeToken = ref('')
 const loading = ref(false)
+const overlayRef = ref(null)
+const modalContainerRef = ref(null)
+
+let previouslyFocusedEl = null
+
+const hasSiblingModalOverlay = () => {
+  if (typeof document === 'undefined') return false
+  return Array.from(document.querySelectorAll('body > .modal-overlay')).some((el) => el !== overlayRef.value)
+}
+
+const handleModalEscape = (event) => {
+  if (!props.visible || event.defaultPrevented) return
+  if (hasSiblingModalOverlay()) return
+  event.preventDefault()
+  event.stopPropagation()
+  handleClose()
+}
+
+const handleGlobalKeydown = (event) => {
+  if (event.key !== 'Escape' || !props.visible || event.defaultPrevented) return
+  if (hasSiblingModalOverlay()) return
+  event.preventDefault()
+  handleClose()
+}
+
+watch(() => props.visible, (isVisible, wasVisible) => {
+  if (typeof window !== 'undefined') {
+    if (isVisible) {
+      window.addEventListener('keydown', handleGlobalKeydown)
+    } else {
+      window.removeEventListener('keydown', handleGlobalKeydown)
+    }
+  }
+  if (typeof document === 'undefined') return
+  if (isVisible && !wasVisible) {
+    previouslyFocusedEl = document.activeElement
+    nextTick(() => {
+      if (modalContainerRef.value && !modalContainerRef.value.contains(document.activeElement)) {
+        modalContainerRef.value.focus?.()
+      }
+    })
+  } else if (!isVisible && wasVisible) {
+    const target = previouslyFocusedEl
+    previouslyFocusedEl = null
+    if (target && typeof target.focus === 'function') {
+      nextTick(() => {
+        if (target.isConnected) target.focus()
+      })
+    }
+  }
+}, { immediate: true })
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleGlobalKeydown)
+  }
+})
 
 const judgeUrl = computed(() => {
   if (!judgeToken.value) return ''
@@ -209,6 +275,8 @@ const modalStyle = computed(() => ({
   border-top-right-radius: 20px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
 }
 .header {
   display: flex;
@@ -216,9 +284,11 @@ const modalStyle = computed(() => ({
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid #2C2C2E;
+  gap: 12px;
 }
-.title { font-size: 22px; font-weight: bold; color: #FFF; }
-.subtitle { font-size: 14px; color: #8E8E93; margin-top: 2px; }
+.header-title-block { min-inline-size: 0; flex: 1 1 auto; }
+.title { font-size: 22px; font-weight: bold; color: #FFF; overflow-wrap: anywhere; }
+.subtitle { font-size: 14px; color: #8E8E93; margin-top: 2px; overflow-wrap: anywhere; }
 .header-buttons { display: flex; gap: 10px; align-items: center; }
 .close-button {
   padding: 8px;
@@ -227,8 +297,11 @@ const modalStyle = computed(() => ({
   color: #FFF;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.content { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 .settings-bar {
   background-color: #1C1C1E;
   border-top: 1px solid #2C2C2E;
@@ -263,4 +336,73 @@ const modalStyle = computed(() => ({
   cursor: pointer;
 }
 .publish-btn:disabled { opacity: 0.5; }
+
+@media (max-width: 768px) {
+  .modal-container {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .settings-bar {
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .judge-link-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .judge-link {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    flex: 1 0 100%;
+  }
+
+  .action-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+}
+
+@media (max-width: 480px) {
+  .copy-btn,
+  .action-buttons,
+  .publish-btn {
+    width: 100%;
+  }
+}
+
+@media (pointer: coarse) {
+  .close-button,
+  .copy-btn,
+  .publish-btn,
+  .reveal-toggle {
+    min-block-size: var(--target-size, 44px);
+    min-inline-size: var(--target-size, 44px);
+  }
+
+  .reveal-toggle {
+    cursor: pointer;
+  }
+
+  .reveal-toggle input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+}
 </style>
