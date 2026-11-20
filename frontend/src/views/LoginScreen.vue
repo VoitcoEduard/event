@@ -1,22 +1,22 @@
 <template>
   <div class="login-page">
     <div class="language-switcher">
-      <select v-model="$i18n.locale" @change="changeLanguage">
+      <select v-model="$i18n.locale" :aria-label="$t('library.language_label')" @change="changeLanguage">
         <option value="en">English</option>
         <option value="ru">Русский</option>
         <option value="ro">Română</option>
       </select>
     </div>
-    <div class="login-card">
+    <main class="login-card">
       <div class="login-logo">
         <img src="/brand-mark.svg" width="48" height="48" alt="Event Operations" />
       </div>
       <h1 class="login-title">{{ $t('login.title') }}</h1>
-	  <p class="login-subtitle">{{ mode === 'google' ? $t('auth.googleSubtitle') : $t('login.subtitle') }}</p>
-	  <p v-if="error" class="error-msg">{{ error }}</p>
+      <p class="login-subtitle">{{ mode === 'google' ? $t('auth.googleSubtitle') : $t('login.subtitle') }}</p>
+      <p v-if="error" class="error-msg" role="alert">{{ error }}</p>
 
-		<a v-if="mode === 'google'" class="login-btn" href="/auth/google/start">{{ $t('auth.googleSignIn') }}</a>
-		<form v-else-if="mode === 'dev'" @submit.prevent="handleLogin" class="login-form">
+      <a v-if="mode === 'google'" class="login-btn" href="/auth/google/start">{{ $t('auth.googleSignIn') }}</a>
+      <form v-else-if="mode === 'dev'" @submit.prevent="handleLogin" class="login-form">
         <div class="input-group">
           <label for="password">{{ $t('login.password_label') }}</label>
           <input
@@ -27,8 +27,14 @@
             autocomplete="current-password"
             :disabled="loading"
           />
-          <button type="button" class="toggle-pw" @click="showPassword = !showPassword" tabindex="-1" :aria-label="showPassword ? 'Hide password' : 'Show password'">
-            <AppIcon :name="showPassword ? 'eyeOff' : 'eye'" :size="18" />
+          <button
+            type="button"
+            class="toggle-pw"
+            @click="showPassword = !showPassword"
+            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-pressed="showPassword"
+          >
+            <AppIcon :name="showPassword ? 'eyeOff' : 'eye'" :size="18" aria-hidden="true" />
           </button>
         </div>
 
@@ -36,9 +42,9 @@
           <span v-if="loading" class="spinner"></span>
           <span v-else>{{ $t('login.signin_btn') }}</span>
         </button>
-		</form>
-		<p v-if="!mode && !error">{{ $t('auth.loading') }}</p>
-    </div>
+      </form>
+      <p v-if="!mode && !error" class="loading-msg">{{ $t('auth.loading') }}</p>
+    </main>
   </div>
 </template>
 
@@ -95,10 +101,16 @@ async function handleLogin() {
 <style scoped>
 .login-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: max(72px, calc(60px + env(safe-area-inset-top, 0px)))
+           max(16px, env(safe-area-inset-right, 0px))
+           max(84px, calc(76px + env(safe-area-inset-bottom, 0px)))
+           max(16px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
   background: #0f0f13;
   background-image: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
                     radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
@@ -108,8 +120,8 @@ async function handleLogin() {
 
 .language-switcher {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
 }
 
 .language-switcher select {
@@ -120,15 +132,17 @@ async function handleLogin() {
   border-radius: 8px;
   cursor: pointer;
   outline: none;
+  min-block-size: 36px;
 }
 
 .login-card {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 48px 40px;
+  padding: clamp(24px, 6vw, 44px) clamp(20px, 5vw, 36px);
   width: 100%;
   max-width: 400px;
+  box-sizing: border-box;
   backdrop-filter: blur(20px);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
   animation: fadeUp 0.4s ease;
@@ -152,13 +166,16 @@ async function handleLogin() {
   text-align: center;
   margin: 0 0 8px;
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 .login-subtitle {
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.72);
   text-align: center;
   font-size: 0.9rem;
-  margin: 0 0 32px;
+  margin: 0 0 28px;
+  line-height: 1.45;
+  text-wrap: pretty;
 }
 
 .login-form {
@@ -188,6 +205,7 @@ async function handleLogin() {
   border-radius: 10px;
   color: #fff;
   font-size: 1rem;
+  line-height: 1.25;
   padding: 12px 44px 12px 16px;
   outline: none;
   transition: border-color 0.2s, background 0.2s;
@@ -206,31 +224,59 @@ async function handleLogin() {
 
 .toggle-pw {
   position: absolute;
-  right: 12px;
-  bottom: 10px;
-  background: none;
+  right: 6px;
+  bottom: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 36px;
+  min-inline-size: 36px;
+  background: transparent;
   border: none;
+  border-radius: 8px;
+  color: var(--admin-text-muted, rgba(255, 255, 255, 0.75));
   cursor: pointer;
   font-size: 1rem;
   padding: 0;
   line-height: 1;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  transition: color 0.2s, opacity 0.2s;
 }
 
-.toggle-pw:hover { opacity: 1; }
+.toggle-pw:hover {
+  color: var(--admin-text, #fff);
+}
 
-.error-msg {
-  color: #f87171;
+:global(html[data-admin-appearance="true"]) .login-page .toggle-pw {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--admin-text-muted) !important;
+}
+
+:global(html[data-admin-appearance="true"]) .login-page .toggle-pw:hover {
+  color: var(--admin-text) !important;
+}
+
+.error-msg,
+:global(html[data-admin-appearance="true"]) .login-page p.error-msg {
+  color: var(--admin-danger, #f87171);
   font-size: 0.85rem;
-  margin: 0;
+  line-height: 1.4;
+  margin: 0 0 16px;
   padding: 10px 14px;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.2);
+  background: var(--admin-danger-soft, rgba(248, 113, 113, 0.1));
+  border: 1px solid color-mix(in srgb, var(--admin-danger, #f87171) 30%, transparent);
   border-radius: 8px;
 }
 
+.loading-msg {
+  text-align: center;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
 .login-btn {
+  width: 100%;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #2d8cff, #0a6cf5);
   border: none;
   border-radius: 10px;
@@ -245,7 +291,6 @@ async function handleLogin() {
   transition: opacity 0.2s, transform 0.15s;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   margin-top: 4px;
 }
@@ -272,5 +317,28 @@ async function handleLogin() {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (pointer: coarse) {
+  .language-switcher select {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .input-group input {
+    min-block-size: 44px;
+    padding: 13px 48px 13px 16px;
+  }
+
+  .toggle-pw {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+    right: 2px;
+    bottom: 2px;
+  }
+
+  .login-btn {
+    min-block-size: 44px;
+  }
 }
 </style>
