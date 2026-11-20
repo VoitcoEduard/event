@@ -11,10 +11,10 @@
     
     <div v-if="modelValue && hidePreview" class="compact-actions">
       <button type="button" class="change-btn" @click="triggerFileSelect" :disabled="disabled">
-        <AppIcon name="upload" :size="16" /> Change Image
+        <AppIcon name="upload" :size="16" aria-hidden="true" /> Change Image
       </button>
       <button type="button" class="remove-btn-compact" @click="removeImage" :disabled="disabled">
-        <AppIcon name="close" :size="16" /> Remove
+        <AppIcon name="close" :size="16" aria-hidden="true" /> Remove
       </button>
     </div>
     
@@ -34,13 +34,18 @@
       v-if="!modelValue" 
       class="upload-zone"
       :class="{ 'drag-over': isDragging, 'disabled': disabled }"
+      role="button"
+      :tabindex="disabled ? -1 : 0"
+      :aria-disabled="disabled ? 'true' : undefined"
       @drop.prevent="handleDrop"
       @dragover.prevent="isDragging = true"
       @dragleave.prevent="isDragging = false"
       @click="!disabled && triggerFileSelect()"
+      @keydown.enter.prevent="!disabled && triggerFileSelect()"
+      @keydown.space.prevent="!disabled && triggerFileSelect()"
     >
       <div v-if="!isUploading" class="upload-content">
-        <AppIcon class="upload-icon" name="camera" :size="32" />
+        <AppIcon class="upload-icon" name="camera" :size="32" aria-hidden="true" />
         <span class="upload-text">{{ $t('image_uploader.click_drag') }}</span>
         <span class="upload-hint">{{ $t('image_uploader.hint') }}</span>
       </div>
@@ -155,9 +160,12 @@ function updateAltText(value) {
 <style scoped>
 .image-uploader {
   width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
 }
 
 .upload-zone {
+  box-sizing: border-box;
   border: 2px dashed #3A3A3C;
   border-radius: 8px;
   padding: 24px;
@@ -245,9 +253,12 @@ function updateAltText(value) {
 }
 
 .remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(0, 0, 0, 0.7);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 4px;
   padding: 6px 12px;
   cursor: pointer;
@@ -261,11 +272,16 @@ function updateAltText(value) {
 
 .compact-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
 }
 
 .change-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: #3A3A3C;
   color: white;
   border: 1px solid #444;
@@ -282,6 +298,10 @@ function updateAltText(value) {
 }
 
 .remove-btn-compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: rgba(255, 69, 58, 0.1);
   color: #FF453A;
   border: 1px solid rgba(255, 69, 58, 0.3);
@@ -315,6 +335,7 @@ function updateAltText(value) {
 
 .alt-input {
   width: 100%;
+  min-inline-size: 0;
   background-color: #1C1C1E;
   border: 1px solid #3A3A3C;
   border-radius: 8px;
@@ -331,5 +352,20 @@ function updateAltText(value) {
 
 .alt-input::placeholder {
   color: #636366;
+}
+
+@media (pointer: coarse) {
+  .change-btn,
+  .remove-btn-compact,
+  .remove-btn,
+  .upload-zone {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .alt-input {
+    min-block-size: 44px;
+    font-size: 16px;
+  }
 }
 </style>

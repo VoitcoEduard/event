@@ -36,7 +36,7 @@
     <div class="targets-list-container">
       <div class="targets-header">
          <h4>{{ $t('quiz_config.question_editor.coordinate_picker.targets_title') }} ({{ targets.length }})</h4>
-         <button class="add-btn" @click.prevent="startPlacing" :disabled="isPlacing">
+         <button type="button" class="add-btn" @click.prevent="startPlacing" :disabled="isPlacing">
             {{ isPlacing ? $t('quiz_config.question_editor.coordinate_picker.placing_hint') : $t('quiz_config.question_editor.coordinate_picker.add_target') }}
          </button>
       </div>
@@ -62,7 +62,7 @@
                <span>%</span>
              </div>
           </div>
-          <button class="remove-btn-small" @click.stop="removeTarget(target.id)" aria-label="Remove target"><AppIcon name="close" :size="14" /></button>
+          <button type="button" class="remove-btn-small" @click.stop="removeTarget(target.id)" aria-label="Remove target"><AppIcon name="close" :size="14" aria-hidden="true" /></button>
         </div>
       </div>
     </div>
@@ -174,11 +174,18 @@ const onImageLoad = () => {
 
 <style scoped>
 .coordinate-picker {
+  container: coord-picker / inline-size;
   display: flex;
   flex-direction: column;
   gap: 12px;
   background: #1C1C1E;
   border-radius: 8px;
+  min-inline-size: 0;
+}
+
+.coordinate-picker,
+.coordinate-picker * {
+  box-sizing: border-box;
 }
 
 .image-container {
@@ -188,6 +195,7 @@ const onImageLoad = () => {
   border-radius: 8px;
   overflow: hidden;
   cursor: crosshair;
+  touch-action: manipulation;
   background: #000;
   border: 1px solid #3A3A3C;
 }
@@ -203,12 +211,15 @@ const onImageLoad = () => {
   border-radius: 8px;
   border: 1px solid #3A3A3C;
   padding: 12px;
+  min-inline-size: 0;
 }
 
 .targets-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
@@ -294,6 +305,7 @@ const onImageLoad = () => {
 
 .target-inputs {
   flex: 1;
+  min-inline-size: 0;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -306,6 +318,8 @@ const onImageLoad = () => {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
+  min-inline-size: 0;
+  box-sizing: border-box;
 }
 
 .label-input {
@@ -328,8 +342,14 @@ const onImageLoad = () => {
 }
 
 .remove-btn-small {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   background: none;
   border: none;
+  border-radius: 6px;
   color: #8E8E93;
   cursor: pointer;
   font-size: 14px;
@@ -399,5 +419,68 @@ const onImageLoad = () => {
   justify-content: center;
   color: #8E8E93;
   font-size: 13px;
+}
+
+@container coord-picker (inline-size <= 520px) {
+  .target-row {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .target-inputs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .label-input {
+    width: 100%;
+    flex: none;
+  }
+
+  .target-params {
+    width: 100%;
+  }
+}
+
+@media (pointer: coarse) {
+  .add-btn {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .target-input {
+    min-block-size: 44px;
+    font-size: 16px;
+  }
+
+  .prop-input {
+    width: 72px;
+  }
+
+  .target-marker::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  .remove-btn-small {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .remove-btn-small::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
 }
 </style>

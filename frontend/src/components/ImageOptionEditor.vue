@@ -4,6 +4,7 @@
       <label>{{ $t('image_options_editor.label') }}</label>
       <button 
         v-if="imageOptions.length < 4" 
+        type="button"
         @click="addOption"
         class="add-option-btn"
       >
@@ -31,11 +32,13 @@
           </label>
           <button 
             v-if="imageOptions.length > 2" 
+            type="button"
             @click="removeOption(idx)"
             class="remove-btn"
             title="Remove option"
+            aria-label="Remove option"
           >
-            <AppIcon name="close" :size="16" />
+            <AppIcon name="close" :size="16" aria-hidden="true" />
           </button>
         </div>
         
@@ -116,12 +119,16 @@ const removeOption = (idx) => {
   margin-top: 1rem;
   border-top: 1px solid #3A3A3C;
   padding-top: 1rem;
+  box-sizing: border-box;
+  min-inline-size: 0;
 }
 
 .options-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 1rem;
 }
 
@@ -146,7 +153,7 @@ const removeOption = (idx) => {
 
 .image-options-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 1rem;
 }
 
@@ -156,6 +163,8 @@ const removeOption = (idx) => {
   padding: 1rem;
   background: #1C1C1E;
   transition: all 0.2s;
+  min-inline-size: 0;
+  box-sizing: border-box;
 }
 
 .image-option-card.is-correct {
@@ -182,6 +191,7 @@ const removeOption = (idx) => {
   justify-content: center;
   border-radius: 50%;
   font-size: 0.8rem;
+  flex-shrink: 0;
 }
 
 .correct-radio {
@@ -190,6 +200,7 @@ const removeOption = (idx) => {
   gap: 0.3rem;
   cursor: pointer;
   flex: 1;
+  min-inline-size: 0;
 }
 
 .radio-label {
@@ -198,16 +209,39 @@ const removeOption = (idx) => {
 }
 
 .remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
+  border-radius: 6px;
   color: #8E8E93;
   cursor: pointer;
   font-size: 1.2rem;
-  padding: 0;
+  padding: 4px;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .remove-btn:hover {
   color: #FF453A;
+}
+
+@media (pointer: coarse) {
+  .add-option-btn,
+  .remove-btn {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .correct-radio {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .correct-radio input[type="radio"] {
+    width: 20px;
+    height: 20px;
+  }
 }
 </style>

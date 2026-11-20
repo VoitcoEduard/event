@@ -2,15 +2,27 @@
   <div class="quiz-editor">
     <div class="scroll-content">
       <div v-if="questions.length === 0" class="empty-state">
-        <AppIcon class="empty-icon" name="quiz" :size="42" />
+        <AppIcon class="empty-icon" name="quiz" :size="42" aria-hidden="true" />
         <p class="empty-text">{{ $t('quiz_editor.empty_text') }}</p>
       </div>
       
       <div v-else class="questions-list">
         <div v-for="(question, index) in questions" :key="question.id" class="question-wrapper-outer">
            <div class="question-sort-controls">
-              <button @click="emit('move-question', index, -1)" :disabled="index === 0" class="move-btn">↑</button>
-              <button @click="emit('move-question', index, 1)" :disabled="index === questions.length - 1" class="move-btn">↓</button>
+              <button
+                type="button"
+                @click="emit('move-question', index, -1)"
+                :disabled="index === 0"
+                class="move-btn"
+                aria-label="Move question up"
+              >↑</button>
+              <button
+                type="button"
+                @click="emit('move-question', index, 1)"
+                :disabled="index === questions.length - 1"
+                class="move-btn"
+                aria-label="Move question down"
+              >↓</button>
            </div>
            <div class="question-component-wrapper">
               <QuizQuestionEditor 
@@ -27,7 +39,7 @@
       </div>
       
       <div class="add-section">
-        <button class="add-btn" @click="handleAddClick">
+        <button type="button" class="add-btn" @click="handleAddClick">
           {{ $t('quiz_editor.add_question') }}
         </button>
       </div>
@@ -85,23 +97,26 @@ const handleTypeSelect = (type) => {
 
 <style scoped>
 .quiz-editor {
+  container: quiz-editor / inline-size;
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  min-inline-size: 0;
 }
 
 .scroll-content {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #8E8E93;
+  color: var(--admin-text-muted, #8E8E93);
 }
 .empty-icon { font-size: 48px; margin-bottom: 16px; }
 .empty-text { font-size: 14px; }
@@ -126,8 +141,8 @@ const handleTypeSelect = (type) => {
 }
 
 .move-btn {
-  background-color: #3A3A3C;
-  color: white;
+  background-color: var(--admin-surface-subtle, #3A3A3C);
+  color: var(--admin-text, white);
   border: none;
   padding: 8px;
   border-radius: 6px;
@@ -139,10 +154,11 @@ const handleTypeSelect = (type) => {
   justify-content: center;
 }
 .move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.move-btn:hover:not(:disabled) { background-color: #48484A; }
+.move-btn:hover:not(:disabled) { background-color: var(--admin-surface-hover, #48484A); }
 
 .question-component-wrapper {
   flex: 1;
+  min-inline-size: 0;
 }
 
 .add-section {
@@ -151,8 +167,8 @@ const handleTypeSelect = (type) => {
 }
 
 .add-btn {
-  background-color: rgba(10, 132, 255, 0.1);
-  color: #0A84FF;
+  background-color: var(--admin-primary-soft, rgba(10, 132, 255, 0.1));
+  color: var(--admin-primary, #0A84FF);
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -162,5 +178,39 @@ const handleTypeSelect = (type) => {
 
 .quiz-editor::-webkit-scrollbar {
   display: none;
+}
+
+@container quiz-editor (inline-size <= 580px) {
+  .scroll-content {
+    padding: 12px;
+  }
+
+  .question-wrapper-outer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .question-sort-controls {
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-top: 0;
+  }
+
+  .question-component-wrapper {
+    flex: none;
+    width: 100%;
+    min-inline-size: 0;
+  }
+}
+
+@media (pointer: coarse) {
+  .move-btn {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .add-btn {
+    min-block-size: 44px;
+  }
 }
 </style>

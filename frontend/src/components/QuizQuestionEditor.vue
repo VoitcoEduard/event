@@ -1,12 +1,13 @@
 <template>
   <div class="question-editor">
+    <div class="question-editor-inner">
     <div class="editor-header">
       <div class="header-left">
         <span class="question-number">{{ $t('quiz_config.question_editor.question_number', { number: index + 1 }) }}</span>
-        <span class="question-type-tag" @click="$emit('change-type')">{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</span>
+        <button type="button" class="question-type-tag" @click="$emit('change-type')">{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</button>
       </div>
-      <button class="delete-btn" @click="$emit('delete')" :aria-label="$t('form_editor.delete_question')">
-        <AppIcon name="trash" :size="16" />
+      <button type="button" class="delete-btn" @click="$emit('delete')" :aria-label="$t('form_editor.delete_question')">
+        <AppIcon name="trash" :size="16" aria-hidden="true" />
       </button>
     </div>
 
@@ -29,14 +30,8 @@
             <span v-if="localQuestion.timeLimit === 20" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
           </label>
           <select v-model.number="localQuestion.timeLimit" class="select-input" @change="emitUpdate">
-            <option v-if="localQuestion.type === 'simple_text'" :value="0">{{ $t('quiz_config.question_editor.no_limit') }}</option>
-            <option :value="5">5s</option>
-            <option :value="10">10s</option>
-            <option :value="20">20s</option>
-            <option :value="30">30s</option>
-            <option :value="60">60s</option>
-            <option :value="90">90s</option>
-            <option :value="120">120s</option>
+            <option v-if="localQuestion.type === 'simple_text' || localQuestion.timeLimit === 0" :value="0">{{ $t('quiz_config.question_editor.no_limit') }}</option>
+            <option v-for="sec in timeLimitOptions" :key="sec" :value="sec">{{ sec }}s</option>
           </select>
         </div>
         <div v-if="localQuestion.type !== 'simple_text'" class="input-group">
@@ -81,7 +76,7 @@
     <!-- STANDARD ANSWERS (MC/TF/MS) -->
     <!-- Multi-select warning -->
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
-      <AppIcon name="alert" :size="16" /> {{ $t('quiz_config.question_editor.multi_select_warning', { count: 2 }) }}
+      <AppIcon name="alert" :size="16" aria-hidden="true" /> {{ $t('quiz_config.question_editor.multi_select_warning', { count: 2 }) }}
     </div>
     <div v-if="localQuestion.type !== 'range' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures' && localQuestion.type !== 'simple_text'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
       <div 
@@ -92,7 +87,7 @@
         v-show="isAnswerVisible(idx)"
       >
         <div class="answer-header">
-          <AppIcon class="shape-icon" :name="getShapeIcon(idx)" :size="20" />
+          <AppIcon class="shape-icon" :name="getShapeIcon(idx)" :size="20" aria-hidden="true" />
           <label class="correct-toggle">
             <input 
               :type="localQuestion.type === 'multi_select' ? 'checkbox' : 'radio'"
@@ -267,7 +262,7 @@
           />
         </div>
         <div v-else class="image-required-warning">
-          <AppIcon name="alert" :size="16" /> {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+          <AppIcon name="alert" :size="16" aria-hidden="true" /> {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
         </div>
       </div>
     </div>
@@ -296,6 +291,7 @@
       </div>
     </div>
 
+    </div>
   </div>
 </template>
 
@@ -388,6 +384,17 @@ const localMaxPoints = computed({
       localQuestion.scoringConfig.maxPoints = val
     }
   }
+})
+
+const BASE_TIME_LIMITS = [5, 10, 20, 30, 45, 60, 90, 120]
+const timeLimitOptions = computed(() => {
+  const options = [...BASE_TIME_LIMITS]
+  const current = Number(localQuestion.timeLimit)
+  if (Number.isFinite(current) && current > 0 && !options.includes(current)) {
+    options.push(current)
+    options.sort((a, b) => a - b)
+  }
+  return options
 })
 
 // Watch for image changes and emit update
@@ -559,17 +566,32 @@ const isAnswerReadOnly = (idx) => {
 
 <style scoped>
 .question-editor {
+  container: question-editor / inline-size;
   background-color: #2C2C2E;
   border-radius: 12px;
-  padding: 16px;
+  padding: 0;
   margin-bottom: 24px;
   border: 1px solid #3A3A3C;
+  width: 100%;
+  min-inline-size: 0;
+}
+
+.question-editor,
+.question-editor *,
+.question-editor *::before,
+.question-editor *::after {
+  box-sizing: border-box;
+}
+
+.question-editor-inner {
+  padding: 16px;
 }
 
 .editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid #3A3A3C;
@@ -578,14 +600,22 @@ const isAnswerReadOnly = (idx) => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-inline-size: 0;
 }
 
 .question-type-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #3A3A3C;
+  border: 1px solid transparent;
   color: #E5E5EA;
+  font-family: inherit;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.2;
   padding: 4px 10px;
   border-radius: 6px;
   text-transform: uppercase;
@@ -606,8 +636,15 @@ const isAnswerReadOnly = (idx) => {
 }
 
 .delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   background: none;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px;
+  color: #8E8E93;
   cursor: pointer;
   font-size: 16px;
   opacity: 0.7;
@@ -621,6 +658,7 @@ const isAnswerReadOnly = (idx) => {
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
+  min-inline-size: 0;
 }
 
 .input-group label {
@@ -631,6 +669,9 @@ const isAnswerReadOnly = (idx) => {
 }
 
 .main-input, .select-input, .config-input {
+  width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
   background-color: #1C1C1E;
   border: 1px solid #3A3A3C;
   border-radius: 8px;
@@ -648,6 +689,7 @@ const isAnswerReadOnly = (idx) => {
 
 .image-section {
   flex: 60;
+  min-inline-size: 0;
   display: flex;
   flex-direction: column;
 }
@@ -665,6 +707,7 @@ const isAnswerReadOnly = (idx) => {
   gap: 12px;
   flex: 40;
   flex-shrink: 0;
+  min-inline-size: 0;
 }
 
 .settings-stack .input-group {
@@ -700,6 +743,7 @@ const isAnswerReadOnly = (idx) => {
   border-radius: 8px;
   padding: 10px;
   position: relative;
+  min-inline-size: 0;
 }
 
 .answer-card.answer-red { background-color: rgba(255, 59, 48, 0.15); border: 1px solid rgba(255, 59, 48, 0.3); }
@@ -710,6 +754,7 @@ const isAnswerReadOnly = (idx) => {
 .answer-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 6px;
 }
 
@@ -736,27 +781,39 @@ const isAnswerReadOnly = (idx) => {
 
 .correct-toggle {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 24px;
   height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .correct-toggle input {
+  position: absolute;
+  inset: 0;
   opacity: 0;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
 }
 
 .checkmark {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
+  display: block;
   height: 24px;
   width: 24px;
   background-color: rgba(255,255,255,0.1);
   border: 2px solid rgba(255,255,255,0.3);
   border-radius: 50%;
   cursor: pointer;
+}
+
+.correct-toggle input:focus-visible ~ .checkmark {
+  outline: 3px solid var(--admin-focus, #0A84FF);
+  outline-offset: 2px;
 }
 
 .correct-toggle input:checked ~ .checkmark {
@@ -775,8 +832,8 @@ const isAnswerReadOnly = (idx) => {
 }
 
 .correct-toggle .checkmark:after {
-  left: 8px;
-  top: 4px;
+  left: 7px;
+  top: 3px;
   width: 5px;
   height: 10px;
   border: solid white;
@@ -821,6 +878,12 @@ const isAnswerReadOnly = (idx) => {
     background: rgba(50, 215, 75, 0.1);
 }
 
+:global(html[data-admin-appearance="true"] .question-editor .input-group input.config-input.correct-value-input) {
+    background: var(--admin-success-soft, rgba(50, 215, 75, 0.1)) !important;
+    border-color: var(--admin-success, #32D74B) !important;
+    color: var(--admin-text, #ffffff) !important;
+}
+
 .preview-box {
     background: #1C1C1E;
     border: 1px solid #3A3A3C;
@@ -838,7 +901,8 @@ const isAnswerReadOnly = (idx) => {
     font-style: italic;
 }
 
-.multi-select-warning {
+.multi-select-warning,
+.image-required-warning {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -986,9 +1050,101 @@ const isAnswerReadOnly = (idx) => {
   transform: translateX(16px);
 }
 
-@media (max-width: 600px) {
+.switch-small input:focus-visible + .slider-round {
+  outline: 3px solid var(--admin-focus, #0A84FF);
+  outline-offset: 2px;
+}
+
+@container question-editor (inline-size <= 580px) {
+  .question-editor-inner {
+    padding: 12px;
+  }
+
+  .editor-main-row {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .image-section,
+  .settings-stack {
+    flex: none;
+    width: 100%;
+  }
+
   .answers-grid {
     grid-template-columns: 1fr;
+  }
+
+  .config-compact-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .config-compact-row .mini {
+    flex: 1 1 135px;
+    width: auto;
+    min-inline-size: 0;
+  }
+
+  .config-compact-row .mini.center {
+    align-items: flex-start;
+  }
+
+  .range-config-panel,
+  .number-config-panel,
+  .wrong-pictures-config,
+  .simple-text-config {
+    padding: 12px;
+  }
+
+  .preview-box {
+    padding: 0 12px;
+  }
+}
+
+@container question-editor (inline-size <= 460px) {
+  .config-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr));
+  }
+}
+
+@media (pointer: coarse) {
+  .delete-btn,
+  .question-type-tag {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .question-type-tag {
+    padding: 8px 12px;
+  }
+
+  .correct-toggle {
+    width: 44px;
+    height: 44px;
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .select-input,
+  .main-input,
+  .config-input {
+    min-block-size: 44px;
+  }
+
+  .answer-input {
+    min-block-size: 44px;
+    font-size: 16px;
+  }
+
+  .switch-small::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
   }
 }
 </style>
