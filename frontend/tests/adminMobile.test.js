@@ -210,3 +210,39 @@ test('ScreenManagerScreen.vue uses library.back_btn alongside arrowLeft icon and
     'teams-activity.css must theme .teams-notice under html[data-admin-appearance="true"]'
   )
 })
+
+test('admin-theme.css and SimpleQuiz host/judge screens preserve contrast, urgency cues, form theming, and screen isolation', () => {
+  const themeCss = src('src/assets/admin-theme.css')
+  assert.match(
+    themeCss,
+    /\.quiz-host-screen\s+\.question-card\.has-image\s+\.question-text\s*\{[^}]*color:\s*#ffffff\s*!important/s
+  )
+  assert.match(
+    themeCss,
+    /\.quiz-host-screen\s+\.timer\.timer-low\s*\{[^}]*border-color:\s*var\(--admin-danger\)\s*!important;[^}]*color:\s*var\(--admin-danger\)\s*!important/s
+  )
+  assert.match(
+    themeCss,
+    /\.quiz-host-screen\s+\.answer-counter-widget\s*\{[^}]*background:\s*var\(--admin-surface\)\s*!important/s
+  )
+  assert.match(
+    themeCss,
+    /\.quiz-host-screen\s+\.counter-label\s*\{[^}]*color:\s*var\(--admin-text-muted\)\s*!important/s
+  )
+  assert.match(
+    themeCss,
+    /\.quiz-host-screen\s*,\s*\.judge-screen\s*\)\s*:is\(input,\s*textarea,\s*select\)/s
+  )
+
+  const simpleHost = src('src/views/SimpleQuizHostScreen.vue')
+  assert.match(simpleHost, /class="quiz-host-screen simple-quiz-host-screen"/)
+  assert.doesNotMatch(simpleHost, /:global\(\s*html\[data-admin-appearance=["']true["']\]\s+\.quiz-host-screen\b/)
+  assert.match(simpleHost, /:global\(html\[data-admin-appearance="true"\] \.simple-quiz-host-screen \.host-error\)/)
+  assert.match(simpleHost, /:global\(html\[data-admin-appearance="true"\] \.simple-quiz-host-screen \.judge-url\)/)
+
+  const simpleJudge = src('src/views/SimpleQuizJudgeScreen.vue')
+  assert.match(
+    simpleJudge,
+    /:global\(html\[data-admin-appearance="true"\] \.judge-screen \.q-badge\)\s*\{[^}]*background:\s*var\(--admin-primary-solid\)\s*!important;[^}]*color:\s*#fff\s*!important/s
+  )
+})

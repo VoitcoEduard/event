@@ -205,7 +205,7 @@ html[data-admin-appearance="true"] :is(
 html[data-admin-appearance="true"] :is(
   .admin-screen, .admin-details-screen, .access-page, .login-page,
   .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
-  .judge-screen
+  .quiz-host-screen, .judge-screen
 ) :is(input, textarea, select) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border-strong) !important;
@@ -1136,9 +1136,28 @@ html[data-admin-appearance="true"] .quiz-host-screen :is(
   backdrop-filter: none !important;
   background-image: none !important;
 }
+html[data-admin-appearance="true"] .quiz-host-screen .timer.timer-low {
+  background: var(--admin-danger-soft) !important;
+  border-color: var(--admin-danger) !important;
+  color: var(--admin-danger) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-counter-widget {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .counter-label {
+  color: var(--admin-text-muted) !important;
+  opacity: 1 !important;
+}
 html[data-admin-appearance="true"] .quiz-host-screen :is(.game-title, .question-text, .players-count) {
   color: var(--admin-text) !important;
   text-shadow: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .question-card.has-image .question-text {
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
 }
 html[data-admin-appearance="true"] .quiz-host-screen :is(.start-btn, .control-btn.primary) {
   background: var(--admin-primary-solid) !important;

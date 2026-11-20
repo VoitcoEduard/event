@@ -217,7 +217,7 @@ onUnmounted(() => {
 .judge-empty { color: #8E8E93; text-align: center; padding: 32px; }
 .judge-card { background: #2C2C2E; border-radius: 12px; padding: 16px; }
 .judge-qmeta { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-.q-badge { background: #0A84FF; border-radius: 16px; padding: 4px 10px; font-weight: 800; }
+.q-badge { background: #0969da; color: #fff; border-radius: 16px; padding: 4px 10px; font-weight: 800; }
 .q-text { font-weight: 700; }
 .judge-img-wrap { text-align: center; }
 .judge-img { max-width: 100%; max-height: 220px; border-radius: 8px; }
@@ -274,6 +274,11 @@ onUnmounted(() => {
 :global(html[data-admin-appearance="true"] .judge-screen .judge-error) {
   background: var(--admin-danger-soft) !important;
   color: var(--admin-danger) !important;
+}
+
+:global(html[data-admin-appearance="true"] .judge-screen .q-badge) {
+  background: var(--admin-primary-solid) !important;
+  color: #fff !important;
 }
 
 @container judge-screen (inline-size <= 540px) {
