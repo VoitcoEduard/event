@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { parse } from '@vue/compiler-sfc'
@@ -177,4 +177,36 @@ test('FormEditor.vue wraps .type-selector and QuizQuestionEditor.vue stacks .edi
   const questionScript = questionEditor.descriptor.scriptSetup?.content || questionEditor.descriptor.script?.content || ''
   assert.match(questionScript, /BASE_TIME_LIMITS\s*=\s*\[[^\]]*\b45\b[^\]]*\]/)
   assert.match(questionScript, /wrong_pictures/)
+})
+
+test('no SFC in views/ or components/ places a descendant selector outside :global(html[data-admin-appearance="true"])', () => {
+  for (const dir of ['src/views', 'src/components']) {
+    const absDir = path.join(here, '..', dir)
+    for (const entry of readdirSync(absDir)) {
+      if (!entry.endsWith('.vue')) continue
+      const content = src(`${dir}/${entry}`)
+      assert.doesNotMatch(
+        content,
+        /:global\(\s*html\[data-admin-appearance=["']true["']\]\s*\)(?!\s*[,{])/,
+        `${dir}/${entry} must wrap the full descendant selector inside :global(html[data-admin-appearance="true"] ...)`
+      )
+    }
+  }
+})
+
+test('ScreenManagerScreen.vue uses library.back_btn alongside arrowLeft icon and teams-activity.css themes .teams-notice', () => {
+  const { descriptor, errors } = parse(src('src/views/ScreenManagerScreen.vue'))
+  assert.deepEqual(errors, [])
+
+  const template = descriptor.template?.content || ''
+  assert.match(template, /<AppIcon\s+name="arrowLeft"/)
+  assert.match(template, /\$t\('library\.back_btn'\)/)
+  assert.doesNotMatch(template, /\$t\('admin\.details\.back_btn'\)/)
+
+  const teamsCss = src('src/styles/teams-activity.css')
+  assert.match(
+    teamsCss,
+    /html\[data-admin-appearance=["']true["']\][^{]*\.teams-notice\s*\{/,
+    'teams-activity.css must theme .teams-notice under html[data-admin-appearance="true"]'
+  )
 })
