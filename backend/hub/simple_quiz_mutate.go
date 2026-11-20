@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"strings"
 	"time"
@@ -163,7 +164,7 @@ func (h *QuizHub) SubmitSimpleQuizAnswer(moduleID, playerID, secret, answerID st
 	id := answerID
 	_, err := h.tryUpdateSimpleLocked(ctx, moduleID, func(s *models.SimpleQuizSession) error {
 		p, ok := s.Players[playerID]
-		if !ok || p.Secret != secret {
+		if !ok || p.Secret == "" || subtle.ConstantTimeCompare([]byte(p.Secret), []byte(secret)) != 1 {
 			code = SimpleQuizSubmitUnknownPlayer
 			return errNoSimpleChange
 		}
@@ -246,7 +247,7 @@ func (h *QuizHub) JoinSimpleQuizWithParticipant(moduleID, nick, providedSecret, 
 		}
 		if providedSecret != "" {
 			for _, p := range s.Players {
-				if p.Secret == providedSecret && strings.EqualFold(p.Nickname, nick) {
+				if p.Secret != "" && subtle.ConstantTimeCompare([]byte(p.Secret), []byte(providedSecret)) == 1 && strings.EqualFold(p.Nickname, nick) {
 					p.Connected = true
 					out = *p
 					reconnected = true

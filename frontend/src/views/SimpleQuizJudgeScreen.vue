@@ -39,6 +39,9 @@
       <div class="judge-notes" v-if="questionNotes(current.questionIndex)">
         <strong>{{ $t('simple_quiz.judge.notes') }}:</strong> {{ questionNotes(current.questionIndex) }}
       </div>
+      <div class="judge-notes" v-if="questionCorrectAnswer(current.questionIndex)">
+        <strong>{{ $t('simple_quiz.player.revealed_answer') }}:</strong> {{ questionCorrectAnswer(current.questionIndex) }}
+      </div>
       <div class="judge-points">{{ questionPoints(current.questionIndex) }} pts</div>
       <p class="judge-answer">{{ current.text }}</p>
       <div class="judge-actions">
@@ -89,16 +92,16 @@ const currentIdx = computed(() => current.value?.questionIndex ?? questionFilter
 
 const questionText = (qi) => questions.value[qi]?.text || ''
 const questionNotes = (qi) => questions.value[qi]?.judgeNotes || ''
+const questionCorrectAnswer = (qi) => questions.value[qi]?.correctAnswerText || ''
 const questionPoints = (qi) => questions.value[qi]?.points || 0
 const questionImage = (qi) => {
   const id = questions.value[qi]?.imageId
   return id ? getImageUrl(id) : ''
 }
 
+let queueReqSeq = 0
+
 const loadState = async () => {
-  // Host-view questions include no notes; fetch judge via queue progress + separate state?
-  // For notes/image/points we use projector state (no notes) + judge queue.
-  // Notes need a judge-aware state: reuse queue + fetch module template for notes.
   try {
     const s = await simpleQuizApi.state(eventId, moduleId, { view: 'projector' })
     total.value = s.total || 0
@@ -108,38 +111,60 @@ const loadState = async () => {
   }
 }
 
-const loadQueue = async () => {
+const loadQueue = async ({ preserveAnswerId = true } = {}) => {
   if (!token.value) return
+  const reqSeq = ++queueReqSeq
+  const activeAnswerId = preserveAnswerId ? current.value?.answerId || '' : ''
   try {
     error.value = ''
-    const res = await simpleQuizApi.queue(eventId, moduleId, token.value, {
-      questionIndex: questionFilter.value,
-      filter: pendingFilter.value,
-      limit: 50
-    })
-    queue.value = res.answers || []
-    progress.value = res.progress || []
-    gradingComplete.value = !!res.gradingComplete
-    if (Array.isArray(res.questions) && res.questions.length) {
-      questions.value = res.questions
-      total.value = res.total || res.questions.length
+    const allAnswers = []
+    let cursor = ''
+    let latestRes = null
+    for (let page = 0; page < 20; page++) {
+      const res = await simpleQuizApi.queue(eventId, moduleId, token.value, {
+        questionIndex: questionFilter.value,
+        filter: pendingFilter.value,
+        limit: 100,
+        cursor
+      })
+      if (stopped || reqSeq !== queueReqSeq) return
+      latestRes = res
+      const batch = res.answers || []
+      allAnswers.push(...batch)
+      if (!res.nextCursor || batch.length === 0) break
+      cursor = res.nextCursor
     }
-    if (queueIndex.value >= queue.value.length) queueIndex.value = 0
+    if (!latestRes || stopped || reqSeq !== queueReqSeq) return
+    queue.value = allAnswers
+    progress.value = latestRes.progress || []
+    gradingComplete.value = !!latestRes.gradingComplete
+    if (Array.isArray(latestRes.questions) && latestRes.questions.length) {
+      questions.value = latestRes.questions
+      total.value = latestRes.total || latestRes.questions.length
+    }
+    if (activeAnswerId) {
+      const keptIdx = allAnswers.findIndex((item) => item.answerId === activeAnswerId)
+      if (keptIdx >= 0) {
+        queueIndex.value = keptIdx
+        return
+      }
+    }
+    if (queueIndex.value >= allAnswers.length) {
+      queueIndex.value = Math.max(0, allAnswers.length - 1)
+    }
   } catch (e) {
-    error.value = e.message
+    if (!stopped && reqSeq === queueReqSeq) error.value = e.message
   }
 }
 
 const grade = async (verdict) => {
-  if (!current.value) return
+  if (!current.value || gradingBusy.value) return
   gradingBusy.value = true
   const answerId = current.value.answerId
   try {
     if (!judgeKey) judgeKey = newUUID()
     await simpleQuizApi.grade(eventId, moduleId, { answerId, verdict, judgeToken: token.value, judgeKey })
-    await loadQueue()
-    // Next pending takes its place: keep index, list shrinks in pending mode.
-    if (queueIndex.value >= queue.value.length) queueIndex.value = Math.max(0, queue.value.length - 1)
+    await loadQueue({ preserveAnswerId: false })
   } catch (e) {
     error.value = e.message
   } finally {
@@ -148,13 +173,14 @@ const grade = async (verdict) => {
 }
 
 const undo = async () => {
+  if (gradingBusy.value) return
   gradingBusy.value = true
   try {
     if (!judgeKey) judgeKey = newUUID()
     await simpleQuizApi.undo(eventId, moduleId, { judgeToken: token.value, judgeKey })
-    await loadQueue()
+    await loadQueue({ preserveAnswerId: false })
   } catch (e) {
-    if (e.status === 409) await loadQueue()
+    if (e.status === 409) await loadQueue({ preserveAnswerId: true })
     error.value = e.message
   } finally {
     gradingBusy.value = false
@@ -168,22 +194,27 @@ const step = (d) => {
 
 watch([questionFilter, pendingFilter], () => {
   queueIndex.value = 0
-  loadQueue()
+  loadQueue({ preserveAnswerId: false })
 })
 
 let poll = null
 let stopped = false
 onMounted(async () => {
-  await loadState()
-  if (stopped) return
-  await loadQueue()
+  if (token.value) {
+    await loadQueue({ preserveAnswerId: false })
+  } else {
+    await loadState()
+  }
   if (stopped) return
   quizWS.on('simple:state', () => {
-    loadState()
-    loadQueue()
+    if (token.value) {
+      loadQueue({ preserveAnswerId: true })
+    } else {
+      loadState()
+    }
   })
   if (token.value) quizWS.connect(moduleId, '', false, false, eventId, { type: 'simple:judge_join', payload: { moduleId, judgeToken: token.value } })
-  poll = setInterval(loadQueue, 5000)
+  poll = setInterval(() => loadQueue({ preserveAnswerId: true }), 5000)
 })
 onUnmounted(() => {
   stopped = true

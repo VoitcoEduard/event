@@ -23,8 +23,8 @@
       </div>
       <p v-if="error" class="host-error">{{ error }}</p>
       <div class="lobby-footer" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-        <button v-if="!launched || stateStatus === 'inactive'" type="button" class="start-btn" @click="doLaunch">{{ $t('simple_quiz.host.start') }}</button>
-        <button v-else type="button" class="start-btn" @click="doOpen">{{ $t('simple_quiz.host.open') }} (Q{{ currentIndex + 1 }})</button>
+        <button v-if="!launched || stateStatus === 'inactive'" type="button" class="start-btn" :disabled="actionBusy" @click="doLaunch">{{ $t('simple_quiz.host.start') }}</button>
+        <button v-else type="button" class="start-btn" :disabled="actionBusy" @click="doOpen">{{ $t('simple_quiz.host.open') }} (Q{{ currentIndex + 1 }})</button>
       </div>
     </div>
 
@@ -85,15 +85,15 @@
       <p class="reveal-hint">{{ $t('simple_quiz.host.reveal_hint') }}</p>
 
       <div class="host-controls">
-        <button type="button" class="control-btn" @click="doOpen">{{ $t('simple_quiz.host.open') }}</button>
-        <button type="button" class="control-btn" @click="doLock">{{ $t('simple_quiz.host.lock') }}</button>
-        <button type="button" class="control-btn" @click="doNext">{{ $t('simple_quiz.host.next') }}</button>
-        <button type="button" class="control-btn" @click="doReveal">{{ $t('simple_quiz.host.reveal') }}</button>
-        <button type="button" class="control-btn" @click="doEnd">{{ $t('simple_quiz.host.end_answering') }}</button>
-        <button type="button" class="control-btn primary" @click="doPublish">{{ $t('simple_quiz.host.publish') }}</button>
-        <button type="button" class="control-btn" @click="doUpdate">{{ $t('simple_quiz.host.update_published') }}</button>
-        <button type="button" class="control-btn" @click="doComplete">{{ $t('simple_quiz.host.complete') }}</button>
-        <button v-if="stateStatus === 'paused'" type="button" class="control-btn primary" @click="doResume">{{ $t('simple_quiz.host.resume') }}</button>
+        <button type="button" class="control-btn" :disabled="actionBusy" @click="doOpen">{{ $t('simple_quiz.host.open') }}</button>
+        <button type="button" class="control-btn" :disabled="actionBusy" @click="doLock">{{ $t('simple_quiz.host.lock') }}</button>
+        <button type="button" class="control-btn" :disabled="actionBusy" @click="doNext">{{ $t('simple_quiz.host.next') }}</button>
+        <button type="button" class="control-btn" :disabled="actionBusy" @click="doReveal">{{ $t('simple_quiz.host.reveal') }}</button>
+        <button type="button" class="control-btn" :disabled="actionBusy" @click="doEnd">{{ $t('simple_quiz.host.end_answering') }}</button>
+        <button type="button" class="control-btn primary" :disabled="actionBusy" @click="doPublish">{{ $t('simple_quiz.host.publish') }}</button>
+        <button type="button" class="control-btn" :disabled="actionBusy" @click="doUpdate">{{ $t('simple_quiz.host.update_published') }}</button>
+        <button type="button" class="control-btn" :disabled="actionBusy" @click="doComplete">{{ $t('simple_quiz.host.complete') }}</button>
+        <button v-if="stateStatus === 'paused'" type="button" class="control-btn primary" :disabled="actionBusy" @click="doResume">{{ $t('simple_quiz.host.resume') }}</button>
       </div>
     </div>
   </div>
@@ -101,7 +101,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '../components/AppIcon.vue'
 import { quizWS } from '../services/websocket'
@@ -111,7 +111,6 @@ import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
 
 const route = useRoute()
-const router = useRouter()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
 const { t } = useI18n()
@@ -136,6 +135,7 @@ const allowReveal = ref(true)
 const judgeToken = ref('')
 const pinCode = ref(eventId)
 const error = ref('')
+const actionBusy = ref(false)
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 const currentImage = computed(() => currentQuestion.value?.imageId ? getImageUrl(currentQuestion.value.imageId) : null)
@@ -147,9 +147,10 @@ const revealedAnswer = computed(() => {
 const judgeUrl = computed(() => judgeToken.value ? `${window.location.origin}/simple-quiz/${eventId}/${moduleId}/judge?token=${encodeURIComponent(judgeToken.value)}` : '')
 
 let deadlineTimer = null
+let refreshSeq = 0
 const tick = () => {
   if (!deadlineUnix.value) {
-    deadlineLeft.value = stateStatus.value === 'question_open' ? null : null
+    deadlineLeft.value = null
     return
   }
   deadlineLeft.value = Math.max(0, deadlineUnix.value - Math.floor(Date.now() / 1000))
@@ -168,7 +169,7 @@ const applyState = (s) => {
   playersCount.value = s.players || 0
   answeredCount.value = s.answeredCount || 0
   playerList.value = s.playerList || []
-  questions.value = (s.questions || []).map((q, i) => ({ ...q, text: q.text, correctAnswer: q.correctAnswer || '' }))
+  questions.value = (s.questions || []).map(q => ({ ...q, text: q.text, correctAnswer: q.correctAnswer || '' }))
   progress.value = s.progress || []
   gradingComplete.value = !!s.gradingComplete
   leaderboard.value = s.working || []
@@ -179,33 +180,30 @@ const applyState = (s) => {
 }
 
 const refresh = async () => {
+  const reqSeq = ++refreshSeq
   try {
     const s = await simpleQuizApi.state(eventId, moduleId, { view: 'host' })
-    // Fetch projector view for revealed correct answers.
-    try {
-      const pub = await simpleQuizApi.state(eventId, moduleId, { view: 'projector' })
-      const byIdx = {}
-      ;(pub.questions || []).forEach((q, i) => {
-        if (q.correctAnswer) byIdx[i] = q.correctAnswer
-      })
-      s.questions = (s.questions || []).map((q, i) => ({ ...q, correctAnswer: byIdx[i] || '' }))
-    } catch { /* ignore */ }
+    if (stopped || reqSeq !== refreshSeq) return
     applyState(s)
     error.value = ''
   } catch (e) {
-    error.value = e.message
+    if (!stopped && reqSeq === refreshSeq) error.value = e.message
   }
 }
 
 const wrap = (fn, confirmMsg = '') => async () => {
+  if (actionBusy.value) return
+  if (confirmMsg && !confirm(confirmMsg)) return
+  actionBusy.value = true
   try {
-    if (confirmMsg && !confirm(confirmMsg)) return
     error.value = ''
     const res = await fn()
     if (res?.judgeToken) judgeToken.value = res.judgeToken
     await refresh()
   } catch (e) {
     error.value = e.message
+  } finally {
+    actionBusy.value = false
   }
 }
 
@@ -263,12 +261,21 @@ onMounted(async () => {
 		if (response.ok && !stopped) participantOptions.value = await response.json()
 	} catch { /* identity linking is optional */ }
 	if (stopped) return
+  try {
+    const modRes = await fetch(`${API_BASE_URL}/events/${eventId}/modules/${moduleId}`, { headers: getAuthHeaders() })
+    if (modRes.ok && !stopped) {
+      const mod = await modRes.json()
+      if (!stopped && mod?.data?.judgeToken && !judgeToken.value) {
+        judgeToken.value = mod.data.judgeToken
+      }
+    }
+  } catch { /* judge token load is best-effort */ }
+  if (stopped) return
   await refresh()
   if (stopped) return
   quizWS.on('simple:state', refresh)
   quizWS.connect(moduleId, '', true, false, eventId, { type: 'simple:host_join', payload: { moduleId } })
   deadlineTimer = setInterval(tick, 1000)
-  void router
 })
 
 onUnmounted(() => {

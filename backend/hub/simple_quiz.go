@@ -97,10 +97,28 @@ func (h *QuizHub) GetSimpleQuiz(moduleID string) *models.SimpleQuizSession {
 
 // TrySetSimpleQuiz commits the initial snapshot before making it visible.
 func (h *QuizHub) TrySetSimpleQuiz(s *models.SimpleQuizSession) error {
+	return h.trySetSimpleQuiz(s, false)
+}
+
+// TryCreateSimpleQuiz starts a new session only if none currently exists.
+func (h *QuizHub) TryCreateSimpleQuiz(s *models.SimpleQuizSession) error {
+	return h.trySetSimpleQuiz(s, true)
+}
+
+func (h *QuizHub) trySetSimpleQuiz(s *models.SimpleQuizSession, requireAbsent bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	lock := h.simpleLock(s.ModuleID)
 	lock.Lock()
+	if requireAbsent {
+		if _, existingErr := h.readSimpleLocked(ctx, s.ModuleID); existingErr == nil {
+			lock.Unlock()
+			return postgres.ErrConflict
+		} else if !errors.Is(existingErr, postgres.ErrNotFound) {
+			lock.Unlock()
+			return existingErr
+		}
+	}
 	next, err := copySimple(s)
 	if err == nil && h.db != nil {
 		err = h.db.SaveSimpleQuiz(ctx, nil, next)
@@ -187,27 +205,9 @@ func (h *QuizHub) BroadcastSimpleQuiz(moduleID string) {
 	if s == nil {
 		return
 	}
-	answered := 0
-	for _, a := range s.Answers {
-		if a.QuestionIndex == s.CurrentIndex {
-			answered++
-		}
-	}
-	progress := s.ProgressFor(s.CurrentIndex)
 	h.BroadcastToSession(moduleID, ServerMessage{
-		Type: "simple:state",
-		Payload: map[string]interface{}{
-			"status":           s.Status,
-			"currentIndex":     s.CurrentIndex,
-			"total":            len(s.Questions),
-			"players":          len(s.Players),
-			"answeredCount":    answered,
-			"progress":         progress,
-			"revealed":         s.Revealed,
-			"deadlineUnix":     s.DeadlineUnix,
-			"publishedVersion": s.PublishedVer,
-			"updatedAt":        s.UpdatedAt,
-		},
+		Type:    "simple:state",
+		Payload: simpleStatePayload(s),
 	})
 }
 
@@ -256,11 +256,11 @@ func (h *QuizHub) cancelSimpleQuizTimer(moduleID string) {
 func (h *QuizHub) autoLockSimpleQuiz(moduleID string, generation uint64, created, opened time.Time, index int, deadline int64) {
 	lock := h.simpleLock(moduleID)
 	lock.Lock()
-	defer lock.Unlock()
 	h.mu.RLock()
 	closed := h.closed || h.simpleQuizTimerGeneration[moduleID] != generation
 	h.mu.RUnlock()
 	if closed {
+		lock.Unlock()
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -273,10 +273,12 @@ func (h *QuizHub) autoLockSimpleQuiz(moduleID string, generation uint64, created
 		s.DeadlineUnix = 0
 		return nil
 	})
+	lock.Unlock()
 	if err == nil {
-		go h.BroadcastSimpleQuiz(moduleID)
+		h.BroadcastSimpleQuiz(moduleID)
+		return
 	}
-	if err != nil && !errors.Is(err, postgres.ErrNotFound) && !errors.Is(err, errNoSimpleChange) {
+	if !errors.Is(err, postgres.ErrNotFound) && !errors.Is(err, errNoSimpleChange) {
 		slog.Error("simple quiz auto-lock failed", "module", moduleID, "error", err)
 		time.AfterFunc(time.Second, func() { h.autoLockSimpleQuiz(moduleID, generation, created, opened, index, deadline) })
 	}
@@ -345,16 +347,7 @@ func (h *QuizHub) ValidateSimpleJudgeToken(ctx context.Context, moduleID, token 
 		if qd.JudgeToken == "" {
 			return false
 		}
-		if len(qd.JudgeToken) != len(token) {
-			return false
-		}
-		match := true
-		for i := 0; i < len(token); i++ {
-			if qd.JudgeToken[i] != token[i] {
-				match = false
-			}
-		}
-		return match
+		return subtle.ConstantTimeCompare([]byte(qd.JudgeToken), []byte(token)) == 1
 	}
 	return false
 }
@@ -517,5 +510,6 @@ func simpleStatePayload(s *models.SimpleQuizSession) map[string]interface{} {
 		"revealed":         s.Revealed,
 		"deadlineUnix":     s.DeadlineUnix,
 		"publishedVersion": s.PublishedVer,
+		"updatedAt":        s.UpdatedAt,
 	}
 }

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/user/go-expo-sample/backend/models"
@@ -47,19 +49,33 @@ func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) m
 	case "host":
 		qs := make([]map[string]any, 0, len(s.Questions))
 		for i, q := range s.Questions {
-			qs = append(qs, map[string]any{
+			item := map[string]any{
 				"id": i, "questionId": q.ID, "text": q.Text,
 				"imageId": q.ImageID, "imageAlt": q.ImageAlt,
 				"points": q.Points, "timeLimit": q.TimeLimit,
 				"hasCorrectAnswer": strings.TrimSpace(q.CorrectAnswerText) != "",
 				"revealed":         s.Revealed[i],
-			})
+			}
+			if s.AllowReveal && s.Revealed[i] && strings.TrimSpace(q.CorrectAnswerText) != "" {
+				item["correctAnswer"] = q.CorrectAnswerText
+			}
+			qs = append(qs, item)
 		}
 		base["questions"] = qs
 		names := make([]map[string]any, 0, len(s.Players))
 		for _, p := range s.Players {
 			names = append(names, map[string]any{"playerId": p.ID, "nickname": p.Nickname, "participantId": p.ParticipantID})
 		}
+		slices.SortFunc(names, func(a, b map[string]any) int {
+			na, _ := a["nickname"].(string)
+			nb, _ := b["nickname"].(string)
+			if c := cmp.Compare(strings.ToLower(na), strings.ToLower(nb)); c != 0 {
+				return c
+			}
+			pa, _ := a["playerId"].(string)
+			pb, _ := b["playerId"].(string)
+			return cmp.Compare(pa, pb)
+		})
 		base["playerList"] = names
 		base["gradingComplete"] = s.GradingComplete()
 		base["working"] = s.ComputeWorkingResults()

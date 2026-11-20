@@ -218,12 +218,6 @@ const handleSave = async () => {
   }
   loading.value = true
   try {
-    const qRes = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}/quiz/questions`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify(questions.value)
-    })
-    if (!qRes.ok) throw new Error('questions save failed')
     const modRes = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },

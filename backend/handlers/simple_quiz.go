@@ -119,8 +119,12 @@ func (h *Handler) LaunchSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	if err := h.simpleQuizHub().TrySetSimpleQuiz(sess); err != nil {
-		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+	if err := h.simpleQuizHub().TryCreateSimpleQuiz(sess); err != nil {
+		if errors.Is(err, postgres.ErrConflict) {
+			http.Error(w, "Quiz already launched; reset it first", http.StatusConflict)
+		} else {
+			http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
+		}
 		return
 	}
 	invalidateEventCache(eventID)
@@ -230,6 +234,14 @@ func (h *Handler) NextSimpleQuizQuestion(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "No session", http.StatusNotFound)
 		return
 	}
+	if s.Status != models.SimpleQuizStateLobby &&
+		s.Status != models.SimpleQuizStateQuestionOpen &&
+		s.Status != models.SimpleQuizStateAnswersLocked &&
+		s.Status != models.SimpleQuizStateBetweenQuestions &&
+		s.Status != models.SimpleQuizStatePaused {
+		http.Error(w, "Cannot advance question in state "+s.Status, http.StatusConflict)
+		return
+	}
 	if s.CurrentIndex+1 >= len(s.Questions) {
 		http.Error(w, "Last question reached; end answering instead", http.StatusBadRequest)
 		return
@@ -261,6 +273,14 @@ func (h *Handler) EndSimpleQuizAnswering(w http.ResponseWriter, r *http.Request)
 	s := hub.GetSimpleQuiz(moduleID)
 	if s == nil {
 		http.Error(w, "No session", http.StatusNotFound)
+		return
+	}
+	if s.Status != models.SimpleQuizStateLobby &&
+		s.Status != models.SimpleQuizStateQuestionOpen &&
+		s.Status != models.SimpleQuizStateAnswersLocked &&
+		s.Status != models.SimpleQuizStateBetweenQuestions &&
+		s.Status != models.SimpleQuizStatePaused {
+		http.Error(w, "Cannot end answering in state "+s.Status, http.StatusConflict)
 		return
 	}
 	updated, updateErr := hub.TryUpdateSimpleQuizExpected(moduleID, s, func(sess *models.SimpleQuizSession) {
@@ -349,6 +369,11 @@ func (h *Handler) RevealSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 	}
 	if idx < 0 || idx >= len(s.Questions) {
 		http.Error(w, "Invalid question index", http.StatusBadRequest)
+		return
+	}
+	if s.Status == models.SimpleQuizStateLobby ||
+		(s.Status == models.SimpleQuizStateQuestionOpen && idx == s.CurrentIndex) {
+		http.Error(w, "Lock answers before revealing the current question's answer", http.StatusConflict)
 		return
 	}
 	if strings.TrimSpace(s.Questions[idx].CorrectAnswerText) == "" {
@@ -740,20 +765,29 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 		filter = "pending"
 	}
 	cursor := q.Get("cursor")
-	type row struct {
-		AnswerID      string `json:"answerId"`
-		QuestionIndex int    `json:"questionIndex"`
-		Text          string `json:"text"`
-		Verdict       string `json:"verdict"`
-		CreatedAt     string `json:"createdAt"`
-	}
-	rows := []row{}
-	progress := []models.SimpleQuizGradingProgress{}
-	for i := range s.Questions {
-		progress = append(progress, s.ProgressFor(i))
-	}
+	writeJSON(w, buildSimpleQuizQueueResponse(s, qi, filter, cursor, limit))
+}
+
+type simpleQuizQueueRow struct {
+	AnswerID      string `json:"answerId"`
+	QuestionIndex int    `json:"questionIndex"`
+	Text          string `json:"text"`
+	Verdict       string `json:"verdict"`
+	CreatedAt     string `json:"createdAt"`
+}
+
+func buildSimpleQuizQueueResponse(s *models.SimpleQuizSession, qi int, filter, cursor string, limit int) map[string]any {
+	rows := []simpleQuizQueueRow{}
+	progress := progressAll(s)
 	started := cursor == ""
+	hasMore := false
 	for _, a := range s.Answers {
+		if !started {
+			if a.ID == cursor {
+				started = true
+			}
+			continue
+		}
 		if qi >= 0 && a.QuestionIndex != qi {
 			continue
 		}
@@ -765,33 +799,24 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 		if verdict == "" {
 			graded = false
 		}
-		if filter == "pending" && (graded && verdict != models.SimpleQuizVerdictReviewLater) {
-			// pending = ungraded + review_later? Spec: review_later prevents publication,
-			// judge can view only pending. Keep review_later in pending.
-			if verdict != models.SimpleQuizVerdictReviewLater {
-				continue
-			}
+		if filter == "pending" && graded && verdict != models.SimpleQuizVerdictReviewLater {
+			continue
 		}
 		// Hide review_later as unresolved for publish gate but show in queue.
 		if !graded {
 			verdict = "pending"
 		}
-		if !started {
-			if a.ID == cursor {
-				started = true
-			}
-			continue
+		if len(rows) >= limit {
+			hasMore = true
+			break
 		}
-		rows = append(rows, row{
+		rows = append(rows, simpleQuizQueueRow{
 			AnswerID: a.ID, QuestionIndex: a.QuestionIndex, Text: a.Text,
 			Verdict: verdict, CreatedAt: a.CreatedAt.Format(time.RFC3339),
 		})
-		if len(rows) >= limit {
-			break
-		}
 	}
 	nextCursor := ""
-	if len(rows) == limit {
+	if hasMore && len(rows) > 0 {
 		nextCursor = rows[len(rows)-1].AnswerID
 	}
 	qs := make([]map[string]any, 0, len(s.Questions))
@@ -800,12 +825,13 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 			"index": i, "id": q.ID, "text": q.Text,
 			"imageId": q.ImageID, "imageAlt": q.ImageAlt,
 			"points": q.Points, "timeLimit": q.TimeLimit,
-			"judgeNotes":       q.JudgeNotes,
-			"hasCorrectAnswer": strings.TrimSpace(q.CorrectAnswerText) != "",
-			"revealed":         s.Revealed[i],
+			"judgeNotes":        q.JudgeNotes,
+			"correctAnswerText": q.CorrectAnswerText,
+			"hasCorrectAnswer":  strings.TrimSpace(q.CorrectAnswerText) != "",
+			"revealed":          s.Revealed[i],
 		})
 	}
-	writeJSON(w, map[string]any{
+	return map[string]any{
 		"answers": rows, "progress": progress,
 		"gradingComplete": s.GradingComplete(),
 		"nextCursor":      nextCursor,
@@ -813,7 +839,7 @@ func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 		"total":           len(s.Questions),
 		"status":          s.Status,
 		"currentIndex":    s.CurrentIndex,
-	})
+	}
 }
 
 // GradeSimpleQuizAnswer marks one answer right/wrong/review_later.
@@ -961,6 +987,9 @@ func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 	if view == "host" || view == "judge" {
 		if view == "judge" {
 			token := r.URL.Query().Get("judgeToken")
+			if token == "" {
+				token = r.Header.Get("X-Judge-Token")
+			}
 			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
 			if !hub.ValidateSimpleJudgeToken(ctx, moduleID, token) {

@@ -121,6 +121,13 @@
       </div>
     </div>
 
+    <div v-else-if="status === 'paused'" class="state-container lobby-container">
+      <div class="lobby-content">
+        <h2 class="waiting-text">{{ $t('simple_quiz.host.paused') }}</h2>
+        <div class="loader"></div>
+      </div>
+    </div>
+
     <div v-else class="state-container lobby-container">
       <div class="lobby-content"><div class="loader"></div></div>
     </div>
@@ -128,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { quizWS } from '../services/websocket'
@@ -168,6 +175,23 @@ const storageKey = computed(() => `sq-identity:${eventId}:${moduleId}`)
 let pendingAnswer = null
 let pollTimer = null
 let deadlineTimer = null
+let refreshSeq = 0
+let submitSeq = 0
+let submittedQuestionIndex = -1
+let hasLoadedState = false
+
+const clearIdentity = () => {
+  identity.value = null
+  pendingAnswer = null
+  hasLoadedState = false
+  submitted.value = false
+  draft.value = ''
+  me.value = null
+  leaderboard.value = []
+  revealedAnswers.value = []
+  try { localStorage.removeItem(storageKey.value) } catch { /* ignore */ }
+  quizWS.disconnect()
+}
 
 const verdictLabel = (v) => {
   if (v === 'right') return t('simple_quiz.player.right')
@@ -190,15 +214,18 @@ const onDraftInput = () => {
 
 const join = async () => {
   const nick = nickname.value.trim()
-  if (!nick) return
+  if (!nick || joining.value) return
   joining.value = true
   error.value = ''
   try {
-	const participantSecret = getParticipantSecret(eventId)
+    const participantSecret = getParticipantSecret(eventId)
     const res = await simpleQuizApi.join(eventId, moduleId, nick, '', participantSecret ? { participantId: getUserId(), participantSecret } : {})
+    if (stopped) return
+    hasLoadedState = false
     identity.value = { playerId: res.playerId, secret: res.secret, nickname: res.nickname }
     try { localStorage.setItem(storageKey.value, JSON.stringify(identity.value)) } catch { /* ignore */ }
     await refresh()
+    if (stopped || !identity.value) return
     quizWS.connect(moduleId, nick, false, false, eventId, { type: 'simple:player_join', payload: { moduleId, playerId: res.playerId, secret: res.secret } })
   } catch (e) {
     error.value = e.message
@@ -213,11 +240,12 @@ const tryReconnect = async () => {
   if (!saved?.playerId || !saved?.secret) return false
   try {
     const res = await simpleQuizApi.join(eventId, moduleId, saved.nickname, saved.secret)
+    if (stopped) return false
     identity.value = { playerId: res.playerId, secret: res.secret, nickname: res.nickname }
     nickname.value = res.nickname
     return true
   } catch (e) {
-    if (e.status === 403) {
+    if (e.status === 403 || e.status === 404) {
       try { localStorage.removeItem(storageKey.value) } catch { /* ignore */ }
     } else {
       error.value = e.message
@@ -227,48 +255,71 @@ const tryReconnect = async () => {
 }
 
 const refresh = async () => {
-  if (!identity.value) return
+  if (!identity.value || stopped) return
+  const reqSeq = ++refreshSeq
+  const submitSeqAtStart = submitSeq
+  const activePlayer = identity.value
   try {
-    const s = await simpleQuizApi.state(eventId, moduleId, { view: 'player', playerId: identity.value.playerId, secret: identity.value.secret })
+    const s = await simpleQuizApi.state(eventId, moduleId, { view: 'player', playerId: activePlayer.playerId, secret: activePlayer.secret })
+    if (stopped || reqSeq !== refreshSeq || identity.value?.playerId !== activePlayer.playerId) return
+    if (!s || s.status === 'inactive') {
+      clearIdentity()
+      return
+    }
+    const prevIndex = hasLoadedState ? currentIndex.value : -1
+    const nextIndex = s.currentIndex || 0
+    hasLoadedState = true
     status.value = s.status || 'lobby'
-    currentIndex.value = s.currentIndex || 0
+    currentIndex.value = nextIndex
     total.value = s.total || 0
     question.value = s.question || null
     deadlineUnix.value = s.deadlineUnix || 0
-    submitted.value = !!s.submitted
+    if (prevIndex !== nextIndex) {
+      pendingAnswer = null
+      draft.value = ''
+    }
+    const justSubmittedCurrent = submitSeq !== submitSeqAtStart && nextIndex === submittedQuestionIndex
+    submitted.value = justSubmittedCurrent || !!s.submitted
     tickDeadline()
     if (!submitted.value && status.value === 'question_open') {
-      const d = loadDraft(eventId, moduleId, currentIndex.value)
+      const d = loadDraft(eventId, moduleId, nextIndex)
       if (d && !draft.value) draft.value = d
     }
     if (s.status === 'results_published' || s.status === 'completed') {
-      await refreshResults()
+      await refreshResults(reqSeq, activePlayer)
     }
   } catch (e) {
+    if (stopped || reqSeq !== refreshSeq) return
+    if (e.status === 403 || e.status === 404) {
+      clearIdentity()
+      return
+    }
     error.value = e.message
   }
 }
 
-const refreshResults = async () => {
+const refreshResults = async (reqSeq, activePlayer) => {
   try {
-    const r = await simpleQuizApi.results(eventId, moduleId, { view: 'player', playerId: identity.value.playerId, secret: identity.value.secret })
+    const r = await simpleQuizApi.results(eventId, moduleId, { view: 'player', playerId: activePlayer.playerId, secret: activePlayer.secret })
+    if (stopped || reqSeq !== refreshSeq || identity.value?.playerId !== activePlayer.playerId) return
     leaderboard.value = r.published?.players || []
-    me.value = r.me || leaderboard.value.find(p => p.playerId === identity.value.playerId) || null
+    me.value = r.me || leaderboard.value.find(p => p.playerId === activePlayer.playerId) || null
     const mine = r.myAnswers || []
     void mine
     // Revealed answers visible in state questions; fetch projector view for texts.
     const pub = await simpleQuizApi.state(eventId, moduleId, { view: 'projector' })
+    if (stopped || reqSeq !== refreshSeq) return
     revealedAnswers.value = (pub.questions || [])
       .map((q, index) => ({ index, text: q.correctAnswer || '' }))
-      .filter(r => r.text)
+      .filter(row => row.text)
   } catch (e) {
-    error.value = e.message
+    if (!stopped && reqSeq === refreshSeq) error.value = e.message
   }
 }
 
 const submit = async () => {
   const text = draft.value.trim()
-  if (!text || submitting.value || submitted.value) return
+  if (!text || submitting.value || submitted.value || !identity.value) return
   submitting.value = true
   error.value = ''
   const signature = `${currentIndex.value}:${text}`
@@ -283,6 +334,8 @@ const submit = async () => {
       text,
       answerId
     })
+    submitSeq++
+    submittedQuestionIndex = questionIndex
     if (pendingAnswer?.id === answerId) pendingAnswer = null
     if (loadDraft(eventId, moduleId, questionIndex).trim() === text) clearDraft(eventId, moduleId, questionIndex)
     if (currentIndex.value === questionIndex) {
@@ -290,20 +343,15 @@ const submit = async () => {
       submitted.value = true
     }
   } catch (e) {
+    if (e.status === 403 || e.status === 404) {
+      clearIdentity()
+      return
+    }
     error.value = e.message
   } finally {
     submitting.value = false
   }
 }
-
-watch(currentIndex, () => {
-  pendingAnswer = null
-  draft.value = ''
-  submitted.value = false
-  if (status.value === 'question_open') {
-    draft.value = loadDraft(eventId, moduleId, currentIndex.value)
-  }
-})
 
 let stopped = false
 onMounted(async () => {

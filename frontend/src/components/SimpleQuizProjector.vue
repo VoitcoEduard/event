@@ -15,6 +15,7 @@
 
     <div v-else-if="status === 'question_open' || status === 'answers_locked' || status === 'between_questions'" class="state-container question-container">
       <div class="question-header">
+        <div class="timer" v-if="status === 'question_open' && deadlineLeft !== null" :class="{ 'timer-low': deadlineLeft <= 10 }">{{ deadlineLeft }}s</div>
         <div class="question-counter">{{ currentIndex + 1 }} / {{ total }}</div>
       </div>
       <div class="question-main-content">
@@ -42,6 +43,13 @@
     <div v-else-if="status === 'waiting_grading' || status === 'answering_finished'" class="state-container get-ready-container">
       <div class="loading-content">
         <h1>{{ $t('simple_quiz.projector.grading') }}</h1>
+        <div class="loader"></div>
+      </div>
+    </div>
+
+    <div v-else-if="status === 'paused'" class="state-container get-ready-container">
+      <div class="loading-content">
+        <h1>{{ $t('simple_quiz.host.paused') }}</h1>
         <div class="loader"></div>
       </div>
     </div>
@@ -84,38 +92,66 @@ const answeredCount = ref(0)
 const question = ref(null)
 const revealedAnswer = ref('')
 const leaderboard = ref([])
+const deadlineUnix = ref(0)
+const deadlineLeft = ref(null)
 
 const image = computed(() => question.value?.imageId ? getImageUrl(question.value.imageId) : null)
 
+let refreshSeq = 0
+let unmounted = false
+let poll = null
+let deadlineTimer = null
+
+const tickDeadline = () => {
+  if (!deadlineUnix.value) {
+    deadlineLeft.value = null
+    return
+  }
+  deadlineLeft.value = Math.max(0, deadlineUnix.value - Math.floor(Date.now() / 1000))
+}
+
 const refresh = async () => {
-  if (!props.visible) return
+  if (!props.visible || unmounted) return
+  const reqSeq = ++refreshSeq
+  const activeModuleId = props.moduleId
   try {
-    const s = await simpleQuizApi.state(props.eventId, props.moduleId, { view: 'projector' })
+    const s = await simpleQuizApi.state(props.eventId, activeModuleId, { view: 'projector' })
+    if (unmounted || reqSeq !== refreshSeq || props.moduleId !== activeModuleId) return
     status.value = s.status || 'lobby'
     currentIndex.value = s.currentIndex || 0
     total.value = s.total || 0
     players.value = s.players || 0
     answeredCount.value = s.answeredCount || 0
+    deadlineUnix.value = s.deadlineUnix || 0
+    tickDeadline()
     const qs = s.questions || []
     question.value = qs[currentIndex.value] || null
     revealedAnswer.value = question.value?.correctAnswer || ''
     if (s.status === 'results_published' || s.status === 'completed') {
-      const r = await simpleQuizApi.results(props.eventId, props.moduleId, { view: 'projector' })
+      const r = await simpleQuizApi.results(props.eventId, activeModuleId, { view: 'projector' })
+      if (unmounted || reqSeq !== refreshSeq || props.moduleId !== activeModuleId) return
       leaderboard.value = r.published?.players || []
+    } else {
+      leaderboard.value = []
     }
   } catch { /* ignore polling errors */ }
 }
 
-let poll = null
-watch(() => [props.moduleId, props.visible], refresh)
+const onStateUpdate = () => refresh()
+
+watch(() => [props.moduleId, props.visible], () => refresh())
 
 onMounted(() => {
   refresh()
-  quizWS.on('simple:state', refresh)
+  quizWS.on('simple:state', onStateUpdate)
   poll = setInterval(refresh, 4000)
+  deadlineTimer = setInterval(tickDeadline, 1000)
 })
 onUnmounted(() => {
+  unmounted = true
+  quizWS.off('simple:state', onStateUpdate)
   if (poll) clearInterval(poll)
+  if (deadlineTimer) clearInterval(deadlineTimer)
 })
 </script>
 
