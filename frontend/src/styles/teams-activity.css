@@ -1,5 +1,6 @@
 .teams-module{
   min-height:100vh;
+  min-height:100dvh;
   background:radial-gradient(ellipse at top left,#182c47 0,#0c1220 55%);
   color:#f5f8ff;
   padding:28px;
@@ -263,7 +264,8 @@
 }
 .teams-toolbar>div:first-child{
   flex:1;
-  max-width:680px
+  max-width:680px;
+  min-width:0
 }
 .teams-admin-grid{
   display:grid;
@@ -273,10 +275,11 @@
 }
 .teams-cards{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));
   gap:18px;
   align-content:start;
-  align-items:start
+  align-items:start;
+  min-width:0
 }
 .team-card{
   border-top:5px solid var(--team-color);
@@ -285,7 +288,13 @@
 .team-card header{
   display:flex;
   justify-content:space-between;
-  gap:16px
+  align-items:flex-start;
+  gap:16px;
+  min-width:0
+}
+.team-card header>div{
+  min-width:0;
+  flex:1 1 auto
 }
 .team-card h2{
   display:inline;
@@ -304,9 +313,10 @@
   background:var(--team-color)
 }
 .team-score{
-  font-size:42px;
+  font-size:clamp(28px,7vw,42px);
   line-height:1;
-  font-variant-numeric:tabular-nums
+  font-variant-numeric:tabular-nums;
+  flex-shrink:0
 }
 .award-buttons{
   display:flex;
@@ -353,16 +363,21 @@
   font-size:13px
 }
 .entrant-panel{
-  align-self:start
+  align-self:start;
+  min-width:0
 }
 .participant-candidates{
   max-height:420px;
-  overflow:auto
+  overflow:auto;
+  overscroll-behavior:contain
 }
 .teams-module details summary{
   cursor:pointer;
   font-weight:600;
   margin-bottom:14px
+}
+.teams-module details.teams-panel>button{
+  margin-top:14px
 }
 .award-history ol{
   list-style:none;
@@ -390,12 +405,14 @@
   background:#000b;
   display:grid;
   place-items:center;
-  padding:18px
+  padding:max(18px,env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) max(18px,env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))
 }
 .team-editor{
   width:min(440px,100%);
   max-height:90vh;
-  overflow:auto
+  max-height:90dvh;
+  overflow:auto;
+  overscroll-behavior:contain
 }
 .team-editor input[type=color]{
   height:48px
@@ -404,11 +421,13 @@
   max-width:760px;
   margin:0 auto;
   padding:22px;
-  min-height:100vh
+  min-height:100vh;
+  min-height:100dvh
 }
 .teams-player-shell{
   background:#0c1220;
-  min-height:100vh
+  min-height:100vh;
+  min-height:100dvh
 }
 .player-team{
   border-top:7px solid var(--team-color);
@@ -484,21 +503,136 @@
 }
 @media(max-width:900px){
   .teams-admin-grid{
-    grid-template-columns:1fr
+    grid-template-columns:minmax(0,1fr)
   }
   .teams-toolbar{
     align-items:stretch;
     flex-direction:column
   }
+  .teams-toolbar>div:first-child{
+    width:100%;
+    max-width:none
+  }
   .teams-header{
     align-items:flex-start;
     flex-direction:column
   }
+  .teams-summary{
+    width:100%
+  }
   .teams-module{
     padding:18px
   }
-  .teams-cards{
-    grid-template-columns:repeat(auto-fit,minmax(250px,1fr))
+  .teams-admin{
+    padding:20px max(16px,env(safe-area-inset-right,0px)) calc(84px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))
+  }
+}
+@media(max-width:600px){
+  .teams-admin .teams-header,
+  .teams-admin .teams-panel{
+    padding:16px
+  }
+  .teams-visibility button{
+    max-width:100%;
+    white-space:normal
+  }
+  .teams-roster li,
+  .entrant-row,
+  .award-history li{
+    flex-wrap:wrap;
+    align-items:stretch;
+    gap:8px
+  }
+  .teams-roster li>span:first-child,
+  .entrant-row>span:first-child{
+    flex:1 1 140px;
+    min-width:0
+  }
+  .teams-roster li>span:nth-child(2){
+    flex:0 0 auto;
+    align-self:center
+  }
+  .award-history li>div{
+    flex:1 1 200px;
+    min-width:0;
+    overflow-wrap:break-word
+  }
+  .entrant-row button,
+  .award-history li button{
+    align-self:center;
+    min-block-size:44px
+  }
+  .teams-roster select,
+  .entrant-row select{
+    max-width:none;
+    width:100%;
+    min-block-size:44px;
+    font-size:16px
+  }
+  .teams-module input,
+  .teams-module select{
+    font-size:16px
+  }
+  .teams-actions{
+    width:100%
+  }
+  .award-buttons button{
+    min-block-size:48px
+  }
+  .custom-award{
+    flex-wrap:wrap;
+    gap:8px
+  }
+  .custom-award input{
+    flex:1 1 120px;
+    min-block-size:44px
+  }
+  .custom-award button{
+    flex:1 1 auto;
+    min-block-size:44px
+  }
+  .team-card header{
+    min-width:0;
+    align-items:flex-start
+  }
+  .team-score{
+    font-size:clamp(28px,7vw,42px)
+  }
+}
+@media(max-width:480px){
+  .teams-actions{
+    width:100%
+  }
+  .teams-actions>button{
+    flex:1 1 140px;
+    min-block-size:44px
+  }
+  .team-editor .teams-actions{
+    flex-direction:column-reverse;
+    align-items:stretch
+  }
+  .team-editor .teams-actions>button{
+    flex:none;
+    width:100%;
+    min-block-size:44px
+  }
+}
+@media(pointer:coarse){
+  .teams-module button,
+  .teams-module select,
+  .teams-module input,
+  .teams-module details summary{
+    min-block-size:44px
+  }
+  .teams-module button{
+    min-inline-size:44px
+  }
+  .teams-module details summary{
+    padding-block:10px
+  }
+  .teams-roster select,
+  .entrant-row select{
+    min-block-size:44px
   }
 }
 @media(prefers-reduced-motion:reduce){

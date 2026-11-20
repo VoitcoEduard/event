@@ -9,20 +9,20 @@
           <span>{{ $t('teams_module.unassigned_count', unassigned.length) }}</span>
         </div>
         <div class="teams-visibility">
-          <button role="switch" :aria-checked="visibleToPlayers" :aria-label="$t('teams_module.player_visibility')" :disabled="busy || loading" @click="toggleVisibility">
+          <button type="button" role="switch" :aria-checked="visibleToPlayers" :aria-label="$t('teams_module.player_visibility')" :disabled="busy || loading" @click="toggleVisibility">
             <span class="visibility-track" :class="{ visible: visibleToPlayers }" aria-hidden="true"><span></span></span>
             {{ $t(visibleToPlayers ? 'teams_module.visible_players' : 'teams_module.hidden_players') }}
           </button>
           <p class="teams-muted">{{ $t('teams_module.visibility_help') }}</p>
         </div>
-        <button v-if="activity && activity.status !== 'completed'" :disabled="busy" @click="showParticipants">{{ $t('teams_module.add_participants') }}</button>
+        <button v-if="activity && activity.status !== 'completed'" type="button" :disabled="busy" @click="showParticipants">{{ $t('teams_module.add_participants') }}</button>
       </div>
       <div class="teams-actions">
-        <button v-if="activity?.status === 'setup'" class="primary start-action" :disabled="busy" @click="act({ action: 'start' })">{{ $t('teams_module.start') }}</button>
-        <button v-if="activity?.status === 'live'" class="primary" @click="manageScores">{{ $t('teams_module.manage_scores') }}</button>
-        <button v-if="activity?.status === 'completed'" class="primary reopen-action" :disabled="busy" @click="reopen">{{ $t('teams_module.reopen') }}</button>
-        <button class="projector-action" @click="showProjector">{{ $t('teams_module.projector') }}</button>
-        <button v-if="activity?.status === 'live'" class="complete-action" :disabled="busy" @click="complete">{{ $t('teams_module.complete') }}</button>
+        <button v-if="activity?.status === 'setup'" type="button" class="primary start-action" :disabled="busy" @click="act({ action: 'start' })">{{ $t('teams_module.start') }}</button>
+        <button v-if="activity?.status === 'live'" type="button" class="primary" @click="manageScores">{{ $t('teams_module.manage_scores') }}</button>
+        <button v-if="activity?.status === 'completed'" type="button" class="primary reopen-action" :disabled="busy" @click="reopen">{{ $t('teams_module.reopen') }}</button>
+        <button type="button" class="projector-action" @click="showProjector">{{ $t('teams_module.projector') }}</button>
+        <button v-if="activity?.status === 'live'" type="button" class="complete-action" :disabled="busy" @click="complete">{{ $t('teams_module.complete') }}</button>
       </div>
     </header>
     <p v-if="loading" class="teams-notice">{{ $t('teams_module.loading') }}</p>
@@ -31,15 +31,15 @@
     <div v-if="!loading && !activity" class="teams-panel setup-panel">
       <h2>{{ $t('teams_module.initialize') }}</h2><p>{{ $t('teams_module.initialize_help') }}</p>
       <TeamsConfigFields v-model="config" :sources="sources" />
-      <div class="teams-actions"><button class="primary" :disabled="busy" @click="act({ action: 'initialize', config })">{{ $t('teams_module.setup_new') }}</button><button v-if="state?.legacyTeams?.length" :disabled="busy || !!config.sourceModuleId" @click="act({ action: 'initialize', config, importLegacy: true })">{{ $t('teams_module.import_legacy') }}</button></div>
+      <div class="teams-actions"><button type="button" class="primary" :disabled="busy" @click="act({ action: 'initialize', config })">{{ $t('teams_module.setup_new') }}</button><button v-if="state?.legacyTeams?.length" type="button" :disabled="busy || !!config.sourceModuleId" @click="act({ action: 'initialize', config, importLegacy: true })">{{ $t('teams_module.import_legacy') }}</button></div>
     </div>
     <template v-if="activity">
       <details v-if="activity.status === 'setup'" class="teams-panel">
-        <summary>{{ $t('teams_module.configure') }}</summary><TeamsConfigFields v-model="config" :sources="sources" source-locked /><button :disabled="busy" @click="act({ action: 'configure', config })">{{ $t('teams_module.save_config') }}</button>
+        <summary>{{ $t('teams_module.configure') }}</summary><TeamsConfigFields v-model="config" :sources="sources" source-locked /><button type="button" :disabled="busy" @click="act({ action: 'configure', config })">{{ $t('teams_module.save_config') }}</button>
       </details>
       <section v-if="activity.status !== 'completed'" class="teams-panel teams-toolbar">
         <div><strong>{{ $t('teams_module.full_points_help') }}</strong><label>{{ $t('teams_module.reason') }}<input v-model="reason" maxlength="500" :placeholder="$t('teams_module.reason_placeholder')" /></label></div>
-        <div class="teams-actions"><button :disabled="busy" @click="editTeam()">{{ $t('teams_module.create_team') }}</button><template v-if="activity.status === 'setup' && activity.config.method === 'random'"><button :disabled="busy" @click="act({ action: 'distribute', reshuffle: false })">{{ $t('teams_module.distribute') }}</button><button :disabled="busy" @click="reshuffle">{{ $t('teams_module.reshuffle') }}</button></template></div>
+        <div class="teams-actions"><button type="button" :disabled="busy" @click="editTeam()">{{ $t('teams_module.create_team') }}</button><template v-if="activity.status === 'setup' && activity.config.method === 'random'"><button type="button" :disabled="busy" @click="act({ action: 'distribute', reshuffle: false })">{{ $t('teams_module.distribute') }}</button><button type="button" :disabled="busy" @click="reshuffle">{{ $t('teams_module.reshuffle') }}</button></template></div>
       </section>
       <div class="teams-admin-grid">
         <section ref="scoringPanel" tabindex="-1" class="teams-cards" :aria-label="$t('teams_module.teams')">
@@ -47,22 +47,22 @@
           <article v-for="team in orderedTeams" :key="team.id" class="teams-panel team-card" :style="{ '--team-color': team.color }">
             <header><div><span class="team-dot"></span><h2>{{ team.name }}</h2><p>{{ $t('teams_module.member_count', members(team.id).length) }}<span v-if="team.capacity || activity.config.capacity"> / {{ team.capacity || activity.config.capacity }}</span></p></div><strong class="team-score">{{ totals.teams.get(team.id) || 0 }}</strong></header>
             <p v-if="activity.status === 'live' && members(team.id).length">{{ $t('teams_module.recipients', members(team.id).length) }}</p>
-            <div v-if="activity.status === 'live' && members(team.id).length" class="award-buttons"><button v-for="points in activity.config.presets" :key="points" class="primary" :disabled="busy || !members(team.id).length" @click="award(team, points)">{{ points > 0 ? '+' : '' }}{{ points }}</button></div>
-            <div v-if="activity.status === 'live' && members(team.id).length" class="custom-award"><input v-model="customPoints[team.id]" type="number" step="1" min="-1000000" max="1000000" :aria-label="$t('teams_module.custom_points')" :placeholder="$t('teams_module.custom_points')" /><button :disabled="busy || !members(team.id).length" @click="award(team, Number(customPoints[team.id]))">{{ $t('teams_module.award') }}</button></div>
+            <div v-if="activity.status === 'live' && members(team.id).length" class="award-buttons"><button v-for="points in activity.config.presets" :key="points" type="button" class="primary" :disabled="busy || !members(team.id).length" @click="award(team, points)">{{ points > 0 ? '+' : '' }}{{ points }}</button></div>
+            <div v-if="activity.status === 'live' && members(team.id).length" class="custom-award"><input v-model="customPoints[team.id]" type="number" step="1" min="-1000000" max="1000000" :aria-label="$t('teams_module.custom_points')" :placeholder="$t('teams_module.custom_points')" /><button type="button" :disabled="busy || !members(team.id).length" @click="award(team, Number(customPoints[team.id]))">{{ $t('teams_module.award') }}</button></div>
             <div v-if="!members(team.id).length" class="team-empty">
               <p class="teams-muted">{{ $t('teams_module.empty_team') }}</p>
-              <button v-if="activity.status !== 'completed'" :disabled="busy" @click="assignTeam = team; assignParticipantId = ''">{{ $t('teams_module.assign_participant') }}</button>
+              <button v-if="activity.status !== 'completed'" type="button" :disabled="busy" @click="assignTeam = team; assignParticipantId = ''">{{ $t('teams_module.assign_participant') }}</button>
             </div>
             <ul v-else class="teams-roster"><li v-for="person in members(team.id)" :key="person.participantId"><span>{{ person.name }}</span><span v-if="activity.status === 'completed'">{{ totals.people.get(person.participantId) || 0 }} {{ $t('teams_module.points') }}</span><select v-else :value="person.teamId" :disabled="busy" :aria-label="$t('teams_module.assign_person', { name: person.name })" @change="act({ action: 'assign', participantId: person.participantId, teamId: $event.target.value })"><option value="">{{ $t('teams_module.unassigned') }}</option><option v-for="target in activity.teams" :key="target.id" :value="target.id">{{ target.name }}</option></select></li></ul>
-            <div v-if="activity.status !== 'completed'" class="teams-actions"><button :disabled="busy" @click="editTeam(team)">{{ $t('teams_module.edit') }}</button><button :disabled="busy || hasAwards(team.id)" @click="deleteTeam(team)">{{ $t('teams_module.delete') }}</button></div>
+            <div v-if="activity.status !== 'completed'" class="teams-actions"><button type="button" :disabled="busy" @click="editTeam(team)">{{ $t('teams_module.edit') }}</button><button type="button" :disabled="busy || hasAwards(team.id)" @click="deleteTeam(team)">{{ $t('teams_module.delete') }}</button></div>
           </article>
         </section>
         <aside ref="participantPanel" tabindex="-1" class="teams-panel entrant-panel">
           <h2>{{ $t('teams_module.unassigned') }} · {{ unassigned.length }}</h2><p v-if="!unassigned.length" class="teams-muted">{{ $t('teams_module.all_assigned') }}</p>
           <div v-for="person in unassigned" :key="person.participantId" class="entrant-row"><span>{{ person.name }}</span><select v-if="activity.status !== 'completed'" :disabled="busy" :aria-label="$t('teams_module.assign_person', { name: person.name })" @change="act({ action: 'assign', participantId: person.participantId, teamId: $event.target.value })"><option value="">{{ $t('teams_module.assign') }}</option><option v-for="team in activity.teams" :key="team.id" :value="team.id">{{ team.name }}</option></select></div>
           <template v-if="activity.status !== 'completed'">
-            <h3>{{ $t('teams_module.invited') }} · {{ invited.length }}</h3><p class="teams-muted">{{ $t('teams_module.invited_help') }}</p><div v-for="person in invited" :key="person.participantId" class="entrant-row"><span>{{ person.name }}</span><button :disabled="busy" @click="act({ action: 'add_participant', participantId: person.participantId })">{{ $t('teams_module.add') }}</button></div>
-            <h3>{{ $t('teams_module.add_participants') }}</h3><input ref="participantSearch" v-model="search" :placeholder="$t('teams_module.search')" :aria-label="$t('teams_module.search')" /><div class="participant-candidates"><div v-for="person in candidates" :key="person.participantId" class="entrant-row"><span>{{ person.name }}</span><button :disabled="busy" @click="act({ action: 'add_participant', participantId: person.participantId })">{{ $t('teams_module.add') }}</button></div></div>
+            <h3>{{ $t('teams_module.invited') }} · {{ invited.length }}</h3><p class="teams-muted">{{ $t('teams_module.invited_help') }}</p><div v-for="person in invited" :key="person.participantId" class="entrant-row"><span>{{ person.name }}</span><button type="button" :disabled="busy" @click="act({ action: 'add_participant', participantId: person.participantId })">{{ $t('teams_module.add') }}</button></div>
+            <h3>{{ $t('teams_module.add_participants') }}</h3><input ref="participantSearch" v-model="search" :placeholder="$t('teams_module.search')" :aria-label="$t('teams_module.search')" /><div class="participant-candidates"><div v-for="person in candidates" :key="person.participantId" class="entrant-row"><span>{{ person.name }}</span><button type="button" :disabled="busy" @click="act({ action: 'add_participant', participantId: person.participantId })">{{ $t('teams_module.add') }}</button></div></div>
           </template>
         </aside>
       </div>
@@ -74,14 +74,14 @@
           <li v-for="entry in visibleHistory" :key="entry.id">
             <div><strong>{{ entry.points > 0 ? '+' : '' }}{{ entry.points }} · {{ teamName(entry.teamId) }}</strong><p>{{ entry.reason || $t('teams_module.manual_award') }} · {{ $t('teams_module.member_count', entry.recipients.length) }}</p><small>{{ new Date(entry.createdAt).toLocaleString() }}</small></div>
             <span v-if="entry.reversesId || reversed.has(entry.id)">{{ $t('teams_module.reversed') }}</span>
-            <button v-else-if="activity.status === 'live'" :disabled="busy" @click="act({ action: 'undo', awardId: entry.id })">{{ $t('teams_module.undo') }}</button>
+            <button v-else-if="activity.status === 'live'" type="button" :disabled="busy" @click="act({ action: 'undo', awardId: entry.id })">{{ $t('teams_module.undo') }}</button>
           </li>
         </ol>
-        <button v-if="history.length > 5" :aria-expanded="showAllHistory" @click="showAllHistory = !showAllHistory">{{ $t(showAllHistory ? 'teams_module.show_latest' : 'teams_module.show_all') }}</button>
+        <button v-if="history.length > 5" type="button" :aria-expanded="showAllHistory" @click="showAllHistory = !showAllHistory">{{ $t(showAllHistory ? 'teams_module.show_latest' : 'teams_module.show_all') }}</button>
       </section>
     </template>
-    <div v-if="assignTeam" class="teams-overlay" @click.self="assignTeam = null">
-      <form class="teams-panel team-editor" role="dialog" aria-modal="true" :aria-label="$t('teams_module.assign_to_team', { name: assignTeam.name })" @submit.prevent="assignToTeam">
+    <div v-if="assignTeam" class="teams-overlay" @click.self="closeAssignDialog" @keydown.escape.stop.prevent="closeAssignDialog">
+      <form ref="assignDialogRef" class="teams-panel team-editor" role="dialog" aria-modal="true" :aria-label="$t('teams_module.assign_to_team', { name: assignTeam.name })" tabindex="-1" @submit.prevent="assignToTeam">
         <h2>{{ $t('teams_module.assign_to_team', { name: assignTeam.name }) }}</h2>
         <label v-if="assignableParticipants.length">{{ $t('teams_module.participant') }}
           <select v-model="assignParticipantId" required :disabled="busy"><option value="" disabled>{{ $t('teams_module.select_participant') }}</option><option v-for="person in assignableParticipants" :key="person.participantId" :value="person.participantId">{{ person.name }}{{ person.teamId ? ` · ${teamName(person.teamId)}` : '' }}</option></select>
@@ -90,16 +90,28 @@
         <p v-if="message" class="teams-error" role="alert">{{ message }}</p>
         <div class="teams-actions">
           <button v-if="assignableParticipants.length" class="primary" :disabled="busy || !assignParticipantId">{{ $t('teams_module.assign_participant') }}</button>
-          <button v-else type="button" @click="assignTeam = null; showParticipants()">{{ $t('teams_module.add_participants') }}</button>
-          <button type="button" :disabled="busy" @click="assignTeam = null">{{ $t('teams_module.cancel') }}</button>
+          <button v-else type="button" @click="closeAssignDialog(); showParticipants()">{{ $t('teams_module.add_participants') }}</button>
+          <button type="button" :disabled="busy" @click="closeAssignDialog">{{ $t('teams_module.cancel') }}</button>
         </div>
       </form>
     </div>
-    <div v-if="teamForm" class="teams-overlay" @click.self="teamForm = null"><form class="teams-panel team-editor" @submit.prevent="saveTeam"><h2>{{ $t('teams_module.manage_teams') }}</h2><label>{{ $t('teams_module.team_name') }}<input v-model="teamForm.name" required maxlength="120" /></label><label>{{ $t('teams_module.team_color') }}<input v-model="teamForm.color" type="color" /></label><label>{{ $t('teams_module.capacity') }}<input v-model.number="teamForm.capacity" type="number" min="0" /></label><p v-if="message" class="teams-error" role="alert">{{ message }}</p><div class="teams-actions"><button :disabled="busy" class="primary">{{ $t('teams_module.save') }}</button><button type="button" @click="teamForm = null">{{ $t('teams_module.cancel') }}</button></div></form></div>
+    <div v-if="teamForm" class="teams-overlay" @click.self="closeTeamDialog" @keydown.escape.stop.prevent="closeTeamDialog">
+      <form ref="teamDialogRef" class="teams-panel team-editor" role="dialog" aria-modal="true" :aria-label="$t('teams_module.manage_teams')" tabindex="-1" @submit.prevent="saveTeam">
+        <h2>{{ $t('teams_module.manage_teams') }}</h2>
+        <label>{{ $t('teams_module.team_name') }}<input v-model="teamForm.name" required maxlength="120" /></label>
+        <label>{{ $t('teams_module.team_color') }}<input v-model="teamForm.color" type="color" /></label>
+        <label>{{ $t('teams_module.capacity') }}<input v-model.number="teamForm.capacity" type="number" min="0" /></label>
+        <p v-if="message" class="teams-error" role="alert">{{ message }}</p>
+        <div class="teams-actions">
+          <button :disabled="busy" class="primary">{{ $t('teams_module.save') }}</button>
+          <button type="button" @click="closeTeamDialog">{{ $t('teams_module.cancel') }}</button>
+        </div>
+      </form>
+    </div>
   </main>
 </template>
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTeamsActivity } from '../composables/useTeamsActivity'
 import { teamsActivity } from '../services/teamsActivity'
@@ -114,6 +126,20 @@ const activity = computed(() => state.value?.activity)
 const visibleToPlayers = computed(() => !!(state.value?.module || props.module).isActive)
 const scoringPanel = ref(null), participantPanel = ref(null), participantSearch = ref(null)
 const showAllHistory = ref(false), assignTeam = ref(null), assignParticipantId = ref('')
+const assignDialogRef = ref(null), teamDialogRef = ref(null)
+let previousFocus = null
+function closeAssignDialog() { assignTeam.value = null }
+function closeTeamDialog() { teamForm.value = null }
+function closeActiveDialog() {
+  if (teamForm.value) teamForm.value = null
+  if (assignTeam.value) assignTeam.value = null
+}
+function onWindowKeydown(event) {
+  if (event.key !== 'Escape') return
+  if (!assignTeam.value && !teamForm.value) return
+  event.preventDefault()
+  closeActiveDialog()
+}
 const assignableParticipants = computed(() => activity.value?.entrants.filter(person => person.teamId !== assignTeam.value?.id) || [])
 const config = ref({ ...defaultTeamsConfig(), ...props.module.data?.teamsConfig })
 let configLoaded = false
@@ -171,4 +197,26 @@ async function assignToTeam() {
 function reopen() { if (window.confirm(t('teams_module.confirm_reopen'))) act({ action: 'reopen' }) }
 function complete() { if (window.confirm(t('teams_module.confirm_complete'))) act({ action: 'complete' }) }
 function showProjector() { window.open(`/projector/${props.eventId}`, '_blank', 'noopener') }
+watch(() => Boolean(assignTeam.value || teamForm.value), async (isOpen, wasOpen) => {
+  if (typeof window !== 'undefined') {
+    if (isOpen && !wasOpen) window.addEventListener('keydown', onWindowKeydown)
+    else if (!isOpen && wasOpen) window.removeEventListener('keydown', onWindowKeydown)
+  }
+  if (isOpen && !wasOpen) {
+    previousFocus = typeof document !== 'undefined' ? document.activeElement : null
+    await nextTick()
+    const dialog = assignTeam.value ? assignDialogRef.value : teamDialogRef.value
+    const target = dialog?.querySelector?.('select, input, button') || dialog
+    target?.focus?.({ preventScroll: true })
+  } else if (!isOpen && wasOpen) {
+    await nextTick()
+    if (previousFocus && previousFocus.isConnected !== false && typeof previousFocus.focus === 'function') {
+      previousFocus.focus({ preventScroll: true })
+    }
+    previousFocus = null
+  }
+})
+onUnmounted(() => {
+  if (typeof window !== 'undefined') window.removeEventListener('keydown', onWindowKeydown)
+})
 </script>
