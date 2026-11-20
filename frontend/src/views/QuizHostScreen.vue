@@ -14,7 +14,7 @@
            <div class="qr-placeholder">{{ $t('quiz.host.qr_placeholder') }}</div>
         </div>
         <div class="lobby-actions">
-            <button class="copy-link-btn" @click="copyProjectorLink">
+            <button type="button" class="copy-link-btn" @click="copyProjectorLink">
                 {{ $t('quiz.host.copy_link') }}
             </button>
         </div>
@@ -22,7 +22,7 @@
       
       <div class="players-area">
         <div class="players-count">
-          <span><AppIcon name="teams" :size="18" /> {{ players.length }}</span> {{ $t('quiz.host.players') }}
+          <span><AppIcon name="teams" :size="18" aria-hidden="true" /> {{ players.length }}</span> {{ $t('quiz.host.players') }}
         </div>
         <div class="players-grid">
           <div v-for="player in players" :key="player.id" class="player-chip">
@@ -32,7 +32,7 @@
       </div>
 
       <div class="lobby-footer">
-        <button class="start-btn" @click="startQuiz" :disabled="players.length === 0">
+        <button type="button" class="start-btn" @click="startQuiz" :disabled="players.length === 0">
           {{ $t('quiz.host.start_btn') }}
         </button>
       </div>
@@ -124,7 +124,7 @@
           </div>
           <template v-else-if="isNumber">
             <div class="number-host-view">
-              <div class="nh-input-icon"><AppIcon name="hash" :size="32" /></div>
+              <div class="nh-input-icon"><AppIcon name="hash" :size="32" aria-hidden="true" /></div>
               <div class="nh-label">{{ $t('quiz.host.players_entering_number') }}</div>
             </div>
           </template>
@@ -136,7 +136,7 @@
                 :class="getAnswerColorClass(idx)"
                 v-show="!isTrueFalse || idx < 2"
             >
-                <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" />
+                <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" aria-hidden="true" />
                 <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
             </div>
           </template>
@@ -150,8 +150,8 @@
       </div>
       
       <div class="host-controls">
-         <button v-if="timeRemaining > 0" class="control-btn" @click="endQuestionEarly">Skip Timer</button>
-         <button v-else class="control-btn primary" @click="goToResults">Go to Results</button>
+         <button v-if="timeRemaining > 0" type="button" class="control-btn" @click="endQuestionEarly">Skip Timer</button>
+         <button v-else type="button" class="control-btn primary" @click="goToResults">Go to Results</button>
       </div>
     </div>
 
@@ -171,7 +171,7 @@
                <div v-if="isAnswerCorrect(idx)" class="cp-host-hero-frame">
                  <div class="cp-host-hero-glow"></div>
                  <img :src="getImageUrl(option.imageId)" class="cp-host-hero-img" decoding="async" loading="eager" />
-                 <div class="cp-host-hero-check"><AppIcon name="check" :size="24" /></div>
+                 <div class="cp-host-hero-check"><AppIcon name="check" :size="24" aria-hidden="true" /></div>
                  <div class="cp-host-hero-label">{{ currentQuestion.text }}</div>
                </div>
              </div>
@@ -235,7 +235,7 @@
             <div class="answers-column">
               <div class="range-result-timeline">
                 <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
-                  <AppIcon class="srt-check" name="check" :size="18" />
+                  <AppIcon class="srt-check" name="check" :size="18" aria-hidden="true" />
                   <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</span>
                 </div>
                 <div class="srt-label srt-label-max">{{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}</div>
@@ -268,7 +268,7 @@
                <div class="number-result-card">
                   <div class="nr-label">{{ $t('quiz.host.correct_answer') }}</div>
                   <div class="nr-value">{{ currentQuestion?.correctNumber }}</div>
-                  <div class="nr-check"><AppIcon name="check" :size="20" /></div>
+                  <div class="nr-check"><AppIcon name="check" :size="20" aria-hidden="true" /></div>
                </div>
             </div>
           </div>
@@ -298,7 +298,7 @@
                                   ></div>
                               </div>
                               <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
-                              <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" />
+                              <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" aria-hidden="true" />
                           </div>
                       </div>
                   </div>
@@ -322,16 +322,16 @@
                   ]"
                   v-show="!isTrueFalse || idx < 2"
                 >
-                  <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" />
+                  <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" aria-hidden="true" />
                   <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
-                  <AppIcon v-if="isAnswerCorrect(idx)" class="result-check-icon" name="check" :size="18" />
+                  <AppIcon v-if="isAnswerCorrect(idx)" class="result-check-icon" name="check" :size="18" aria-hidden="true" />
                 </div>
             </div>
           </div>
        </div>
 
        <div class="host-controls">
-         <button class="control-btn primary" @click="nextState">
+         <button type="button" class="control-btn primary" @click="nextState">
            {{ $t('quiz.host.show_leaderboard') }}
          </button>
        </div>
@@ -341,7 +341,7 @@
     <div v-else-if="gameState === 'leaderboard'" class="state-container leaderboard-container" :key="leaderboardAnimKey">
       <div class="lb-bg-glow"></div>
       <div class="lb-header">
-        <AppIcon class="lb-trophy" name="trophy" :size="54" />
+        <AppIcon class="lb-trophy" name="trophy" :size="54" aria-hidden="true" />
         <h2 class="lb-title">{{ $t('quiz.host.leaderboard_title') }}</h2>
         <div class="lb-subtitle">{{ $t('quiz.host.question_of', { current: currentQuestionIndex + 1, total: totalQuestions }) }}</div>
       </div>
@@ -354,7 +354,7 @@
           :style="{ animationDelay: ((topPlayers.length - 1 - idx) * 0.12) + 's' }"
         >
           <div class="lb-rank-badge" :class="'lb-badge-' + (idx + 1)">
-            <AppIcon v-if="idx < 3" name="medal" :size="22" />
+            <AppIcon v-if="idx < 3" name="medal" :size="22" aria-hidden="true" />
             <span v-else>{{ idx + 1 }}</span>
           </div>
           <div class="lb-player-name">{{ player.nickname }}</div>
@@ -374,7 +374,7 @@
         </div>
       </div>
       <div class="host-controls">
-        <button class="control-btn primary" @click="nextState">
+        <button type="button" class="control-btn primary" @click="nextState">
           {{ isLastQuestion ? $t('quiz.host.end_quiz') : $t('quiz.host.next_question') }}
         </button>
       </div>
@@ -388,7 +388,7 @@
        </div>
 
        <div class="final-header">
-         <AppIcon class="final-trophy" name="trophy" :size="64" />
+         <AppIcon class="final-trophy" name="trophy" :size="64" aria-hidden="true" />
          <h1 class="final-title">{{ $t('quiz.host.quiz_complete') }}</h1>
          <p class="final-subtitle">{{ $t('quiz.host.final_standings') }}</p>
        </div>
@@ -396,20 +396,20 @@
        <!-- Top 3 Podium -->
        <div class="final-podium">
           <div class="final-podium-place fp-second" v-if="topPlayers[1]">
-            <AppIcon class="fp-avatar" name="medal" :size="32" />
+            <AppIcon class="fp-avatar" name="medal" :size="32" aria-hidden="true" />
             <div class="fp-name">{{ topPlayers[1].nickname }}</div>
             <div class="fp-score">{{ topPlayers[1].score.toLocaleString() }}</div>
             <div class="fp-block fp-block-2"><span>2</span></div>
           </div>
           <div class="final-podium-place fp-first" v-if="topPlayers[0]">
-            <AppIcon class="fp-crown" name="crown" :size="28" />
-            <AppIcon class="fp-avatar" name="medal" :size="32" />
+            <AppIcon class="fp-crown" name="crown" :size="28" aria-hidden="true" />
+            <AppIcon class="fp-avatar" name="medal" :size="32" aria-hidden="true" />
             <div class="fp-name">{{ topPlayers[0].nickname }}</div>
             <div class="fp-score">{{ topPlayers[0].score.toLocaleString() }}</div>
             <div class="fp-block fp-block-1"><span>1</span></div>
           </div>
           <div class="final-podium-place fp-third" v-if="topPlayers[2]">
-            <AppIcon class="fp-avatar" name="medal" :size="32" />
+            <AppIcon class="fp-avatar" name="medal" :size="32" aria-hidden="true" />
             <div class="fp-name">{{ topPlayers[2].nickname }}</div>
             <div class="fp-score">{{ topPlayers[2].score.toLocaleString() }}</div>
             <div class="fp-block fp-block-3"><span>3</span></div>
@@ -430,14 +430,14 @@
          </div>
        </div>
 
-       <button class="control-btn" @click="exitQuiz" style="margin-top: 20px; z-index: 1;">{{ $t('quiz.host.end_quiz') }}</button>
+       <button type="button" class="control-btn" @click="exitQuiz" style="margin-top: 20px; z-index: 1;">{{ $t('quiz.host.end_quiz') }}</button>
     </div>
 
     <!-- Audio Player -->
     <audio ref="bgMusicPlayer" :src="fullMusicUrl" loop id="bg-music-player"></audio>
     
     <div v-if="showUnmuteButton" class="unmute-overlay">
-        <button @click="enableAudio" class="unmute-btn">
+        <button type="button" @click="enableAudio" class="unmute-btn">
             🔊 Enable Sound
         </button>
     </div>
@@ -575,58 +575,50 @@ const questionImageUrl = computed(() => {
 const questionFontSize = computed(() => {
     const text = currentQuestion.value?.text || ''
     const hasImage = !!questionImageUrl.value
-    
-    // Larger base font sizes - maximize use of space
-    let baseSize;
-    
+
     if (!hasImage) {
         // No image - massive text centered
         if (text.length < 30) {
-            baseSize = 10.0;
+            return 'clamp(1.5rem, 0.9rem + 4.5vw, 3.5rem)'
         } else if (text.length < 60) {
-            baseSize = 7.0;
+            return 'clamp(1.25rem, 0.75rem + 3.5vw, 2.8rem)'
         } else if (text.length < 100) {
-            baseSize = 5.0;
+            return 'clamp(1.1rem, 0.7rem + 2.5vw, 2.4rem)'
         } else {
-            baseSize = 3.5;
+            return 'clamp(1rem, 0.65rem + 2.0vw, 2.1rem)'
         }
     } else {
         // With image - text at bottom
         if (text.length < 30) {
-            baseSize = 8.0; 
+            return 'clamp(1.25rem, 0.75rem + 3.5vw, 2.8rem)'
         } else if (text.length < 60) {
-            baseSize = 5.0; 
+            return 'clamp(1.1rem, 0.7rem + 2.5vw, 2.4rem)'
         } else if (text.length < 100) {
-            baseSize = 3.5; 
+            return 'clamp(1rem, 0.65rem + 2.2vw, 2.2rem)'
         } else {
-            baseSize = 2.5;
+            return 'clamp(0.95rem, 0.65rem + 1.6vw, 1.85rem)'
         }
     }
-    return `${baseSize}vw`;
 })
 
 // Calculate individual font size for each answer card
 const getAnswerFontSize = (answerText) => {
     const text = answerText || ''
     const length = text.length
-    
-    // Calculate font size for each answer individually based on text length
-    let size
+
     if (length < 15) {
-        size = 2.4
+        return 'clamp(1rem, 0.8rem + 1.4vw, 2.1rem)'
     } else if (length < 25) {
-        size = 2.0
+        return 'clamp(0.95rem, 0.75rem + 1.2vw, 1.85rem)'
     } else if (length < 40) {
-        size = 1.6
+        return 'clamp(0.95rem, 0.75rem + 1.1vw, 1.75rem)'
     } else if (length < 60) {
-        size = 1.3
+        return 'clamp(0.9rem, 0.72rem + 0.9vw, 1.5rem)'
     } else if (length < 100) {
-        size = 1.0
+        return 'clamp(0.875rem, 0.7rem + 0.7vw, 1.3rem)'
     } else {
-        size = 0.85
+        return 'clamp(0.85rem, 0.7rem + 0.5vw, 1.15rem)'
     }
-    
-    return `${size}vw`
 }
 
 const formatNumber = (num, decimals = 0) => {

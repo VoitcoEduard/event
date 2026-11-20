@@ -94,7 +94,7 @@
     margin-top: 40px;
 }
 
-.game-title { font-size: 3rem; margin-bottom: 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.game-title { font-size: clamp(1.5rem, 1rem + 4vw, 3rem); margin-bottom: 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
 .pin-display {
     background: white;
@@ -660,7 +660,7 @@
 }
 
 .nr-value {
-    font-size: 8rem;
+    font-size: clamp(2.5rem, 1.5rem + 8vw, 6rem);
     font-weight: 900;
     color: white;
     line-height: 1;
@@ -838,7 +838,7 @@
     padding: 18px 16px 14px;
     background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
     color: #fff;
-    font-size: 1.4vw;
+    font-size: clamp(0.95rem, 0.7rem + 1.2vw, 1.5rem);
     font-weight: 700;
     text-align: center;
     z-index: 5;
@@ -914,7 +914,7 @@
 }
 
 .wp-host-title {
-    font-size: 2.5rem;
+    font-size: clamp(1.35rem, 1rem + 2.5vw, 2.5rem);
     font-weight: 900;
     color: #fff;
     margin: 0;
@@ -1066,53 +1066,6 @@
     white-space: nowrap;
 }
 
-/* Responsive Design for Smaller Screens */
-@media (max-width: 900px) {
-    .question-main-content {
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .question-column {
-        flex: none;
-        width: 100% !important;
-        min-height: 30vh;
-    }
-    
-    .question-card {
-        padding: 20px;
-    }
-    
-    .question-image-container {
-        min-height: 150px;
-    }
-    
-    .answers-column {
-        width: 100% !important;
-        flex: 1;
-    }
-    
-    .answer-card-stacked {
-        min-height: 60px;
-        padding: 15px 20px;
-    }
-    
-    .answer-card-stacked .answer-icon {
-        font-size: 1.8rem;
-        margin-right: 15px;
-    }
-    
-    .answer-counter-widget {
-        bottom: 70px;
-        right: 20px;
-    }
-}
-
-@media (max-width: 600px) {
-    .answer-card-stacked .answer-icon {
-        font-size: 1.5rem;
-    }
-}
 
 /* HISTOGRAM */
 .histogram-container {
@@ -1313,7 +1266,7 @@
 }
 
 .lb-title {
-    font-size: 2rem;
+    font-size: clamp(1.35rem, 1rem + 2vw, 2rem);
     font-weight: 900;
     background: linear-gradient(135deg, #FFD700, #FFA500);
     -webkit-background-clip: text;
@@ -1469,7 +1422,7 @@
 }
 
 .final-title {
-    font-size: 2.2rem;
+    font-size: clamp(1.4rem, 1rem + 2.2vw, 2.2rem);
     font-weight: 900;
     background: linear-gradient(135deg, #FFD700, #FF6B6B, #4ECDC4);
     -webkit-background-clip: text;
@@ -1724,7 +1677,7 @@
 }
 
 .results-mode-title {
-    font-size: 2rem;
+    font-size: clamp(1.25rem, 0.95rem + 1.8vw, 2rem);
     font-weight: bold;
     color: #fff;
     margin-right: auto;
@@ -1904,13 +1857,13 @@
   background: rgba(0,0,0,0.22);
 }
 .sbs-label {
-  font-size: 1.3vw;
+  font-size: clamp(0.9rem, 0.7rem + 1vw, 1.4rem);
   font-weight: 700;
   color: rgba(255,255,255,0.55);
   text-align: center;
 }
 .sbs-hint {
-  font-size: 1.1vw;
+  font-size: clamp(0.85rem, 0.68rem + 0.8vw, 1.2rem);
   font-weight: 600;
   color: rgba(255,255,255,0.35);
   letter-spacing: 0.05em;
@@ -1949,18 +1902,18 @@
   transform: translateY(0) scale(1);
 }
 .srt-check {
-  font-size: 1.8vw;
+  font-size: clamp(1rem, 0.75rem + 1.2vw, 1.8rem);
   font-weight: 900;
   color: #000;
 }
 .srt-value {
-  font-size: 2.4vw;
+  font-size: clamp(1.25rem, 0.9rem + 1.8vw, 2.4rem);
   font-weight: 900;
   color: #000;
   letter-spacing: -0.01em;
 }
 .srt-label {
-  font-size: 1.1vw;
+  font-size: clamp(0.85rem, 0.68rem + 0.8vw, 1.2rem);
   font-weight: 600;
   color: rgba(255,255,255,0.45);
 }
@@ -2004,7 +1957,7 @@
 .srt-marker-bubble {
   background: #30D158;
   color: #000;
-  font-size: 1.0vw;
+  font-size: clamp(0.85rem, 0.68rem + 0.7vw, 1.15rem);
   font-weight: 800;
   padding: 4px 10px;
   border-radius: 6px;
@@ -2031,4 +1984,369 @@
   25% { transform: scale(1); }
   80% { opacity: 1; transform: translateY(-15px); }
   100% { opacity: 0; transform: translateY(-25px); }
+}
+
+/* =========================================================
+   Mobile & Responsive Adaptations (QuizHost & SimpleQuizHost)
+   ========================================================= */
+@media (max-width: 900px) {
+  .quiz-host-screen {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: clip;
+  }
+
+  .state-container,
+  .question-container,
+  .results-container,
+  .results-container-new,
+  .leaderboard-container,
+  .final-container {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: clip;
+    padding: 16px;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  /* Unmute overlay avoids bottom-right AdminThemeToggle */
+  .unmute-overlay {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: auto;
+  }
+
+  /* Lobby */
+  .lobby-header {
+    margin-top: 16px;
+    width: 100%;
+  }
+
+  .pin-display {
+    flex-wrap: wrap;
+    font-size: clamp(1.25rem, 4.5vw, 2rem);
+    padding: 10px 18px;
+    max-width: 100%;
+  }
+
+  .lobby-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .players-area {
+    margin-top: 24px;
+  }
+
+  .lobby-footer {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Question header & main two-column stacking */
+  .question-header {
+    height: auto;
+    min-height: 52px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .timer {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+    border-width: 3px;
+  }
+
+  .question-main-content {
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 12px;
+    min-height: auto;
+  }
+
+  .question-column {
+    flex: none;
+    width: 100% !important;
+    min-height: 28vh;
+  }
+
+  .question-card {
+    padding: 20px;
+    min-height: 200px;
+  }
+
+  .question-image-container {
+    min-height: 150px;
+  }
+
+  .question-text-overlay {
+    padding: 16px 20px;
+  }
+
+  .answers-column {
+    width: 100% !important;
+    flex: 1;
+    gap: 10px;
+  }
+
+  .answer-card-stacked {
+    min-height: 60px;
+    padding: 14px 16px;
+  }
+
+  .answer-card-stacked .answer-icon {
+    font-size: 1.5rem;
+    margin-right: 12px;
+  }
+
+  /* Flow answer counter inline instead of overlapping answer cards */
+  .answer-counter-widget {
+    position: static;
+    align-self: flex-end;
+    margin-top: 8px;
+    flex-direction: row;
+    gap: 8px;
+    padding: 8px 14px;
+  }
+
+  .counter-value {
+    font-size: 1.5rem;
+  }
+
+  .counter-label {
+    margin-top: 0;
+  }
+
+  /* Correct Picture & Wrong Pictures active layouts */
+  .correct-picture-host-layout {
+    height: auto;
+  }
+
+  .cp-host-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+    gap: 12px;
+    padding: 4px;
+  }
+
+  .cp-host-card {
+    height: auto;
+    min-height: 120px;
+    aspect-ratio: 4 / 3;
+  }
+
+  .cp-host-text {
+    padding: 12px 8px;
+  }
+
+  .wrong-picture-host-layout,
+  .wrong-picture-results-magnified {
+    height: auto;
+    overflow: visible;
+    padding: 8px 0;
+  }
+
+  .wp-host-header {
+    margin-bottom: 12px;
+  }
+
+  .wp-host-instruction {
+    font-size: 1rem;
+  }
+
+  .wp-host-image-container {
+    max-height: 55dvh;
+    min-height: 200px;
+  }
+
+  .wp-host-big-img {
+    max-height: 55dvh;
+    width: 100%;
+    object-fit: contain;
+  }
+
+  /* Host controls */
+  .host-controls {
+    margin-top: 12px;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .control-btn {
+    min-block-size: 44px;
+  }
+
+  /* Results states */
+  .wp-magnified-results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    min-height: auto;
+  }
+
+  .wp-magnified-column {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 12px;
+    padding: 4px;
+    overflow-y: visible;
+  }
+
+  .wp-labels-column {
+    overflow-y: visible;
+    padding: 4px;
+  }
+
+  .wp-label-text.small {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .range-results-new,
+  .number-results-host {
+    flex-direction: column;
+    gap: 16px;
+    height: auto;
+  }
+
+  .range-result-timeline {
+    height: 240px;
+    width: 100%;
+  }
+
+  .number-result-card {
+    padding: 24px 16px;
+    gap: 12px;
+    height: auto;
+  }
+
+  .nr-check {
+    width: 64px;
+    height: 64px;
+  }
+
+  .cp-host-hero-frame {
+    max-width: 100%;
+    max-height: 45dvh;
+  }
+
+  .cp-host-wrong-thumbs {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* Leaderboard & Finished */
+  .lb-list {
+    overflow: visible;
+  }
+
+  .lb-row {
+    min-width: 0;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .lb-player-name {
+    min-width: 0;
+    font-size: 1rem;
+  }
+
+  .lb-score-area {
+    min-width: 0;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+
+  .lb-score-bar-wrap {
+    width: 48px;
+    flex: none;
+  }
+
+  .lb-score-value {
+    min-width: 56px;
+    font-size: 0.95rem;
+  }
+
+  .lb-diff-anim {
+    right: 0;
+    top: -22px;
+    font-size: 1rem;
+  }
+
+  .final-podium {
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .final-podium-place {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .fp-block-1,
+  .fp-block-2,
+  .fp-block-3 {
+    width: 100%;
+    max-width: 100px;
+  }
+
+  .fp-name {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    font-size: 0.9rem;
+  }
+
+  .final-rest-row {
+    gap: 10px;
+    padding: 8px 12px;
+  }
+
+  .final-rest-name {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+}
+
+@media (max-width: 640px) {
+  .start-btn {
+    width: 100%;
+    min-block-size: 44px;
+    padding: 12px 20px;
+    font-size: 1.15rem;
+  }
+
+  .cp-host-thumb-card {
+    width: 72px;
+  }
+
+  .lb-score-bar-wrap {
+    width: 36px;
+  }
+}
+
+@media (pointer: coarse) {
+  .copy-link-btn,
+  .start-btn,
+  .control-btn,
+  .unmute-btn {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
 }
