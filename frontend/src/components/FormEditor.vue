@@ -2,34 +2,43 @@
   <div class="form-editor">
     <div class="scroll-content">
       <div v-if="localTimeline.length === 0" class="empty-state">
-        <AppIcon class="empty-icon" name="edit" :size="42" />
+        <AppIcon class="empty-icon" name="edit" :size="42" aria-hidden="true" />
         <p class="empty-text">{{ $t('form_editor.empty_text') }}</p>
       </div>
       <div v-else>
         <div v-for="(step, index) in localTimeline" :key="step.id" class="step-card">
           <div class="step-header" :class="{ 'field-step': step.type === 'field', 'message-step': step.type === 'message' }">
             <div class="step-title-container">
-              <AppIcon class="step-icon" :name="step.type === 'field' ? 'question' : 'message'" :size="18" />
+              <AppIcon class="step-icon" :name="step.type === 'field' ? 'question' : 'message'" :size="18" aria-hidden="true" />
               <span class="step-index">{{ $t('form_module.step_counter', { current: index + 1, total: localTimeline.length }) }}</span>
               <span class="step-type-label">{{ step.type === 'field' ? $t('form_editor.question') : $t('form_editor.message') }}</span>
             </div>
             <div class="step-actions">
-              <button 
-                class="action-icon" 
+              <button
+                type="button"
+                class="action-icon"
                 @click="moveStep(index, 'up')"
                 :disabled="index === 0"
+                aria-label="Move step up"
               >
-                <AppIcon name="chevronUp" :size="16" />
+                <AppIcon name="chevronUp" :size="16" aria-hidden="true" />
               </button>
-              <button 
-                class="action-icon" 
+              <button
+                type="button"
+                class="action-icon"
                 @click="moveStep(index, 'down')"
                 :disabled="index === localTimeline.length - 1"
+                aria-label="Move step down"
               >
-                <AppIcon name="chevronDown" :size="16" />
+                <AppIcon name="chevronDown" :size="16" aria-hidden="true" />
               </button>
-              <button class="action-icon delete-btn" @click="removeStep(step.id)">
-                <AppIcon name="trash" :size="16" />
+              <button
+                type="button"
+                class="action-icon delete-btn"
+                @click="removeStep(step.id)"
+                aria-label="Delete step"
+              >
+                <AppIcon name="trash" :size="16" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -41,16 +50,19 @@
                 :value="step.data.label"
                 @input="updateStep(step.id, 'label', $event.target.value)"
                 :placeholder="$t('form_editor.question_placeholder')"
+                :aria-label="$t('form_editor.question_label')"
                 class="input"
               />
 
               <p class="label">{{ $t('form_editor.response_type') }}</p>
               <div class="type-selector">
-                <button 
-                  v-for="type in ['text', 'number', 'date', 'radio', 'checkbox', 'dropdown']" 
+                <button
+                  v-for="type in ['text', 'number', 'date', 'radio', 'checkbox', 'dropdown']"
                   :key="type"
+                  type="button"
                   class="type-option"
                   :class="{ active: step.data.fieldType === type }"
+                  :aria-pressed="step.data.fieldType === type"
                   @click="updateStep(step.id, 'fieldType', type)"
                 >
                   {{ $t(`form_editor.types.${type}`) }}
@@ -72,25 +84,28 @@
                         :value="answer.text"
                         @input="updateAnswer(step.id, answerIndex, 'text', $event.target.value)"
                         :placeholder="$t('form_editor.display_text')"
+                        :aria-label="$t('form_editor.display_text')"
                         class="input answer-input"
                       />
                       <input
                         :value="answer.value"
                         @input="updateAnswer(step.id, answerIndex, 'value', $event.target.value)"
                         :placeholder="$t('form_editor.value')"
+                        :aria-label="$t('form_editor.value')"
                         class="input answer-value-input"
                       />
-                      <button 
-                        class="remove-answer-btn" 
+                      <button
+                        type="button"
+                        class="remove-answer-btn"
                         @click="removeAnswer(step.id, answerIndex)"
-                        :title="$t('form_editor.delete_question')"
+                        aria-label="Remove answer"
                       >
-                        <AppIcon name="close" :size="14" />
+                        <AppIcon name="close" :size="14" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
                   
-                  <button class="add-answer-btn" @click="addAnswer(step.id)">
+                  <button type="button" class="add-answer-btn" @click="addAnswer(step.id)">
                     {{ $t('form_editor.add_answer') }}
                   </button>
 
@@ -125,6 +140,7 @@
                       :value="step.data.otherPlaceholder || $t('form_module.other_placeholder')"
                       @input="updateStep(step.id, 'otherPlaceholder', $event.target.value)"
                       :placeholder="$t('form_module.other_placeholder')"
+                      :aria-label="$t('form_editor.other_placeholder_label')"
                       class="input"
                     />
                   </div>
@@ -138,6 +154,7 @@
                 :value="step.data.content"
                 @input="updateStep(step.id, 'content', $event.target.value)"
                 :placeholder="$t('form_editor.message_placeholder')"
+                :aria-label="$t('form_editor.message_content')"
                 class="input text-area"
               ></textarea>
             </template>
@@ -149,10 +166,10 @@
 
     <div class="action-bar">
       <div class="add-buttons">
-        <button class="add-btn add-question" @click="addStep('field')">
+        <button type="button" class="add-btn add-question" @click="addStep('field')">
           {{ $t('form_editor.add_question_btn') }}
         </button>
-        <button class="add-btn add-message" @click="addStep('message')">
+        <button type="button" class="add-btn add-message" @click="addStep('message')">
           {{ $t('form_editor.add_message_btn') }}
         </button>
       </div>
@@ -300,13 +317,26 @@ const moveStep = (index, direction) => {
 
 <style scoped>
 .form-editor {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  container: form-editor / inline-size;
+}
+
+.form-editor *,
+.form-editor *::before,
+.form-editor *::after {
+  box-sizing: border-box;
 }
 
 .scroll-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 20px;
   padding-bottom: 80px;
 }
@@ -335,6 +365,7 @@ const moveStep = (index, direction) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 16px;
   background-color: #252527;
   border-left: 4px solid;
@@ -346,16 +377,25 @@ const moveStep = (index, direction) => {
 .step-title-container {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
+  min-width: 0;
 }
 
 .step-icon { font-size: 18px; }
 .step-index { font-size: 12px; color: #8E8E93; font-weight: 600; text-transform: uppercase; }
 .step-type-label { font-size: 16px; font-weight: 600; color: #FFF; }
 
-.step-actions { display: flex; gap: 8px; }
+.step-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
 
 .action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
   border-radius: 6px;
   background-color: #333;
@@ -381,14 +421,23 @@ const moveStep = (index, direction) => {
   color: white;
   font-size: 16px;
   width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
   margin-bottom: 12px;
 }
 
 .input.text-area { min-height: 80px; resize: vertical; }
 
-.type-selector { display: flex; gap: 8px; }
+.type-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
 .type-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px 16px;
   border-radius: 8px;
   background-color: #333;
@@ -412,10 +461,14 @@ const moveStep = (index, direction) => {
 }
 
 .answer-item { display: flex; gap: 8px; align-items: center; }
-.answer-input { flex: 2; margin-bottom: 0; }
-.answer-value-input { flex: 1; margin-bottom: 0; }
+.answer-input { flex: 2; min-inline-size: 0; box-sizing: border-box; margin-bottom: 0; }
+.answer-value-input { flex: 1; min-inline-size: 0; box-sizing: border-box; margin-bottom: 0; }
 
 .remove-answer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   padding: 8px 12px;
   border-radius: 8px;
   background-color: rgba(255, 69, 58, 0.2);
@@ -425,6 +478,9 @@ const moveStep = (index, direction) => {
 }
 
 .add-answer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 16px;
   border-radius: 8px;
   background-color: rgba(52, 199, 89, 0.1);
@@ -444,7 +500,12 @@ const moveStep = (index, direction) => {
   color: #FFF;
   font-size: 14px;
 }
-.toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: #007AFF; }
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #007AFF;
+}
 .other-option-section { margin-top: 12px; }
 
 .action-bar {
@@ -456,7 +517,16 @@ const moveStep = (index, direction) => {
   border-top: 1px solid #2C2C2E;
 }
 
+.add-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 16px;
   border-radius: 8px;
   font-size: 14px;
@@ -464,4 +534,70 @@ const moveStep = (index, direction) => {
 }
 .add-question { background-color: rgba(0, 122, 255, 0.1); color: #007AFF; }
 .add-message { background-color: rgba(255, 159, 10, 0.1); color: #FF9F0A; }
+
+@container form-editor (inline-size <= 540px) {
+  .scroll-content {
+    padding: 12px;
+    padding-bottom: 84px;
+  }
+
+  .step-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .step-actions {
+    margin-inline-start: auto;
+  }
+
+  .step-body {
+    padding: 12px;
+  }
+
+  .answer-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .answer-input,
+  .answer-value-input {
+    flex: none;
+    width: 100%;
+    min-inline-size: 0;
+    box-sizing: border-box;
+  }
+
+  .remove-answer-btn {
+    width: 100%;
+  }
+
+  .action-bar {
+    padding: 12px;
+  }
+
+  .add-buttons {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .add-btn {
+    flex: 1 1 130px;
+    min-inline-size: 0;
+  }
+}
+
+@media (pointer: coarse) {
+  .action-icon,
+  .type-option,
+  .remove-answer-btn,
+  .add-answer-btn,
+  .add-btn,
+  .toggle-label {
+    min-block-size: var(--target-size, 44px);
+    min-inline-size: var(--target-size, 44px);
+  }
+}
 </style>

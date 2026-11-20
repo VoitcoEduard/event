@@ -1,21 +1,40 @@
 <template>
   <Teleport to="body">
     <div v-if="visible" class="modal-overlay" @click.self="handleClose">
-      <div class="modal-container" :style="modalStyle">
+      <div
+        ref="modalContainerRef"
+        class="modal-container"
+        :style="modalStyle"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="$t('form_module.config.title')"
+        tabindex="-1"
+      >
         <div class="header">
-          <div>
+          <div class="header-title-group">
             <p class="title">{{ $t('form_module.config.title') }}</p>
             <p class="subtitle">{{ module?.name || $t('form_module.config.untitled') }}</p>
           </div>
           <div class="header-buttons">
-            <button class="icon-button" @click="openTemplateModal" :title="$t('quiz_config.load_library')">
-              <AppIcon name="download" :size="18" />
+            <button
+              type="button"
+              class="icon-button"
+              @click="openTemplateModal"
+              :title="$t('quiz_config.load_library')"
+              :aria-label="$t('quiz_config.load_library')"
+            >
+              <AppIcon name="download" :size="18" aria-hidden="true" />
             </button>
-            <button class="library-btn" @click="openSaveTemplateModal">
-               <AppIcon name="copy" :size="18" /> {{ $t('quiz_config.save_template') }}
+            <button type="button" class="library-btn" @click="openSaveTemplateModal">
+               <AppIcon name="copy" :size="18" aria-hidden="true" /> {{ $t('quiz_config.save_template') }}
             </button>
-            <button class="close-button" @click="handleClose">
-              <AppIcon name="close" :size="18" />
+            <button
+              type="button"
+              class="close-button"
+              @click="handleClose"
+              :aria-label="$t('common.close')"
+            >
+              <AppIcon name="close" :size="18" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -48,7 +67,7 @@
             <div class="status-text">
                 {{ $t('form_module.config.steps_count', { count: timeline.length }) }}
             </div>
-            <button class="publish-btn" @click="handlePublish" :disabled="loading">
+            <button type="button" class="publish-btn" @click="handlePublish" :disabled="loading">
               {{ loading ? $t('quiz_config.saving') : $t('form_module.config.save_btn') }}
             </button>
           </div>
@@ -56,40 +75,62 @@
       </div>
 
       <!-- Load Template Modal -->
-      <div v-if="showTemplateModal" class="modal-overlay" @click.self="showTemplateModal = false">
-        <div class="dialog">
+      <div v-if="showTemplateModal" class="modal-overlay dialog-overlay" @click.self="showTemplateModal = false">
+        <div
+          ref="templateDialogRef"
+          class="dialog"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="$t('quiz_config.load_library')"
+          tabindex="-1"
+        >
           <h3 class="dialog-title">{{ $t('quiz_config.load_library') }}</h3>
           <div class="template-list">
             <div v-if="loadingTemplates">{{ $t('common.loading') }}</div>
             <div v-else-if="templateError" class="template-error">{{ $t('quiz_config.template_load_failed') }}</div>
             <div v-else-if="templates.length === 0">{{ $t('quiz_config.no_templates') }}</div>
             <div v-else v-for="template in templates" :key="template.id" class="template-item-wrapper">
-              <div class="template-item" @click="loadTemplate(template)">
+              <div
+                class="template-item"
+                role="button"
+                tabindex="0"
+                @click="loadTemplate(template)"
+                @keydown.enter.prevent="loadTemplate(template)"
+                @keydown.space.prevent="loadTemplate(template)"
+              >
                 <p class="template-item-name">{{ template.name }}</p>
                 <p class="template-item-desc">{{ template.description }}</p>
               </div>
             </div>
           </div>
-          <button class="dialog-close-btn" @click="showTemplateModal = false">
+          <button type="button" class="dialog-close-btn" @click="showTemplateModal = false">
             {{ $t('common.cancel') }}
           </button>
         </div>
       </div>
 
       <!-- Save Template Modal -->
-      <div v-if="showSaveTemplateModal" class="modal-overlay" @click.self="showSaveTemplateModal = false">
-        <div class="dialog">
+      <div v-if="showSaveTemplateModal" class="modal-overlay dialog-overlay" @click.self="showSaveTemplateModal = false">
+        <div
+          ref="saveTemplateDialogRef"
+          class="dialog"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="$t('quiz_config.save_template')"
+          tabindex="-1"
+        >
           <h3 class="dialog-title">{{ $t('quiz_config.save_template') }}</h3>
           <input
             v-model="templateName"
             :placeholder="$t('library.actions.template_name_placeholder')"
+            :aria-label="$t('library.actions.template_name_placeholder')"
             class="dialog-input"
           />
           <div class="dialog-buttons">
-            <button class="dialog-btn cancel" @click="showSaveTemplateModal = false">
+            <button type="button" class="dialog-btn cancel" @click="showSaveTemplateModal = false">
               {{ $t('common.cancel') }}
             </button>
-            <button class="dialog-btn save" @click="saveAsTemplate">
+            <button type="button" class="dialog-btn save" @click="saveAsTemplate">
               {{ $t('admin.details.add_modal_title') }}
             </button>
           </div>
@@ -100,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
@@ -126,6 +167,12 @@ const templateError = ref(false)
 const showTemplateModal = ref(false)
 const templateName = ref('')
 const showSaveTemplateModal = ref(false)
+const modalContainerRef = ref(null)
+const templateDialogRef = ref(null)
+const saveTemplateDialogRef = ref(null)
+
+let previouslyFocusedEl = null
+let nestedPreviouslyFocusedEl = null
 
 const { success, error, info } = useToast()
 
@@ -247,8 +294,88 @@ const saveAsTemplate = async () => {
 }
 
 const handleClose = () => {
+  showTemplateModal.value = false
+  showSaveTemplateModal.value = false
   emit('close')
 }
+
+const handleKeydown = (event) => {
+  if (event.key !== 'Escape' || !props.visible) return
+  event.preventDefault()
+  event.stopPropagation()
+  if (showTemplateModal.value) {
+    showTemplateModal.value = false
+    return
+  }
+  if (showSaveTemplateModal.value) {
+    showSaveTemplateModal.value = false
+    return
+  }
+  handleClose()
+}
+
+watch(() => props.visible, (isOpen) => {
+  if (!isOpen) {
+    showTemplateModal.value = false
+    showSaveTemplateModal.value = false
+    if (previouslyFocusedEl && typeof previouslyFocusedEl.focus === 'function') {
+      const target = previouslyFocusedEl
+      previouslyFocusedEl = null
+      nextTick(() => {
+        if (target.isConnected) target.focus()
+      })
+    }
+    return
+  }
+  if (typeof document !== 'undefined') {
+    previouslyFocusedEl = document.activeElement
+    nextTick(() => {
+      modalContainerRef.value?.focus()
+    })
+  }
+})
+
+watch([showTemplateModal, showSaveTemplateModal], ([templateOpen, saveOpen]) => {
+  if (typeof document === 'undefined') return
+  if (templateOpen || saveOpen) {
+    if (!nestedPreviouslyFocusedEl) {
+      nestedPreviouslyFocusedEl = document.activeElement
+    }
+    nextTick(() => {
+      if (templateOpen) {
+        templateDialogRef.value?.focus()
+      } else if (saveOpen) {
+        saveTemplateDialogRef.value?.focus()
+      }
+    })
+  } else if (nestedPreviouslyFocusedEl && typeof nestedPreviouslyFocusedEl.focus === 'function') {
+    const target = nestedPreviouslyFocusedEl
+    nestedPreviouslyFocusedEl = null
+    if (props.visible) {
+      nextTick(() => {
+        if (target.isConnected) target.focus()
+      })
+    }
+  }
+})
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', handleKeydown)
+  }
+  if (props.visible && typeof document !== 'undefined') {
+    previouslyFocusedEl = document.activeElement
+    nextTick(() => {
+      modalContainerRef.value?.focus()
+    })
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleKeydown)
+  }
+})
 
 const modalStyle = computed(() => ({
   transform: `translateY(${props.visible ? '0' : '100%'})`,
@@ -268,6 +395,12 @@ const modalStyle = computed(() => ({
   z-index: 1000;
 }
 
+.dialog-overlay {
+  align-items: center;
+  padding: 12px;
+  z-index: 1100;
+}
+
 .modal-container {
   background-color: #1C1C1E;
   height: 92%;
@@ -277,22 +410,40 @@ const modalStyle = computed(() => ({
   border-top-right-radius: 20px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
+.modal-container:focus { outline: none; }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 20px;
   border-bottom: 1px solid #2C2C2E;
 }
 
-.title { font-size: 22px; font-weight: bold; color: #FFF; }
-.subtitle { font-size: 14px; color: #8E8E93; margin-top: 2px; }
+.header-title-group {
+  min-width: 0;
+  flex: 1 1 180px;
+}
 
-.header-buttons { display: flex; gap: 12px; align-items: center; }
+.title { font-size: 22px; font-weight: bold; color: #FFF; overflow-wrap: anywhere; }
+.subtitle { font-size: 14px; color: #8E8E93; margin-top: 2px; overflow-wrap: anywhere; }
+
+.header-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+}
 
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
   border-radius: 8px;
   background-color: #2C2C2E;
@@ -303,18 +454,25 @@ const modalStyle = computed(() => ({
 .icon-button:hover { background-color: #333; }
 
 .library-btn {
-    background-color: #333;
-    color: white;
-    border: 1px solid #444;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: #333;
+  color: white;
+  border: 1px solid #444;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
 }
 .library-btn:hover { background-color: #444; }
 
 .close-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
   border-radius: 8px;
   background-color: #3A3A3C;
@@ -331,6 +489,7 @@ const modalStyle = computed(() => ({
 
 .content {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -344,6 +503,7 @@ const modalStyle = computed(() => ({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .settings-bar {
@@ -359,6 +519,7 @@ const modalStyle = computed(() => ({
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  min-width: 0;
 }
 
 .checkbox-label {
@@ -374,6 +535,7 @@ const modalStyle = computed(() => ({
 .checkbox-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -387,6 +549,9 @@ const modalStyle = computed(() => ({
 .status-text { color: #8E8E93; }
 
 .publish-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #0A84FF;
   color: white;
   padding: 10px 20px;
@@ -401,10 +566,15 @@ const modalStyle = computed(() => ({
   background-color: #1C1C1E;
   border-radius: 16px;
   padding: 20px;
-  width: 85%;
+  width: calc(100% - 24px);
   max-width: 400px;
-  margin-bottom: 20%;
+  max-height: 85vh;
+  max-height: 85dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
 }
+.dialog:focus { outline: none; }
 
 .dialog-title {
   font-size: 18px;
@@ -416,6 +586,7 @@ const modalStyle = computed(() => ({
 .template-list {
   max-height: 300px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   margin-bottom: 16px;
 }
 
@@ -437,37 +608,6 @@ const modalStyle = computed(() => ({
 }
 .template-item:hover { border-color: #0A84FF; }
 
-.template-item-name { color: white; font-weight: 600; }
-.template-item-desc { color: #888; font-size: 12px; margin: 0; }
-
-.dialog-close-btn {
-  width: 100%;
-  padding: 12px;
-  background-color: #333;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.dialog-input {
-    background-color: #121212;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 12px;
-    color: white;
-    width: 100%;
-    margin-bottom: 16px;
-}
-
-.dialog-buttons { display: flex; gap: 10px; }
-.dialog-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
-.cancel { background-color: #333; color: white; }
-.save { background-color: #30D158; color: white; }
-
-
-
 .template-item-name {
   font-size: 16px;
   font-weight: 600;
@@ -477,31 +617,23 @@ const modalStyle = computed(() => ({
 .template-item-desc {
   font-size: 14px;
   color: #8E8E93;
-  margin-top: 4px;
-}
-
-.delete-template-btn {
-  padding: 8px;
-  margin-left: 8px;
-  background: none;
-  font-size: 20px;
-}
-
-.no-templates {
-  color: #8E8E93;
-  text-align: center;
-  padding: 20px;
+  margin: 4px 0 0;
 }
 
 .dialog-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 16px;
   padding: 14px;
   background-color: #2C2C2E;
+  border: none;
   border-radius: 12px;
   width: 100%;
   color: #FFF;
   font-size: 16px;
   font-weight: 600;
+  cursor: pointer;
 }
 
 .dialog-input {
@@ -512,6 +644,8 @@ const modalStyle = computed(() => ({
   color: white;
   font-size: 16px;
   width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
   margin-bottom: 16px;
 }
 
@@ -521,11 +655,16 @@ const modalStyle = computed(() => ({
 }
 
 .dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   padding: 14px;
+  border: none;
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
+  cursor: pointer;
 }
 
 .dialog-btn.cancel {
@@ -536,5 +675,60 @@ const modalStyle = computed(() => ({
 .dialog-btn.save {
   background-color: #007AFF;
   color: #FFF;
+}
+
+@media (max-width: 768px) {
+  .modal-container {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .header-buttons {
+    gap: 8px;
+  }
+
+  .settings-bar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .action-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+}
+
+@media (max-width: 480px) {
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .publish-btn {
+    width: 100%;
+  }
+}
+
+@media (pointer: coarse) {
+  .icon-button,
+  .library-btn,
+  .close-button,
+  .publish-btn,
+  .dialog-close-btn,
+  .dialog-btn,
+  .checkbox-label {
+    min-block-size: var(--target-size, 44px);
+    min-inline-size: var(--target-size, 44px);
+  }
 }
 </style>
