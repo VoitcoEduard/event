@@ -182,7 +182,7 @@ onMounted(load)
 }
 
 .error-msg,
-:global(html[data-admin-appearance="true"]) .access-page p.error-msg {
+:global(html[data-admin-appearance="true"] .access-page p.error-msg) {
   margin: 0 0 16px;
   padding: 12px 16px;
   border-radius: 10px;
@@ -314,7 +314,7 @@ button.primary {
 }
 
 button.danger,
-:global(html[data-admin-appearance="true"]) .access-page button.danger {
+:global(html[data-admin-appearance="true"] .access-page button.danger) {
   background: var(--admin-danger-soft, rgba(248, 113, 113, 0.14)) !important;
   border-color: color-mix(in srgb, var(--admin-danger, #f87171) 35%, var(--admin-border, #333)) !important;
   color: var(--admin-danger, #f87171) !important;

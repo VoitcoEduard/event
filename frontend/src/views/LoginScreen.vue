@@ -246,18 +246,18 @@ async function handleLogin() {
   color: var(--admin-text, #fff);
 }
 
-:global(html[data-admin-appearance="true"]) .login-page .toggle-pw {
+:global(html[data-admin-appearance="true"] .login-page .toggle-pw) {
   background: transparent !important;
   border-color: transparent !important;
   color: var(--admin-text-muted) !important;
 }
 
-:global(html[data-admin-appearance="true"]) .login-page .toggle-pw:hover {
+:global(html[data-admin-appearance="true"] .login-page .toggle-pw:hover) {
   color: var(--admin-text) !important;
 }
 
 .error-msg,
-:global(html[data-admin-appearance="true"]) .login-page p.error-msg {
+:global(html[data-admin-appearance="true"] .login-page p.error-msg) {
   color: var(--admin-danger, #f87171);
   font-size: 0.85rem;
   line-height: 1.4;

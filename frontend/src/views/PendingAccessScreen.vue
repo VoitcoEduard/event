@@ -123,13 +123,13 @@ button.primary {
 }
 
 button.secondary,
-:global(html[data-admin-appearance="true"]) .access-card button.secondary {
+:global(html[data-admin-appearance="true"] .access-card button.secondary) {
   background: var(--admin-surface-subtle, #2a2a2e) !important;
   border: 1px solid var(--admin-border-strong, #4b4b50) !important;
   color: var(--admin-text, #f5f5f7) !important;
 }
 
-:global(html[data-admin-appearance="true"]) .access-card button.secondary:hover:not(:disabled) {
+:global(html[data-admin-appearance="true"] .access-card button.secondary:hover:not(:disabled)) {
   background: var(--admin-surface-hover) !important;
 }
 
@@ -139,7 +139,7 @@ button:disabled {
 }
 
 .error-msg,
-:global(html[data-admin-appearance="true"]) .access-page p.error-msg {
+:global(html[data-admin-appearance="true"] .access-page p.error-msg) {
   margin: 16px 0 0;
   padding: 10px 14px;
   border-radius: 8px;

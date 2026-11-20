@@ -4,7 +4,7 @@
       <div class="header-left">
         <button type="button" class="back-btn" @click="goBack">
           <AppIcon name="arrowLeft" :size="18" aria-hidden="true" />
-          <span>{{ $t('admin.details.back_btn') }}</span>
+          <span>{{ $t('library.back_btn') }}</span>
         </button>
         <h1>{{ $t('screen_manager.editor.title') }}</h1>
       </div>
@@ -1013,7 +1013,7 @@ const closeProjector = () => {
 .icon-btn:hover { color: #f87171; }
 .block-btn { display: block; width: 100%; }
 
-:global(html[data-admin-appearance="true"]) .screen-manager .launch-btn.close-btn {
+:global(html[data-admin-appearance="true"] .screen-manager .launch-btn.close-btn) {
   background: var(--admin-danger-solid) !important;
   border-color: var(--admin-danger-solid) !important;
   color: #fff !important;
@@ -1083,11 +1083,11 @@ const closeProjector = () => {
 }
 .slide-list li.active .slide-item { background: #3b82f6; color: white; }
 
-:global(html[data-admin-appearance="true"]) .screen-manager .slide-list li.active .slide-item {
+:global(html[data-admin-appearance="true"] .screen-manager .slide-list li.active .slide-item) {
   background: var(--admin-primary-solid) !important;
   color: #fff !important;
 }
-:global(html[data-admin-appearance="true"]) .screen-manager .slide-list .slide-select-btn {
+:global(html[data-admin-appearance="true"] .screen-manager .slide-list .slide-select-btn) {
   background: transparent !important;
   border-color: transparent !important;
   color: inherit !important;
@@ -1299,7 +1299,7 @@ const closeProjector = () => {
   border-radius: 6px;
 }
 
-:global(html[data-admin-appearance="true"]) .screen-manager .screensaver-option {
+:global(html[data-admin-appearance="true"] .screen-manager .screensaver-option) {
   background: transparent !important;
   border-color: transparent !important;
   padding: 0;
@@ -1431,16 +1431,16 @@ const closeProjector = () => {
   }
 }
 
-:global(html[data-admin-appearance="true"]) .mobile-panel-tabs {
+:global(html[data-admin-appearance="true"] .screen-manager .mobile-panel-tabs) {
   background: var(--admin-surface) !important;
   border-top-color: var(--admin-border) !important;
 }
-:global(html[data-admin-appearance="true"]) .mobile-tab-btn {
+:global(html[data-admin-appearance="true"] .screen-manager .mobile-tab-btn) {
   background: var(--admin-surface-subtle) !important;
   border-color: var(--admin-border-strong) !important;
   color: var(--admin-text-muted) !important;
 }
-:global(html[data-admin-appearance="true"]) .mobile-tab-btn[aria-selected="true"] {
+:global(html[data-admin-appearance="true"] .screen-manager .mobile-tab-btn[aria-selected="true"]) {
   background: var(--admin-primary-solid) !important;
   border-color: var(--admin-primary-solid) !important;
   color: #fff !important;
