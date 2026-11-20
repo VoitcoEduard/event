@@ -233,6 +233,49 @@ onUnmounted(() => {
 .judge-hint { color: #8E8E93; font-size: 12px; }
 .publish-hint { color: #8E8E93; font-size: 13px; margin-top: 16px; }
 
+:global(html[data-admin-appearance="true"] .judge-screen .prog-card) {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+:global(html[data-admin-appearance="true"] .judge-screen .prog-card.active) {
+  border-color: var(--admin-primary-solid) !important;
+}
+
+:global(html[data-admin-appearance="true"] .judge-screen .judge-notes),
+:global(html[data-admin-appearance="true"] .judge-screen .judge-answer) {
+  background: var(--admin-surface-subtle) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+:global(html[data-admin-appearance="true"] .judge-screen .judge-points),
+:global(html[data-admin-appearance="true"] .judge-screen .judge-hint),
+:global(html[data-admin-appearance="true"] .judge-screen .publish-hint),
+:global(html[data-admin-appearance="true"] .judge-screen .judge-empty),
+:global(html[data-admin-appearance="true"] .judge-screen .prog-card span) {
+  color: var(--admin-text-muted) !important;
+}
+
+:global(html[data-admin-appearance="true"] .judge-screen .link-btn) {
+  background: var(--admin-primary-soft) !important;
+  border-color: color-mix(in srgb, var(--admin-primary) 35%, var(--admin-border)) !important;
+  color: var(--admin-primary) !important;
+}
+
+:global(html[data-admin-appearance="true"] .judge-screen .judge-nav button) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+
+:global(html[data-admin-appearance="true"] .judge-screen .judge-error) {
+  background: var(--admin-danger-soft) !important;
+  color: var(--admin-danger) !important;
+}
+
 @container judge-screen (inline-size <= 540px) {
   .judge-header {
     flex-direction: column;

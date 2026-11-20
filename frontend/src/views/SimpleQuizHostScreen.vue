@@ -290,6 +290,26 @@ onUnmounted(() => {
 .prog-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
 .reveal-hint { text-align: center; color: #8E8E93; font-size: 12px; }
 
+:global(html[data-admin-appearance="true"] .quiz-host-screen .answer-counter-widget),
+:global(html[data-admin-appearance="true"] .quiz-host-screen .grading-card) {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+
+:global(html[data-admin-appearance="true"] .quiz-host-screen .counter-label),
+:global(html[data-admin-appearance="true"] .quiz-host-screen .reveal-hint) {
+  color: var(--admin-text-muted) !important;
+  opacity: 1;
+}
+
+:global(html[data-admin-appearance="true"] .quiz-host-screen .reveal-card) {
+  background: var(--admin-success-soft) !important;
+  border: 1px solid var(--admin-success) !important;
+  color: var(--admin-text) !important;
+}
+
 @media (max-width: 900px) {
   .quiz-host-screen,
   .state-container,
