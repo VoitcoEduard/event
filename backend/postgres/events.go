@@ -275,6 +275,10 @@ func (s *Store) DeleteEvent(ctx context.Context, id string) error {
 		return err
 	}
 	defer tx.Rollback(ctx)
+	var exists int
+	if err = tx.QueryRow(ctx, `SELECT 1 FROM events WHERE id=$1 FOR UPDATE`, id).Scan(&exists); err != nil {
+		return translate(err)
+	}
 	_, err = detachOwnedMedia(ctx, tx, id, "")
 	if err != nil {
 		return err

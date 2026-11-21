@@ -15,9 +15,19 @@ import (
 	"github.com/user/go-expo-sample/backend/postgres"
 )
 
+type mediaStore interface {
+	CreateMedia(ctx context.Context, m postgres.MediaRecord, screen *postgres.ScreensaverRecord, track *postgres.TrackRecord) error
+	Media(ctx context.Context, id string) (postgres.MediaRecord, error)
+	MediaStorageKeyExists(ctx context.Context, key string) (bool, error)
+	PendingMediaDeletion(ctx context.Context) ([]postgres.MediaRecord, error)
+	ForgetDeletedMedia(ctx context.Context, id string) error
+	MarkMediaDeleted(ctx context.Context, id string) error
+	DeleteLibraryMedia(ctx context.Context, library, id string) (string, error)
+}
+
 type Store struct {
 	root string
-	db   *postgres.Store
+	db   mediaStore
 }
 type Upload struct {
 	OriginalName string
@@ -189,13 +199,16 @@ func (s *Store) Reconcile(ctx context.Context, now time.Time) error {
 		}
 		info, err := entry.Info()
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
 			return err
 		}
 		if !info.Mode().IsRegular() || now.Sub(info.ModTime()) < 24*time.Hour {
 			continue
 		}
 		name := entry.Name()
-		if strings.HasPrefix(name, ".upload-") {
+		if strings.HasPrefix(name, ".upload-") || strings.HasPrefix(name, ".probe-") {
 			if err = os.Remove(filepath.Join(s.root, name)); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
