@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
+	"github.com/user/go-expo-sample/backend/postgres"
 )
 
 var (
@@ -41,7 +44,12 @@ func removeScreenSubscriber(eventID string, ch chan models.ScreenState) {
 	subs := screenSubscribers[eventID]
 	for i, sub := range subs {
 		if sub == ch {
-			screenSubscribers[eventID] = append(subs[:i], subs[i+1:]...)
+			subs = append(subs[:i], subs[i+1:]...)
+			if len(subs) == 0 {
+				delete(screenSubscribers, eventID)
+			} else {
+				screenSubscribers[eventID] = subs
+			}
 			close(ch)
 			break
 		}
@@ -115,14 +123,39 @@ func (h *Handler) UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 
 // ScreenStream handles GET /events/{eventId}/screen-stream for SSE
 func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
-	// Parse eventID from URL
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 4 {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
+	// Parse eventID from PathValue or URL path
+	eventID := r.PathValue("eventID")
+	if eventID == "" {
+		parts := strings.Split(r.URL.Path, "/")
+		if len(parts) < 4 {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
+		}
+		eventID = parts[2]
+	}
+	if _, err := uuid.Parse(eventID); err != nil {
+		http.Error(w, "Invalid event ID", http.StatusBadRequest)
 		return
 	}
-	eventID := parts[2]
+
+	// Validate the event exists before allocating a subscriber channel or opening SSE.
+	lookupEvent := h.getEvent
+	if lookupEvent == nil {
+		if h.deps.DB == nil {
+			http.Error(w, "Storage unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		lookupEvent = h.deps.DB.GetEvent
+	}
+	event, err := lookupEvent(r.Context(), eventID)
+	if err != nil {
+		if errors.Is(err, postgres.ErrNotFound) {
+			http.Error(w, "Event not found", http.StatusNotFound)
+			return
+		}
+		writeRequestError(w, err, http.StatusInternalServerError)
+		return
+	}
 
 	// Ensure the connection supports SSE
 	flusher, ok := w.(http.Flusher)
@@ -141,16 +174,13 @@ func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
 	defer removeScreenSubscriber(eventID, ch)
 
 	// Send initial state
-	event, err := h.deps.DB.GetEvent(r.Context(), eventID)
-	if err == nil {
-		state := event.ScreenState
-		if state == nil {
-			state = &models.ScreenState{CurrentView: "screensaver"}
-		}
-		data, _ := json.Marshal(state)
-		fmt.Fprintf(w, "data: %s\n\n", data)
-		flusher.Flush()
+	state := event.ScreenState
+	if state == nil {
+		state = &models.ScreenState{CurrentView: "screensaver"}
 	}
+	data, _ := json.Marshal(state)
+	fmt.Fprintf(w, "data: %s\n\n", data)
+	flusher.Flush()
 
 	// Listen for updates or client disconnect
 	ctx := r.Context()

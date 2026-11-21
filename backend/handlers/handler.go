@@ -8,6 +8,7 @@ import (
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/filestore"
 	"github.com/user/go-expo-sample/backend/hub"
+	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/postgres"
 	"github.com/user/go-expo-sample/backend/services"
 )
@@ -29,6 +30,7 @@ type Dependencies struct {
 type Handler struct {
 	deps                  Dependencies
 	checkParticipantProof func(ctx context.Context, eventID, participantID, secret string) (bool, bool, error)
+	getEvent              func(ctx context.Context, id string) (*models.Event, error)
 }
 
 func New(deps Dependencies) *Handler {
