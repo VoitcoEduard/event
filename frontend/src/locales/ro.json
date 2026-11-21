@@ -760,5 +760,28 @@
     "earned": "Puncte individuale câștigate",
     "award_history": "Istoricul punctajelor",
     "rank": "Loc"
+  },
+  "admin_shell": {
+    "brand": "Admin Evenimente",
+    "nav_label": "Navigare administrator",
+    "breadcrumb_label": "Navigare ierarhică",
+    "events": "Evenimente",
+    "library": "Librărie",
+    "users": "Administratori",
+    "menu_open": "Deschide meniul de navigare",
+    "menu_close": "Închide meniul de navigare"
+  },
+  "dialog": {
+    "confirm_title": "Confirmă acțiunea",
+    "prompt_title": "Introdu o valoare",
+    "confirm": "Confirmă",
+    "cancel": "Anulează",
+    "close": "Închide fereastra"
+  },
+  "unsaved_changes": {
+    "title": "Modificări nesalvate",
+    "message": "Ai modificări nesalvate. Pleci fără să salvezi?",
+    "leave": "Pleacă",
+    "stay": "Rămâi"
   }
 }
