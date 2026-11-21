@@ -298,3 +298,35 @@ describe('QuizHostScreen question-presenting transitions', () => {
     }
   })
 })
+
+describe('QuizHostScreen distribution chart on text-only questions (Bug #7)', () => {
+  it('renders .distribution-overlay-container in results state even without an image', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: async () => ({
+        pin: '4321',
+        modules: [{
+          id: 'm1',
+          data: {
+            questions: [{
+              text: 'Text-only question',
+              type: 'classic',
+              answers: ['A', 'B', 'C', 'D'],
+              correctIndex: 1,
+            }],
+          },
+        }],
+      }),
+    })))
+
+    wrapper = mount(QuizHostScreen, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0 })
+    mockQuizWS.emit('sync:minimal', { questionIndex: 0, answeredCount: 5, answerCounts: { '0': 1, '1': 3, '2': 1, '3': 0 } })
+    await flushPromises()
+
+    expect(wrapper.find('.distribution-overlay-container').exists()).toBe(true)
+    expect(wrapper.findAll('.dist-count').map(n => n.text())).toEqual(['1', '3', '1', '0'])
+  })
+})

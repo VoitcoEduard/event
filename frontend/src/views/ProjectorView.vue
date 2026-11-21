@@ -364,32 +364,33 @@
         <div v-else class="question-main-content">
           <!-- Image Column with Overlay -->
           <div class="question-column">
-            <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+            <div class="question-card has-distribution" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
                 <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" decoding="async" loading="eager" />
                 <div class="image-overlay-gradient"></div>
-                
-                <!-- DISTRIBUTION OVERLAY -->
-                <div class="distribution-overlay-container">
-                    <div class="dist-chart">
-                        <div 
-                            v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
-                            :key="idx"
-                            class="dist-bar-col"
-                        >
-                            <div class="dist-bar-track">
-                                <div 
-                                    class="dist-bar-fill"
-                                    :class="getAnswerColorClass(idx)"
-                                    :style="{ height: getBarHeight(idx) + '%' }"
-                                ></div>
-                            </div>
-                            <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
-                            <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" />
-                        </div>
-                    </div>
-                </div>
               </div>
+
+              <!-- DISTRIBUTION OVERLAY -->
+              <div class="distribution-overlay-container">
+                  <div class="dist-chart">
+                      <div 
+                          v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
+                          :key="idx"
+                          class="dist-bar-col"
+                      >
+                          <div class="dist-bar-track">
+                              <div 
+                                  class="dist-bar-fill"
+                                  :class="getAnswerColorClass(idx)"
+                                  :style="{ height: getBarHeight(idx) + '%' }"
+                              ></div>
+                          </div>
+                          <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
+                          <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" />
+                      </div>
+                  </div>
+              </div>
+
               <div class="question-text-overlay">
                 <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
               </div>

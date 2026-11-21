@@ -262,3 +262,22 @@ describe('ProjectorView question count and Wrong Pictures target sequence (Bug #
     expect(wrapper.find('.wp-result-overview').exists()).toBe(true)
   })
 })
+
+describe('ProjectorView distribution chart on text-only questions (Bug #7)', () => {
+  it('renders .distribution-overlay-container in results state when question has no image', async () => {
+    wrapper = mount(ProjectorView, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('data:batch', {
+      startIndex: 0,
+      totalQuestions: 1,
+      questions: [{ id: 'q1', type: 'classic', text: 'No image question', answers: ['A', 'B', 'C', 'D'] }],
+    })
+    mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0, totalQuestions: 1 })
+    mockQuizWS.emit('sync:minimal', { questionIndex: 0, answeredCount: 4, answerCounts: { '0': 2, '1': 0, '2': 2, '3': 0 } })
+    await flushPromises()
+
+    expect(wrapper.find('.distribution-overlay-container').exists()).toBe(true)
+    expect(wrapper.findAll('.dist-count').map(n => n.text())).toEqual(['2', '0', '2', '0'])
+  })
+})
