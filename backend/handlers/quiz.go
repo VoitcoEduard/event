@@ -7,9 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/hub"
 	"github.com/user/go-expo-sample/backend/models"
@@ -106,43 +104,57 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 7 {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
+	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
+	if eventID == "" || moduleID == "" {
+		parts := strings.Split(r.URL.Path, "/")
+		if len(parts) < 7 {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
+		}
+		eventID = parts[2]
+		moduleID = parts[4]
 	}
-	eventID := parts[2]
-	moduleID := parts[4]
+
+	lookupEvent := h.getEvent
+	if lookupEvent == nil {
+		if h.deps.DB == nil {
+			http.Error(w, "Database not initialized", http.StatusInternalServerError)
+			return
+		}
+		lookupEvent = h.deps.DB.GetEvent
+	}
 
 	// Load questions from DB
-	event, err := h.deps.DB.GetEvent(r.Context(), eventID)
+	event, err := lookupEvent(r.Context(), eventID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
+	if event == nil {
+		http.NotFound(w, r)
+		return
+	}
 	var questions []models.QuizQuestion
 	foundModule := false
-	if err == nil {
-		for _, mod := range event.Modules {
-			if mod.ID == moduleID {
-				foundModule = true
-				if mod.Type != models.ModuleTypeQuiz && mod.Type != models.ModuleTypeWrongPictures {
-					http.Error(w, "Module is not a quiz", http.StatusBadRequest)
-					return
-				}
-				// unmarshal data
-				dataBytes, _ := json.Marshal(mod.Data)
-				var qData models.QuizModuleData
-				json.Unmarshal(dataBytes, &qData)
-				questions = qData.Questions
-				// Debug: log questions with images
-				for i, q := range questions {
-					if q.ImageID != nil && *q.ImageID != "" {
-						fmt.Printf("[StartQuiz] Question %d has imageId: %s\n", i, *q.ImageID)
-					}
-				}
-				break
+	for _, mod := range event.Modules {
+		if mod.ID == moduleID {
+			foundModule = true
+			if mod.Type != models.ModuleTypeQuiz && mod.Type != models.ModuleTypeWrongPictures {
+				http.Error(w, "Module is not a quiz", http.StatusBadRequest)
+				return
 			}
+			dataBytes, err := json.Marshal(mod.Data)
+			if err != nil {
+				http.Error(w, "Invalid quiz module data", http.StatusBadRequest)
+				return
+			}
+			var qData models.QuizModuleData
+			if err := json.Unmarshal(dataBytes, &qData); err != nil {
+				http.Error(w, "Invalid quiz module data", http.StatusBadRequest)
+				return
+			}
+			questions = qData.Questions
+			break
 		}
 	}
 
@@ -154,41 +166,28 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Quiz has no questions", http.StatusBadRequest)
 		return
 	}
-	h.deps.QuizHub.CreateSession(moduleID, eventID)
 
-	// Update session state - reset players and signals when starting new quiz
-	if !h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
-		s.State = "question"
-		s.RunID = uuid.NewString()
-		s.CurrentIndex = 0
-		s.PlayerSignals = []models.PlayerSignal{}
-		s.AnswerCounts = make(map[int]int)
-		s.Questions = questions
-		s.Batches = hub.CalculateBatches(questions)
-		s.StartTime = time.Now().Unix()
-		// Reset players for new quiz session
-		s.Players = make(map[string]*models.Player)
+	aspects, err := h.deps.QuizHub.WrongPictureAspects(r.Context(), questions)
+	if err != nil {
+		http.Error(w, "This image has no dimensions. Reupload it before starting the quiz.", http.StatusBadRequest)
+		return
+	}
 
-		// Create question window for first question
-		if len(questions) > 0 {
-			limit := hub.EffectiveTimeLimit(questions[0])
-			qWindow := models.QuestionWindow{
-				QuestionIndex: int64(s.CurrentIndex),
-				StartTime:     s.StartTime,
-				EndTime:       s.StartTime + limit,
-				GraceEndTime:  s.StartTime + limit + hub.GracePeriodSeconds,
-				State:         "active",
-			}
-			s.QuestionWindows = []models.QuestionWindow{qWindow}
+	started, err := h.deps.QuizHub.StartQuizSession(moduleID, eventID, questions, aspects)
+	if err != nil {
+		switch {
+		case errors.Is(err, hub.ErrQuizEventMismatch):
+			http.NotFound(w, r)
+		case errors.Is(err, hub.ErrQuizFinishing):
+			http.Error(w, "Quiz results are being saved", http.StatusConflict)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-	}) {
-		http.Error(w, "Quiz results are being saved", http.StatusConflict)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	// Retrieve updated session to return
-	json.NewEncoder(w).Encode(h.deps.QuizHub.GetSession(moduleID))
+	json.NewEncoder(w).Encode(started)
 }
 
 // NextQuestion - POST /events/{id}/modules/{moduleId}/quiz/next
@@ -198,43 +197,38 @@ func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 7 {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
-	}
-	moduleID := parts[4]
-	session := h.deps.QuizHub.GetSession(moduleID)
-	if session == nil {
-		http.Error(w, "Quiz not active", http.StatusBadRequest)
-		return
-	}
-
-	if !h.deps.QuizHub.UpdateSession(moduleID, func(s *models.QuizSession) {
-		s.CurrentIndex++
-		s.State = "question"
-		s.AnswerCounts = make(map[int]int)
-		s.StartTime = time.Now().Unix()
-
-		// Create question window for new question
-		if s.CurrentIndex < len(s.Questions) {
-			limit := hub.EffectiveTimeLimit(s.Questions[s.CurrentIndex])
-			qWindow := models.QuestionWindow{
-				QuestionIndex: int64(s.CurrentIndex),
-				StartTime:     s.StartTime,
-				EndTime:       s.StartTime + limit,
-				GraceEndTime:  s.StartTime + limit + hub.GracePeriodSeconds,
-				State:         "active",
-			}
-			s.QuestionWindows = append(s.QuestionWindows, qWindow)
+	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
+	if eventID == "" || moduleID == "" {
+		parts := strings.Split(r.URL.Path, "/")
+		if len(parts) < 7 {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
 		}
-	}) {
-		http.Error(w, "Quiz results are being saved", http.StatusConflict)
+		eventID = parts[2]
+		moduleID = parts[4]
+	}
+
+	updated, err := h.deps.QuizHub.NextQuizQuestion(moduleID, eventID)
+	if err != nil {
+		switch {
+		case errors.Is(err, hub.ErrQuizNotActive):
+			http.Error(w, "Quiz not active", http.StatusBadRequest)
+		case errors.Is(err, hub.ErrQuizEventMismatch):
+			http.NotFound(w, r)
+		case errors.Is(err, hub.ErrQuizFinishing):
+			http.Error(w, "Quiz results are being saved", http.StatusConflict)
+		case errors.Is(err, hub.ErrQuizFinished):
+			http.Error(w, "Quiz already finished", http.StatusConflict)
+		case errors.Is(err, hub.ErrQuizNoMoreQuestions):
+			http.Error(w, "No more questions", http.StatusBadRequest)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.deps.QuizHub.GetSession(moduleID))
+	json.NewEncoder(w).Encode(updated)
 }
 
 // GetQuizResults - GET /events/{id}/modules/{moduleId}/quiz/results
