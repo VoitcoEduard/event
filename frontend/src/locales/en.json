@@ -248,7 +248,21 @@
       "number_required": "Correct answer for number question is required.",
       "mc_options": "All answer options must be filled for multiple choice questions.",
       "simple_text_required": "Text questions need question text or an image.",
-      "simple_points": "Text questions need positive points."
+      "simple_points": "Text questions need positive points.",
+      "points_positive": "Points must be greater than 0.",
+      "mc_min_answers": "Please provide at least {min} non-empty answer options.",
+      "correct_answer_required": "Please select a valid correct answer.",
+      "multi_select_min_correct": "Please mark at least {min} non-empty answers as correct.",
+      "cp_images_required": "Every image option must have an uploaded image.",
+      "tf_answer": "Please select True or False as the correct answer.",
+      "range_target_bounds": "Correct value must be between Min and Max values.",
+      "range_tolerance": "Tolerance must be 0 or greater.",
+      "wp_min_one": "Please add at least one round.",
+      "wp_title_required": "Round title or instructions are required.",
+      "wp_image_required": "Each round must have an uploaded image.",
+      "wp_targets_required": "Each round must have at least {min} target location defined.",
+      "wp_tolerance": "Tolerance percentage must be 0 or greater.",
+      "unknown_type": "Unsupported question type: {type}."
     },
     "import": {
       "note_images": "Note: Images from imported files need to be re-uploaded",
