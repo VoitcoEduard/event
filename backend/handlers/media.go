@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"strings"
@@ -58,6 +59,23 @@ func mimeToExtension(m string) string {
 		return ".jpg"
 	}
 }
+func safeServedMediaType(raw string) (string, bool) {
+	mediaType, _, err := mime.ParseMediaType(raw)
+	if err != nil {
+		return "", false
+	}
+	switch strings.ToLower(mediaType) {
+	case "image/jpeg", "image/png", "image/gif", "image/webp",
+		"audio/mpeg", "audio/wav", "audio/ogg":
+		return strings.ToLower(mediaType), true
+	case "audio/x-wav", "audio/wave":
+		return "audio/wav", true
+	case "application/ogg":
+		return "audio/ogg", true
+	default:
+		return "", false
+	}
+}
 func cacheMedia(m postgres.MediaRecord, data []byte) {
 	mediaMemoryCache.Set(m.ID, cache.MediaItem{ID: m.ID, Filename: m.Filename, MimeType: m.MimeType, Data: data, CreatedAt: m.CreatedAt, Size: m.Size})
 }
@@ -89,9 +107,8 @@ func (h *Handler) uploadMedia(w http.ResponseWriter, r *http.Request, kind strin
 	if name == "" {
 		name = header.Filename
 	}
-	mediaType := http.DetectContentType(data)
+	var mediaType, ext string
 	width, height := 0, 0
-	ext := ".mp3"
 	if kind != "track" {
 		if _, err = utils.ValidateImage(data); err != nil {
 			writeRequestError(w, err, http.StatusBadRequest)
@@ -104,13 +121,16 @@ func (h *Handler) uploadMedia(w http.ResponseWriter, r *http.Request, kind strin
 		}
 		ext = mimeToExtension(mediaType)
 	} else {
-		switch mediaType {
-		case "audio/wav", "audio/x-wav":
-			ext = ".wav"
-		case "audio/ogg":
-			ext = ".ogg"
-		case "audio/mpeg":
-			ext = ".mp3"
+		mediaType, err = utils.ValidateAudio(data)
+		if err != nil {
+			writeRequestError(w, err, http.StatusBadRequest)
+			return
+		}
+		var ok bool
+		ext, ok = utils.SupportedAudioTypes[mediaType]
+		if !ok {
+			writeRequestError(w, errors.New("unsupported audio format"), http.StatusBadRequest)
+			return
 		}
 	}
 	in := filestore.Upload{OriginalName: header.Filename, Filename: uuid.NewString() + ext, MimeType: mediaType, Width: width, Height: height, EventID: r.FormValue("eventId"), ModuleID: r.FormValue("moduleId"), Data: data, Kind: kind, Name: name}
@@ -173,9 +193,14 @@ func (h *Handler) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		item = cache.MediaItem{ID: m.ID, Filename: m.Filename, MimeType: m.MimeType, Data: data, CreatedAt: m.CreatedAt, Size: m.Size}
 	}
 	mediaAccessMu.RUnlock()
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; media-src 'self'; sandbox")
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	if item.MimeType != "" {
-		w.Header().Set("Content-Type", item.MimeType)
+	if safeType, ok := safeServedMediaType(item.MimeType); ok {
+		w.Header().Set("Content-Type", safeType)
+	} else {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", "attachment")
 	}
 	w.Header().Set("ETag", `"`+id+`"`)
 	http.ServeContent(w, r, item.Filename, item.CreatedAt, bytes.NewReader(item.Data))
