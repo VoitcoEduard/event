@@ -2,11 +2,10 @@ package hub
 
 import (
 	"encoding/json"
-	"github.com/user/go-expo-sample/backend/models"
 )
 
 func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
-	client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
+	client.IsHost, client.IsTeamsAdmin, client.IsProjector, client.PlayerID = false, false, false, ""
 	// Payload: { "moduleId": "...", "eventId": "..." }
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
@@ -22,25 +21,31 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 	client.IsProjector = true
 
 	if moduleID != "" {
-		// Ensure session exists (same logic as host)
-		if _, exists := h.sessions[moduleID]; !exists {
-			DebugLog("projector:join: Creating new session for module: %s", moduleID)
-			h.sessions[moduleID] = &models.QuizSession{
-				ModuleID:      moduleID,
-				State:         "lobby",
-				Players:       make(map[string]*models.Player),
-				PlayerSignals: []models.PlayerSignal{},
-				AnswerCounts:  make(map[int]int),
-			}
+		s, exists := h.sessions[moduleID]
+		if !exists || s == nil {
+			// Do not allocate phantom sessions for unauthenticated projector joins.
+			// Send an initial lobby cmd:state so the projector renders lobby while
+			// remaining subscribed for updates once a host creates/starts a session.
+			jsonMsg, _ := json.Marshal(ServerMessage{
+				Type: "cmd:state",
+				Payload: map[string]interface{}{
+					"state":        "lobby",
+					"currentIndex": 0,
+					"runId":        "",
+				},
+			})
+			h.sendToClientLocked(client, jsonMsg)
+			DebugLog("projector:join: No active session for module: %s; sent initial lobby state", moduleID)
+			return
 		}
 
 		// Send current state to projector via cmd:state (same as host)
 		jsonMsg, _ := json.Marshal(ServerMessage{
 			Type: "cmd:state",
 			Payload: map[string]interface{}{
-				"state":        h.sessions[moduleID].State,
-				"currentIndex": h.sessions[moduleID].CurrentIndex,
-				"runId":        h.sessions[moduleID].RunID,
+				"state":        s.State,
+				"currentIndex": s.CurrentIndex,
+				"runId":        s.RunID,
 			},
 		})
 		if !h.sendToClientLocked(client, jsonMsg) {
@@ -51,10 +56,10 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 		jsonMsg2, _ := json.Marshal(ServerMessage{
 			Type: "state:update",
 			Payload: map[string]any{
-				"eventId": h.sessions[moduleID].EventID, "moduleId": moduleID,
-				"state": h.sessions[moduleID].State, "currentIndex": h.sessions[moduleID].CurrentIndex,
-				"players": h.sessions[moduleID].Players, "answerCounts": h.sessions[moduleID].AnswerCounts,
-				"questionWindows": h.sessions[moduleID].QuestionWindows, "startTime": h.sessions[moduleID].StartTime,
+				"eventId": s.EventID, "moduleId": moduleID,
+				"state": s.State, "currentIndex": s.CurrentIndex,
+				"players": s.Players, "answerCounts": s.AnswerCounts,
+				"questionWindows": s.QuestionWindows, "startTime": s.StartTime,
 			},
 		})
 		if !h.sendToClientLocked(client, jsonMsg2) {
@@ -62,14 +67,13 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 		}
 
 		// Send data:batch with questions to projector
-		if len(h.sessions[moduleID].Batches) > 0 && h.sessions[moduleID].CurrentIndex/MaxQuestionsPerBatch < len(h.sessions[moduleID].Batches) {
-			jsonMsg3 := publicBatchMessage(h.sessions[moduleID].Batches[h.sessions[moduleID].CurrentIndex/MaxQuestionsPerBatch], h.sessions[moduleID].CurrentIndex)
+		if len(s.Batches) > 0 && s.CurrentIndex/MaxQuestionsPerBatch < len(s.Batches) {
+			jsonMsg3 := publicBatchMessage(s.Batches[s.CurrentIndex/MaxQuestionsPerBatch], s.CurrentIndex)
 			if !h.sendToClientLocked(client, jsonMsg3) {
 				return
 			}
 			DebugLog("projector:join: Sent data:batch to projector for module: %s", moduleID)
 		}
-		s := h.sessions[moduleID]
 		if (s.State == "results" || s.State == "leaderboard" || s.State == "finished") && s.CurrentIndex >= 0 && s.CurrentIndex < len(s.Questions) {
 			if !h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "data:reveal", Payload: revealQuestionPayload(s.Questions[s.CurrentIndex], s.CurrentIndex)})) {
 				return

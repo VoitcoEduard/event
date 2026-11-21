@@ -46,6 +46,18 @@ func TestPublicQuizStateOmitsIndividualPlayersAndAnswers(t *testing.T) {
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("cross-event session returned %d", w.Code)
 	}
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("GET", "/events/e/modules/unstarted/quiz/state", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("unstarted session returned %d", w.Code)
+	}
+	var inactive map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &inactive); err != nil {
+		t.Fatal(err)
+	}
+	if inactive["state"] != "inactive" {
+		t.Fatalf("unstarted session state = %v, want inactive", inactive["state"])
+	}
 }
 
 func TestGetEventRejectsOversizedUserIDBeforeStorage(t *testing.T) {
