@@ -144,3 +144,43 @@ describe('ProjectorView answer counter (Bug #4)', () => {
     expect(wrapper.find('.answer-counter-widget .counter-value').text()).toBe('2')
   })
 })
+
+describe('ProjectorView reconnect stability (Bug #5)', () => {
+  it('does not wipe state or reconnect every 3s during a brief WebSocket disconnect for the same active module', async () => {
+    wrapper = mount(ProjectorView, mountOpts)
+    await flushPromises()
+
+    expect(mockQuizWS.connect).toHaveBeenCalledTimes(1)
+
+    mockQuizWS.emit('data:batch', {
+      startIndex: 0,
+      totalQuestions: 2,
+      questions: [{ id: 'q1', type: 'classic', text: 'Persisted Q1', answers: ['A', 'B'] }],
+    })
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, totalQuestions: 2 })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Persisted Q1')
+
+    mockQuizWS.connect.mockClear()
+    mockQuizWS.disconnect.mockClear()
+    mockQuizWS.clearHandlers.mockClear()
+
+    // Brief disconnect: quizWS handles its own reconnect; 3s poll must not wipe state
+    mockQuizWS.isConnected = false
+    mockQuizWS.emit('disconnect')
+    await flushPromises()
+
+    await vi.advanceTimersByTimeAsync(6500)
+    await flushPromises()
+
+    expect(mockQuizWS.disconnect).not.toHaveBeenCalled()
+    expect(mockQuizWS.clearHandlers).not.toHaveBeenCalled()
+    expect(mockQuizWS.connect).not.toHaveBeenCalled()
+
+    // Once quizWS reconnects and emits cmd:state, question state is still intact
+    mockQuizWS.isConnected = true
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, totalQuestions: 2 })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Persisted Q1')
+  })
+})

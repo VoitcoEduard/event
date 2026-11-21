@@ -1176,7 +1176,7 @@ const fetchEventState = async () => {
       return
     }
 
-    if (activeModuleId.value !== nextModule.id || (nextModule.type !== 'teams' && !quizWS.isConnected)) {
+    if (activeModuleId.value !== nextModule.id) {
       connectToModule(nextModule)
       return
     }
