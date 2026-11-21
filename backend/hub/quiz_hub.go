@@ -610,22 +610,38 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 	DebugLog("resetSessionLocked: Session found, current state: %s, players: %d", session.State, len(session.Players))
 
 	// Reset session state
+	session.RunID = ""
 	session.State = "lobby"
 	session.CurrentIndex = 0
 	session.Players = make(map[string]*models.Player)
 	session.PlayerSignals = []models.PlayerSignal{}
 	session.AnswerCounts = make(map[int]int)
 	session.AnsweredPlayerIDs = make(map[string]struct{})
+	session.Streaks = make(map[string]int)
+	session.WrongPictureAspects = nil
 	session.Questions = nil
 	session.Batches = nil
 	session.QuestionWindows = nil
 	session.StartTime = 0
 
-	// Broadcast reset to all clients in session
+	// Broadcast reset to all clients in session, then unbind player sockets
+	// so stale connections cannot submit signals against future runs without re-joining.
 	h.broadcastToSessionLocked(moduleID, ServerMessage{
 		Type:    "cmd:state",
-		Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex},
+		Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID, "reset": true},
 	})
+	h.broadcastToHostsAndProjectorsLocked(moduleID, ServerMessage{
+		Type:    "state:update",
+		Payload: session,
+	})
+	for client := range h.clients {
+		if (client.ModuleID == moduleID && !client.IsHost && !client.IsProjector && !client.IsTeamsAdmin) ||
+			(client.quizBinding != nil && client.quizBinding.moduleID == moduleID) {
+			client.ModuleID = ""
+			client.PlayerID = ""
+			client.quizBinding = nil
+		}
+	}
 
 	DebugLog("resetSessionLocked: Reset complete for module: %s, broadcast sent", moduleID)
 }

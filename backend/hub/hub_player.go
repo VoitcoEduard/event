@@ -271,7 +271,7 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		// A2: one answer per player per question. Without this, re-sent
 		// (or replayed) signals for the same question keep adding to the
 		// score and inflate the answer histogram.
-		if client.PlayerID == "" {
+		if client.PlayerID == "" || session.Players[client.PlayerID] == nil {
 			log.Printf("Answer rejected (no player) for module %s: Question %d",
 				client.ModuleID, questionIndex)
 			ack(false, "no_player", 0)

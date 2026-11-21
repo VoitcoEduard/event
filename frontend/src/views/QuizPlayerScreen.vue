@@ -701,6 +701,36 @@ onMounted(async () => {
 
     quizWS.on('cmd:state', (payload) => {
         const newState = payload.state
+		if (newState === States.LOBBY && payload.reset === true) {
+			clearInterval(timerInterval)
+			clearInterval(explainTimerInterval)
+			clearTimeout(confirmSelectionTimeout)
+			confirmSelectionTimeout = null
+			currentRunId.value = ''
+			currentQuestionIndex.value = 0
+			score.value = 0
+			streak.value = 0
+			rank.value = 0
+			hasSubmitted.value = false
+			pendingAnswerId.value = null
+			answerStatus.value = ''
+			submittedGuesses.value = []
+			isCorrect.value = false
+			currentPoints.value = 0
+			selectedAnswer.value = null
+			selectedIndices.value = []
+			wpGuesses.value = []
+			wrongPictureReview.value = null
+			activeMarkerIndex.value = null
+			questionCache.clear()
+			requestedBatchIndexes.clear()
+			questionCacheVersion.value++
+			joined.value = false
+			hasOpenedOnce = false
+			quizWS.disconnect()
+			transition(States.LOBBY, payload, { authoritative: true })
+			return
+		}
 		const nextRunId = typeof payload.runId === 'string' ? payload.runId : currentRunId.value
 		const nextIndex = Number.isInteger(payload.currentIndex) ? payload.currentIndex : currentQuestionIndex.value
 		const questionChanged = nextRunId !== currentRunId.value || nextIndex !== currentQuestionIndex.value
