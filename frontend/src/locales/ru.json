@@ -457,6 +457,8 @@
       "submit_btn": "Отправить ответ",
       "submitted": "Ответ отправлен!",
       "waiting_others": "Ожидание остальных...",
+      "times_up": "Время вышло!",
+      "waiting_results": "Ожидание результатов...",
       "correct": "Верно",
       "incorrect": "Неверно",
       "streak": "🔥 Серия: {streak}",

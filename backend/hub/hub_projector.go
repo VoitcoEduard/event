@@ -71,7 +71,7 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 
 		// Send data:batch with questions to projector
 		if len(s.Batches) > 0 && s.CurrentIndex/MaxQuestionsPerBatch < len(s.Batches) {
-			jsonMsg3 := publicBatchMessage(s.Batches[s.CurrentIndex/MaxQuestionsPerBatch], s.CurrentIndex, len(s.Questions))
+			jsonMsg3 := publicBatchMessage(s.Batches[s.CurrentIndex/MaxQuestionsPerBatch], s.CurrentIndex, len(s.Questions), s.RunID)
 			if !h.sendToClientLocked(client, jsonMsg3) {
 				return
 			}

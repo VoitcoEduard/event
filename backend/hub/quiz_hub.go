@@ -430,7 +430,7 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 		if !ok || session == nil {
 			return nil
 		}
-		return publicBatchMessage(batch, session.CurrentIndex, len(session.Questions))
+		return publicBatchMessage(batch, session.CurrentIndex, len(session.Questions), session.RunID)
 	}
 	if m.Type != "state:update" {
 		return original
@@ -466,7 +466,7 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 	return b
 }
 
-func publicBatchMessage(batch models.QuestionBatch, currentIndex, totalQuestions int) []byte {
+func publicBatchMessage(batch models.QuestionBatch, currentIndex, totalQuestions int, runID string) []byte {
 	questions := []map[string]any{}
 	if currentIndex >= batch.StartIndex && currentIndex <= batch.EndIndex {
 		localIndex := currentIndex - batch.StartIndex
@@ -474,12 +474,16 @@ func publicBatchMessage(batch models.QuestionBatch, currentIndex, totalQuestions
 			questions = append(questions, models.PublicQuizQuestion(batch.Questions[localIndex]))
 		}
 	}
-	return mustMarshal(ServerMessage{Type: "data:batch", Payload: map[string]any{
+	payload := map[string]any{
 		"batchIndex": batch.BatchIndex, "totalBatches": batch.TotalBatches,
 		"totalQuestions": totalQuestions,
 		"startIndex": currentIndex, "endIndex": currentIndex,
 		"nextBatchAt": currentIndex, "questions": questions,
-	}})
+	}
+	if runID != "" {
+		payload["runId"] = runID
+	}
+	return mustMarshal(ServerMessage{Type: "data:batch", Payload: payload})
 }
 
 func revealQuestionPayload(q models.QuizQuestion, index int) map[string]any {

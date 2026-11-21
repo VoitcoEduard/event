@@ -49,7 +49,7 @@ func TestPublicBatchOmitsAnswersAndFutureQuestions(t *testing.T) {
 		{ID: "now", Text: "Current", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 1},
 		{ID: "future", Text: "Future secret", Type: "wrong_pictures", WrongPictureConfig: &models.WrongPictureConfig{Targets: []models.WrongPictureTarget{{ID: "hidden-target", XPercent: 70}}}},
 	}}
-	public := publicBatchMessage(batch, 0, len(batch.Questions))
+	public := publicBatchMessage(batch, 0, len(batch.Questions), "run-1")
 	if !bytes.Contains(public, []byte(`"totalQuestions":2`)) {
 		t.Fatalf("public batch missing totalQuestions: %s", public)
 	}

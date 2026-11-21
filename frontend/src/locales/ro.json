@@ -457,6 +457,8 @@
       "submit_btn": "Trimite Răspunsul",
       "submitted": "Răspuns Trimis!",
       "waiting_others": "Se așteaptă ceilalți...",
+      "times_up": "Timpul a expirat!",
+      "waiting_results": "Se așteaptă rezultatele...",
       "correct": "Corect",
       "incorrect": "Incorect",
       "streak": "🔥 Serie: {streak}",
