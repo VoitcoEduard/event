@@ -602,8 +602,9 @@ const submitNumberAnswer = () => {
 
 const submitAnswer = (answerData) => {
     // Guard against double submission (e.g. pending confirmSelection timeout)
-    // and premature taps before the current question batch has arrived.
-    if (hasSubmitted.value || !questionCache.get(currentQuestionIndex.value)) return
+    if (hasSubmitted.value) return
+    // Guard against premature taps before the current question batch has arrived.
+    if (!questionCache.get(currentQuestionIndex.value)) return
     hasSubmitted.value = true
     clearInterval(timerInterval) // Stop the timer
     transition(States.ANSWERED)

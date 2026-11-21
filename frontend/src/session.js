@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { safeLocalRemove } from './utils/storage'
+import { safeLocalRemove } from './utils/storage.js'
 
 export const session = reactive({ loaded: false, user: null, csrfToken: '', expiresAt: null, mode: null })
 let requestVersion = 0
