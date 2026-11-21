@@ -89,6 +89,7 @@ func TestParticipantJoinLoadsTeamsAndBroadcastsWithoutDeadlock(t *testing.T) {
 	admin := &Client{EventID: "event-1", IsTeamsAdmin: true, send: make(chan []byte, 1)}
 	h.Register(admin)
 	participant := &Client{send: make(chan []byte, 1)}
+	h.Register(participant)
 	h.ProcessMessage(participant, []byte(`{"type":"participant:join","payload":{"eventId":"event-1","userId":"user-1","displayName":"Alex"}}`))
 	assertMessageType(t, participant.send, "teams:available")
 	assertMessageType(t, admin.send, "participant:joined")
@@ -246,4 +247,48 @@ func TestBroadcastMarshalsOutsideHubLock(t *testing.T) {
 	h.Register(client)
 	h.BroadcastToSession("m", lockCheckingMessage{hub: h})
 	assertMessageType(t, client.send, "ping")
+}
+
+func TestSendToUnregisteredAndStalledPlayerJoinDoesNotPanic(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.CreateSession("m", "e")
+	h.UpdateSession("m", func(s *models.QuizSession) {
+		s.State = "results"
+		s.CurrentIndex = 0
+		s.Questions = []models.QuizQuestion{{ID: "q0", Text: "Q0", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 0}}
+		s.Batches = CalculateBatches(s.Questions)
+	})
+
+	// Unregistered client whose send channel was already closed must not panic.
+	disconnected := &Client{send: make(chan []byte, 1)}
+	h.Register(disconnected)
+	h.Unregister(disconnected)
+
+	h.mu.Lock()
+	if h.sendToClientLocked(disconnected, []byte(`{"type":"ping"}`)) {
+		h.mu.Unlock()
+		t.Fatal("sendToClientLocked succeeded for unregistered client")
+	}
+	h.processPlayerJoin(disconnected, ClientMessage{
+		Type:    "player:join",
+		Payload: map[string]interface{}{"moduleId": "m", "userId": "p-gone", "nickname": "Gone"},
+	})
+	h.mu.Unlock()
+
+	// Stalled client with full send buffer must be evicted cleanly without panicking on subsequent sends.
+	stalled := &Client{send: make(chan []byte, 1)}
+	stalled.send <- []byte(`full`)
+	h.Register(stalled)
+
+	h.mu.Lock()
+	h.processPlayerJoin(stalled, ClientMessage{
+		Type:    "player:join",
+		Payload: map[string]interface{}{"moduleId": "m", "userId": "p-slow", "nickname": "Slow"},
+	})
+	_, stillRegistered := h.clients[stalled]
+	h.mu.Unlock()
+
+	if stillRegistered {
+		t.Fatal("stalled client was not evicted during processPlayerJoin")
+	}
 }

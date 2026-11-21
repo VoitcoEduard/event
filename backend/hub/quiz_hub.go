@@ -351,6 +351,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 // touching the evicted client. A blocking send here would stall every session
 // because ProcessMessage holds the hub-wide lock.
 func (h *QuizHub) sendToClientLocked(client *Client, msg []byte) bool {
+	if client == nil || client.send == nil {
+		return false
+	}
+	if _, ok := h.clients[client]; !ok {
+		return false
+	}
 	select {
 	case client.send <- msg:
 		return true

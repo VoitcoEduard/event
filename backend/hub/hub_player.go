@@ -178,29 +178,24 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 		Type:    "cmd:state",
 		Payload: statePayload,
 	}); err == nil {
-		select {
-		case client.send <- jsonMsg:
-		default:
+		if !h.sendToClientLocked(client, jsonMsg) {
+			return
 		}
 	}
 	if session.CurrentIndex >= 0 && session.CurrentIndex/MaxQuestionsPerBatch < len(session.Batches) {
 		batch := session.Batches[session.CurrentIndex/MaxQuestionsPerBatch]
-		select {
-		case client.send <- publicBatchMessage(batch, session.CurrentIndex, len(session.Questions), session.RunID):
-		default:
+		if !h.sendToClientLocked(client, publicBatchMessage(batch, session.CurrentIndex, len(session.Questions), session.RunID)) {
+			return
 		}
 	}
 	if (session.State == "results" || session.State == "leaderboard" || session.State == "finished") && session.CurrentIndex >= 0 && session.CurrentIndex < len(session.Questions) {
-		select {
-		case client.send <- mustMarshal(ServerMessage{Type: "data:reveal", Payload: revealQuestionPayload(session.Questions[session.CurrentIndex], session.CurrentIndex)}):
-		default:
+		if !h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "data:reveal", Payload: revealQuestionPayload(session.Questions[session.CurrentIndex], session.CurrentIndex)})) {
+			return
 		}
 	}
-	if _, registered := h.clients[client]; registered {
-		public := publicSessionMessage(ServerMessage{Type: "state:update", Payload: session}, nil, session, client)
-		if len(public) > 0 {
-			h.sendToClientLocked(client, public)
-		}
+	public := publicSessionMessage(ServerMessage{Type: "state:update", Payload: session}, nil, session, client)
+	if len(public) > 0 {
+		h.sendToClientLocked(client, public)
 	}
 
 	// Notify session update (state:update) to refresh player list for host & projector only
