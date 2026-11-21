@@ -505,7 +505,8 @@ const validateQuestions = () => {
   if (questions.value.length === 0) return t('quiz_config.validation.min_one')
   
   for (const q of questions.value) {
-    if (!q.text.trim()) return t('quiz_config.validation.text_required')
+    const text = String(q.text || '').trim()
+    if (q.type !== 'simple_text' && !text) return t('quiz_config.validation.text_required')
     
     if (q.type === 'range') {
         const config = q.rangeConfig
@@ -514,17 +515,19 @@ const validateQuestions = () => {
         if (config.step <= 0 || q.scoringConfig.tolerance < 0) return t('quiz_config.validation.range_step')
     } else if (q.type === 'true_false') {
       // Only check first 2 answers for T/F
-      if (q.answers.slice(0, 2).some(a => !a.trim())) return t('quiz_config.validation.tf_options')
+      if (!Array.isArray(q.answers) || q.answers.length < 2 || q.answers.slice(0, 2).some(a => !String(a || '').trim())) return t('quiz_config.validation.tf_options')
     } else if (q.type === 'correct_picture') {
         if (!q.imageOptions || q.imageOptions.length < 2) return t('quiz_config.validation.cp_options')
+    } else if (q.type === 'wrong_pictures') {
+        // Wrong Pictures uses image + target coordinates; 4 text answer slots are hidden
     } else if (q.type === 'number') {
         if (q.correctNumber === undefined || q.correctNumber === null) return t('quiz_config.validation.number_required')
     } else if (q.type === 'simple_text') {
-        if (!q.text.trim() && !q.imageId) return t('quiz_config.validation.simple_text_required')
+        if (!text && !q.imageId) return t('quiz_config.validation.simple_text_required')
         if ((q.scoringConfig?.maxPoints ?? 0) <= 0) return t('quiz_config.validation.simple_points')
     } else {
       // For standard types (classic, multi_select), ensure all 4 slots are filled
-      if (q.answers.some(a => !a.trim())) return t('quiz_config.validation.mc_options')
+      if (!Array.isArray(q.answers) || q.answers.some(a => !String(a || '').trim())) return t('quiz_config.validation.mc_options')
     }
   }
   return null
