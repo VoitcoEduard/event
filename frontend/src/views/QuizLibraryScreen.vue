@@ -1,368 +1,321 @@
 <template>
-  <div class="library-screen">
-    <header class="header">
-      <div class="header-top">
-        <button type="button" class="back-link" @click="goBack">
-          <AppIcon name="arrowLeft" :size="18" aria-hidden="true" />
-          <span>{{ $t('library.back_btn') }}</span>
-        </button>
-        <div class="language-switcher">
-          <select
-            v-model="$i18n.locale"
-            :aria-label="$t('library.language_label')"
-            @change="changeLanguage"
-          >
-            <option value="en">English</option>
-            <option value="ru">Русский</option>
-            <option value="ro">Română</option>
-          </select>
-        </div>
-      </div>
-      <div class="header-main">
-        <div class="header-title-block">
-          <p class="header-eyebrow">{{ $t('library.title') }}</p>
-          <h1 class="header-heading">{{ $t('library.manage_templates') }}</h1>
-        </div>
-        <div class="header-actions">
-          <button
-            v-if="activeTab !== 'screensaver' && activeTab !== 'music'"
-            type="button"
-            class="create-btn"
-            @click="createNewTemplate"
-          >
-            {{ activeTab === 'form' ? $t('library.new_form') : (activeTab === 'quiz' ? $t('library.new_quiz') : $t('library.new_wrong_pictures')) }}
-          </button>
-          <button
-            v-if="activeTab === 'screensaver'"
-            type="button"
-            class="create-btn"
-            @click="triggerScreensaverUpload"
-          >
-            {{ $t('library.upload_screensaver') }}
-          </button>
-          <button
-            v-if="activeTab === 'music'"
-            type="button"
-            class="create-btn"
-            @click="triggerTrackUpload"
-          >
-            {{ $t('library.upload_music') }}
-          </button>
-          <button
-            v-if="activeTab !== 'screensaver' && activeTab !== 'music'"
-            type="button"
-            class="import-btn"
-            @click="triggerFileInput"
-          >
-            {{ $t('library.import') }}
-          </button>
-          <input
-            type="file"
-            ref="fileInput"
-            style="display: none"
-            accept=".json"
-            @change="handleFileUpload"
-          />
-          <input
-            type="file"
-            ref="screensaverInput"
-            style="display: none"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            @change="handleScreensaverUpload"
-          />
-          <input
-            type="file"
-            ref="trackInput"
-            style="display: none"
-            accept="audio/mpeg,audio/wav,audio/ogg"
-            @change="handleTrackUpload"
-          />
-        </div>
-      </div>
-    </header>
+  <AdminLayout :breadcrumbs="breadcrumbs">
+    <template v-if="safeReturnTo" #actions>
+      <RouterLink :to="safeReturnTo" class="back-link">
+        <AppIcon name="arrowLeft" :size="16" aria-hidden="true" />
+        <span>{{ $t('library.back_to_event') }}</span>
+      </RouterLink>
+    </template>
 
-    <div class="content-wrapper">
-      <!-- Navigation Tabs (Vertical sidebar on desktop, horizontal scrollable bar on mobile) -->
-      <div class="sidebar" :class="{ 'more-start': hasMoreStart, 'more-end': hasMoreEnd }">
-        <div
-          ref="tablistRef"
-          class="library-tabs"
-          :class="{ 'more-start': hasMoreStart, 'more-end': hasMoreEnd }"
-          role="tablist"
-          :aria-label="$t('library.title')"
-          :aria-orientation="isCompactLayout ? 'horizontal' : 'vertical'"
-          @keydown="handleTabKeydown"
-          @scroll.passive="updateTabScrollCues"
+    <div class="library-screen">
+      <header class="header">
+        <div class="header-main">
+          <div class="header-title-block">
+            <p class="header-eyebrow">{{ $t('library.title') }}</p>
+            <h1 class="header-heading">
+              {{ isMediaTab ? $t('library.heading_media') : $t('library.heading_templates') }}
+            </h1>
+          </div>
+          <div class="header-actions">
+            <button
+              v-if="!isMediaTab"
+              type="button"
+              class="create-btn"
+              @click="createNewTemplate"
+            >
+              {{ newTemplateLabel }}
+            </button>
+            <button
+              v-if="activeTab === 'screensavers'"
+              type="button"
+              class="create-btn"
+              @click="triggerScreensaverUpload"
+            >
+              {{ $t('library.upload_screensaver') }}
+            </button>
+            <button
+              v-if="activeTab === 'music'"
+              type="button"
+              class="create-btn"
+              @click="triggerTrackUpload"
+            >
+              {{ $t('library.upload_music') }}
+            </button>
+            <button
+              v-if="!isMediaTab"
+              type="button"
+              class="import-btn"
+              @click="triggerFileInput"
+            >
+              {{ $t('library.import') }}
+            </button>
+            <input
+              ref="fileInput"
+              type="file"
+              style="display: none"
+              accept=".json"
+              @change="handleFileUpload"
+            />
+            <input
+              ref="screensaverInput"
+              type="file"
+              style="display: none"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              @change="handleScreensaverUpload"
+            />
+            <input
+              ref="trackInput"
+              type="file"
+              style="display: none"
+              accept="audio/mpeg,audio/wav,audio/ogg"
+              @change="handleTrackUpload"
+            />
+          </div>
+        </div>
+      </header>
+
+      <div class="content-wrapper">
+        <div class="sidebar">
+          <div
+            ref="tablistRef"
+            class="library-tabs"
+            role="tablist"
+            :aria-label="$t('library.title')"
+            :aria-orientation="isCompactLayout ? 'horizontal' : 'vertical'"
+            @keydown="handleTabKeydown"
+          >
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              :id="'library-tab-' + tab.id"
+              :ref="(el) => setTabRef(tab.id, el)"
+              type="button"
+              role="tab"
+              class="tab-btn"
+              :class="{ active: activeTab === tab.id }"
+              :aria-selected="activeTab === tab.id ? 'true' : 'false'"
+              :tabindex="activeTab === tab.id ? 0 : -1"
+              @click="selectTab(tab.id)"
+            >
+              <AppIcon class="tab-icon" :name="tab.icon" :size="20" aria-hidden="true" />
+              <span class="tab-label">{{ $t(tab.labelKey) }}</span>
+            </button>
+          </div>
+        </div>
+
+        <main
+          class="main-content"
+          role="tabpanel"
+          :aria-labelledby="'library-tab-' + activeTab"
         >
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            :ref="(el) => setTabRef(tab.id, el)"
-            type="button"
-            role="tab"
-            :id="'library-tab-' + tab.id"
-            class="tab-btn"
-            :class="{ active: activeTab === tab.id }"
-            :aria-selected="activeTab === tab.id ? 'true' : 'false'"
-            :tabindex="activeTab === tab.id ? 0 : -1"
-            @click="selectTab(tab.id)"
-          >
-            <AppIcon class="tab-icon" :name="tab.icon" :size="20" aria-hidden="true" />
-            <span class="tab-label">{{ $t(tab.labelKey) }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Main Content Area -->
-      <main
-        class="main-content"
-        role="tabpanel"
-        :aria-labelledby="'library-tab-' + activeTab"
-      >
-        <div v-if="loading" class="loading-state">
-          <p>{{ $t('common.loading') }}</p>
-        </div>
-
-        <!-- Screensavers Tab Content -->
-        <div v-else-if="activeTab === 'screensaver'" class="screensaver-view">
-          <div v-if="screensavers.length === 0" class="empty-state">
-            <AppIcon class="empty-icon" name="image" :size="48" aria-hidden="true" />
-            <p class="empty-text">{{ $t('library.empty.no_screensavers') }}</p>
-            <p class="empty-hint">{{ $t('library.empty.screensaver_hint') }}</p>
+          <div v-if="loading" class="loading-state">
+            <p>{{ $t('common.loading') }}</p>
           </div>
 
-          <div v-else class="screensavers-grid">
-            <div v-for="screensaver in screensavers" :key="screensaver.id" class="screensaver-card">
-              <div class="screensaver-image-container">
-                <img :src="screensaver.thumbnailUrl" :alt="screensaver.name" class="screensaver-thumbnail" decoding="async" loading="lazy" />
-              </div>
-              <div class="screensaver-footer">
-                <div class="screensaver-info">
-                  <h2 class="screensaver-name">{{ screensaver.name }}</h2>
-                  <p class="screensaver-date">{{ $t('library.meta.added') }}: {{ formatDate(screensaver.createdAt) }}</p>
+          <!-- Screensavers Tab Content -->
+          <div v-else-if="activeTab === 'screensavers'" class="screensaver-view">
+            <div v-if="screensavers.length === 0" class="empty-state">
+              <AppIcon class="empty-icon" name="image" :size="48" aria-hidden="true" />
+              <p class="empty-text">{{ $t('library.empty.no_screensavers') }}</p>
+              <p class="empty-hint">{{ $t('library.empty.screensaver_hint') }}</p>
+              <button type="button" class="create-btn empty-cta-btn" @click="triggerScreensaverUpload">
+                {{ $t('library.upload_screensaver') }}
+              </button>
+            </div>
+
+            <div v-else class="screensavers-grid">
+              <div v-for="screensaver in screensavers" :key="screensaver.id" class="screensaver-card">
+                <div class="screensaver-image-container">
+                  <img
+                    :src="screensaver.thumbnailUrl"
+                    :alt="screensaver.name"
+                    class="screensaver-thumbnail"
+                    decoding="async"
+                    loading="lazy"
+                  />
                 </div>
-                <div class="screensaver-actions">
+                <div class="screensaver-footer">
+                  <div class="screensaver-info">
+                    <h2 class="screensaver-name">{{ screensaver.name }}</h2>
+                    <p class="screensaver-date">{{ $t('library.meta.added') }}: {{ formatDate(screensaver.createdAt) }}</p>
+                  </div>
+                  <div class="screensaver-actions">
+                    <button
+                      type="button"
+                      class="icon-btn delete-btn"
+                      :aria-label="`${$t('admin.delete_btn')} ${screensaver.name}`"
+                      @click="handleDeleteScreensaver(screensaver)"
+                    >
+                      <AppIcon name="trash" :size="17" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Music Tab Content -->
+          <div v-else-if="activeTab === 'music'" class="music-view">
+            <div v-if="tracks.length === 0" class="empty-state">
+              <AppIcon class="empty-icon" name="music" :size="48" aria-hidden="true" />
+              <p class="empty-text">{{ $t('library.empty.no_music') }}</p>
+              <p class="empty-hint">{{ $t('library.empty.music_hint') }}</p>
+              <button type="button" class="create-btn empty-cta-btn" @click="triggerTrackUpload">
+                {{ $t('library.upload_music') }}
+              </button>
+            </div>
+
+            <div v-else class="tracks-list">
+              <div v-for="track in tracks" :key="track.id" class="track-card">
+                <div class="track-icon">
+                  <AppIcon name="music" :size="22" aria-hidden="true" />
+                </div>
+                <div class="track-info">
+                  <h2 class="track-name">{{ track.name }}</h2>
+                  <p class="track-date">{{ $t('library.meta.added') }}: {{ formatDate(track.createdAt) }}</p>
+                </div>
+                <div class="track-actions">
                   <button
                     type="button"
                     class="icon-btn delete-btn"
-                    @click="handleDeleteScreensaver(screensaver)"
-                    :aria-label="`${$t('admin.delete_btn')} ${screensaver.name}`"
+                    :aria-label="`${$t('admin.delete_btn')} ${track.name}`"
+                    @click="handleDeleteTrack(track)"
                   >
                     <AppIcon name="trash" :size="17" aria-hidden="true" />
                   </button>
                 </div>
+                <div class="track-preview">
+                  <audio controls :src="`${API_BASE_URL}${track.url}`" class="audio-player"></audio>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Music Tab Content -->
-        <div v-else-if="activeTab === 'music'" class="music-view">
-          <div v-if="tracks.length === 0" class="empty-state">
-            <AppIcon class="empty-icon" name="music" :size="48" aria-hidden="true" />
-            <p class="empty-text">{{ $t('library.empty.no_music') }}</p>
-            <p class="empty-hint">{{ $t('library.empty.music_hint') }}</p>
+          <!-- Template Tabs Empty State -->
+          <div v-else-if="filteredTemplates.length === 0" class="empty-state">
+            <AppIcon class="empty-icon" :name="activeTabConfig.icon" :size="48" aria-hidden="true" />
+            <p class="empty-text">{{ $t('library.empty.no_templates', { type: activeTabLabel }) }}</p>
+            <p class="empty-hint">{{ $t(emptyTemplateHintKey) }}</p>
+            <button type="button" class="create-btn empty-cta-btn" @click="createNewTemplate">
+              {{ newTemplateLabel }}
+            </button>
           </div>
 
-          <div v-else class="tracks-list">
-            <div v-for="track in tracks" :key="track.id" class="track-card">
-              <div class="track-icon">
-                <AppIcon name="music" :size="22" aria-hidden="true" />
+          <!-- Template Cards Grid -->
+          <div v-else class="templates-grid">
+            <div v-for="template in filteredTemplates" :key="template.id" class="template-card">
+              <h2 class="template-name">{{ template.name }}</h2>
+              <p class="template-desc">{{ template.description || $t('library.meta.no_desc') }}</p>
+              <div class="template-meta">
+                <span class="question-count">{{ formatTemplateItemCount(template) }}</span>
+                <span class="created-at">{{ formatDate(template.createdAt) }}</span>
               </div>
-              <div class="track-info">
-                <h2 class="track-name">{{ track.name }}</h2>
-                <p class="track-date">{{ $t('library.meta.added') }}: {{ formatDate(track.createdAt) }}</p>
-              </div>
-              <div class="track-actions">
+              <div class="card-actions">
                 <button
                   type="button"
-                  class="icon-btn delete-btn"
-                  @click="handleDeleteTrack(track)"
-                  :aria-label="`${$t('admin.delete_btn')} ${track.name}`"
+                  class="card-action-btn edit-btn"
+                  :aria-label="`${$t('admin.edit_btn')} ${template.name}`"
+                  @click="editTemplate(template)"
                 >
-                  <AppIcon name="trash" :size="17" aria-hidden="true" />
+                  <AppIcon name="edit" :size="16" aria-hidden="true" />
+                  <span>{{ $t('admin.edit_btn') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="card-action-btn export-btn"
+                  :aria-label="`${$t('library.actions.export_btn')} ${template.name}`"
+                  @click="exportTemplate(template)"
+                >
+                  <AppIcon name="download" :size="16" aria-hidden="true" />
+                  <span>{{ $t('library.actions.export_btn') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="card-action-btn delete-btn"
+                  :aria-label="`${$t('admin.delete_btn')} ${template.name}`"
+                  @click="deleteTemplate(template)"
+                >
+                  <AppIcon name="trash" :size="16" aria-hidden="true" />
+                  <span>{{ $t('admin.delete_btn') }}</span>
                 </button>
               </div>
-              <div class="track-preview">
-                <audio controls :src="`${API_BASE_URL}${track.url}`" class="audio-player"></audio>
-              </div>
             </div>
           </div>
-        </div>
-
-        <div v-else-if="filteredTemplates.length === 0" class="empty-state">
-          <AppIcon class="empty-icon" :name="activeTab === 'form' ? 'form' : (activeTab === 'wrong_pictures' ? 'image' : 'quiz')" :size="48" aria-hidden="true" />
-          <p class="empty-text">{{ $t('library.empty.no_templates', { type: activeTabLabel }) }}</p>
-        </div>
-
-        <div v-else class="templates-grid">
-          <div v-for="template in filteredTemplates" :key="template.id" class="template-card">
-            <h2 class="template-name">{{ template.name }}</h2>
-            <p class="template-desc">{{ template.description || $t('library.meta.no_desc') }}</p>
-            <div class="template-meta">
-              <span v-if="activeTab === 'quiz' || activeTab === 'wrong_pictures'" class="question-count">{{ $t('library.meta.questions', { count: (template.data?.questions || []).length }) }}</span>
-              <span v-else class="question-count">{{ $t('library.meta.steps', { count: (template.data?.timeline || []).length }) }}</span>
-              <span class="created-at">{{ formatDate(template.createdAt) }}</span>
-            </div>
-            <div class="card-actions">
-              <button
-                type="button"
-                class="card-action-btn edit-btn"
-                @click="editTemplate(template)"
-                :aria-label="`${$t('admin.edit_btn')} ${template.name}`"
-              >
-                <AppIcon name="edit" :size="16" aria-hidden="true" />
-                <span>{{ $t('admin.edit_btn') }}</span>
-              </button>
-              <button
-                type="button"
-                class="card-action-btn export-btn"
-                @click="exportTemplate(template)"
-                :aria-label="`${$t('library.actions.export_btn')} ${template.name}`"
-              >
-                <AppIcon name="download" :size="16" aria-hidden="true" />
-                <span>{{ $t('library.actions.export_btn') }}</span>
-              </button>
-              <button
-                type="button"
-                class="card-action-btn delete-btn"
-                @click="deleteTemplate(template)"
-                :aria-label="`${$t('admin.delete_btn')} ${template.name}`"
-              >
-                <AppIcon name="trash" :size="16" aria-hidden="true" />
-                <span>{{ $t('admin.delete_btn') }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-
-    <!-- Edit Template Modal -->
-    <div v-if="showEditor" class="modal-overlay" @click.self="closeEditor">
-      <div
-        ref="modalContainerRef"
-        class="modal-container"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="currentTemplate.name || $t('library.manage_templates')"
-        tabindex="-1"
-        @keydown.escape.stop.prevent="closeEditor"
-      >
-        <div class="modal-header">
-          <input
-            v-model="currentTemplate.name"
-            class="template-name-input"
-            :aria-label="$t('library.actions.template_name_placeholder')"
-            :placeholder="$t('library.actions.template_name_placeholder')"
-          />
-          <div class="header-buttons">
-            <button type="button" class="save-btn" @click="saveTemplate" :disabled="saving">
-              {{ saving ? $t('library.actions.saving_btn') : $t('library.actions.save_btn') }}
-            </button>
-            <button type="button" class="close-btn" @click="closeEditor" :aria-label="$t('common.close')">
-              <AppIcon name="close" :size="18" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-
-        <div class="modal-body">
-          <textarea
-            v-model="currentTemplate.description"
-            class="template-desc-input"
-            :placeholder="$t('library.actions.desc_placeholder')"
-            rows="2"
-          ></textarea>
-
-          <!-- Dynamic Editor based on Type -->
-          <QuizEditor
-            v-if="currentTemplate.moduleType === 'quiz'"
-            :questions="currentTemplate.questions"
-            event-id=""
-            module-id=""
-            @update-question="handleUpdateQuestion"
-            @remove-question="handleRemoveQuestion"
-            @add-question="(type) => handleAddQuestion(type)"
-            @move-question="handleMoveQuestion"
-            class="editor-component"
-          />
-
-          <FormEditor
-            v-if="currentTemplate.moduleType === 'form'"
-            :timeline="currentTemplate.timeline"
-            @update:timeline="handleUpdateTimeline"
-            class="editor-component"
-          />
-
-          <QuizEditor
-            v-if="currentTemplate.moduleType === 'wrong_pictures'"
-            :questions="currentTemplate.questions"
-            event-id=""
-            module-id=""
-            @update-question="handleUpdateQuestion"
-            @remove-question="handleRemoveQuestion"
-            @add-question="(type) => handleAddQuestion(type)"
-            @move-question="handleMoveQuestion"
-            class="editor-component"
-          />
-        </div>
+        </main>
       </div>
     </div>
-  </div>
+  </AdminLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
-import { useToast } from '../composables/useToast'
-import QuizEditor from '../components/QuizEditor.vue'
-import FormEditor from '../components/FormEditor.vue'
-import { getScreensavers, uploadScreensaver, deleteScreensaver, getTracks, uploadTrack, deleteTrack, getImageUrl } from '../services/media'
+import AdminLayout from '../components/AdminLayout.vue'
 import AppIcon from '../components/AppIcon.vue'
+import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
+import {
+  LIBRARY_TABS,
+  getLibraryTabConfig,
+  resolveLibraryTab,
+  resolveSafeReturnTo,
+  sanitizeTemplateQuestions
+} from '../utils/templateLibrary'
+import { useToast } from '../composables/useToast'
+import { useDialog } from '../composables/useDialog'
+import {
+  getScreensavers,
+  uploadScreensaver,
+  deleteScreensaver,
+  getTracks,
+  uploadTrack,
+  deleteTrack
+} from '../services/media'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const { success, error, info } = useToast()
+const { confirm: confirmDialog, prompt: promptDialog } = useDialog()
 
-const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
-}
+const tabs = LIBRARY_TABS
+const activeTab = ref(resolveLibraryTab(route?.params?.tab))
+const activeTabConfig = computed(() => getLibraryTabConfig(activeTab.value))
+const activeTabLabel = computed(() => t(activeTabConfig.value.labelKey))
+const isMediaTab = computed(() => activeTabConfig.value.kind === 'media')
 
-const tabs = [
-  { id: 'form', labelKey: 'library.tabs.forms', icon: 'form' },
-  { id: 'quiz', labelKey: 'library.tabs.quizzes', icon: 'quiz' },
-  { id: 'screensaver', labelKey: 'library.tabs.screensavers', icon: 'image' },
-  { id: 'music', labelKey: 'library.tabs.music', icon: 'music' },
-  { id: 'wrong_pictures', labelKey: 'library.tabs.wrong_pictures', icon: 'image' }
-]
+const safeReturnTo = computed(() => resolveSafeReturnTo(route?.query?.returnTo, router))
 
-const activeTab = ref('form')
-const activeTabLabel = computed(() => {
-  const currentTab = tabs.find(tab => tab.id === activeTab.value)
-  return t(currentTab?.labelKey || 'library.tabs.forms')
+const breadcrumbs = computed(() => {
+  if (safeReturnTo.value) {
+    return [
+      { label: t('admin_shell.events'), to: '/admin/events' },
+      { label: t('library.back_to_event'), to: safeReturnTo.value },
+      { label: t('library.title') },
+      { label: activeTabLabel.value }
+    ]
+  }
+  return [
+    { label: t('library.title') },
+    { label: activeTabLabel.value }
+  ]
 })
+
+const newTemplateLabel = computed(() => {
+  if (activeTab.value === 'forms') return t('library.new_form')
+  if (activeTab.value === 'wrong-pictures') return t('library.new_wrong_pictures')
+  return t('library.new_quiz')
+})
+
+const emptyTemplateHintKey = computed(() => {
+  if (activeTab.value === 'forms') return 'library.empty.forms_hint'
+  if (activeTab.value === 'wrong-pictures') return 'library.empty.wrong_pictures_hint'
+  return 'library.empty.quizzes_hint'
+})
+
 const tablistRef = ref(null)
-const modalContainerRef = ref(null)
 const tabRefs = {}
 const isCompactLayout = ref(false)
-const hasMoreStart = ref(false)
-const hasMoreEnd = ref(false)
-
-const updateTabScrollCues = () => {
-  const scroller = tablistRef.value
-  if (!scroller) return
-  const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
-  if (maxScrollLeft <= 1) {
-    hasMoreStart.value = false
-    hasMoreEnd.value = false
-    return
-  }
-  const scrollLeft = Math.max(0, scroller.scrollLeft)
-  hasMoreStart.value = scrollLeft > 2
-  hasMoreEnd.value = scrollLeft < maxScrollLeft - 2
-}
 
 const setTabRef = (tabId, el) => {
   if (el) {
@@ -372,22 +325,13 @@ const setTabRef = (tabId, el) => {
   }
 }
 
-const scrollTabIntoView = (el) => {
-  if (!el) return
-  const scroller = tablistRef.value
-  const shouldCenter = isCompactLayout.value || (scroller && scroller.scrollWidth > scroller.clientWidth)
-  el.scrollIntoView({
-    block: 'nearest',
-    inline: shouldCenter ? 'center' : 'nearest'
-  })
-  updateTabScrollCues()
-}
-
 const selectTab = (tabId) => {
-  activeTab.value = tabId
-  nextTick(() => {
-    scrollTabIntoView(tabRefs[tabId])
-  })
+  const canonical = resolveLibraryTab(tabId)
+  activeTab.value = canonical
+  const query = safeReturnTo.value ? { returnTo: safeReturnTo.value } : {}
+  if (route?.params?.tab !== canonical) {
+    router.push({ path: `/admin/library/${canonical}`, query })
+  }
 }
 
 const handleTabKeydown = (event) => {
@@ -415,49 +359,53 @@ const handleTabKeydown = (event) => {
   const targetEl = tabRefs[tabs[nextIndex].id]
   if (targetEl) {
     targetEl.focus()
-    scrollTabIntoView(targetEl)
   }
 }
 
 const templates = ref([])
+const templatesLoaded = ref(false)
 const screensavers = ref([])
 const tracks = ref([])
 const loading = ref(true)
-const showEditor = ref(false)
-const saving = ref(false)
 const fileInput = ref(null)
 const screensaverInput = ref(null)
 const trackInput = ref(null)
-const currentTemplate = ref({
-  id: null,
-  name: '',
-  description: '',
-  moduleType: 'form',
-  questions: [],
-  timeline: []
-})
 
 const filteredTemplates = computed(() => {
-    return templates.value.filter(t => t.moduleType === activeTab.value)
+  const targetModuleType = activeTabConfig.value.moduleType
+  return templates.value.filter(tpl => tpl.moduleType === targetModuleType)
 })
+
+const formatTemplateItemCount = (template) => {
+  const type = template.moduleType
+  if (type === 'form') {
+    const count = (template.data?.timeline || []).length
+    return t('library.meta.steps', { count }, count)
+  }
+  const count = (template.data?.questions || []).length
+  if (type === 'wrong_pictures') {
+    return t('library.meta.rounds', { count }, count)
+  }
+  return t('library.meta.questions', { count }, count)
+}
 
 const fetchTemplates = async () => {
   loading.value = true
   try {
     const response = await fetch(`${API_BASE_URL}/templates`)
     if (response.ok) {
-        const data = normalizeTemplates(await response.json())
-        // Ensure legacy templates have a type (default to quiz if missing, based on data structure)
-        templates.value = data.map(t => ({
-            ...t,
-            moduleType: t.moduleType || (t.data?.questions ? 'quiz' : 'form')
-        }))
+      const data = normalizeTemplates(await response.json())
+      templates.value = data.map(tpl => ({
+        ...tpl,
+        moduleType: tpl.moduleType || (tpl.data?.questions ? 'quiz' : 'form')
+      }))
+      templatesLoaded.value = true
     } else {
-      error('Failed to load templates')
+      error(t('library.toast.load_templates_failed'))
     }
   } catch (err) {
     console.error(err)
-    error('Error loading templates')
+    error(t('library.toast.load_templates_failed'))
   } finally {
     loading.value = false
   }
@@ -466,11 +414,10 @@ const fetchTemplates = async () => {
 const fetchScreensavers = async () => {
   loading.value = true
   try {
-    const data = await getScreensavers()
-    screensavers.value = data
+    screensavers.value = await getScreensavers()
   } catch (err) {
     console.error(err)
-    error('Error loading screensavers')
+    error(t('library.toast.load_screensavers_failed'))
   } finally {
     loading.value = false
   }
@@ -479,217 +426,62 @@ const fetchScreensavers = async () => {
 const fetchTracks = async () => {
   loading.value = true
   try {
-    const data = await getTracks()
-    tracks.value = data
+    tracks.value = await getTracks()
   } catch (err) {
     console.error(err)
-    error('Error loading tracks')
+    error(t('library.toast.load_tracks_failed'))
   } finally {
     loading.value = false
   }
 }
 
-const handleScreensaverUpload = async (event) => {
-    const file = event.target.files[0]
-    if (!file) return
-
-    try {
-        const name = prompt(t('library.actions.template_name_placeholder'), file.name)
-        if (!name) return
-        
-        await uploadScreensaver(file, name)
-        success(t('admin.details.toast.screensaver_updated'))
-        fetchScreensavers()
-    } catch (err) {
-        console.error(err)
-        error('Failed to upload screensaver')
-    } finally {
-        event.target.value = ''
-    }
-}
-
-const handleDeleteScreensaver = async (screensaver) => {
-    if (!confirm(t('library.actions.delete_confirm', { name: screensaver.name }))) return
-    
-    try {
-        await deleteScreensaver(screensaver.id)
-        success(t('admin.details.toast.screensaver_removed'))
-        fetchScreensavers()
-    } catch (err) {
-        console.error(err)
-        error('Failed to delete screensaver')
-    }
-}
-
-const handleTrackUpload = async (event) => {
-    const file = event.target.files[0]
-    if (!file) return
-
-    try {
-        const name = prompt(t('library.actions.template_name_placeholder'), file.name)
-        if (!name) return
-        
-        await uploadTrack(file, name)
-        success('Track uploaded successfully')
-        fetchTracks()
-    } catch (err) {
-        console.error(err)
-        error('Failed to upload track')
-    } finally {
-        event.target.value = ''
-    }
-}
-
-const handleDeleteTrack = async (track) => {
-    if (!confirm(t('library.actions.delete_confirm', { name: track.name }))) return
-    
-    try {
-        await deleteTrack(track.id)
-        success('Track deleted')
-        fetchTracks()
-    } catch (err) {
-        console.error(err)
-        error('Failed to delete track')
-    }
-}
-
-let mediaQueryList = null
-let handleMediaChange = null
-let tabResizeObserver = null
-let previouslyFocusedEl = null
-
-const handleGlobalKeydown = (event) => {
-  if (event.key === 'Escape' && showEditor.value && !event.defaultPrevented) {
-    if (typeof document !== 'undefined' && document.querySelector('body > .modal-overlay')) {
-      return
-    }
-    event.preventDefault()
-    closeEditor()
+const loadTabData = (tabId) => {
+  if (tabId === 'screensavers') {
+    fetchScreensavers()
+  } else if (tabId === 'music') {
+    fetchTracks()
+  } else if (!templatesLoaded.value) {
+    fetchTemplates()
+  } else {
+    loading.value = false
   }
 }
 
-watch(showEditor, (isOpen) => {
-  if (typeof document === 'undefined') return
-  if (isOpen) {
-    previouslyFocusedEl = document.activeElement
-    nextTick(() => {
-      modalContainerRef.value?.focus()
-    })
-  } else if (previouslyFocusedEl && typeof previouslyFocusedEl.focus === 'function') {
-    const target = previouslyFocusedEl
-    previouslyFocusedEl = null
-    nextTick(() => {
-      if (target.isConnected) target.focus()
-    })
-  }
-})
-
-watch(locale, () => {
-  nextTick(updateTabScrollCues)
-})
-
-onMounted(() => {
-  fetchTemplates()
-
-  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-    mediaQueryList = window.matchMedia('(max-width: 768px)')
-    isCompactLayout.value = mediaQueryList.matches
-    handleMediaChange = (event) => {
-      isCompactLayout.value = event.matches
-      nextTick(updateTabScrollCues)
-    }
-    mediaQueryList.addEventListener('change', handleMediaChange)
-  }
-
-  const scroller = tablistRef.value
-  if (scroller) {
-    nextTick(updateTabScrollCues)
-    if (typeof ResizeObserver !== 'undefined') {
-      tabResizeObserver = new ResizeObserver(() => {
-        updateTabScrollCues()
-      })
-      tabResizeObserver.observe(scroller)
-      Array.from(scroller.children).forEach((child) => tabResizeObserver.observe(child))
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', updateTabScrollCues, { passive: true })
-    window.addEventListener('keydown', handleGlobalKeydown)
-  }
-
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    document.fonts.ready.then(() => updateTabScrollCues()).catch(() => {})
-  }
-})
-
-onUnmounted(() => {
-  if (mediaQueryList && handleMediaChange) {
-    mediaQueryList.removeEventListener('change', handleMediaChange)
-  }
-  if (tabResizeObserver) {
-    tabResizeObserver.disconnect()
-  }
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', updateTabScrollCues)
-    window.removeEventListener('keydown', handleGlobalKeydown)
-  }
-})
-
-// Watch for tab changes
-watch(activeTab, (newTab) => {
-    if (newTab === 'screensaver') {
-        fetchScreensavers()
-    } else if (newTab === 'music') {
-        fetchTracks()
-    }
-})
-
-const goBack = () => {
-  router.push('/admin')
-}
+watch(
+  () => route?.params?.tab,
+  (nextParam) => {
+    const resolved = resolveLibraryTab(nextParam)
+    activeTab.value = resolved
+    loadTabData(resolved)
+  },
+  { immediate: true }
+)
 
 const createNewTemplate = () => {
-  let defaultName = 'New Template'
-  if (activeTab.value === 'form') defaultName = 'New Form Template'
-  else if (activeTab.value === 'quiz') defaultName = 'New Quiz Template'
-  else if (activeTab.value === 'wrong_pictures') defaultName = 'New Wrong Pictures Template'
-
-  currentTemplate.value = {
-    id: null,
-    name: defaultName,
-    description: '',
-    moduleType: activeTab.value,
-    questions: [],
-    timeline: []
-  }
-  showEditor.value = true
+  const query = safeReturnTo.value ? { returnTo: safeReturnTo.value } : {}
+  router.push({
+    path: `/admin/library/${activeTab.value}/new`,
+    query
+  })
 }
 
 const editTemplate = (template) => {
-  currentTemplate.value = {
-    id: template.id,
-    name: template.name,
-    description: template.description,
-    moduleType: template.moduleType,
-    questions: JSON.parse(JSON.stringify(template.data?.questions || [])).map(q => {
-        if (q.type === 'range') {
-            if (!q.rangeConfig) q.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
-            if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
-        }
-        if (q.type === 'true_false') {
-             q.answers = ['True', 'False', '', '']
-            if (q.correctIndex > 1) q.correctIndex = 0
-        }
-        return q
-    }),
-    timeline: JSON.parse(JSON.stringify(template.data?.timeline || []))
-  }
-  showEditor.value = true
+  const query = safeReturnTo.value ? { returnTo: safeReturnTo.value } : {}
+  router.push({
+    path: `/admin/library/${activeTab.value}/${encodeURIComponent(template.id)}/edit`,
+    query
+  })
 }
 
 const deleteTemplate = async (template) => {
-  if (!confirm(t('library.actions.delete_confirm', { name: template.name }))) return
+  const confirmed = await confirmDialog({
+    title: t('library.actions.delete_title'),
+    message: t('library.actions.delete_confirm', { name: template.name }),
+    confirmLabel: t('admin.delete_btn'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (!confirmed) return
 
   try {
     const response = await fetch(`${API_BASE_URL}/templates/${template.id}`, {
@@ -698,247 +490,239 @@ const deleteTemplate = async (template) => {
     })
 
     if (response.ok) {
-      success('Template deleted')
+      success(t('library.toast.template_deleted'))
       fetchTemplates()
     } else {
-      error('Failed to delete template')
+      error(t('library.toast.template_delete_failed'))
     }
   } catch (err) {
     console.error(err)
-    error('Error deleting template')
+    error(t('library.toast.template_delete_failed'))
   }
 }
 
-const saveTemplate = async () => {
-  if (!currentTemplate.value.name.trim()) {
-    info(t('admin.messages.fill_fields'))
-    return
-  }
-  
-  const isQuiz = currentTemplate.value.moduleType === 'quiz'
-  const isWrongPictures = currentTemplate.value.moduleType === 'wrong_pictures'
-  
-  if ((isQuiz || isWrongPictures) && currentTemplate.value.questions.length === 0) {
-    if (!confirm(t('library.actions.save_empty_confirm'))) return
-  }
+const handleScreensaverUpload = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
 
-   saving.value = true
   try {
-    const payload = {
-      name: currentTemplate.value.name,
-      description: currentTemplate.value.description,
-      moduleType: currentTemplate.value.moduleType,
-      data: (isQuiz || isWrongPictures) 
-        ? { questions: currentTemplate.value.questions } 
-        : { timeline: currentTemplate.value.timeline }
-    }
-
-    let url = `${API_BASE_URL}/templates`
-    let method = 'POST'
-
-    if (currentTemplate.value.id) {
-      url = `${API_BASE_URL}/templates/${currentTemplate.value.id}`
-      method = 'PUT'
-    }
-
-    const response = await fetch(url, {
-      method: method,
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify(payload)
+    const defaultName = file.name.replace(/\.[^.]+$/, '') || file.name
+    const name = await promptDialog({
+      title: t('library.upload_screensaver'),
+      label: t('library.actions.screensaver_name_label'),
+      defaultValue: defaultName,
+      placeholder: t('library.actions.screensaver_name_placeholder'),
+      confirmLabel: t('library.actions.upload_btn'),
+      cancelLabel: t('common.cancel')
     })
+    if (name === null) return
+    const trimmed = name.trim()
+    if (!trimmed) {
+      info(t('library.actions.media_name_required'))
+      return
+    }
 
-    if (response.ok) {
-      const result = await response.json()
-      const saved = method === 'POST' ? response.status === 201 && !!result?.id : result?.message === 'Template updated'
-      if (!saved) {
-        error('Failed to save template')
+    await uploadScreensaver(file, trimmed)
+    success(t('library.toast.screensaver_uploaded'))
+    fetchScreensavers()
+  } catch (err) {
+    console.error(err)
+    error(t('library.toast.screensaver_upload_failed'))
+  } finally {
+    event.target.value = ''
+  }
+}
+
+const handleDeleteScreensaver = async (screensaver) => {
+  const confirmed = await confirmDialog({
+    title: t('library.actions.delete_title'),
+    message: t('library.actions.delete_confirm', { name: screensaver.name }),
+    confirmLabel: t('admin.delete_btn'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (!confirmed) return
+
+  try {
+    await deleteScreensaver(screensaver.id)
+    success(t('admin.details.toast.screensaver_removed'))
+    fetchScreensavers()
+  } catch (err) {
+    console.error(err)
+    error(t('library.toast.screensaver_delete_failed'))
+  }
+}
+
+const handleTrackUpload = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  try {
+    const defaultName = file.name.replace(/\.[^.]+$/, '') || file.name
+    const name = await promptDialog({
+      title: t('library.upload_music'),
+      label: t('library.actions.track_name_label'),
+      defaultValue: defaultName,
+      placeholder: t('library.actions.track_name_placeholder'),
+      confirmLabel: t('library.actions.upload_btn'),
+      cancelLabel: t('common.cancel')
+    })
+    if (name === null) return
+    const trimmed = name.trim()
+    if (!trimmed) {
+      info(t('library.actions.media_name_required'))
+      return
+    }
+
+    await uploadTrack(file, trimmed)
+    success(t('library.toast.track_uploaded'))
+    fetchTracks()
+  } catch (err) {
+    console.error(err)
+    error(t('library.toast.track_upload_failed'))
+  } finally {
+    event.target.value = ''
+  }
+}
+
+const handleDeleteTrack = async (track) => {
+  const confirmed = await confirmDialog({
+    title: t('library.actions.delete_title'),
+    message: t('library.actions.delete_confirm', { name: track.name }),
+    confirmLabel: t('admin.delete_btn'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (!confirmed) return
+
+  try {
+    await deleteTrack(track.id)
+    success(t('library.toast.track_deleted'))
+    fetchTracks()
+  } catch (err) {
+    console.error(err)
+    error(t('library.toast.track_delete_failed'))
+  }
+}
+
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const triggerScreensaverUpload = () => {
+  screensaverInput.value?.click()
+}
+
+const triggerTrackUpload = () => {
+  trackInput.value?.click()
+}
+
+const handleFileUpload = (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const content = JSON.parse(e.target.result)
+      const validTypes = new Set(['quiz', 'form', 'wrong_pictures'])
+      if (!content?.name || !validTypes.has(content.moduleType)) {
+        error(t('library.toast.invalid_template_file'))
         return
       }
-      success('Template saved successfully')
-      showEditor.value = false
-      fetchTemplates()
-    } else {
-      error('Failed to save template')
+
+      const confirmed = await confirmDialog({
+        title: t('library.actions.import_title'),
+        message: t('library.actions.import_confirm', { name: content.name }),
+        confirmLabel: t('library.actions.import_btn'),
+        cancelLabel: t('common.cancel')
+      })
+      if (!confirmed) return
+
+      const rawData = content.data && typeof content.data === 'object' ? { ...content.data } : {}
+      if ((content.moduleType === 'quiz' || content.moduleType === 'wrong_pictures') && Array.isArray(rawData.questions)) {
+        rawData.questions = sanitizeTemplateQuestions(content.moduleType, rawData.questions)
+      }
+
+      const payload = {
+        name: `${content.name} ${t('library.actions.imported_suffix')}`,
+        description: content.description || '',
+        moduleType: content.moduleType,
+        data: rawData
+      }
+
+      const res = await fetch(`${API_BASE_URL}/templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify(payload)
+      })
+
+      if (res.ok) {
+        success(t('library.toast.template_imported'))
+        await fetchTemplates()
+        const importedTab = resolveLibraryTab(content.moduleType)
+        if (importedTab !== activeTab.value) {
+          selectTab(importedTab)
+        }
+      } else {
+        error(t('library.toast.template_import_failed'))
+      }
+    } catch (err) {
+      console.error(err)
+      error(t('library.toast.invalid_json'))
+    } finally {
+      event.target.value = ''
     }
-  } catch (err) {
-    console.error(err)
-    error('Error saving template')
-  } finally {
-    saving.value = false
   }
+  reader.readAsText(file)
 }
 
-const closeEditor = () => {
-    if(confirm(t('library.actions.discard_confirm'))) {
-        showEditor.value = false
-    }
+const exportTemplate = (template) => {
+  const dataStr = JSON.stringify(template, null, 2)
+  const blob = new Blob([dataStr], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${String(template.name || 'template').replace(/[^a-z0-9]/gi, '_').toLowerCase()}_template.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  success(t('library.toast.template_exported', { name: template.name }))
 }
-
-// Quiz Editor Handlers
-const handleUpdateQuestion = (index, updatedQ) => {
-    currentTemplate.value.questions[index] = updatedQ
-}
-
-const handleRemoveQuestion = (index) => {
-    if (!confirm(t('library.actions.delete_confirm', { name: 'this question' }))) return
-    currentTemplate.value.questions.splice(index, 1)
-}
-
-const handleAddQuestion = (type = 'classic') => {
-    const isWrongPictures = currentTemplate.value.moduleType === 'wrong_pictures'
-    const finalType = isWrongPictures ? 'wrong_pictures' : type
-    
-    const newQuestion = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        type: finalType,
-        text: '',
-        answers: (finalType === 'wrong_pictures' || finalType === 'correct_picture') ? [] : ['', '', '', ''],
-        correctIndex: 0,
-        timeLimit: finalType === 'wrong_pictures' ? 45 : 20,
-        explainTime: 5
-    }
-
-    // Add type-specific defaults
-    if (finalType === 'range') {
-        newQuestion.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
-        newQuestion.correctValue = 0
-    } else if (finalType === 'number') {
-        newQuestion.correctNumber = 0
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
-    } else if (finalType === 'correct_picture') {
-        newQuestion.imageOptions = [
-            { id: Date.now().toString(), imageId: '', label: '' },
-            { id: (Date.now() + 1).toString(), imageId: '', label: '' }
-        ]
-        // A7: choice scoring reads scoringConfig.maxPoints.
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
-    } else if (finalType === 'wrong_pictures') {
-        newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 5, maxPoints: 50 }
-    } else if (finalType === 'true_false') {
-        newQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
-        // A7: choice scoring reads scoringConfig.maxPoints.
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
-    } else if (finalType === 'multi_select' || finalType === 'classic') {
-        // A7: choice scoring reads scoringConfig.maxPoints.
-        newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
-    }
-
-    currentTemplate.value.questions.push(newQuestion)
-}
-
-const handleMoveQuestion = (index, direction) => {
-    const newIndex = index + direction
-    if (newIndex < 0 || newIndex >= currentTemplate.value.questions.length) return
-    const temp = currentTemplate.value.questions[index]
-    currentTemplate.value.questions[index] = currentTemplate.value.questions[newIndex]
-    currentTemplate.value.questions[newIndex] = temp
-}
-
-// Form Editor Handlers
-const handleUpdateTimeline = (newTimeline) => {
-    currentTemplate.value.timeline = newTimeline
-}
-
 
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleDateString()
 }
-const triggerFileInput = () => {
-    fileInput.value.click()
-}
 
-const triggerScreensaverUpload = () => {
-    screensaverInput.value.click()
-}
+let mediaQueryList = null
+let handleMediaChange = null
 
-const triggerTrackUpload = () => {
-    trackInput.value.click()
-}
-
-const handleFileUpload = (event) => {
-    const file = event.target.files[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-        try {
-            const content = JSON.parse(e.target.result)
-            
-            // Validate content structure roughly
-            if(!content.name || !content.moduleType) {
-                error('Invalid template file format')
-                return
-            }
-
-            // Ask User for confirmation or just save
-            if(!confirm(`Import template "${content.name}"?`)) return
-
-            // Prepare payload (clean up ID if present to create new)
-            const payload = {
-                name: content.name + ' (Imported)',
-                description: content.description || '',
-                moduleType: content.moduleType,
-                data: content.data || {}
-            }
-            // Sanitize questions if quiz
-            if (payload.moduleType === 'quiz' && payload.data.questions) {
-                 payload.data.questions = payload.data.questions.map(q => {
-                    if (q.type === 'range') {
-                        if (!q.rangeConfig) q.rangeConfig = { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 }
-                        if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
-                    }
-                    if (q.type === 'true_false') {
-                        q.answers = ['True', 'False', '', '']
-                        if (q.correctIndex > 1) q.correctIndex = 0
-                    }
-                    return q
-                 })
-            }
-
-            const res = await fetch(`${API_BASE_URL}/templates`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                body: JSON.stringify(payload)
-            })
-
-            if(res.ok) {
-                success('Template imported successfully')
-                fetchTemplates()
-            } else {
-                error('Failed to import template')
-            }
-        } catch (err) {
-            console.error(err)
-            error('Error parsing JSON file')
-        } finally {
-            event.target.value = '' // Reset input
-        }
+onMounted(() => {
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    mediaQueryList = window.matchMedia('(max-width: 768px)')
+    isCompactLayout.value = mediaQueryList.matches
+    handleMediaChange = (event) => {
+      isCompactLayout.value = event.matches
     }
-    reader.readAsText(file)
-}
+    mediaQueryList.addEventListener('change', handleMediaChange)
+  }
+})
 
-const exportTemplate = (template) => {
-    const dataStr = JSON.stringify(template, null, 2)
-    const blob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_template.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-}
+onUnmounted(() => {
+  if (mediaQueryList && handleMediaChange) {
+    mediaQueryList.removeEventListener('change', handleMediaChange)
+  }
+})
 </script>
 
 <style scoped>
 .library-screen {
   container: library / inline-size;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: calc(100vh - 60px);
+  min-height: calc(100dvh - 60px);
   background-color: #121212;
   color: white;
   display: flex;
@@ -946,50 +730,30 @@ const exportTemplate = (template) => {
   scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
-.header {
-  padding: 16px 24px 20px;
-  background-color: #1E1E1E;
-  border-bottom: 1px solid #2C2C2C;
-}
-
-.header-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
 .back-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #007AFF;
-  font-size: 14px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border-strong, #3a3a3c);
+  background: var(--admin-surface, #252525);
+  color: var(--admin-primary, #007AFF);
+  font-size: 13px;
   font-weight: 600;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  padding: 6px 10px;
-  margin-left: -10px;
-  min-block-size: 36px;
-  min-inline-size: 36px;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-.language-switcher {
-  margin-inline-start: auto;
+.back-link:hover {
+  background: var(--admin-surface-hover, #303034);
 }
 
-.language-switcher select {
-  background-color: #252525;
-  color: white;
-  border: 1px solid #333333;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  outline: none;
-  min-block-size: 36px;
+.header {
+  padding: 20px clamp(16px, 3vw, 32px);
+  background-color: #1E1E1E;
+  border-bottom: 1px solid #2C2C2C;
 }
 
 .header-main {
@@ -1040,8 +804,8 @@ const exportTemplate = (template) => {
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  min-block-size: 36px;
-  min-inline-size: 36px;
+  min-block-size: 38px;
+  min-inline-size: 38px;
   text-align: center;
 }
 
@@ -1112,29 +876,48 @@ const exportTemplate = (template) => {
   border-inline-start: 3px solid var(--admin-primary, #007AFF);
 }
 
-.tab-icon { font-size: 20px; }
+.tab-icon {
+  flex-shrink: 0;
+}
 
 .main-content {
   flex: 1;
   min-inline-size: 0;
-  padding: 24px 24px 80px;
+  padding: 24px clamp(16px, 3vw, 32px) 80px;
   overflow-y: auto;
 }
 
 .loading-state,
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 48px 20px;
   color: #888;
   text-wrap: pretty;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
-.empty-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-icon {
+  margin-bottom: 8px;
+}
+
+.empty-text {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
 
 .empty-hint {
   font-size: 14px;
-  color: #666;
-  margin-top: 8px;
+  color: #888;
+  margin: 0 0 12px;
+  max-width: 440px;
+}
+
+.empty-cta-btn {
+  margin-top: 4px;
 }
 
 .templates-grid {
@@ -1369,125 +1152,10 @@ const exportTemplate = (template) => {
   justify-content: flex-end;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  z-index: 1000;
-  overscroll-behavior: contain;
-}
-
-.modal-container {
-  background-color: #1C1C1E;
-  width: 100%;
-  height: 95vh;
-  height: 95dvh;
-  max-width: 1000px;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-  overscroll-behavior: contain;
-}
-.modal-container:focus { outline: none; }
-
-.modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #333;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.template-name-input {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 24px;
-  font-weight: bold;
-  width: 100%;
-  min-inline-size: 0;
-  outline: none;
-}
-.template-name-input:focus-visible {
-  outline: 2px solid var(--admin-primary, #007AFF);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-.template-name-input::placeholder { color: #555; }
-
-.header-buttons {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.save-btn {
-  background-color: #30D158;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  min-block-size: 36px;
-}
-.save-btn:disabled { opacity: 0.5; }
-
-.close-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  border-radius: 8px;
-  min-block-size: 36px;
-  min-inline-size: 36px;
-}
-
-.modal-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0;
-}
-
-.template-desc-input {
-  background-color: #2C2C2E;
-  border: none;
-  color: white;
-  padding: 16px 20px;
-  font-size: 14px;
-  resize: none;
-  outline: none;
-  border-bottom: 1px solid #333;
-}
-
-.editor-component {
-  flex: 1;
-  min-height: 0;
-}
-
-@media (min-width: 800px) {
-  .modal-overlay { align-items: center; }
-  .modal-container { height: 90vh; height: 90dvh; border-radius: 20px; }
-}
-
-/* Mobile & vertical container adaptation */
+/* Mobile & vertical container adaptation: 2-row wrapped pill bar so all 5 tabs remain visible */
 @container library (inline-size <= 768px) {
   .header {
-    padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px));
+    padding: 14px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px));
   }
 
   .header-main {
@@ -1525,110 +1193,36 @@ const exportTemplate = (template) => {
   }
 
   .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 20;
     width: 100%;
     border-right: none;
     border-bottom: 1px solid #2C2C2C;
   }
 
-  .sidebar::before,
-  .sidebar::after {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    inline-size: 28px;
-    pointer-events: none;
-    z-index: 2;
-    opacity: 0;
-    transition: opacity 0.18s ease;
-    background: linear-gradient(
-      var(--edge-dir, to right),
-      var(--admin-surface, #1E1E1E) 0%,
-      color-mix(in srgb, var(--admin-surface, #1E1E1E) 75%, transparent) 45%,
-      transparent 100%
-    );
-    box-shadow: inset var(--edge-shadow-x, 8px) 0 10px -10px rgba(0, 0, 0, 0.35);
-  }
-
-  .sidebar::before {
-    --edge-dir: to right;
-    --edge-shadow-x: 8px;
-    inset-inline-start: 0;
-  }
-
-  .sidebar::after {
-    --edge-dir: to left;
-    --edge-shadow-x: -8px;
-    inset-inline-end: 0;
-  }
-
-  .sidebar.more-start::before,
-  .sidebar.more-end::after {
-    opacity: 1;
-  }
-
   .library-tabs {
     flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
-    gap: 4px;
-    scroll-snap-type: inline proximity;
-    scrollbar-width: none;
-    --fade-size: 2.25rem;
-    scroll-padding-inline: var(--fade-size);
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      black var(--fade-start, 0px),
-      black calc(100% - var(--fade-end, 0px)),
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      black var(--fade-start, 0px),
-      black calc(100% - var(--fade-end, 0px)),
-      transparent 100%
-    );
-    transition: --fade-start 0.18s ease, --fade-end 0.18s ease;
-  }
-
-  .library-tabs::after {
-    content: "";
-    flex: 0 0 max(16px, env(safe-area-inset-right, 0px));
-  }
-
-  .library-tabs.more-start {
-    --fade-start: var(--fade-size);
-  }
-
-  .library-tabs.more-end {
-    --fade-end: var(--fade-size);
-  }
-
-  .library-tabs::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));
   }
 
   .tab-btn {
-    flex: none;
+    flex: 1 1 auto;
+    justify-content: center;
     white-space: nowrap;
-    scroll-snap-align: start;
     min-block-size: 44px;
-    padding: 10px 14px;
-    font-size: 14px;
-    gap: 8px;
-    border-radius: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--admin-border, #333);
   }
 
   .tab-btn[aria-selected="true"]::after {
-    inset: auto 8px 0 8px;
-    border-inline-start: none;
-    border-block-end: 3px solid var(--admin-primary, #007AFF);
+    display: none;
+  }
+
+  .tab-btn[aria-selected="true"] {
+    border-color: var(--admin-primary, #007AFF);
   }
 
   .main-content {
@@ -1671,61 +1265,21 @@ const exportTemplate = (template) => {
   }
 }
 
-@media (max-width: 768px) {
-  .modal-container {
-    height: 100vh;
-    height: 100dvh;
-    border-radius: 0;
-  }
+:global(html[data-admin-appearance="true"] .library-screen .tab-btn) {
+  border-color: var(--admin-border) !important;
+}
 
-  .modal-header {
-    padding: max(12px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 8px;
-  }
-
-  .header-buttons {
-    order: 1;
-    width: 100%;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .template-name-input {
-    order: 2;
-    flex: 1 0 100%;
-    width: 100%;
-    font-size: clamp(16px, 4.5vw, 18px);
-    line-height: 1.3;
-    padding: 4px 0;
-  }
-
-  .template-desc-input {
-    padding: 12px max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
-    font-size: 16px;
-  }
-
-  .save-btn {
-    min-block-size: 44px;
-  }
-
-  .close-btn {
-    min-block-size: 44px;
-    min-inline-size: 44px;
-  }
+:global(html[data-admin-appearance="true"] .library-screen .tab-btn[aria-selected="true"]) {
+  border-color: var(--admin-primary) !important;
 }
 
 @media (pointer: coarse) {
   .back-link,
-  .language-switcher select,
   .create-btn,
   .import-btn,
   .tab-btn,
   .card-action-btn,
-  .icon-btn,
-  .save-btn,
-  .close-btn {
+  .icon-btn {
     min-block-size: 44px;
     min-inline-size: 44px;
   }
