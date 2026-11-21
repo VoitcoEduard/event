@@ -454,6 +454,7 @@ import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
 import { useI18n } from 'vue-i18n'
 import { preloader } from '../utils/imagePreload'
+import { copyTextToClipboard } from '../utils/clipboard'
 import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
 import AppIcon from '../components/AppIcon.vue'
 
@@ -871,10 +872,14 @@ const enableAudio = () => {
 const { success, error: showError } = useToast()
 const { t } = useI18n()
 
-const copyProjectorLink = () => {
+const copyProjectorLink = async () => {
     const url = `${window.location.origin}/projector/${eventId}`
-    navigator.clipboard.writeText(url)
-    success(t('quiz.host.toast.link_copied'))
+    const copied = await copyTextToClipboard(url)
+    if (copied) {
+        success(t('quiz.host.toast.link_copied'))
+    } else {
+        showError('Failed to copy projector link')
+    }
 }
 
 watch(gameState, () => {
