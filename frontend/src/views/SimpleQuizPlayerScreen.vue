@@ -306,12 +306,7 @@ const refreshResults = async (reqSeq, activePlayer) => {
     me.value = r.me || leaderboard.value.find(p => p.playerId === activePlayer.playerId) || null
     const mine = r.myAnswers || []
     void mine
-    // Revealed answers visible in state questions; fetch projector view for texts.
-    const pub = await simpleQuizApi.state(eventId, moduleId, { view: 'projector' })
-    if (stopped || reqSeq !== refreshSeq) return
-    revealedAnswers.value = (pub.questions || [])
-      .map((q, index) => ({ index, text: q.correctAnswer || '' }))
-      .filter(row => row.text)
+    revealedAnswers.value = r.revealedAnswers || []
   } catch (e) {
     if (!stopped && reqSeq === refreshSeq) error.value = e.message
   }

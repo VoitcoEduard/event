@@ -726,7 +726,7 @@ func (h *Handler) GetSimpleQuizState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if view == "" {
-		view = "projector"
+		view = "player"
 	}
 	writeJSON(w, publicSimpleQuizState(s, view, playerID))
 }
@@ -1017,6 +1017,18 @@ func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 		}
 		resp["myAnswers"] = mine
 	}
+	revealedAnswers := []map[string]any{}
+	if s.AllowReveal {
+		for i, q := range s.Questions {
+			if s.Revealed[i] && strings.TrimSpace(q.CorrectAnswerText) != "" {
+				revealedAnswers = append(revealedAnswers, map[string]any{
+					"index": i,
+					"text":  q.CorrectAnswerText,
+				})
+			}
+		}
+	}
+	resp["revealedAnswers"] = revealedAnswers
 	writeJSON(w, resp)
 }
 

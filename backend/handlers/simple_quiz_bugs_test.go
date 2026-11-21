@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -148,5 +150,114 @@ func TestSimpleQuizQueueCursorResilienceAndMetadata(t *testing.T) {
 	qs := resp["questions"].([]map[string]any)
 	if qs[0]["correctAnswerText"] != "Paris" || qs[0]["judgeNotes"] != "accept pariz" {
 		t.Fatalf("unexpected judge question metadata: %+v", qs[0])
+	}
+}
+
+func TestSimpleQuizPublicStateNeverLeaksUpcomingOrLobbyQuestions(t *testing.T) {
+	hiddenStates := []string{
+		models.SimpleQuizStateLobby,
+		models.SimpleQuizStateBetweenQuestions,
+		models.SimpleQuizStatePaused,
+		models.SimpleQuizStateWaitingGrading,
+		models.SimpleQuizStateAnsweringFinished,
+		models.SimpleQuizStateResultsPublished,
+		models.SimpleQuizStateCompleted,
+	}
+	for _, status := range hiddenStates {
+		for _, viewQuery := range []string{"", "projector", "player"} {
+			t.Run(status+"_"+viewQuery, func(t *testing.T) {
+				h, _ := seedHandlerSimpleQuiz(status)
+				url := "/events/e1/modules/m1/simple-quiz/state"
+				if viewQuery != "" {
+					url += "?view=" + viewQuery
+				}
+				req := httptest.NewRequest(http.MethodGet, url, nil)
+				req.SetPathValue("eventID", "e1")
+				req.SetPathValue("moduleID", "m1")
+				rec := httptest.NewRecorder()
+				h.GetSimpleQuizState(rec, req)
+				if rec.Code != http.StatusOK {
+					t.Fatalf("status = %d, want 200", rec.Code)
+				}
+				body := rec.Body.String()
+				if strings.Contains(body, `"Q1"`) || strings.Contains(body, `"Q2"`) || strings.Contains(body, "Accept Pariz") {
+					t.Fatalf("public state in %s (view=%q) leaked question content: %s", status, viewQuery, body)
+				}
+				var got map[string]any
+				if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+					t.Fatalf("decode json: %v", err)
+				}
+				if _, hasQuestions := got["questions"]; hasQuestions {
+					t.Fatalf("public state in %s (view=%q) should not include questions array: %s", status, viewQuery, body)
+				}
+				if got["question"] != nil {
+					t.Fatalf("public state in %s (view=%q) question = %#v, want nil", status, viewQuery, got["question"])
+				}
+			})
+		}
+	}
+
+	activeStates := []string{
+		models.SimpleQuizStateQuestionOpen,
+		models.SimpleQuizStateAnswersLocked,
+	}
+	for _, status := range activeStates {
+		for _, viewQuery := range []string{"", "projector", "player"} {
+			t.Run("active_"+status+"_"+viewQuery, func(t *testing.T) {
+				h, _ := seedHandlerSimpleQuiz(status)
+				url := "/events/e1/modules/m1/simple-quiz/state"
+				if viewQuery != "" {
+					url += "?view=" + viewQuery
+				}
+				req := httptest.NewRequest(http.MethodGet, url, nil)
+				req.SetPathValue("eventID", "e1")
+				req.SetPathValue("moduleID", "m1")
+				rec := httptest.NewRecorder()
+				h.GetSimpleQuizState(rec, req)
+				if rec.Code != http.StatusOK {
+					t.Fatalf("status = %d, want 200", rec.Code)
+				}
+				body := rec.Body.String()
+				if strings.Contains(body, `"Q2"`) || strings.Contains(body, "Accept Pariz") {
+					t.Fatalf("public state in %s (view=%q) leaked future question or notes: %s", status, viewQuery, body)
+				}
+				var got map[string]any
+				if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+					t.Fatalf("decode json: %v", err)
+				}
+				if _, hasQuestions := got["questions"]; hasQuestions {
+					t.Fatalf("public state in %s (view=%q) should not include questions array", status, viewQuery)
+				}
+				q, ok := got["question"].(map[string]any)
+				if !ok || q["text"] != "Q1" {
+					t.Fatalf("public state in %s (view=%q) question = %#v, want Q1", status, viewQuery, got["question"])
+				}
+			})
+		}
+	}
+}
+
+func TestSimpleQuizResultsIncludesOnlyRevealedAnswers(t *testing.T) {
+	h, _ := seedHandlerSimpleQuiz(models.SimpleQuizStateResultsPublished)
+	req := httptest.NewRequest(http.MethodGet, "/events/e1/modules/m1/simple-quiz/results?view=player&playerId=p1", nil)
+	req.Header.Set("X-Player-Secret", "s1")
+	req.SetPathValue("eventID", "e1")
+	req.SetPathValue("moduleID", "m1")
+	rec := httptest.NewRecorder()
+	h.GetSimpleQuizResults(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	var got struct {
+		RevealedAnswers []struct {
+			Index int    `json:"index"`
+			Text  string `json:"text"`
+		} `json:"revealedAnswers"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode json: %v", err)
+	}
+	if len(got.RevealedAnswers) != 1 || got.RevealedAnswers[0].Index != 0 || got.RevealedAnswers[0].Text != "Paris" {
+		t.Fatalf("revealedAnswers = %+v, want [{Index:0 Text:Paris}]", got.RevealedAnswers)
 	}
 }

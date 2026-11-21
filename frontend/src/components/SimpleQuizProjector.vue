@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <div v-else-if="status === 'question_open' || status === 'answers_locked' || status === 'between_questions'" class="state-container question-container">
+    <div v-else-if="status === 'question_open' || status === 'answers_locked'" class="state-container question-container">
       <div class="question-header">
         <div class="timer" v-if="status === 'question_open' && deadlineLeft !== null" :class="{ 'timer-low': deadlineLeft <= 10 }">{{ deadlineLeft }}s</div>
         <div class="question-counter">{{ currentIndex + 1 }} / {{ total }}</div>
@@ -37,6 +37,13 @@
             <div class="counter-label">{{ $t('simple_quiz.host.answered') }}</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div v-else-if="status === 'between_questions'" class="state-container get-ready-container">
+      <div class="loading-content">
+        <h1>{{ $t('simple_quiz.player.waiting_next') }}</h1>
+        <div class="loader"></div>
       </div>
     </div>
 
@@ -124,8 +131,7 @@ const refresh = async () => {
     answeredCount.value = s.answeredCount || 0
     deadlineUnix.value = s.deadlineUnix || 0
     tickDeadline()
-    const qs = s.questions || []
-    question.value = qs[currentIndex.value] || null
+    question.value = s.question || null
     revealedAnswer.value = question.value?.correctAnswer || ''
     if (s.status === 'results_published' || s.status === 'completed') {
       const r = await simpleQuizApi.results(props.eventId, activeModuleId, { view: 'projector' })

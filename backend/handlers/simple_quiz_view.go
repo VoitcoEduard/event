@@ -8,11 +8,33 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
+// simpleQuizCurrentPublicQuestion returns only the active question when it is
+// open or locked for answering. It never exposes upcoming questions or any
+// question while in lobby, between_questions, paused, or post-answering states.
+func simpleQuizCurrentPublicQuestion(s *models.SimpleQuizSession) map[string]any {
+	if s.Status != models.SimpleQuizStateQuestionOpen && s.Status != models.SimpleQuizStateAnswersLocked {
+		return nil
+	}
+	if s.CurrentIndex < 0 || s.CurrentIndex >= len(s.Questions) {
+		return nil
+	}
+	q := s.Questions[s.CurrentIndex]
+	cq := map[string]any{
+		"text": q.Text, "imageId": q.ImageID, "imageAlt": q.ImageAlt,
+		"points": q.Points, "timeLimit": q.TimeLimit,
+		"revealed": s.Revealed[s.CurrentIndex],
+	}
+	if s.AllowReveal && s.Revealed[s.CurrentIndex] && strings.TrimSpace(q.CorrectAnswerText) != "" {
+		cq["correctAnswer"] = q.CorrectAnswerText
+	}
+	return cq
+}
+
 // publicSimpleQuizState filters the session per role.
-// host: full except player secrets/answer texts? Host sees counts + progress + questions without notes.
-// player: current question (no notes; correct answer only if revealed+allowed), own submitted flag, published leaderboard.
+// host: full except player secrets/answer texts; host sees counts + progress + all questions without notes.
+// player: active question only when open/locked (no notes; correct answer only if revealed+allowed), own submitted flag, published leaderboard.
 // judge: never called here (queue endpoint is separate); state gives progress only.
-// projector: lobby/question/counts/revealed/published leaderboard.
+// projector: active question only when open/locked + counts/revealed/published leaderboard (never future questions).
 func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) map[string]any {
 	if s == nil {
 		return map[string]any{"status": "inactive"}
@@ -81,21 +103,12 @@ func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) m
 		base["working"] = s.ComputeWorkingResults()
 		return base
 	case "player":
-		// Current question without notes/correct answer unless revealed.
-		var cur any
-		if s.CurrentIndex >= 0 && s.CurrentIndex < len(s.Questions) {
-			q := s.Questions[s.CurrentIndex]
-			cq := map[string]any{
-				"text": q.Text, "imageId": q.ImageID, "imageAlt": q.ImageAlt,
-				"points": q.Points, "timeLimit": q.TimeLimit,
-				"revealed": s.Revealed[s.CurrentIndex],
-			}
-			if s.AllowReveal && s.Revealed[s.CurrentIndex] && strings.TrimSpace(q.CorrectAnswerText) != "" {
-				cq["correctAnswer"] = q.CorrectAnswerText
-			}
-			cur = cq
+		// Active question only when open/locked (no notes; correct answer only if revealed).
+		if cur := simpleQuizCurrentPublicQuestion(s); cur != nil {
+			base["question"] = cur
+		} else {
+			base["question"] = nil
 		}
-		base["question"] = cur
 		if playerID != "" {
 			submitted := false
 			for _, a := range s.Answers {
@@ -110,18 +123,11 @@ func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) m
 		// include leaderboard here for convenience once published.
 		return base
 	default: // projector, judge-state, anonymous
-		qs := make([]map[string]any, 0, len(s.Questions))
-		for i, q := range s.Questions {
-			item := map[string]any{
-				"text": q.Text, "imageId": q.ImageID, "imageAlt": q.ImageAlt,
-				"points": q.Points, "timeLimit": q.TimeLimit, "revealed": s.Revealed[i],
-			}
-			if s.AllowReveal && s.Revealed[i] && strings.TrimSpace(q.CorrectAnswerText) != "" {
-				item["correctAnswer"] = q.CorrectAnswerText
-			}
-			qs = append(qs, item)
+		if cur := simpleQuizCurrentPublicQuestion(s); cur != nil {
+			base["question"] = cur
+		} else {
+			base["question"] = nil
 		}
-		base["questions"] = qs
 		return base
 	}
 }
