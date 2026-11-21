@@ -149,7 +149,9 @@ const route = useRoute()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
 
-const changeLanguage = () => localStorage.setItem('userLanguage', locale.value)
+const changeLanguage = () => {
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
+}
 
 const nickname = ref('')
 const joining = ref(false)

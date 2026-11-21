@@ -354,7 +354,7 @@ const answerStatus = ref('')
 const submittedGuesses = ref([])
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
 }
 
 // State machine

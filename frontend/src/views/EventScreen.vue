@@ -215,7 +215,7 @@ const fetchEvent = async () => {
         // Filter out completed modules that should be hidden
         activeModules.value = active.filter(m => {
           if (m.data?.hideAfterCompletion) {
-            return localStorage.getItem(`completed_module_${m.id}`) !== 'true'
+            try { return localStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
           }
           return true
         })
@@ -231,7 +231,10 @@ const fetchEvent = async () => {
 
         // Auto-redirect to mandatory uncompleted module if not already in a module and no route module
         if (!selectedModule.value && !routeModuleId) {
-            const mandatoryModule = active.find(m => m.data?.mandatoryOnEntry && localStorage.getItem(`completed_module_${m.id}`) !== 'true')
+            const mandatoryModule = active.find(m => {
+              if (!m.data?.mandatoryOnEntry) return false
+              try { return localStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
+            })
             if (mandatoryModule) {
                selectModule(mandatoryModule)
             }

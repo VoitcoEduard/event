@@ -136,7 +136,7 @@ const isLoading = ref(false)
 const { success, error, info } = useToast()
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
   if (!editingId.value) {
     eventLanguage.value = locale.value
   }
@@ -229,7 +229,7 @@ const cancelEdit = () => {
 }
 
 const viewDetails = (event) => {
-  sessionStorage.setItem('currentEvent', JSON.stringify(event))
+  try { sessionStorage.setItem('currentEvent', JSON.stringify(event)) } catch { /* storage unavailable */ }
   router.push(`/admin/event/${event.id}`)
 }
 

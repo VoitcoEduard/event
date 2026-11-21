@@ -37,7 +37,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { teamsService } from '../services/teams'
 import { quizWS } from '../services/websocket'
-import { getUserId, getAuthHeaders } from '../utils'
+import { getUserId, getUserName, getAuthHeaders } from '../utils'
 
 const router = useRouter()
 const route = useRoute()
@@ -92,7 +92,7 @@ onMounted(() => {
   quizWS.send('participant:join', {
     eventId: eventId.value,
     userId: getUserId(),
-    displayName: localStorage.getItem('userName') || 'User',
+    displayName: getUserName() || 'User',
   })
 
   quizWS.on('teams:available', (data) => {

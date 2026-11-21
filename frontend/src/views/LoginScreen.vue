@@ -53,6 +53,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { API_BASE_URL } from '../utils/index.js'
+import { safeLocalRemove, safeLocalSet } from '../utils/storage.js'
 import { loadAuthMode, loadSession } from '../session.js'
 import AppIcon from '../components/AppIcon.vue'
 
@@ -65,14 +66,14 @@ const showPassword = ref(false)
 const mode = ref(null)
 
 onMounted(async () => {
-	localStorage.removeItem('adminToken')
+	safeLocalRemove('adminToken')
 	if (new URLSearchParams(window.location.search).get('error') === 'disabled') error.value = t('auth.disabled')
 	if (new URLSearchParams(window.location.search).get('error') === 'cancelled') error.value = t('auth.cancelled')
 	try { mode.value = await loadAuthMode() } catch { error.value = t('login.errors.failed') }
 })
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  safeLocalSet('userLanguage', locale.value)
 }
 
 async function handleLogin() {

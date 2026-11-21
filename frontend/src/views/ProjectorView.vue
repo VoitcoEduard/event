@@ -550,7 +550,7 @@ let pollingInterval = null
 let stopped = false
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
 }
 
 const joinUrl = computed(() => `${window.location.origin}/?pin=${currentEvent.value?.pin || eventId}`)
