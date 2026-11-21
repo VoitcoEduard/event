@@ -90,13 +90,45 @@ func GetImageDimensions(data []byte) (int, int, error) {
 	return config.Width, config.Height, nil
 }
 
-// ConvertToWebP converts image data to WebP format using available system tools (cwebp, sips, ffmpeg).
-// If maxWidth > 0, the image is proportionally resized to fit within maxWidth.
-func ConvertToWebP(data []byte, maxWidth ...int) ([]byte, error) {
-	targetMaxWidth := 0
-	if len(maxWidth) > 0 && maxWidth[0] > 0 {
-		targetMaxWidth = maxWidth[0]
+func buildWebPArgs(tool string, srcW, srcH, maxDim int, inPath, outPath string) []string {
+	shouldResize := maxDim > 0 && (srcW <= 0 || srcH <= 0 || srcW > maxDim || srcH > maxDim)
+	switch tool {
+	case "cwebp":
+		args := []string{"-q", "80"}
+		if shouldResize {
+			if srcH > srcW && srcW > 0 {
+				args = append(args, "-resize", "0", strconv.Itoa(maxDim))
+			} else {
+				args = append(args, "-resize", strconv.Itoa(maxDim), "0")
+			}
+		}
+		return append(args, inPath, "-o", outPath)
+	case "sips":
+		args := []string{"-s", "format", "webp"}
+		if shouldResize {
+			args = append(args, "-Z", strconv.Itoa(maxDim))
+		}
+		return append(args, inPath, "--out", outPath)
+	case "ffmpeg":
+		args := []string{"-y", "-i", inPath}
+		if shouldResize {
+			args = append(args, "-vf", fmt.Sprintf("scale='min(%d,iw)':'min(%d,ih)':force_original_aspect_ratio=decrease", maxDim, maxDim))
+		}
+		return append(args, "-c:v", "libwebp", "-lossless", "0", "-qscale", "80", outPath)
+	default:
+		return nil
 	}
+}
+
+// ConvertToWebP converts image data to WebP format using available system tools (cwebp, sips, ffmpeg).
+// If maxWidth > 0, the image is proportionally resized to fit within a maxWidth x maxWidth box without upscaling.
+func ConvertToWebP(data []byte, maxWidth ...int) ([]byte, error) {
+	targetMaxDim := 0
+	if len(maxWidth) > 0 && maxWidth[0] > 0 {
+		targetMaxDim = maxWidth[0]
+	}
+
+	srcW, srcH, _ := GetImageDimensions(data)
 
 	// Create temporary input file
 	tmpIn, err := os.CreateTemp("", "img-*.in")
@@ -115,28 +147,14 @@ func ConvertToWebP(data []byte, maxWidth ...int) ([]byte, error) {
 
 	// Try standard tools based on OS / installed binaries
 	var cmd *exec.Cmd
-	if _, err := exec.LookPath("cwebp"); err == nil {
-		args := []string{"-q", "80"}
-		if targetMaxWidth > 0 {
-			args = append(args, "-resize", strconv.Itoa(targetMaxWidth), "0")
+	for _, tool := range []string{"cwebp", "sips", "ffmpeg"} {
+		if _, err := exec.LookPath(tool); err == nil {
+			args := buildWebPArgs(tool, srcW, srcH, targetMaxDim, tmpIn.Name(), tmpOut)
+			cmd = exec.Command(tool, args...)
+			break
 		}
-		args = append(args, tmpIn.Name(), "-o", tmpOut)
-		cmd = exec.Command("cwebp", args...)
-	} else if _, err := exec.LookPath("sips"); err == nil {
-		args := []string{"-s", "format", "webp"}
-		if targetMaxWidth > 0 {
-			args = append(args, "-Z", strconv.Itoa(targetMaxWidth))
-		}
-		args = append(args, tmpIn.Name(), "--out", tmpOut)
-		cmd = exec.Command("sips", args...)
-	} else if _, err := exec.LookPath("ffmpeg"); err == nil {
-		args := []string{"-y", "-i", tmpIn.Name()}
-		if targetMaxWidth > 0 {
-			args = append(args, "-vf", fmt.Sprintf("scale='min(%d,iw)':-1", targetMaxWidth))
-		}
-		args = append(args, "-c:v", "libwebp", "-lossless", "0", "-qscale", "80", tmpOut)
-		cmd = exec.Command("ffmpeg", args...)
-	} else {
+	}
+	if cmd == nil {
 		return nil, errors.New("no standard tools available for webp conversion (cwebp, sips, ffmpeg)")
 	}
 

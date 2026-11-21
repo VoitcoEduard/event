@@ -14,7 +14,6 @@ func (h *Handler) GetSlides(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
 	}
-	invalidateEventCache(eventID)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(slides)
 }

@@ -364,32 +364,33 @@
         <div v-else class="question-main-content">
           <!-- Image Column with Overlay -->
           <div class="question-column">
-            <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+            <div class="question-card has-distribution" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
                 <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" decoding="async" loading="eager" />
                 <div class="image-overlay-gradient"></div>
-                
-                <!-- DISTRIBUTION OVERLAY -->
-                <div class="distribution-overlay-container">
-                    <div class="dist-chart">
-                        <div 
-                            v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
-                            :key="idx"
-                            class="dist-bar-col"
-                        >
-                            <div class="dist-bar-track">
-                                <div 
-                                    class="dist-bar-fill"
-                                    :class="getAnswerColorClass(idx)"
-                                    :style="{ height: getBarHeight(idx) + '%' }"
-                                ></div>
-                            </div>
-                            <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
-                            <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" />
-                        </div>
-                    </div>
-                </div>
               </div>
+
+              <!-- DISTRIBUTION OVERLAY -->
+              <div class="distribution-overlay-container">
+                  <div class="dist-chart">
+                      <div 
+                          v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
+                          :key="idx"
+                          class="dist-bar-col"
+                      >
+                          <div class="dist-bar-track">
+                              <div 
+                                  class="dist-bar-fill"
+                                  :class="getAnswerColorClass(idx)"
+                                  :style="{ height: getBarHeight(idx) + '%' }"
+                              ></div>
+                          </div>
+                          <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
+                          <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" />
+                      </div>
+                  </div>
+              </div>
+
               <div class="question-text-overlay">
                 <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
               </div>
@@ -549,7 +550,7 @@ let pollingInterval = null
 let stopped = false
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
 }
 
 const joinUrl = computed(() => `${window.location.origin}/?pin=${currentEvent.value?.pin || eventId}`)
@@ -580,13 +581,12 @@ const timeRemaining = ref(20)
 const explainTimeRemaining = ref(0)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 })
 const playerSignals = ref([])
+const realTimeAnsweredCount = ref(0)
 
-const totalAnswered = computed(() => {
-  if (isRange.value) return playerSignals.value.length
-  return Object.values(answerCounts.value).reduce((a, b) => a + b, 0)
-})
+const totalAnswered = computed(() => realTimeAnsweredCount.value)
 
-const totalQuestions = computed(() => questions.value.length)
+const totalQuestions = computed(() => Math.max(serverTotalQuestions.value, questions.value.length))
+const serverTotalQuestions = ref(0)
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
@@ -618,19 +618,24 @@ const wpResultTargetIndex = ref(0)
 const wpResultMode = ref('targets')
 const activeWrongPictureTarget = computed(() => wrongPictureTargets.value[wpResultTargetIndex.value])
 let wrongPicturesResultTimers = []
+let wrongPicturesSequenceStarted = false
 
 const clearWrongPicturesResultTimers = () => {
   wrongPicturesResultTimers.forEach(clearTimeout)
   wrongPicturesResultTimers = []
+  wrongPicturesSequenceStarted = false
 }
 
 const startWrongPicturesResultSequence = () => {
+  clearTimeout(revealTimer)
+  revealTimer = null
   clearWrongPicturesResultTimers()
   revealCorrect.value = false
   wpResultTargetIndex.value = 0
   wpResultMode.value = 'targets'
 
   if (!wrongPictureTargets.value.length) return
+  wrongPicturesSequenceStarted = true
 
   const focusDuration = 2800
   wrongPicturesResultTimers.push(setTimeout(() => {
@@ -839,8 +844,8 @@ const getHistogramBarHeight = (count) => {
 const correctMarkerPercentage = computed(() => {
   if (!isRange.value) return 0
   const q = currentQuestion.value
-  const min = q?.rangeConfig?.minValue || 0
-  const max = q?.rangeConfig?.maxValue || 100
+  const min = q?.rangeConfig?.minValue ?? 0
+  const max = q?.rangeConfig?.maxValue ?? 100
   const range = max - min
   if (range === 0) return 0
   return ((q.correctValue - min) / range) * 100
@@ -967,11 +972,13 @@ const resetModuleState = () => {
   gameState.value = 'lobby'
   players.value = []
   questions.value = []
+  serverTotalQuestions.value = 0
   currentQuestionIndex.value = 0
   timeRemaining.value = 20
   explainTimeRemaining.value = 0
   answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
   playerSignals.value = []
+  realTimeAnsweredCount.value = 0
   displayedScores.value = {}
   revealCorrect.value = false
   backgroundMusicUrl.value = ''
@@ -1017,11 +1024,22 @@ const connectToModule = (module) => {
 
   quizWS.on('cmd:state', (payload) => {
     const prevState = gameState.value
+    const prevIndex = currentQuestionIndex.value
     gameState.value = payload.state
     displayMode.value = 'module'
 
     if (payload.currentIndex !== undefined) {
       currentQuestionIndex.value = payload.currentIndex
+    }
+    if (typeof payload.totalQuestions === 'number' && payload.totalQuestions > 0) {
+      serverTotalQuestions.value = payload.totalQuestions
+    }
+    const questionChanged = payload.currentIndex !== undefined && payload.currentIndex !== prevIndex
+
+    if (payload.state === 'question-presenting' || payload.state === 'lobby' || questionChanged) {
+      realTimeAnsweredCount.value = 0
+      answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
+      playerSignals.value = []
     }
 
     if (payload.state === 'get-ready' || payload.state === 'question-active' || payload.state === 'question-presenting') {
@@ -1053,6 +1071,8 @@ const connectToModule = (module) => {
   })
 
   quizWS.on('sync:minimal', (payload) => {
+    if (payload.questionIndex !== undefined && payload.questionIndex !== currentQuestionIndex.value) return
+
     if (payload.answerCounts) {
       answerCounts.value = {
         0: payload.answerCounts["0"] || 0,
@@ -1060,6 +1080,9 @@ const connectToModule = (module) => {
         2: payload.answerCounts["2"] || 0,
         3: payload.answerCounts["3"] || 0,
       }
+    }
+    if (payload.answeredCount !== undefined) {
+      realTimeAnsweredCount.value = payload.answeredCount
     }
   })
 
@@ -1081,24 +1104,70 @@ const connectToModule = (module) => {
       const signals = session.PlayerSignals || session.playerSignals
       playerSignals.value = signals.filter(s => s.questionIndex === currentQuestionIndex.value)
     }
+
+    if (session.AnswerCounts || session.answerCounts) {
+      const counts = session.AnswerCounts || session.answerCounts
+      answerCounts.value = {
+        0: counts["0"] || 0,
+        1: counts["1"] || 0,
+        2: counts["2"] || 0,
+        3: counts["3"] || 0,
+      }
+    }
+    if (typeof session.totalQuestions === 'number' && session.totalQuestions > 0) {
+      serverTotalQuestions.value = session.totalQuestions
+    }
+    if (session.answeredCount !== undefined) {
+      realTimeAnsweredCount.value = session.answeredCount
+    }
   })
 
   quizWS.on('data:batch', (batch) => {
+    if (typeof batch.totalQuestions === 'number' && batch.totalQuestions > 0) {
+      serverTotalQuestions.value = batch.totalQuestions
+    }
     if (batch.questions) {
       const updated = [...questions.value]
       batch.questions.forEach((question, index) => {
-        updated[batch.startIndex + index] = question
+        const existing = updated[batch.startIndex + index]
+        if (existing) {
+          updated[batch.startIndex + index] = {
+            ...existing,
+            ...question,
+            wrongPictureConfig: existing.wrongPictureConfig?.targets
+              ? { ...question.wrongPictureConfig, ...existing.wrongPictureConfig }
+              : question.wrongPictureConfig,
+          }
+        } else {
+          updated[batch.startIndex + index] = question
+        }
       })
       questions.value = updated
+      if (
+        gameState.value === 'results' &&
+        isWrongPictures.value &&
+        wrongPictureTargets.value.length > 0 &&
+        !wrongPicturesSequenceStarted
+      ) {
+        startWrongPicturesResultSequence()
+      }
     }
   })
 
   quizWS.on('data:reveal', (payload) => {
-    const question = questions.value[payload.questionIndex]
-    if (!question) return
+    const existing = questions.value[payload.questionIndex]
     const updated = [...questions.value]
-    updated[payload.questionIndex] = { ...question, ...payload }
+    updated[payload.questionIndex] = existing ? { ...existing, ...payload } : { ...payload }
     questions.value = updated
+    if (
+      gameState.value === 'results' &&
+      payload.questionIndex === currentQuestionIndex.value &&
+      isWrongPictures.value &&
+      wrongPictureTargets.value.length > 0 &&
+      !wrongPicturesSequenceStarted
+    ) {
+      startWrongPicturesResultSequence()
+    }
   })
 
   quizWS.on('disconnect', () => {
@@ -1151,7 +1220,7 @@ const fetchEventState = async () => {
       return
     }
 
-    if (activeModuleId.value !== nextModule.id || (nextModule.type !== 'teams' && !quizWS.isConnected)) {
+    if (activeModuleId.value !== nextModule.id) {
       connectToModule(nextModule)
       return
     }

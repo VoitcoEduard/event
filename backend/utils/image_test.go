@@ -6,6 +6,8 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"slices"
+	"strings"
 	"testing"
 )
 
@@ -305,5 +307,45 @@ func TestConvertToWebP_Resizing(t *testing.T) {
 	}
 	if h > 600 {
 		t.Errorf("expected height <= 600, got %d", h)
+	}
+}
+
+func TestBuildWebPArgsPortraitAndNoUpscale(t *testing.T) {
+	// Portrait 800x2400 with max 1920 scales height to 1920 for cwebp, never width to 1920
+	cwebpPortrait := buildWebPArgs("cwebp", 800, 2400, 1920, "in.png", "out.webp")
+	if !slices.Contains(cwebpPortrait, "-resize") || !strings.Contains(strings.Join(cwebpPortrait, " "), "-resize 0 1920") {
+		t.Fatalf("cwebp portrait args = %v, want -resize 0 1920", cwebpPortrait)
+	}
+	// Smaller 400x600 with max 1920 does not pass resize flags to any tool
+	for _, tool := range []string{"cwebp", "sips", "ffmpeg"} {
+		args := buildWebPArgs(tool, 400, 600, 1920, "in.png", "out.webp")
+		joined := strings.Join(args, " ")
+		if strings.Contains(joined, "-resize") || strings.Contains(joined, "-Z") || strings.Contains(joined, "-vf") {
+			t.Fatalf("%s unexpectedly resized small image: %v", tool, args)
+		}
+	}
+	// ffmpeg scales within maxDim x maxDim box without upscaling
+	ffmpegPortrait := buildWebPArgs("ffmpeg", 800, 2400, 1920, "in.png", "out.webp")
+	if !strings.Contains(strings.Join(ffmpegPortrait, " "), "force_original_aspect_ratio=decrease") {
+		t.Fatalf("ffmpeg portrait args = %v, want force_original_aspect_ratio=decrease", ffmpegPortrait)
+	}
+}
+
+func TestConvertToWebP_TallPortraitShrinksProportionally(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 800, 2400))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("failed to encode portrait png: %v", err)
+	}
+	webpData, err := ConvertToWebP(buf.Bytes(), MaxImageDimension)
+	if err != nil {
+		t.Skipf("skipping ConvertToWebP portrait test: %v", err)
+	}
+	w, h, err := GetImageDimensions(webpData)
+	if err != nil {
+		t.Fatalf("GetImageDimensions failed: %v", err)
+	}
+	if w != 640 || h != 1920 {
+		t.Fatalf("tall portrait dimensions = %dx%d, want 640x1920", w, h)
 	}
 }

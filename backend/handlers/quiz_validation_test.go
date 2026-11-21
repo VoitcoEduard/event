@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -105,5 +106,99 @@ func TestSimpleQuizQueueOptionsRejectsMalformedAndOutOfRangeNumbers(t *testing.T
 				t.Fatalf("options = %d/%d, want %d/%d", index, limit, tc.index, tc.limit)
 			}
 		})
+	}
+}
+
+func TestRESTStartAndNextAlignWithHub(t *testing.T) {
+	qh := hub.NewQuizHub(hub.Dependencies{})
+	t.Cleanup(qh.Shutdown)
+	qh.CreateSession("m1", "e1")
+	qh.UpdateSession("m1", func(s *models.QuizSession) {
+		s.Players["p1"] = &models.Player{ID: "p1", Nickname: "Alice", Score: 500}
+		s.Players["p2"] = &models.Player{ID: "p2", Nickname: "Bob", Score: 300}
+		s.Streaks = map[string]int{"p1": 2, "p2": 3}
+	})
+
+	h := New(Dependencies{QuizHub: qh})
+	h.getEvent = func(_ context.Context, id string) (*models.Event, error) {
+		if id != "e1" {
+			return nil, nil
+		}
+		return &models.Event{
+			ID: "e1",
+			Modules: []models.Module{{
+				ID:   "m1",
+				Type: models.ModuleTypeQuiz,
+				Data: map[string]any{
+					"questions": []map[string]any{
+						{"id": "q1", "type": "classic", "text": "Q1", "answers": []string{"A", "B"}, "correctIndex": 0, "explainTime": 60},
+						{"id": "q2", "type": "classic", "text": "Q2", "answers": []string{"C", "D"}, "correctIndex": 1, "explainTime": 60},
+					},
+				},
+			}},
+		}, nil
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /events/{eventID}/modules/{moduleID}/quiz/start", h.StartQuiz)
+	mux.HandleFunc("POST /events/{eventID}/modules/{moduleID}/quiz/next", h.NextQuestion)
+
+	// StartQuiz keeps lobby players, resets scores/streaks, enters question-presenting
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/e1/modules/m1/quiz/start", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("StartQuiz status = %d: %s", w.Code, w.Body.String())
+	}
+	sess := qh.GetSession("m1")
+	if sess.State != "question-presenting" || sess.CurrentIndex != 0 || len(sess.Players) != 2 || sess.Players["p1"].Score != 0 {
+		t.Fatalf("unexpected started session: %+v", sess)
+	}
+
+	// Simulate p1 answered Q0, p2 did not
+	qh.UpdateSession("m1", func(s *models.QuizSession) {
+		s.Streaks["p1"] = 1
+		s.Streaks["p2"] = 3
+		s.AnsweredPlayerIDs = map[string]struct{}{"p1": {}}
+	})
+
+	// Cross-event NextQuestion is rejected
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/other/modules/m1/quiz/next", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("cross-event NextQuestion status = %d, want 404", w.Code)
+	}
+
+	// Valid NextQuestion advances to Q1, resets unanswered player streak, clears AnsweredPlayerIDs
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/e1/modules/m1/quiz/next", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("NextQuestion status = %d: %s", w.Code, w.Body.String())
+	}
+	sess = qh.GetSession("m1")
+	if sess.State != "question-presenting" || sess.CurrentIndex != 1 || len(sess.AnsweredPlayerIDs) != 0 {
+		t.Fatalf("unexpected next session: %+v", sess)
+	}
+	if sess.Streaks["p1"] != 1 || sess.Streaks["p2"] != 0 {
+		t.Fatalf("unexpected streaks after NextQuestion: %+v", sess.Streaks)
+	}
+
+	// NextQuestion past end returns 400 without incrementing CurrentIndex
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/e1/modules/m1/quiz/next", nil))
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("past-end NextQuestion status = %d, want 400", w.Code)
+	}
+	if qh.GetSession("m1").CurrentIndex != 1 {
+		t.Fatalf("CurrentIndex mutated past end")
+	}
+
+	// NextQuestion on finished session returns 409
+	qh.UpdateSession("m1", func(s *models.QuizSession) {
+		s.State = "finished"
+	})
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/e1/modules/m1/quiz/next", nil))
+	if w.Code != http.StatusConflict {
+		t.Fatalf("finished NextQuestion status = %d, want 409", w.Code)
 	}
 }

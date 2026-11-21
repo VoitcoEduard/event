@@ -72,12 +72,38 @@ func TestHostEndTeamsSavesAndBroadcastsWithoutDeadlock(t *testing.T) {
 		assertHubUnlocked(t, h)
 		return &models.TeamResult{EventID: eventID, ModuleID: moduleID}, nil
 	}
-	admin := &Client{EventID: "event-1", IsTeamsAdmin: true, send: make(chan []byte, 1)}
+	admin := &Client{EventID: "event-1", IsTeamsAdmin: true, send: make(chan []byte, 2)}
 	h.Register(admin)
 	h.processHostEndTeams(&Client{IsHost: true}, ClientMessage{Payload: map[string]any{
 		"eventId": "event-1", "moduleId": "module-1", "moduleName": "Teams",
 	}})
 	assertMessageType(t, admin.send, "teams:ended")
+
+	// Teams admin for the matching event can also end teams.
+	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
+		"eventId": "event-1", "moduleId": "module-1", "moduleName": "Teams",
+	}})
+	assertMessageType(t, admin.send, "teams:ended")
+
+	// Teams admin for another event is rejected.
+	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
+		"eventId": "event-other", "moduleId": "module-1", "moduleName": "Teams",
+	}})
+	if len(admin.send) != 0 {
+		t.Fatalf("cross-event teams admin end should be ignored")
+	}
+
+	// Save error sends cmd:error to requester and does NOT broadcast teams:ended.
+	h.saveTeams = func(_, _, _ string) (*models.TeamResult, error) {
+		return nil, errors.New("db write failed")
+	}
+	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
+		"eventId": "event-1", "moduleId": "module-1", "moduleName": "Teams",
+	}})
+	assertMessageType(t, admin.send, "cmd:error")
+	if len(admin.send) != 0 {
+		t.Fatalf("unexpected extra message after save error")
+	}
 }
 
 func TestParticipantJoinLoadsTeamsAndBroadcastsWithoutDeadlock(t *testing.T) {
@@ -89,6 +115,7 @@ func TestParticipantJoinLoadsTeamsAndBroadcastsWithoutDeadlock(t *testing.T) {
 	admin := &Client{EventID: "event-1", IsTeamsAdmin: true, send: make(chan []byte, 1)}
 	h.Register(admin)
 	participant := &Client{send: make(chan []byte, 1)}
+	h.Register(participant)
 	h.ProcessMessage(participant, []byte(`{"type":"participant:join","payload":{"eventId":"event-1","userId":"user-1","displayName":"Alex"}}`))
 	assertMessageType(t, participant.send, "teams:available")
 	assertMessageType(t, admin.send, "participant:joined")
@@ -246,4 +273,48 @@ func TestBroadcastMarshalsOutsideHubLock(t *testing.T) {
 	h.Register(client)
 	h.BroadcastToSession("m", lockCheckingMessage{hub: h})
 	assertMessageType(t, client.send, "ping")
+}
+
+func TestSendToUnregisteredAndStalledPlayerJoinDoesNotPanic(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.CreateSession("m", "e")
+	h.UpdateSession("m", func(s *models.QuizSession) {
+		s.State = "results"
+		s.CurrentIndex = 0
+		s.Questions = []models.QuizQuestion{{ID: "q0", Text: "Q0", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 0}}
+		s.Batches = CalculateBatches(s.Questions)
+	})
+
+	// Unregistered client whose send channel was already closed must not panic.
+	disconnected := &Client{send: make(chan []byte, 1)}
+	h.Register(disconnected)
+	h.Unregister(disconnected)
+
+	h.mu.Lock()
+	if h.sendToClientLocked(disconnected, []byte(`{"type":"ping"}`)) {
+		h.mu.Unlock()
+		t.Fatal("sendToClientLocked succeeded for unregistered client")
+	}
+	h.processPlayerJoin(disconnected, ClientMessage{
+		Type:    "player:join",
+		Payload: map[string]interface{}{"moduleId": "m", "userId": "p-gone", "nickname": "Gone"},
+	})
+	h.mu.Unlock()
+
+	// Stalled client with full send buffer must be evicted cleanly without panicking on subsequent sends.
+	stalled := &Client{send: make(chan []byte, 1)}
+	stalled.send <- []byte(`full`)
+	h.Register(stalled)
+
+	h.mu.Lock()
+	h.processPlayerJoin(stalled, ClientMessage{
+		Type:    "player:join",
+		Payload: map[string]interface{}{"moduleId": "m", "userId": "p-slow", "nickname": "Slow"},
+	})
+	_, stillRegistered := h.clients[stalled]
+	h.mu.Unlock()
+
+	if stillRegistered {
+		t.Fatal("stalled client was not evicted during processPlayerJoin")
+	}
 }

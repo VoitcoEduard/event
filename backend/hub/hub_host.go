@@ -3,12 +3,22 @@ package hub
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/user/go-expo-sample/backend/models"
+)
+
+var (
+	ErrQuizNotActive       = errors.New("quiz session not active")
+	ErrQuizEventMismatch   = errors.New("quiz session belongs to another event")
+	ErrQuizFinishing       = errors.New("quiz results are being saved")
+	ErrQuizFinished        = errors.New("quiz session already finished")
+	ErrQuizNoMoreQuestions = errors.New("no more questions")
+	ErrInvalidImageMeta    = errors.New("invalid image metadata")
 )
 
 func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
@@ -63,6 +73,192 @@ func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 	DebugLog("host:join: Sent state:update to host for module: %s", moduleID)
 }
 
+func (h *QuizHub) WrongPictureAspects(ctx context.Context, questions []models.QuizQuestion) (map[int]float64, error) {
+	aspects := make(map[int]float64)
+	for i, question := range questions {
+		if question.Type != models.QuestionTypeWrongPictures {
+			continue
+		}
+		if h.db == nil {
+			aspects[i] = 1 // In-memory test hubs have no media store.
+			continue
+		}
+		if question.ImageID == nil || *question.ImageID == "" {
+			return nil, fmt.Errorf("%w: question %d missing image", ErrInvalidImageMeta, i)
+		}
+		media, mediaErr := h.db.Media(ctx, *question.ImageID)
+		if mediaErr != nil || media.Width <= 0 || media.Height <= 0 {
+			return nil, fmt.Errorf("%w: question %d missing dimensions: %v", ErrInvalidImageMeta, i, mediaErr)
+		}
+		aspects[i] = float64(media.Width) / float64(media.Height)
+	}
+	return aspects, nil
+}
+
+func (h *QuizHub) startQuizSessionLocked(session *models.QuizSession, moduleID, eventID string, questions []models.QuizQuestion, aspects map[int]float64) error {
+	if session == nil {
+		return ErrQuizNotActive
+	}
+	if session.EventID != "" && eventID != "" && session.EventID != eventID {
+		return ErrQuizEventMismatch
+	}
+	if session.State == "finishing" {
+		return ErrQuizFinishing
+	}
+	if len(questions) == 0 {
+		return ErrQuizNoMoreQuestions
+	}
+
+	session.RunID = uuid.NewString()
+	session.EventID = eventID
+	session.State = "question-presenting"
+	session.CurrentIndex = 0
+	session.PlayerSignals = []models.PlayerSignal{}
+	session.AnswerCounts = make(map[int]int)
+	session.AnsweredPlayerIDs = make(map[string]struct{})
+	session.Streaks = make(map[string]int)
+	for _, player := range session.Players {
+		if player != nil {
+			player.Score = 0
+			player.JoinedQuestionIndex = 0
+		}
+	}
+	session.WrongPictureAspects = aspects
+	session.Questions = questions
+	session.Batches = CalculateBatches(questions)
+	session.StartTime = time.Now().Unix()
+
+	firstLimit := EffectiveTimeLimit(questions[0])
+	qWindow := models.QuestionWindow{
+		QuestionIndex: int64(session.CurrentIndex),
+		StartTime:     session.StartTime,
+		EndTime:       session.StartTime + firstLimit,
+		GraceEndTime:  session.StartTime + firstLimit + GracePeriodSeconds,
+		State:         "active",
+	}
+	session.QuestionWindows = []models.QuestionWindow{qWindow}
+
+	if len(session.Batches) > 0 {
+		h.broadcastToSessionLocked(moduleID, ServerMessage{
+			Type:    "data:batch",
+			Payload: session.Batches[0],
+		})
+	}
+
+	explainTime := session.Questions[session.CurrentIndex].ExplainTime
+	if explainTime == 0 {
+		explainTime = 5
+	}
+	h.broadcastToSessionLocked(moduleID, ServerMessage{
+		Type:    "cmd:state",
+		Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "timeLimit": explainTime, "runId": session.RunID},
+	})
+	h.broadcastToSessionLocked(moduleID, ServerMessage{
+		Type:    "state:update",
+		Payload: session,
+	})
+
+	h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
+	return nil
+}
+
+func (h *QuizHub) nextQuizQuestionLocked(session *models.QuizSession, eventID string) error {
+	if session == nil {
+		return ErrQuizNotActive
+	}
+	if session.EventID != "" && eventID != "" && session.EventID != eventID {
+		return ErrQuizEventMismatch
+	}
+	if h.closed || session.State == "finishing" {
+		return ErrQuizFinishing
+	}
+	if session.State == "finished" {
+		return ErrQuizFinished
+	}
+	if session.CurrentIndex+1 >= len(session.Questions) {
+		return ErrQuizNoMoreQuestions
+	}
+	if session.Streaks == nil {
+		session.Streaks = make(map[string]int)
+	}
+	for playerID := range session.Players {
+		if _, answered := session.AnsweredPlayerIDs[playerID]; !answered {
+			session.Streaks[playerID] = 0
+		}
+	}
+	session.CurrentIndex++
+	session.AnswerCounts = make(map[int]int)
+	session.AnsweredPlayerIDs = make(map[string]struct{})
+	session.StartTime = time.Now().Unix()
+
+	limit := EffectiveTimeLimit(session.Questions[session.CurrentIndex])
+	qWindow := models.QuestionWindow{
+		QuestionIndex: int64(session.CurrentIndex),
+		StartTime:     session.StartTime,
+		EndTime:       session.StartTime + limit,
+		GraceEndTime:  session.StartTime + limit + GracePeriodSeconds,
+		State:         "active",
+	}
+	session.QuestionWindows = append(session.QuestionWindows, qWindow)
+	batchIndex := session.CurrentIndex / MaxQuestionsPerBatch
+	if batchIndex < len(session.Batches) {
+		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+			Type: "data:batch", Payload: session.Batches[batchIndex],
+		})
+	}
+
+	session.State = "question-presenting"
+	explainTime := session.Questions[session.CurrentIndex].ExplainTime
+	if explainTime == 0 {
+		explainTime = 5
+	}
+	h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
+		Type:    "cmd:state",
+		Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "timeLimit": explainTime, "runId": session.RunID},
+	})
+
+	h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
+	return nil
+}
+
+// StartQuizSession starts a quiz session via REST with identical state transitions,
+// broadcasts, and transition timers as the host WebSocket flow.
+func (h *QuizHub) StartQuizSession(moduleID, eventID string, questions []models.QuizQuestion, aspects map[int]float64) (*models.QuizSession, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.closed {
+		return nil, ErrQuizFinishing
+	}
+	session, exists := h.sessions[moduleID]
+	if !exists || session == nil {
+		session = &models.QuizSession{
+			EventID:       eventID,
+			ModuleID:      moduleID,
+			State:         "lobby",
+			Players:       make(map[string]*models.Player),
+			PlayerSignals: []models.PlayerSignal{},
+			AnswerCounts:  make(map[int]int),
+		}
+		h.sessions[moduleID] = session
+	}
+	if err := h.startQuizSessionLocked(session, moduleID, eventID, questions, aspects); err != nil {
+		return nil, err
+	}
+	return snapshotSession(session), nil
+}
+
+// NextQuizQuestion advances a quiz session to the next question via REST with
+// identical guards, streak updates, broadcasts, and timers as WebSockets.
+func (h *QuizHub) NextQuizQuestion(moduleID, eventID string) (*models.QuizSession, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	session := h.sessions[moduleID]
+	if err := h.nextQuizQuestionLocked(session, eventID); err != nil {
+		return nil, err
+	}
+	return snapshotSession(session), nil
+}
+
 func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 	h.mu.RLock()
 	isHost, moduleID := client.IsHost, client.ModuleID
@@ -82,27 +278,11 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		log.Printf("Cannot start quiz for module %s: %v", moduleID, err)
 		return
 	}
-	aspects := make(map[int]float64)
-	for i, question := range questions {
-		if question.Type != models.QuestionTypeWrongPictures {
-			continue
-		}
-		if h.db == nil {
-			aspects[i] = 1 // In-memory test hubs have no media store.
-			continue
-		}
-		if question.ImageID == nil || *question.ImageID == "" {
-			log.Printf("Cannot start Wrong Pictures question %d without image metadata", i)
-			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{"code": "invalid_image_metadata", "message": "This image has no dimensions. Reupload it before starting the quiz."}}))
-			return
-		}
-		media, mediaErr := h.db.Media(ctx, *question.ImageID)
-		if mediaErr != nil || media.Width <= 0 || media.Height <= 0 {
-			log.Printf("Cannot start Wrong Pictures question %d with missing dimensions: %v", i, mediaErr)
-			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{"code": "invalid_image_metadata", "message": "This image has no dimensions. Reupload it before starting the quiz."}}))
-			return
-		}
-		aspects[i] = float64(media.Width) / float64(media.Height)
+	aspects, err := h.WrongPictureAspects(ctx, questions)
+	if err != nil {
+		log.Printf("Cannot start Wrong Pictures for module %s: %v", moduleID, err)
+		h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{"code": "invalid_image_metadata", "message": "This image has no dimensions. Reupload it before starting the quiz."}}))
+		return
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -110,64 +290,7 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		return
 	}
 
-	session := h.sessions[moduleID]
-	if session != nil && session.State != "finishing" {
-		session.RunID = uuid.NewString()
-		session.EventID = event.ID // Ensure EventID is set
-		session.State = "question-presenting"
-		session.CurrentIndex = 0
-		session.PlayerSignals = []models.PlayerSignal{}
-		session.AnswerCounts = make(map[int]int)
-		session.AnsweredPlayerIDs = make(map[string]struct{})
-		session.Streaks = make(map[string]int)
-		for _, player := range session.Players {
-			if player != nil {
-				player.Score = 0
-			}
-		}
-		session.WrongPictureAspects = aspects
-		session.Questions = questions // Assigned loaded questions
-		session.Batches = CalculateBatches(questions)
-		session.StartTime = time.Now().Unix() // Reset timer
-		// session.Players = make(map[string]*models.Player) // REMOVED: Do not reset players, keep lobby players
-
-		// Create question window for first question
-		// A8: EffectiveTimeLimit keeps old questions without a timeLimit
-		// on the same 20s window every client displays.
-		firstLimit := EffectiveTimeLimit(questions[0])
-		qWindow := models.QuestionWindow{
-			QuestionIndex: int64(session.CurrentIndex),
-			StartTime:     session.StartTime,
-			EndTime:       session.StartTime + firstLimit,
-			GraceEndTime:  session.StartTime + firstLimit + GracePeriodSeconds,
-			State:         "active",
-		}
-		session.QuestionWindows = []models.QuestionWindow{qWindow}
-
-		// Send first batch to clients
-		if len(session.Batches) > 0 {
-			h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
-				Type:    "data:batch",
-				Payload: session.Batches[0],
-			})
-		}
-
-		// Notify state change - send 'question-presenting' for presentation
-		explainTime := session.Questions[session.CurrentIndex].ExplainTime
-		if explainTime == 0 {
-			explainTime = 5 // default
-		}
-		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
-			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime, "runId": session.RunID},
-		})
-		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
-			Type:    "state:update",
-			Payload: session,
-		})
-
-		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
-	}
+	_ = h.startQuizSessionLocked(h.sessions[moduleID], client.ModuleID, event.ID, questions, aspects)
 }
 
 func questionsForModule(event *models.Event, moduleID string) ([]models.QuizQuestion, error) {
@@ -195,63 +318,8 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 	if !client.IsHost {
 		return
 	}
-	session := h.sessions[client.ModuleID]
-	if session != nil {
-		if h.closed || session.State == "finishing" || session.State == "finished" {
-			return
-		}
-		// Advancing past the final question is invalid — the host UI only sends
-		// next_question while another question remains (it sends end/leaderboard
-		// actions past the last one). A double-click, a racing client, or a
-		// session that was never started must be ignored, never index out of range.
-		if session.CurrentIndex+1 >= len(session.Questions) {
-			DebugLog("host:next_question ignored for module %s: already on question %d of %d",
-				client.ModuleID, session.CurrentIndex+1, len(session.Questions))
-			return
-		}
-		if session.Streaks == nil {
-			session.Streaks = make(map[string]int)
-		}
-		for playerID := range session.Players {
-			if _, answered := session.AnsweredPlayerIDs[playerID]; !answered {
-				session.Streaks[playerID] = 0
-			}
-		}
-		// session.State = "question-active" // Will be set after delay
-		session.CurrentIndex++
-		session.AnswerCounts = make(map[int]int)
-		session.AnsweredPlayerIDs = make(map[string]struct{})
-		session.StartTime = time.Now().Unix()
-
-		// Create question window for new question
-		limit := EffectiveTimeLimit(session.Questions[session.CurrentIndex])
-		qWindow := models.QuestionWindow{
-			QuestionIndex: int64(session.CurrentIndex),
-			StartTime:     session.StartTime,
-			EndTime:       session.StartTime + limit,
-			GraceEndTime:  session.StartTime + limit + GracePeriodSeconds,
-			State:         "active",
-		}
-		session.QuestionWindows = append(session.QuestionWindows, qWindow)
-		batchIndex := session.CurrentIndex / MaxQuestionsPerBatch
-		if batchIndex < len(session.Batches) {
-			h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
-				Type: "data:batch", Payload: session.Batches[batchIndex],
-			})
-		}
-
-		// Notify state change - send 'question-presenting' first
-		session.State = "question-presenting"
-		explainTime := session.Questions[session.CurrentIndex].ExplainTime
-		if explainTime == 0 {
-			explainTime = 5 // default
-		}
-		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
-			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime, "runId": session.RunID},
-		})
-
-		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
+	if err := h.nextQuizQuestionLocked(h.sessions[client.ModuleID], ""); err != nil {
+		DebugLog("host:next_question ignored for module %s: %v", client.ModuleID, err)
 	}
 }
 
@@ -261,6 +329,9 @@ func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		if session.State == "finishing" || session.State == "finished" {
+			return
+		}
 		h.cancelQuizTransitionLocked(client.ModuleID)
 		session.State = "results"
 		if session.CurrentIndex >= 0 && session.CurrentIndex < len(session.Questions) {
@@ -272,7 +343,7 @@ func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
 
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID},
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "runId": session.RunID},
 		})
 
 		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES/ANSWERS
@@ -289,11 +360,14 @@ func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) 
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		if session.State == "finishing" || session.State == "finished" {
+			return
+		}
 		h.cancelQuizTransitionLocked(client.ModuleID)
 		session.State = "leaderboard"
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID},
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "runId": session.RunID},
 		})
 
 		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES

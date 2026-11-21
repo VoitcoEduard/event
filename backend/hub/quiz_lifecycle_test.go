@@ -516,3 +516,107 @@ func TestStartQuizWithoutResetClearsPreviousScores(t *testing.T) {
 		t.Fatalf("run 2 player score = %d, want %d", got, ackAwarded)
 	}
 }
+
+func TestLateJoinerReconnectPreservesActiveStreak(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.CreateSession("m", "e")
+	questions := make([]models.QuizQuestion, 5)
+	for i := range questions {
+		questions[i] = models.QuizQuestion{ID: fmt.Sprintf("q%d", i), Text: "Q", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 1}
+	}
+	h.UpdateSession("m", func(s *models.QuizSession) {
+		s.State = "question-active"
+		s.CurrentIndex = 2
+		s.Questions = questions
+		s.Batches = CalculateBatches(questions)
+		s.RunID = "run-1"
+		s.Streaks = make(map[string]int)
+	})
+
+	// Late player joins at Q2
+	late := &Client{send: make(chan []byte, 16)}
+	h.Register(late)
+	h.ProcessMessage(late, []byte(`{"type":"player:join","payload":{"moduleId":"m","eventId":"e","nickname":"Late","userId":"late-1"}}`))
+
+	// Player answers Q2 and Q3 -> streak becomes 2
+	h.mu.Lock()
+	late.quizBinding = &quizPlayerBinding{eventID: "e", moduleID: "m", playerID: "late-1"}
+	s := h.sessions["m"]
+	if s.Players["late-1"].JoinedQuestionIndex != 2 {
+		h.mu.Unlock()
+		t.Fatalf("JoinedQuestionIndex = %d, want 2", s.Players["late-1"].JoinedQuestionIndex)
+	}
+	s.PlayerSignals = append(s.PlayerSignals,
+		models.PlayerSignal{PlayerID: "late-1", QuestionIndex: 2, Status: "on_time"},
+		models.PlayerSignal{PlayerID: "late-1", QuestionIndex: 3, Status: "on_time"},
+	)
+	s.Streaks["late-1"] = 2
+	s.CurrentIndex = 4
+	h.mu.Unlock()
+	for len(late.send) > 0 {
+		<-late.send
+	}
+
+	// Reconnect at Q4 with stale lastKnownQuestionIndex (-1 or 0)
+	h.ProcessMessage(late, []byte(`{"type":"player:reconnect","payload":{"moduleId":"m","nickname":"Late","lastKnownQuestionIndex":-1,"lastKnownState":"question-active"}}`))
+
+	var catchup struct {
+		Type    string `json:"type"`
+		Payload struct {
+			MissedQuestions []int `json:"missedQuestions"`
+			Streak          int   `json:"streak"`
+		} `json:"payload"`
+	}
+	var gotCatchup bool
+	for len(late.send) > 0 {
+		raw := <-late.send
+		if err := json.Unmarshal(raw, &catchup); err == nil && catchup.Type == "sync:catchup" {
+			gotCatchup = true
+			break
+		}
+	}
+	if !gotCatchup {
+		t.Fatal("did not receive sync:catchup")
+	}
+	if len(catchup.Payload.MissedQuestions) != 0 {
+		t.Fatalf("late joiner got missedQuestions %v, want empty", catchup.Payload.MissedQuestions)
+	}
+	if catchup.Payload.Streak != 2 {
+		t.Fatalf("catchup streak = %d, want 2", catchup.Payload.Streak)
+	}
+	h.mu.RLock()
+	serverStreak := s.Streaks["late-1"]
+	h.mu.RUnlock()
+	if serverStreak != 2 {
+		t.Fatalf("server streak = %d, want 2", serverStreak)
+	}
+}
+
+func TestFinishedQuizCannotReopenViaResultsOrLeaderboard(t *testing.T) {
+	for _, state := range []string{"finishing", "finished"} {
+		t.Run(state, func(t *testing.T) {
+			h := NewQuizHub(Dependencies{})
+			h.CreateSession("m", "e")
+			h.UpdateSession("m", func(s *models.QuizSession) {
+				s.State = state
+				s.CurrentIndex = 0
+				s.Questions = []models.QuizQuestion{{ID: "q0", Text: "Q0", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 0}}
+			})
+			host := &Client{ModuleID: "m", IsHost: true, send: make(chan []byte, 8)}
+			h.Register(host)
+
+			h.mu.Lock()
+			h.processHostShowResults(host, ClientMessage{})
+			h.processHostShowLeaderboard(host, ClientMessage{})
+			got := h.sessions["m"].State
+			h.mu.Unlock()
+
+			if got != state {
+				t.Fatalf("session state changed from %q to %q", state, got)
+			}
+			if len(host.send) != 0 {
+				t.Fatalf("unexpected broadcast for %q session", state)
+			}
+		})
+	}
+}

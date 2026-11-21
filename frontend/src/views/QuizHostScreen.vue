@@ -277,31 +277,31 @@
           <div v-else class="question-main-content">
             <!-- Left Column: Image + Distribution Overlay -->
             <div class="question-column">
-              <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
+              <div class="question-card has-distribution" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
                   <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
-                  
-                  <!-- DISTRIBUTION OVERLAY -->
-                  <div class="distribution-overlay-container">
-                      <div class="dist-chart">
-                          <div 
-                              v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
-                              :key="idx"
-                              class="dist-bar-col"
-                          >
-                              <div class="dist-bar-track">
-                                  <div 
-                                      class="dist-bar-fill"
-                                      :class="getAnswerColorClass(idx)"
-                                      :style="{ height: getBarHeight(idx) + '%' }"
-                                  ></div>
-                              </div>
-                              <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
-                              <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" aria-hidden="true" />
-                          </div>
-                      </div>
-                  </div>
+                </div>
+
+                <!-- DISTRIBUTION OVERLAY -->
+                <div class="distribution-overlay-container">
+                    <div class="dist-chart">
+                        <div 
+                            v-for="(count, idx) in (isTrueFalse ? 2 : 4)"
+                            :key="idx"
+                            class="dist-bar-col"
+                        >
+                            <div class="dist-bar-track">
+                                <div 
+                                    class="dist-bar-fill"
+                                    :class="getAnswerColorClass(idx)"
+                                    :style="{ height: getBarHeight(idx) + '%' }"
+                                ></div>
+                            </div>
+                            <div class="dist-count">{{ answerCounts[idx] || 0 }}</div>
+                            <AppIcon class="dist-icon" :name="getShapeIcon(idx)" :size="20" aria-hidden="true" />
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="question-text-overlay">
@@ -694,8 +694,8 @@ const getHistogramBarHeight = (count) => {
 const correctMarkerPercentage = computed(() => {
     if (!isRange.value) return 0
     const q = currentQuestion.value
-    const min = q?.rangeConfig?.minValue || 0
-    const max = q?.rangeConfig?.maxValue || 100
+    const min = q?.rangeConfig?.minValue ?? 0
+    const max = q?.rangeConfig?.maxValue ?? 100
     const range = max - min
     if (range === 0) return 0
     return ((q.correctValue - min) / range) * 100

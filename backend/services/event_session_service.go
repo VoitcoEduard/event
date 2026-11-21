@@ -19,6 +19,13 @@ type EventSessionStore interface {
 	Update(context.Context, *models.EventSession) error
 }
 
+// EventSessionAtomicUpdater performs targeted column updates without
+// reading and overwriting unrelated session fields under concurrency.
+type EventSessionAtomicUpdater interface {
+	UpdateStatus(context.Context, string, models.EventSessionStatus, time.Time) error
+	UpdateActiveModule(context.Context, string, string, time.Time) error
+}
+
 type EventSessionService struct {
 	SessionRepo EventSessionStore
 }
@@ -57,15 +64,19 @@ func (s *EventSessionService) GetSession(ctx context.Context, sessionID string) 
 }
 
 func (s *EventSessionService) UpdateSessionStatus(ctx context.Context, sessionID string, status models.EventSessionStatus) error {
+	now := time.Now()
+	if atomic, ok := s.SessionRepo.(EventSessionAtomicUpdater); ok {
+		return atomic.UpdateStatus(ctx, sessionID, status, now)
+	}
+
 	session, err := s.SessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
 		return err
 	}
 
 	session.Status = status
-	session.UpdatedAt = time.Now()
+	session.UpdatedAt = now
 
-	now := time.Now()
 	if status == models.EventSessionStatusLive && session.StartedAt == nil {
 		session.StartedAt = &now
 	}
@@ -77,13 +88,18 @@ func (s *EventSessionService) UpdateSessionStatus(ctx context.Context, sessionID
 }
 
 func (s *EventSessionService) AdvanceSessionModule(ctx context.Context, sessionID string, activeModuleID string) error {
+	now := time.Now()
+	if atomic, ok := s.SessionRepo.(EventSessionAtomicUpdater); ok {
+		return atomic.UpdateActiveModule(ctx, sessionID, activeModuleID, now)
+	}
+
 	session, err := s.SessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
 		return err
 	}
 
 	session.ActiveModuleID = activeModuleID
-	session.UpdatedAt = time.Now()
+	session.UpdatedAt = now
 
 	return s.SessionRepo.Update(ctx, session)
 }

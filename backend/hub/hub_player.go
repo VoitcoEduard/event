@@ -155,10 +155,15 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 			player.Nickname = nickname
 		}
 	} else {
+		joinedAt := 0
+		if session.State != "lobby" && session.CurrentIndex > 0 {
+			joinedAt = session.CurrentIndex
+		}
 		session.Players[playerID] = &models.Player{
-			ID:       playerID,
-			Nickname: nickname,
-			Score:    0,
+			ID:                  playerID,
+			Nickname:            nickname,
+			Score:               0,
+			JoinedQuestionIndex: joinedAt,
 		}
 	}
 
@@ -173,29 +178,24 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 		Type:    "cmd:state",
 		Payload: statePayload,
 	}); err == nil {
-		select {
-		case client.send <- jsonMsg:
-		default:
+		if !h.sendToClientLocked(client, jsonMsg) {
+			return
 		}
 	}
 	if session.CurrentIndex >= 0 && session.CurrentIndex/MaxQuestionsPerBatch < len(session.Batches) {
 		batch := session.Batches[session.CurrentIndex/MaxQuestionsPerBatch]
-		select {
-		case client.send <- publicBatchMessage(batch, session.CurrentIndex):
-		default:
+		if !h.sendToClientLocked(client, publicBatchMessage(batch, session.CurrentIndex, len(session.Questions), session.RunID)) {
+			return
 		}
 	}
 	if (session.State == "results" || session.State == "leaderboard" || session.State == "finished") && session.CurrentIndex >= 0 && session.CurrentIndex < len(session.Questions) {
-		select {
-		case client.send <- mustMarshal(ServerMessage{Type: "data:reveal", Payload: revealQuestionPayload(session.Questions[session.CurrentIndex], session.CurrentIndex)}):
-		default:
+		if !h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "data:reveal", Payload: revealQuestionPayload(session.Questions[session.CurrentIndex], session.CurrentIndex)})) {
+			return
 		}
 	}
-	if _, registered := h.clients[client]; registered {
-		public := publicSessionMessage(ServerMessage{Type: "state:update", Payload: session}, nil, session, client)
-		if len(public) > 0 {
-			h.sendToClientLocked(client, public)
-		}
+	public := publicSessionMessage(ServerMessage{Type: "state:update", Payload: session}, nil, session, client)
+	if len(public) > 0 {
+		h.sendToClientLocked(client, public)
 	}
 
 	// Notify session update (state:update) to refresh player list for host & projector only
@@ -426,7 +426,7 @@ func (h *QuizHub) processPlayerBatchRequest(client *Client, msg ClientMessage) {
 	session := h.sessions[client.ModuleID]
 	if session != nil && currentBatchIndex >= 0 && currentBatchIndex < len(session.Batches) {
 		// Send the requested batch.
-		h.sendToClientLocked(client, publicBatchMessage(session.Batches[currentBatchIndex], session.CurrentIndex))
+		h.sendToClientLocked(client, publicBatchMessage(session.Batches[currentBatchIndex], session.CurrentIndex, len(session.Questions), session.RunID))
 	}
 }
 
@@ -467,13 +467,25 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 		return
 	}
 
-	// Calculate what user missed
+	// Calculate what user missed since joining / since their last answered question
 	currentIndex := session.CurrentIndex
+	lastAnsweredIndex := -1
+	for _, previous := range session.PlayerSignals {
+		if previous.PlayerID == player.ID && previous.Status != "missed" && previous.QuestionIndex > lastAnsweredIndex {
+			lastAnsweredIndex = previous.QuestionIndex
+		}
+	}
+	startIdx := lastKnownIndex + 1
+	if player.JoinedQuestionIndex > startIdx {
+		startIdx = player.JoinedQuestionIndex
+	}
+	if lastAnsweredIndex+1 > startIdx {
+		startIdx = lastAnsweredIndex + 1
+	}
+
 	missedQuestions := []int{}
 
-	for i := lastKnownIndex + 1; i < currentIndex; i++ {
-		missedQuestions = append(missedQuestions, i)
-
+	for i := startIdx; i < currentIndex; i++ {
 		// Do not duplicate an answer or an earlier missed marker.
 		seen := false
 		for _, previous := range session.PlayerSignals {
@@ -483,6 +495,7 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 			}
 		}
 		if !seen {
+			missedQuestions = append(missedQuestions, i)
 			if session.Streaks == nil {
 				session.Streaks = make(map[string]int)
 			}
@@ -522,6 +535,7 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 			"currentQuestionIndex": currentIndex,
 			"missedQuestions":      missedQuestions,
 			"score":                player.Score,
+			"streak":               session.Streaks[player.ID],
 			"isActive":             isActive,
 			"batchesNeeded":        batchesNeeded,
 		},

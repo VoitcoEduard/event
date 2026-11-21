@@ -13,7 +13,15 @@ export const readAdminTheme = storage => {
   }
 }
 
-const theme = ref(typeof window === 'undefined' ? 'light' : readAdminTheme(window.localStorage))
+const readWindowAdminTheme = () => {
+  try {
+    return readAdminTheme(window.localStorage)
+  } catch {
+    return 'light'
+  }
+}
+
+const theme = ref(typeof window === 'undefined' ? 'light' : readWindowAdminTheme())
 const adminAppearanceActive = ref(false)
 let storageListenerInstalled = false
 

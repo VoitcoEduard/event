@@ -89,7 +89,7 @@ const handlePinInput = (e) => {
 }
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
 }
 
 const handleConnect = async () => {
@@ -109,7 +109,7 @@ const handleConnect = async () => {
 
     if (response.ok) {
       const event = await response.json()
-      sessionStorage.setItem('currentEvent', JSON.stringify(event))
+      try { sessionStorage.setItem('currentEvent', JSON.stringify(event)) } catch { /* storage unavailable */ }
       router.push('/event')
     } else {
       if (response.status === 404) {

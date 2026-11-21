@@ -351,6 +351,12 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 // touching the evicted client. A blocking send here would stall every session
 // because ProcessMessage holds the hub-wide lock.
 func (h *QuizHub) sendToClientLocked(client *Client, msg []byte) bool {
+	if client == nil || client.send == nil {
+		return false
+	}
+	if _, ok := h.clients[client]; !ok {
+		return false
+	}
 	select {
 	case client.send <- msg:
 		return true
@@ -430,7 +436,7 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 		if !ok || session == nil {
 			return nil
 		}
-		return publicBatchMessage(batch, session.CurrentIndex)
+		return publicBatchMessage(batch, session.CurrentIndex, len(session.Questions), session.RunID)
 	}
 	if m.Type != "state:update" {
 		return original
@@ -455,9 +461,10 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 	}
 	b, err := json.Marshal(ServerMessage{Type: m.Type, Payload: map[string]any{
 		"eventId": s.EventID, "moduleId": s.ModuleID, "state": s.State,
-		"currentIndex": s.CurrentIndex, "players": players, "rank": rank,
-		"answerCounts": s.AnswerCounts, "questionWindows": s.QuestionWindows,
-		"startTime": s.StartTime,
+		"currentIndex": s.CurrentIndex, "totalQuestions": len(s.Questions),
+		"players": players, "rank": rank,
+		"answerCounts": s.AnswerCounts, "answeredCount": len(s.AnsweredPlayerIDs),
+		"questionWindows": s.QuestionWindows, "startTime": s.StartTime,
 	}})
 	if err != nil {
 		return nil
@@ -465,7 +472,7 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 	return b
 }
 
-func publicBatchMessage(batch models.QuestionBatch, currentIndex int) []byte {
+func publicBatchMessage(batch models.QuestionBatch, currentIndex, totalQuestions int, runID string) []byte {
 	questions := []map[string]any{}
 	if currentIndex >= batch.StartIndex && currentIndex <= batch.EndIndex {
 		localIndex := currentIndex - batch.StartIndex
@@ -473,11 +480,16 @@ func publicBatchMessage(batch models.QuestionBatch, currentIndex int) []byte {
 			questions = append(questions, models.PublicQuizQuestion(batch.Questions[localIndex]))
 		}
 	}
-	return mustMarshal(ServerMessage{Type: "data:batch", Payload: map[string]any{
+	payload := map[string]any{
 		"batchIndex": batch.BatchIndex, "totalBatches": batch.TotalBatches,
+		"totalQuestions": totalQuestions,
 		"startIndex": currentIndex, "endIndex": currentIndex,
 		"nextBatchAt": currentIndex, "questions": questions,
-	}})
+	}
+	if runID != "" {
+		payload["runId"] = runID
+	}
+	return mustMarshal(ServerMessage{Type: "data:batch", Payload: payload})
 }
 
 func revealQuestionPayload(q models.QuizQuestion, index int) map[string]any {

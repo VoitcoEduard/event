@@ -84,7 +84,7 @@ const route = useRoute();
 const router = useRouter();
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
 }
 const routeEventId = computed(() => route.query.eventId);
 const routeModuleId = computed(() => route.query.moduleId);

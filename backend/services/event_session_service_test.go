@@ -1014,3 +1014,46 @@ func TestCreateAndUpdateSession(t *testing.T) {
 		t.Error("EndedAt should be set")
 	}
 }
+
+type mockAtomicEventSessionRepo struct {
+	*MockEventSessionRepository
+	statusUpdates       []models.EventSessionStatus
+	activeModuleUpdates []string
+}
+
+func (m *mockAtomicEventSessionRepo) UpdateStatus(_ context.Context, _ string, status models.EventSessionStatus, _ time.Time) error {
+	m.statusUpdates = append(m.statusUpdates, status)
+	return nil
+}
+
+func (m *mockAtomicEventSessionRepo) UpdateActiveModule(_ context.Context, _ string, activeModuleID string, _ time.Time) error {
+	m.activeModuleUpdates = append(m.activeModuleUpdates, activeModuleID)
+	return nil
+}
+
+func TestAtomicSessionUpdatesAvoidReadModifyWriteAndAllowClear(t *testing.T) {
+	base := NewMockEventSessionRepo()
+	base.UpdateFunc = func(context.Context, *models.EventSession) error {
+		t.Fatal("Update read-modify-write must not be called when EventSessionAtomicUpdater is supported")
+		return nil
+	}
+	repo := &mockAtomicEventSessionRepo{MockEventSessionRepository: base}
+	svc := &EventSessionService{SessionRepo: repo}
+
+	if err := svc.UpdateSessionStatus(testCtx, "ses-1", models.EventSessionStatusLive); err != nil {
+		t.Fatalf("UpdateSessionStatus failed: %v", err)
+	}
+	if err := svc.AdvanceSessionModule(testCtx, "ses-1", "mod-2"); err != nil {
+		t.Fatalf("AdvanceSessionModule set failed: %v", err)
+	}
+	if err := svc.AdvanceSessionModule(testCtx, "ses-1", ""); err != nil {
+		t.Fatalf("AdvanceSessionModule clear failed: %v", err)
+	}
+
+	if len(repo.statusUpdates) != 1 || repo.statusUpdates[0] != models.EventSessionStatusLive {
+		t.Fatalf("statusUpdates = %v, want [live]", repo.statusUpdates)
+	}
+	if len(repo.activeModuleUpdates) != 2 || repo.activeModuleUpdates[0] != "mod-2" || repo.activeModuleUpdates[1] != "" {
+		t.Fatalf("activeModuleUpdates = %v, want [mod-2 \"\"]", repo.activeModuleUpdates)
+	}
+}

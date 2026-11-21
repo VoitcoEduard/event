@@ -254,6 +254,15 @@
        </div>
     </div>
 
+    <!-- QUESTION ENDED (Time's up / Waiting for results) -->
+    <div v-else-if="state === States.QUESTION_ENDED" class="state-container answered-container">
+       <div class="answered-content">
+          <div class="spinner"></div>
+          <h2>{{ $t('quiz.player.times_up', "Time's up!") }}</h2>
+          <p>{{ $t('quiz.player.waiting_results', 'Waiting for results...') }}</p>
+       </div>
+    </div>
+
     <!-- WRONG PICTURES RESULT REVIEW -->
     <div
       v-else-if="state === States.RESULTS && isWrongPictures && wrongPictureReview"
@@ -345,12 +354,13 @@ const answerStatus = ref('')
 const submittedGuesses = ref([])
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
 }
 
 // State machine
 const requestedBatchIndexes = new Set()
 const questionCacheVersion = ref(0)
+let cacheRunId = ''
 
 const requestBatch = (batchIndex) => {
     if (!Number.isInteger(batchIndex) || batchIndex < 0 || requestedBatchIndexes.has(batchIndex)) return
@@ -422,6 +432,13 @@ const createWrongPictureReview = (question, result = { totalScore: 0, scoredGues
         number: index + 1
     }))
 })
+
+const refreshWrongPictureReview = (question) => {
+    if (!question || question.type !== 'wrong_pictures') return
+    const config = question.wrongPictureConfig || { targets: [], maxPoints: 0, tolerancePercent: 0 }
+    const review = calculateTotalScore(submittedGuesses.value, config.targets || [], config, wpAspectRatio.value)
+    wrongPictureReview.value = createWrongPictureReview(question, { ...review, totalScore: currentPoints.value })
+}
 
 const updateWpContainerRect = () => {
     // Legacy - kept for safety if needed by other components, but MapCoordinatePicker handles its own rect
@@ -586,6 +603,8 @@ const submitNumberAnswer = () => {
 const submitAnswer = (answerData) => {
     // Guard against double submission (e.g. pending confirmSelection timeout)
     if (hasSubmitted.value) return
+    // Guard against premature taps before the current question batch has arrived.
+    if (!questionCache.get(currentQuestionIndex.value)) return
     hasSubmitted.value = true
     clearInterval(timerInterval) // Stop the timer
     transition(States.ANSWERED)
@@ -724,6 +743,7 @@ onMounted(async () => {
 			activeMarkerIndex.value = null
 			questionCache.clear()
 			requestedBatchIndexes.clear()
+			cacheRunId = ''
 			questionCacheVersion.value++
 			joined.value = false
 			hasOpenedOnce = false
@@ -733,7 +753,20 @@ onMounted(async () => {
 		}
 		const nextRunId = typeof payload.runId === 'string' ? payload.runId : currentRunId.value
 		const nextIndex = Number.isInteger(payload.currentIndex) ? payload.currentIndex : currentQuestionIndex.value
-		const questionChanged = nextRunId !== currentRunId.value || nextIndex !== currentQuestionIndex.value
+		const runChanged = nextRunId !== currentRunId.value
+		const questionChanged = runChanged || nextIndex !== currentQuestionIndex.value
+		if (runChanged && nextRunId && nextRunId !== cacheRunId && (currentRunId.value !== '' || cacheRunId !== '')) {
+			questionCache.clear()
+			requestedBatchIndexes.clear()
+			cacheRunId = nextRunId
+			questionCacheVersion.value++
+		}
+		if (newState !== States.QUESTION_ACTIVE || questionChanged) {
+			clearInterval(timerInterval)
+		}
+		if (newState !== States.QUESTION_PRESENTING) {
+			clearInterval(explainTimerInterval)
+		}
 		currentRunId.value = nextRunId
 		currentQuestionIndex.value = nextIndex
 
@@ -788,10 +821,10 @@ onMounted(async () => {
             }
         }
 
-        if (newState === States.RESULTS && !wrongPictureReview.value) {
+        if (newState === States.RESULTS) {
             const question = questionCache.get(currentQuestionIndex.value)
-            if (question?.type === 'wrong_pictures') {
-                wrongPictureReview.value = createWrongPictureReview(question)
+            if (question?.type === 'wrong_pictures' && (!wrongPictureReview.value || question.wrongPictureConfig?.targets?.length)) {
+                refreshWrongPictureReview(question)
             }
         }
 
@@ -810,10 +843,12 @@ onMounted(async () => {
     })
 
     quizWS.on('data:batch', (batch) => {
-        // Clear cache at the start of a new quiz (startIndex === 0 = first batch)
-        if (batch.startIndex === 0) {
+        const batchRunId = typeof batch.runId === 'string' ? batch.runId : ''
+        // Clear cache when a new quiz run begins (or batch 0 arrives without runId)
+        if ((batchRunId && batchRunId !== cacheRunId) || (!batchRunId && batch.startIndex === 0)) {
             questionCache.clear()
             requestedBatchIndexes.clear()
+            if (batchRunId) cacheRunId = batchRunId
         }
         questionCache.addBatch(batch)
         requestedBatchIndexes.add(batch.batchIndex)
@@ -825,9 +860,7 @@ onMounted(async () => {
         if (!question) return
         Object.assign(question, payload)
 		if (question.type === 'wrong_pictures' && payload.questionIndex === currentQuestionIndex.value) {
-			const config = question.wrongPictureConfig || { targets: [], maxPoints: 0, tolerancePercent: 0 }
-			const review = calculateTotalScore(submittedGuesses.value, config.targets || [], config, wpAspectRatio.value)
-			wrongPictureReview.value = createWrongPictureReview(question, { ...review, totalScore: currentPoints.value })
+			refreshWrongPictureReview(question)
 		}
         questionCacheVersion.value++
     })
@@ -844,6 +877,10 @@ onMounted(async () => {
 		if (Number.isFinite(payload.total)) score.value = payload.total
 		if (Number.isInteger(payload.streak)) streak.value = payload.streak
 		isCorrect.value = currentPoints.value > 0
+		const question = questionCache.get(currentQuestionIndex.value)
+		if (question?.type === 'wrong_pictures' && (wrongPictureReview.value || state.value === States.RESULTS || question.wrongPictureConfig?.targets?.length)) {
+			refreshWrongPictureReview(question)
+		}
 	})
 
     quizWS.on('sync:catchup', (payload) => {
@@ -859,6 +896,8 @@ onMounted(async () => {
             console.warn(`You missed ${missedQuestions.length} questions`)
             // A9: missed questions are skipped questions — break the streak.
             streak.value = streakAfterCatchup({ missedCount: missedQuestions.length, streak: streak.value })
+        } else if (typeof payload.streak === 'number') {
+            streak.value = payload.streak
         }
         const batchesNeeded = payload.batchesNeeded || []
         batchesNeeded.forEach(requestBatch)
@@ -867,10 +906,13 @@ onMounted(async () => {
     quizWS.on('open', () => {
 		connectionReady.value = true
         if (hasOpenedOnce) {
+            const lastKnownQuestionIndex = questionCache.has(currentQuestionIndex.value)
+                ? currentQuestionIndex.value
+                : currentQuestionIndex.value - 1
             quizWS.send('player:reconnect', {
                 moduleId,
                 nickname: nickname.value,
-                lastKnownQuestionIndex: currentQuestionIndex.value,
+                lastKnownQuestionIndex,
                 lastKnownState: state.value,
             })
         }

@@ -9,6 +9,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { API_BASE_URL, getUserId } from './utils'
+import { safeSessionGet, safeSessionSet } from './utils/storage'
 import Toast from './components/Toast.vue'
 import AdminThemeToggle from './components/AdminThemeToggle.vue'
 import { useAdminTheme } from './composables/useAdminTheme'
@@ -16,15 +17,11 @@ import { useAdminTheme } from './composables/useAdminTheme'
 const { adminAppearanceActive } = useAdminTheme()
 
 onMounted(() => {
-  if (!sessionStorage.getItem('currentScreen')) {
-    sessionStorage.setItem('currentScreen', 'main')
+  if (!safeSessionGet('currentScreen')) {
+    safeSessionSet('currentScreen', 'main')
   }
 
-  let uid = localStorage.getItem('userId')
-  if (!uid) {
-    uid = 'user_' + Math.random().toString(36).substr(2, 9)
-    localStorage.setItem('userId', uid)
-  }
+  getUserId()
 })
 
 defineExpose({ getUserId })

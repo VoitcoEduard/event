@@ -24,7 +24,7 @@
       <!-- Module View -->
       <div v-else-if="selectedModule" class="module-view">
         <div class="module-header">
-          <button class="back-link" @click="selectedModule = null">
+          <button class="back-link" @click="closeSelectedModule">
             <AppIcon class="back-arrow" name="arrowLeft" :size="18" />
             <span>{{ $t('event.back_to_event') }}</span>
           </button>
@@ -215,7 +215,7 @@ const fetchEvent = async () => {
         // Filter out completed modules that should be hidden
         activeModules.value = active.filter(m => {
           if (m.data?.hideAfterCompletion) {
-            return localStorage.getItem(`completed_module_${m.id}`) !== 'true'
+            try { return localStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
           }
           return true
         })
@@ -231,7 +231,10 @@ const fetchEvent = async () => {
 
         // Auto-redirect to mandatory uncompleted module if not already in a module and no route module
         if (!selectedModule.value && !routeModuleId) {
-            const mandatoryModule = active.find(m => m.data?.mandatoryOnEntry && localStorage.getItem(`completed_module_${m.id}`) !== 'true')
+            const mandatoryModule = active.find(m => {
+              if (!m.data?.mandatoryOnEntry) return false
+              try { return localStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
+            })
             if (mandatoryModule) {
                selectModule(mandatoryModule)
             }
@@ -292,7 +295,20 @@ onUnmounted(() => {
 	if (joinController) joinController.abort()
 })
 
+const clearCompletionTimer = () => {
+  if (completionTimer) {
+    clearTimeout(completionTimer)
+    completionTimer = null
+  }
+}
+
+const closeSelectedModule = () => {
+  clearCompletionTimer()
+  selectedModule.value = null
+}
+
 const selectModule = (module) => {
+  clearCompletionTimer()
   if (module.type === 'teams') {
     router.push(`/teams/${currentEvent.value.id}/${module.id}/player`)
     return
@@ -331,9 +347,12 @@ const handleModuleComplete = async (data) => {
       }
     }
   }
-	if (selectedModule.value) localStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true')
-	if (completionTimer) clearTimeout(completionTimer)
+	if (selectedModule.value) {
+    try { localStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true') } catch { /* Storage may be disabled. */ }
+  }
+	clearCompletionTimer()
   completionTimer = setTimeout(() => {
+    completionTimer = null
 	if (stopped) return
     selectedModule.value = null
     fetchEvent() // Refresh immediately

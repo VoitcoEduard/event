@@ -470,6 +470,8 @@
       "submit_btn": "Submit Answer",
       "submitted": "Answer Submitted!",
       "waiting_others": "Waiting for others...",
+      "times_up": "Time's up!",
+      "waiting_results": "Waiting for results...",
       "correct": "Correct",
       "incorrect": "Incorrect",
       "streak": "🔥 Streak: {streak}",

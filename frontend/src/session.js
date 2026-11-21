@@ -1,11 +1,12 @@
 import { reactive } from 'vue'
+import { safeLocalRemove } from './utils/storage.js'
 
 export const session = reactive({ loaded: false, user: null, csrfToken: '', expiresAt: null, mode: null })
 let requestVersion = 0
 let pendingLoad = null
 
 export function loadSession(force = false) {
-  if (typeof localStorage !== 'undefined') localStorage.removeItem('adminToken')
+  safeLocalRemove('adminToken')
   if (session.loaded && !force) return Promise.resolve(session.user)
   if (pendingLoad && !force) return pendingLoad
   const version = ++requestVersion

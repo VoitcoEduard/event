@@ -43,9 +43,10 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 		jsonMsg, _ := json.Marshal(ServerMessage{
 			Type: "cmd:state",
 			Payload: map[string]interface{}{
-				"state":        s.State,
-				"currentIndex": s.CurrentIndex,
-				"runId":        s.RunID,
+				"state":          s.State,
+				"currentIndex":   s.CurrentIndex,
+				"totalQuestions": len(s.Questions),
+				"runId":          s.RunID,
 			},
 		})
 		if !h.sendToClientLocked(client, jsonMsg) {
@@ -58,7 +59,9 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 			Payload: map[string]any{
 				"eventId": s.EventID, "moduleId": moduleID,
 				"state": s.State, "currentIndex": s.CurrentIndex,
+				"totalQuestions": len(s.Questions),
 				"players": s.Players, "answerCounts": s.AnswerCounts,
+				"answeredCount": len(s.AnsweredPlayerIDs),
 				"questionWindows": s.QuestionWindows, "startTime": s.StartTime,
 			},
 		})
@@ -68,7 +71,7 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 
 		// Send data:batch with questions to projector
 		if len(s.Batches) > 0 && s.CurrentIndex/MaxQuestionsPerBatch < len(s.Batches) {
-			jsonMsg3 := publicBatchMessage(s.Batches[s.CurrentIndex/MaxQuestionsPerBatch], s.CurrentIndex)
+			jsonMsg3 := publicBatchMessage(s.Batches[s.CurrentIndex/MaxQuestionsPerBatch], s.CurrentIndex, len(s.Questions), s.RunID)
 			if !h.sendToClientLocked(client, jsonMsg3) {
 				return
 			}

@@ -168,6 +168,12 @@ func (r *EventSessionRepository) GetByEventID(ctx context.Context, id string) ([
 func (r *EventSessionRepository) Update(ctx context.Context, v *models.EventSession) error {
 	return r.DB.UpdateEventSession(ctx, v)
 }
+func (r *EventSessionRepository) UpdateStatus(ctx context.Context, id string, status models.EventSessionStatus, at time.Time) error {
+	return r.DB.UpdateEventSessionStatus(ctx, id, status, at)
+}
+func (r *EventSessionRepository) UpdateActiveModule(ctx context.Context, id, activeModuleID string, at time.Time) error {
+	return r.DB.UpdateEventSessionActiveModule(ctx, id, activeModuleID, at)
+}
 
 // Used to preserve and verify the existing partial-update semantics.
 func buildEventSessionUpdate(v *models.EventSession) map[string]any {

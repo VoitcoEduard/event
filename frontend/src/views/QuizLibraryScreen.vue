@@ -327,7 +327,7 @@ const router = useRouter()
 const { success, error, info } = useToast()
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
 }
 
 const tabs = [

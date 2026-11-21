@@ -30,12 +30,6 @@ func (h *QuizHub) processTeamsAdminJoin(client *Client, msg ClientMessage) {
 }
 
 func (h *QuizHub) processHostEndTeams(client *Client, msg ClientMessage) {
-	h.mu.RLock()
-	isHost := client.IsHost
-	h.mu.RUnlock()
-	if !isHost {
-		return
-	}
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		return
@@ -43,13 +37,32 @@ func (h *QuizHub) processHostEndTeams(client *Client, msg ClientMessage) {
 	eventID, _ := data["eventId"].(string)
 	moduleID, _ := data["moduleId"].(string)
 	moduleName, _ := data["moduleName"].(string)
+	if eventID == "" || moduleID == "" {
+		return
+	}
+
+	h.mu.RLock()
+	allowed := false
+	if client.IsHost {
+		allowed = client.ModuleID == "" || client.ModuleID == moduleID
+	} else if client.IsTeamsAdmin {
+		allowed = client.EventID != "" && client.EventID == eventID
+	}
+	h.mu.RUnlock()
+	if !allowed {
+		return
+	}
 
 	DebugLog("host:end_teams received for event: %s, module: %s", eventID, moduleID)
 
 	result, err := h.saveTeams(eventID, moduleID, moduleName)
-
 	if err != nil {
 		log.Printf("Error saving team results for module %s: %v", moduleID, err)
+		h.sendToClient(client, mustMarshal(ServerMessage{
+			Type:    "cmd:error",
+			Payload: map[string]interface{}{"code": "save_failed", "eventId": eventID, "moduleId": moduleID, "message": "Could not save team results."},
+		}))
+		return
 	}
 
 	message := ServerMessage{

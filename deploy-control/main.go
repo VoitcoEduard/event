@@ -265,7 +265,18 @@ func (c *controller) changeImage(ctx context.Context, env environment, target st
 	}
 	state := c.environmentState(env.Name)
 	if rollback {
+		popped := false
+		for len(state.Previous) > 0 && state.Previous[len(state.Previous)-1] == current {
+			state.Previous = state.Previous[:len(state.Previous)-1]
+			popped = true
+		}
 		if len(state.Previous) == 0 {
+			if popped {
+				state.Current = current
+				if err := c.saveState(); err != nil {
+					return nil, fmt.Errorf("saving rollback state failed: %w", err)
+				}
+			}
 			return nil, errNoRollback
 		}
 		target = state.Previous[len(state.Previous)-1]

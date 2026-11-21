@@ -76,6 +76,28 @@ func (s *Store) UpdateEventSession(ctx context.Context, v *models.EventSession) 
 	return affected(tag, err)
 }
 
+// UpdateEventSessionStatus atomically updates status and lifecycle timestamps
+// without overwriting active_module_id or other concurrently modified columns.
+func (s *Store) UpdateEventSessionStatus(ctx context.Context, id string, status models.EventSessionStatus, at time.Time) error {
+	tag, err := s.Pool.Exec(ctx, `UPDATE event_sessions
+		SET status=$2,
+		    started_at=CASE WHEN $2='live' AND started_at IS NULL THEN $3 ELSE started_at END,
+		    ended_at=CASE WHEN $2='completed' THEN $3 ELSE ended_at END,
+		    updated_at=$3
+		WHERE id=$1`, id, status, at)
+	return affected(tag, err)
+}
+
+// UpdateEventSessionActiveModule atomically sets or clears active_module_id
+// ("" -> NULL) without overwriting status or timestamps.
+func (s *Store) UpdateEventSessionActiveModule(ctx context.Context, id, activeModuleID string, at time.Time) error {
+	tag, err := s.Pool.Exec(ctx, `UPDATE event_sessions
+		SET active_module_id=NULLIF($2,'')::uuid,
+		    updated_at=$3
+		WHERE id=$1`, id, activeModuleID, at)
+	return affected(tag, err)
+}
+
 func scanAttempt(row scanner) (*models.ModuleAttempt, error) {
 	var a models.ModuleAttempt
 	var data []byte
