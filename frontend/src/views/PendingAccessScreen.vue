@@ -1,5 +1,8 @@
 <template>
   <main class="access-page">
+    <div class="access-utility-strip">
+      <AdminThemeToggle variant="inline" />
+    </div>
     <div class="access-card">
       <h1>{{ $t('auth.pendingTitle') }}</h1>
       <p>{{ $t('auth.pendingMessage') }}</p>
@@ -17,6 +20,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { loadSession, signOut } from '../session'
+import AdminThemeToggle from '../components/AdminThemeToggle.vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -56,12 +60,13 @@ async function leave() {
 
 <style scoped>
 .access-page {
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(24px, env(safe-area-inset-top, 0px))
+  padding: max(72px, calc(60px + env(safe-area-inset-top, 0px)))
            max(16px, env(safe-area-inset-right, 0px))
            max(84px, calc(72px + env(safe-area-inset-bottom, 0px)))
            max(16px, env(safe-area-inset-left, 0px));
@@ -69,6 +74,17 @@ async function leave() {
   background: #121212;
   color: white;
   text-align: center;
+}
+
+.access-utility-strip {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .access-card {
@@ -149,5 +165,11 @@ button:disabled {
   background: var(--admin-danger-soft, rgba(248, 113, 113, 0.14));
   border: 1px solid color-mix(in srgb, var(--admin-danger, #f87171) 35%, var(--admin-border, #333));
   color: var(--admin-danger, #f87171);
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .access-utility-strip :deep(.admin-theme-option) {
+    min-block-size: 44px;
+  }
 }
 </style>

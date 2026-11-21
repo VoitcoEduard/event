@@ -325,7 +325,7 @@ const fetchEventDetails = async (targetId = routeEventId.value) => {
   const eventId = targetId ? String(targetId) : ''
   if (!eventId) {
     currentEvent.value = null
-    eventLoadError.value = 'Event not found'
+    eventLoadError.value = t('event_details.not_found')
     isLoadingEvent.value = false
     return
   }
@@ -345,15 +345,15 @@ const fetchEventDetails = async (targetId = routeEventId.value) => {
     } else if (response.status === 404) {
       currentEvent.value = null
       writeStoredEvent(null)
-      eventLoadError.value = 'Event not found'
+      eventLoadError.value = t('event_details.not_found')
     } else {
-      eventLoadError.value = 'Failed to load event details'
+      eventLoadError.value = t('event_details.load_failed')
       error(eventLoadError.value)
     }
   } catch (err) {
     if (seq !== eventFetchSeq) return
     console.error('Error fetching event details:', err)
-    eventLoadError.value = 'Failed to load event details'
+    eventLoadError.value = t('event_details.load_failed')
     error(eventLoadError.value)
   } finally {
     if (seq === eventFetchSeq) {
@@ -1151,6 +1151,10 @@ const copyProjectorLink = () => {
   .modules-card {
     padding: 18px 16px;
     min-height: 0;
+  }
+
+  .add-button {
+    min-block-size: 44px;
   }
 
   .module-item {

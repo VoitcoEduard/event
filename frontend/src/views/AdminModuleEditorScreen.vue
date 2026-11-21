@@ -1324,8 +1324,8 @@ function handleFileUpload(event) {
 function exportJSON() {
   overflowOpen.value = false
   const payload = {
-    name: moduleName.value.trim() || 'Export',
-    description: `Exported from event ${eventId.value}`,
+    name: moduleName.value.trim() || t('module_editor.export_default_name'),
+    description: t('module_editor.export_description', { eventId: eventId.value }),
     moduleType: moduleType.value,
     data: { questions: questions.value }
   }
@@ -1373,7 +1373,7 @@ async function saveAsTemplate() {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         name,
-        description: `Created from event ${eventId.value}`,
+        description: t('module_editor.template_description', { eventId: eventId.value }),
         moduleType: moduleType.value,
         data: dataPayload
       })
@@ -2200,6 +2200,21 @@ onUnmounted(() => {
   .editor-body {
     padding: 16px max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px));
   }
+
+  .editor-btn,
+  .module-name-input,
+  .setting-select,
+  .checkbox-setting-label,
+  .settings-collapse-trigger,
+  .template-item,
+  .close-btn {
+    min-height: 44px;
+  }
+
+  .close-btn,
+  .overflow-menu-toggle {
+    min-width: 44px;
+  }
 }
 
 @media (pointer: coarse) {
@@ -2207,8 +2222,14 @@ onUnmounted(() => {
   .module-name-input,
   .setting-select,
   .checkbox-setting-label,
+  .settings-collapse-trigger,
+  .template-item,
   .close-btn {
     min-height: 44px;
+  }
+
+  .close-btn {
+    min-width: 44px;
   }
 }
 </style>

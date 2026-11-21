@@ -11,10 +11,10 @@
     
     <div v-if="modelValue && hidePreview" class="compact-actions">
       <button type="button" class="change-btn" @click="triggerFileSelect" :disabled="disabled">
-        <AppIcon name="upload" :size="16" aria-hidden="true" /> Change Image
+        <AppIcon name="upload" :size="16" aria-hidden="true" /> {{ $t('image_uploader.change_image') }}
       </button>
       <button type="button" class="remove-btn-compact" @click="removeImage" :disabled="disabled">
-        <AppIcon name="close" :size="16" aria-hidden="true" /> Remove
+        <AppIcon name="close" :size="16" aria-hidden="true" /> {{ $t('image_uploader.remove_short') }}
       </button>
     </div>
     

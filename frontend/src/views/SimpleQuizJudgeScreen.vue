@@ -1,10 +1,13 @@
 <template>
   <div class="judge-screen">
+    <div class="judge-utility-strip">
+      <AdminThemeToggle variant="inline" />
+    </div>
     <div class="judge-header">
       <h1>{{ $t('simple_quiz.judge.title') }}</h1>
       <div class="judge-filters">
         <select v-model="questionFilter" class="judge-select">
-          <option :value="-1">Q: all ({{ total }})</option>
+          <option :value="-1">{{ $t('simple_quiz.judge.question_all', { total }) }}</option>
           <option v-for="i in total" :key="i" :value="i - 1">Q{{ i }}</option>
         </select>
         <select v-model="pendingFilter" class="judge-select">
@@ -42,7 +45,7 @@
       <div class="judge-notes" v-if="questionCorrectAnswer(current.questionIndex)">
         <strong>{{ $t('simple_quiz.player.revealed_answer') }}:</strong> {{ questionCorrectAnswer(current.questionIndex) }}
       </div>
-      <div class="judge-points">{{ questionPoints(current.questionIndex) }} pts</div>
+      <div class="judge-points">{{ $t('simple_quiz.judge.points_short', { points: questionPoints(current.questionIndex) }) }}</div>
       <p class="judge-answer">{{ current.text }}</p>
       <div class="judge-actions">
         <button type="button" class="grade-right" @click="grade('right')" :disabled="gradingBusy">{{ $t('simple_quiz.judge.right') }}</button>
@@ -69,6 +72,7 @@ import { getImageUrl } from '../services/media'
 import { quizWS } from '../services/websocket'
 import { newUUID } from '../utils'
 import AppIcon from '../components/AppIcon.vue'
+import AdminThemeToggle from '../components/AdminThemeToggle.vue'
 
 const route = useRoute()
 const eventId = route.params.eventId
@@ -236,6 +240,13 @@ onUnmounted(() => {
   max-width: 760px;
   margin: 0 auto;
 }
+.judge-utility-strip {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
 .judge-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .judge-filters { display: flex; gap: 8px; align-items: center; }
 .judge-select { background: #2C2C2E; color: #fff; border: 1px solid #3A3A3C; border-radius: 8px; padding: 8px; }
@@ -368,13 +379,18 @@ onUnmounted(() => {
   }
 }
 
-@media (pointer: coarse) {
+@media (max-width: 768px), (pointer: coarse) {
   .judge-select,
   .judge-btn,
   .link-btn,
   .judge-actions button,
-  .judge-nav button {
+  .judge-nav button,
+  .judge-utility-strip :deep(.admin-theme-option) {
     min-block-size: 44px;
+  }
+
+  .judge-nav button {
+    min-inline-size: 44px;
   }
 }
 </style>

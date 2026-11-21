@@ -31,7 +31,7 @@
               <option value="players">{{ t('data_library.players') }}</option><option value="teams">{{ t('data_library.teams') }}</option><option value="both">{{ t('data_library.players_and_teams') }}</option>
             </select>
           </label>
-          <span class="record-count">{{ rows.length }} {{ target }}</span>
+          <span class="record-count">{{ t(target === 'players' ? 'data_library.players_count' : 'data_library.teams_count', { count: rows.length }, rows.length) }}</span>
         </section>
         <p class="sheet-hint" v-if="!selectedModule">{{ t('data_library.edit_hint') }}</p>
         <p class="sheet-hint" v-else-if="!allowsManual(selectedModule, target)">{{ t('data_library.manual_disabled', { target: target === 'players' ? t('data_library.players') : t('data_library.teams') }) }}</p>
@@ -49,14 +49,14 @@
                 </tr></thead>
                 <tbody><tr v-for="(row, index) in rows" :key="row.id" :class="{ edited: hasDraft(row) }">
                   <td class="row-number" data-label="#">{{ index + 1 }}</td>
-                  <th scope="row" class="name-cell" :title="row.id"><input v-if="target === 'players' && row.registered" :aria-label="`${row.name} player name`" :disabled="busy" :value="drafts[row.id]?.name ?? row.name" @input="setDraft(row, 'name', $event.target.value)" /><span v-else>{{ row.name }}</span><small>{{ row.id }}</small></th>
+                  <th scope="row" class="name-cell" :title="row.id"><input v-if="target === 'players' && row.registered" :aria-label="t('data_library.aria.player_name', { name: row.name })" :disabled="busy" :value="drafts[row.id]?.name ?? row.name" @input="setDraft(row, 'name', $event.target.value)" /><span v-else>{{ row.name }}</span><small>{{ row.id }}</small></th>
                   <template v-for="module in visibleModules" :key="module.id">
                     <td v-if="target === 'players' && isGame(module)" :data-label="`${module.name} · ${t('data_library.latest_game')}`">
-                      <input v-if="selectedModule && isEditableGameScore(module) && row.game[module.id] !== undefined" :aria-label="`${row.name} game points`" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
+                      <input v-if="selectedModule && isEditableGameScore(module) && row.game[module.id] !== undefined" :aria-label="t('data_library.aria.game_points', { name: row.name })" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
                       <span v-else>{{ row.game[module.id] ?? '—' }}</span>
                     </td>
                     <td v-if="module.type === 'teams'" :data-label="`${module.name} · ${t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score')}`">{{ row.awards[module.id] ?? 0 }}</td>
-                    <td :data-label="`${module.name} · ${t('data_library.manual_adjustments')}`"><input v-if="selectedModule && row.registered && allowsManual(module, target)" :aria-label="`${row.name} manual points`" type="number" step="any" :disabled="busy" :value="draft(row, 'manual')" @input="setDraft(row, 'manual', $event.target.value)" /><span v-else>{{ row.manual[module.id] ?? 0 }}</span></td>
+                    <td :data-label="`${module.name} · ${t('data_library.manual_adjustments')}`"><input v-if="selectedModule && row.registered && allowsManual(module, target)" :aria-label="t('data_library.aria.manual_points', { name: row.name })" type="number" step="any" :disabled="busy" :value="draft(row, 'manual')" @input="setDraft(row, 'manual', $event.target.value)" /><span v-else>{{ row.manual[module.id] ?? 0 }}</span></td>
                   </template>
                   <td class="total-cell" :data-label="t('data_library.total_points')"><strong>{{ row.total }}</strong></td>
                   <td class="actions-cell" :data-label="t('data_library.actions')"><button type="button" :disabled="busy || !hasDraft(row)" @click="saveRow(row)">{{ t('data_library.save') }}</button><button v-if="hasDraft(row)" type="button" :disabled="busy" @click="delete drafts[row.id]">{{ t('common.cancel') }}</button></td>
@@ -133,14 +133,14 @@ const path = suffix => `/events/${encodeURIComponent(eventId.value)}${suffix}`
 const modulePath = () => path(`/modules/${encodeURIComponent(activeTab.value)}`)
 async function request(url, method = 'GET', body) {
   const response = await fetch(`${API_BASE_URL}${url}`, { method, headers: { ...getAuthHeaders(), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) })
-  if (!response.ok) throw new Error((await response.text()) || `Request failed (${response.status})`)
+  if (!response.ok) throw new Error((await response.text()) || t('data_library.errors.request_failed', { status: response.status }))
   return response.status === 204 ? null : response.json()
 }
 async function load() {
   const current = ++generation
   loading.value = true; error.value = ''; drafts.value = {}; event.value = null
   try {
-    if (!eventId.value) throw new Error('Open Data from an event to continue.')
+    if (!eventId.value) throw new Error(t('data_library.errors.open_from_event'))
     const [e, p, pt, s] = await Promise.all([request(path('')), request(path('/participants')), request(path('/teams')), request(path('/scores'))])
     if (current !== generation) return
     event.value = e; participants.value = p || []; teams.value = pt || []; scores.value = s
@@ -157,7 +157,7 @@ async function loadResponses() {
   if (activeTab.value === tab) responses.value = result.responses || []
 }
 async function selectTab(id) {
-  if (Object.keys(drafts.value).length) { error.value = 'Save or cancel your edits before changing modules.'; return }
+  if (Object.keys(drafts.value).length) { error.value = t('data_library.errors.save_or_cancel_tab'); return }
   activeTab.value = id; error.value = ''; notice.value = ''
   try { await loadResponses() } catch (err) { error.value = err.message }
 }
@@ -176,7 +176,7 @@ async function saveRow(row) {
     const game = values.game === undefined || !isEditableGameScore(selectedModule.value) ? undefined : parsePoints(values.game, true)
     const manual = values.manual === undefined ? undefined : parsePoints(values.manual)
     const name = values.name === undefined ? undefined : values.name.trim()
-    if (name !== undefined && (!name || name.length > 120)) throw new Error('Enter a player name (up to 120 characters).')
+    if (name !== undefined && (!name || name.length > 120)) throw new Error(t('data_library.errors.invalid_player_name'))
     if (name !== undefined) {
       await request(path(`/participants/${encodeURIComponent(row.id)}/name`), 'POST', { displayName: name })
       delete values.name
@@ -192,9 +192,9 @@ async function saveRow(row) {
     delete drafts.value[row.id]
     await refreshScores()
     await loadResponses()
-    notice.value = `Changes saved for ${name ?? row.name}.`
+    notice.value = t('data_library.notices.row_saved', { name: name ?? row.name })
   } catch (err) {
-    error.value = `Could not finish saving: ${err.message}`
+    error.value = t('data_library.errors.save_failed', { message: err.message })
     try { await refreshScores() } catch { /* Keep the original save error visible. */ }
   } finally { busy.value = false }
 }
@@ -203,7 +203,7 @@ async function saveTarget(value) {
   try {
     await request(modulePath() + '/manual-score-target', 'PUT', { target: value })
     selectedModule.value.data = { ...selectedModule.value.data, manualScoreTarget: value }; drafts.value = {}
-    notice.value = 'Manual entry setting saved. Existing points are preserved.'
+    notice.value = t('data_library.notices.manual_target_saved')
   } catch (err) { error.value = err.message } finally { busy.value = false }
 }
 function fieldLabel(key) {
@@ -220,12 +220,12 @@ async function saveResponse(response, key, value) {
       await refreshScores()
     }
     await request(modulePath() + `/responses/${encodeURIComponent(response.id)}`, 'PUT', { data })
-    response.data = data; notice.value = 'Response saved.'
-  } catch (err) { error.value = `Response was not saved: ${err.message}`; try { await loadResponses() } catch { /* Preserve save error. */ } }
+    response.data = data; notice.value = t('data_library.notices.response_saved')
+  } catch (err) { error.value = t('data_library.errors.response_save_failed', { message: err.message }); try { await loadResponses() } catch { /* Preserve save error. */ } }
   finally { busy.value = false }
 }
 function canNavigate() {
-  if (busy.value || dirty.value) { error.value = 'Save or cancel your edits before leaving.'; return false }
+  if (busy.value || dirty.value) { error.value = t('data_library.errors.save_or_cancel_leave'); return false }
   return true
 }
 onBeforeRouteLeave(canNavigate)
@@ -462,6 +462,22 @@ article label { margin: 4px 16px 4px 0; }
     border-radius: 8px;
     border: 1px solid var(--admin-border, #50575f);
   }
+
+  .data-page button,
+  .data-page select,
+  .data-page input,
+  .data-page .actions-cell button,
+  .data-page td input[type="number"],
+  .data-page .name-cell input {
+    min-block-size: 44px;
+    min-height: 44px;
+  }
+
+  .data-page a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+  }
 }
 
 @container data-page (inline-size <= 700px) {
@@ -662,7 +678,7 @@ article label { margin: 4px 16px 4px 0; }
   .data-page td input[type="number"] {
     width: min(140px, 45%);
     height: auto;
-    min-height: 40px;
+    min-height: 44px;
     font-size: 16px;
     padding: 6px 10px;
     border-color: var(--admin-border-strong, #50575f);
@@ -676,8 +692,8 @@ article label { margin: 4px 16px 4px 0; }
     gap: 8px;
   }
   .data-page .actions-cell button {
-    min-block-size: 40px;
-    min-height: 40px;
+    min-block-size: 44px;
+    min-height: 44px;
     font-size: 13px;
     padding: 6px 14px;
     margin-right: 0;

@@ -514,7 +514,17 @@ async function handleSignOut() {
   .admin-nav-link,
   .admin-lang-select,
   .admin-signout-btn,
-  .admin-brand {
+  .admin-brand,
+  .admin-breadcrumb-link {
+    min-height: 44px;
+  }
+
+  .admin-breadcrumb-link {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .admin-utility-cluster :deep(.admin-theme-option) {
     min-height: 44px;
   }
 }

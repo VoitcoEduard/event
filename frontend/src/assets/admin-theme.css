@@ -144,6 +144,12 @@ html[data-admin-appearance="true"] :focus-visible {
 .admin-theme-option:hover { background: var(--admin-surface-hover); color: var(--admin-text); }
 .admin-theme-option.active { background: var(--admin-primary-soft); color: var(--admin-primary); }
 
+@media (max-width: 768px), (pointer: coarse) {
+  .admin-theme-option {
+    min-height: 44px;
+  }
+}
+
 html[data-admin-appearance="true"] .admin-theme-control .admin-theme-option {
   border: 0 !important;
   background: transparent !important;

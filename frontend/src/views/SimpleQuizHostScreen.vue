@@ -70,7 +70,7 @@
               <span>Q{{ p.questionIndex + 1 }}</span>
               <span>{{ p.received }} / {{ p.graded }} <AppIcon name="check" :size="14" aria-hidden="true" /> / {{ p.reviewLater }}…</span>
             </div>
-            <p v-if="gradingComplete"><AppIcon name="check" :size="16" aria-hidden="true" /> {{ $t('simple_quiz.host.waiting_grading') }} ready</p>
+            <p v-if="gradingComplete"><AppIcon name="check" :size="16" aria-hidden="true" /> {{ $t('simple_quiz.host.grading_ready') }}</p>
             <p v-else>{{ $t('simple_quiz.host.waiting_grading') }}</p>
           </div>
           <div v-if="leaderboard.length" class="grading-card">
@@ -80,11 +80,11 @@
             </div>
           </div>
 		  <div v-if="playerList.length && participantOptions.length" class="grading-card">
-			<h4>Event identities</h4>
+			<h4>{{ $t('simple_quiz.host.event_identities') }}</h4>
 			<div v-for="p in playerList" :key="p.playerId" class="prog-row">
 				<span>{{ p.nickname }}</span>
-				<select :value="p.participantId || ''" :aria-label="`Link ${p.nickname} to an event participant`" @change="linkPlayer(p.playerId, $event)">
-					<option value="">Separate score row</option>
+				<select :value="p.participantId || ''" :aria-label="$t('simple_quiz.host.link_participant_aria', { name: p.nickname })" @change="linkPlayer(p.playerId, $event)">
+					<option value="">{{ $t('simple_quiz.host.separate_score_row') }}</option>
 					<option v-for="person in participantOptions" :key="person.id" :value="person.id">{{ person.displayName }} ({{ person.id }})</option>
 				</select>
 			</div>

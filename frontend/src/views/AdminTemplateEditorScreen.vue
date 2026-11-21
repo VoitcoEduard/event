@@ -726,7 +726,13 @@ const saveTemplate = async () => {
   }
 
   .cancel-link,
-  .save-btn {
+  .save-btn,
+  .retry-btn,
+  .state-action-link {
+    min-height: 44px;
+  }
+
+  .field-input:not(.field-textarea) {
     min-height: 44px;
   }
 
@@ -739,7 +745,8 @@ const saveTemplate = async () => {
   .cancel-link,
   .save-btn,
   .retry-btn,
-  .state-action-link {
+  .state-action-link,
+  .field-input:not(.field-textarea) {
     min-block-size: 44px;
   }
 }

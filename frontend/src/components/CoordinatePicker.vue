@@ -6,7 +6,7 @@
       ref="imageContainer"
     >
       <img v-if="imageUrl" :src="imageUrl" @load="onImageLoad" crossorigin="anonymous" decoding="async" />
-      <div v-else class="loading-placeholder">Loading...</div>
+      <div v-else class="loading-placeholder">{{ $t('common.loading') }}</div>
       
       <!-- Existing targets shown as markers -->
       <div 
@@ -62,7 +62,7 @@
                <span>%</span>
              </div>
           </div>
-          <button type="button" class="remove-btn-small" @click.stop="removeTarget(target.id)" aria-label="Remove target"><AppIcon name="close" :size="14" aria-hidden="true" /></button>
+          <button type="button" class="remove-btn-small" @click.stop="removeTarget(target.id)" :aria-label="$t('quiz_config.question_editor.coordinate_picker.remove_target')"><AppIcon name="close" :size="14" aria-hidden="true" /></button>
         </div>
       </div>
     </div>

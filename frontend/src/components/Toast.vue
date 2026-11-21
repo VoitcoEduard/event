@@ -13,7 +13,7 @@
             <AppIcon :name="getIcon(toast.type)" :size="15" aria-hidden="true" />
           </span>
           <span class="toast-message">{{ toast.message }}</span>
-          <button class="toast-close" @click="remove(toast.id)" aria-label="Close notification">
+          <button class="toast-close" @click="remove(toast.id)" :aria-label="$t('common.close_notification')">
             <AppIcon name="close" :size="16" aria-hidden="true" />
           </button>
         </div>

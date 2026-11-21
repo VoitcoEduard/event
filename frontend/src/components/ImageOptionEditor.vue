@@ -35,8 +35,8 @@
             type="button"
             @click="removeOption(idx)"
             class="remove-btn"
-            title="Remove option"
-            aria-label="Remove option"
+            :title="$t('image_options_editor.remove_option')"
+            :aria-label="$t('image_options_editor.remove_option')"
           >
             <AppIcon name="close" :size="16" aria-hidden="true" />
           </button>

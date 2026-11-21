@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import DataLibraryScreen from '../src/views/DataLibraryScreen.vue'
+import i18n from '../src/i18n.js'
 
 const mockRoute = reactive({ query: { eventId: 'evt-1' } })
 const mockRouter = { push: vi.fn() }
@@ -21,7 +22,7 @@ vi.mock('../src/utils', () => ({
 let wrapper = null
 const mountOpts = {
   global: {
-    mocks: { $t: k => k },
+    plugins: [i18n],
     stubs: {
       AppIcon: true,
       'router-link': true,
@@ -31,6 +32,7 @@ const mountOpts = {
 }
 
 beforeEach(() => {
+  i18n.global.locale.value = 'en'
   mockRoute.query = { eventId: 'evt-1' }
   mockRouter.push.mockClear()
 })

@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import AdminEventDetailsScreen from '../src/views/AdminEventDetailsScreen.vue'
+import en from '../src/locales/en.json'
+
+function lookupEn(key) {
+  return key.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), en) ?? key
+}
 
 const mockRoute = reactive({ params: { id: 'evt-1' } })
 const mockRouter = { push: vi.fn() }
@@ -13,7 +18,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: k => k, locale: { value: 'en' } }),
+  useI18n: () => ({ t: lookupEn, locale: { value: 'en' } }),
 }))
 
 vi.mock('../src/composables/useToast', () => ({

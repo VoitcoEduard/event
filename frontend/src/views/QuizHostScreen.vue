@@ -74,7 +74,7 @@
           {{ timeRemaining }}
         </div>
         <div class="timer" v-else-if="gameState === 'question-presenting'" :style="explainTimeRemaining > 0 ? '' : 'font-size: 1.5rem'">
-          {{ explainTimeRemaining > 0 ? explainTimeRemaining : ($t('quiz.player.get_ready') || 'Ready!') }}
+          {{ explainTimeRemaining > 0 ? explainTimeRemaining : $t('quiz.player.get_ready') }}
         </div>
         <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
       </div>
@@ -114,7 +114,7 @@
             
             <!-- Image Background (if exists) -->
             <div v-if="questionImageUrl" class="question-image-container">
-               <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
+               <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image" decoding="async" loading="eager" />
                <div class="image-overlay-gradient"></div>
             </div>
 
@@ -245,7 +245,7 @@
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
                 <div class="question-text-overlay">
@@ -277,7 +277,7 @@
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
                 <div class="question-text-overlay">
@@ -300,7 +300,7 @@
             <div class="question-column">
               <div class="question-card has-distribution" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" decoding="async" loading="eager" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image dimmed-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
 

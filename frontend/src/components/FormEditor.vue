@@ -101,7 +101,7 @@
                         type="button"
                         class="remove-answer-btn"
                         @click="removeAnswer(step.id, answerIndex)"
-                        aria-label="Remove answer"
+                        :aria-label="$t('form_editor.remove_answer')"
                       >
                         <AppIcon name="close" :size="14" aria-hidden="true" />
                       </button>

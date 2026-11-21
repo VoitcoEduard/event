@@ -1241,7 +1241,12 @@ onUnmounted(() => {
 
   .card-action-btn {
     flex: 1 1 auto;
-    min-block-size: 42px;
+    min-block-size: 44px;
+  }
+
+  .icon-btn {
+    min-block-size: 44px;
+    min-inline-size: 44px;
   }
 
   .track-card {

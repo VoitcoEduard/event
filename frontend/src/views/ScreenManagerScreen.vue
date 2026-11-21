@@ -748,7 +748,7 @@ const addElement = (type) => {
     y: 40,
     width: 20,
     height: 10,
-    content: type === 'text' ? 'New Text' : '',
+    content: type === 'text' ? t('screen_manager.editor.new_text_default') : '',
     color: '#ffffff',
     fontSize: 48,
     textAlign: 'center'
@@ -910,7 +910,7 @@ const onElementKeydown = (element, e) => {
     e.preventDefault()
     e.stopPropagation()
     deselectElement()
-    liveAnnouncement.value = `${getElementLabel(element)} deselected`
+    liveAnnouncement.value = t('screen_manager.editor.element_deselected', { label: getElementLabel(element) })
     return
   }
 
@@ -958,7 +958,7 @@ const showImageSelector = async (target) => {
     imageLibrary.value = await getScreensavers()
     isImageSelectorOpen.value = true
   } catch (err) {
-    error('Failed to load library')
+    error(t('screen_manager.editor.library_load_failed'))
   }
 }
 

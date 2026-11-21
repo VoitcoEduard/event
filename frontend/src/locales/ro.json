@@ -42,7 +42,9 @@
     "errors": {
       "incorrect": "Parolă incorectă. Te rugăm să încerci din nou.",
       "failed": "Nu s-a putut conecta la server. Te rugăm să încerci din nou."
-    }
+    },
+    "hide_password": "Ascunde parola",
+    "show_password": "Arată parola"
   },
   "admin": {
     "title": "Admin Evenimente",
@@ -146,7 +148,53 @@
     "custom_text_placeholder": "Introduceți text personalizat...",
     "live_preview": "Previzualizare Live",
     "toast_pushed": "Afișat cu succes pe proiector",
-    "editor": {"title":"Editor de diapozitive","push_current":"Afișează diapozitivul curent","save_all":"Salvează tot","slides":"Diapozitive","add_custom_slide":"+ Adaugă diapozitiv","text":"Text","properties":"Proprietăți","mobile_slides":"Diapozitive","mobile_properties":"Proprietăți","element":"Element","text_content":"Conținut text","text_color":"Culoare text","font_size":"Dimensiune font","image":"Imagine","select_image":"Selectează o imagine","delete_element":"Șterge elementul","slide":"Diapozitiv","name":"Nume","background_color":"Culoare fundal","background_image":"Imagine de fundal","select_background":"Selectează fundalul","clear_image":"Șterge imaginea","add_elements":"Adaugă elemente","add_text":"+ Adaugă text","add_image":"+ Adaugă imagine","add_qr":"+ Adaugă cod QR","template_options":"Opțiuni șablon","save_template":"Salvează ca șablon","apply_template":"Aplică șablonul","no_templates":"Nu există șabloane salvate.","template_name_prompt":"Introdu numele șablonului:","template_saved":"Șablon salvat","template_save_failed":"Salvarea șablonului a eșuat","apply_confirm":"Aplici șablonul \"{name}\"? Diapozitivul curent va fi înlocuit.","template_applied":"Șablon aplicat","load_failed":"Încărcarea diapozitivelor a eșuat","saved":"Diapozitive salvate","save_failed":"Salvarea diapozitivelor a eșuat","pushed":"Afișat pe ecranul mare","push_failed":"Afișarea pe ecran a eșuat","new_custom_slide":"Diapozitiv personalizat nou","delete_slide_confirm":"Ștergi acest diapozitiv?"}
+    "editor": {
+      "title": "Editor de diapozitive",
+      "push_current": "Afișează diapozitivul curent",
+      "save_all": "Salvează tot",
+      "slides": "Diapozitive",
+      "add_custom_slide": "+ Adaugă diapozitiv",
+      "text": "Text",
+      "properties": "Proprietăți",
+      "mobile_slides": "Diapozitive",
+      "mobile_properties": "Proprietăți",
+      "element": "Element",
+      "text_content": "Conținut text",
+      "text_color": "Culoare text",
+      "font_size": "Dimensiune font",
+      "image": "Imagine",
+      "select_image": "Selectează o imagine",
+      "delete_element": "Șterge elementul",
+      "slide": "Diapozitiv",
+      "name": "Nume",
+      "background_color": "Culoare fundal",
+      "background_image": "Imagine de fundal",
+      "select_background": "Selectează fundalul",
+      "clear_image": "Șterge imaginea",
+      "add_elements": "Adaugă elemente",
+      "add_text": "+ Adaugă text",
+      "add_image": "+ Adaugă imagine",
+      "add_qr": "+ Adaugă cod QR",
+      "template_options": "Opțiuni șablon",
+      "save_template": "Salvează ca șablon",
+      "apply_template": "Aplică șablonul",
+      "no_templates": "Nu există șabloane salvate.",
+      "template_name_prompt": "Introdu numele șablonului:",
+      "template_saved": "Șablon salvat",
+      "template_save_failed": "Salvarea șablonului a eșuat",
+      "apply_confirm": "Aplici șablonul \"{name}\"? Diapozitivul curent va fi înlocuit.",
+      "template_applied": "Șablon aplicat",
+      "load_failed": "Încărcarea diapozitivelor a eșuat",
+      "saved": "Diapozitive salvate",
+      "save_failed": "Salvarea diapozitivelor a eșuat",
+      "pushed": "Afișat pe ecranul mare",
+      "push_failed": "Afișarea pe ecran a eșuat",
+      "new_custom_slide": "Diapozitiv personalizat nou",
+      "delete_slide_confirm": "Ștergi acest diapozitiv?",
+      "library_load_failed": "Nu s-a putut încărca biblioteca",
+      "new_text_default": "Text nou",
+      "element_deselected": "{label} deselectat"
+    }
   },
   "library": {
     "title": "Librărie",
@@ -276,9 +324,55 @@
       "name": "Nume",
       "total_score": "Scor total"
     },
-    "scoring_note":"Este luată în calcul doar ultima rundă finalizată a fiecărui joc. Ajustările manuale sunt adăugate separat. Premiile activității pe echipe se acordă integral fiecărui membru înregistrat; ajustările vechi rămân la echipă.","modules":"Module","all_points":"Toate punctele","show":"Afișează","players":"Jucători","teams":"Echipe","players_and_teams":"Jucători și echipe","manual_points_for":"Puncte manuale pentru","edit_hint":"Editează numele unui jucător și salvează rândul. Alege un modul pentru a introduce sau corecta puncte.","manual_disabled":"Introducerea manuală pentru „{target}” este dezactivată în acest modul. Punctele salvate anterior rămân valabile.","spreadsheet":"Tabel cu punctele evenimentului","player":"Jucător","team":"Echipă","latest_game":"Ultimul joc","manual_adjustments":"Ajustări manuale","total_points":"Total puncte","actions":"Acțiuni","save":"Salvează","player_scores":"Punctele jucătorilor","team_scores":"Punctele echipelor","saving":"Se salvează…","unsaved":"Modificări nesalvate — salvează fiecare rând editat","up_to_date":"La zi","no_rows":"Nu există încă {target}. Adaugă-i în eveniment înainte de a introduce puncte.","form_responses":"Răspunsuri formular","no_responses":"Nu există încă răspunsuri.",
+    "scoring_note": "Este luată în calcul doar ultima rundă finalizată a fiecărui joc. Ajustările manuale sunt adăugate separat. Premiile activității pe echipe se acordă integral fiecărui membru înregistrat; ajustările vechi rămân la echipă.",
+    "modules": "Module",
+    "all_points": "Toate punctele",
+    "show": "Afișează",
+    "players": "Jucători",
+    "teams": "Echipe",
+    "players_and_teams": "Jucători și echipe",
+    "manual_points_for": "Puncte manuale pentru",
+    "edit_hint": "Editează numele unui jucător și salvează rândul. Alege un modul pentru a introduce sau corecta puncte.",
+    "manual_disabled": "Introducerea manuală pentru „{target}” este dezactivată în acest modul. Punctele salvate anterior rămân valabile.",
+    "spreadsheet": "Tabel cu punctele evenimentului",
+    "player": "Jucător",
+    "team": "Echipă",
+    "latest_game": "Ultimul joc",
+    "manual_adjustments": "Ajustări manuale",
+    "total_points": "Total puncte",
+    "actions": "Acțiuni",
+    "save": "Salvează",
+    "player_scores": "Punctele jucătorilor",
+    "team_scores": "Punctele echipelor",
+    "saving": "Se salvează…",
+    "unsaved": "Modificări nesalvate — salvează fiecare rând editat",
+    "up_to_date": "La zi",
+    "no_rows": "Nu există încă {target}. Adaugă-i în eveniment înainte de a introduce puncte.",
+    "form_responses": "Răspunsuri formular",
+    "no_responses": "Nu există încă răspunsuri.",
     "breadcrumb": "Date",
-    "page_title": "{name} — Date"
+    "page_title": "{name} — Date",
+    "players_count": "{count} jucător | {count} jucători",
+    "teams_count": "{count} echipă | {count} echipe",
+    "aria": {
+      "player_name": "Numele jucătorului {name}",
+      "game_points": "Puncte de joc {name}",
+      "manual_points": "Puncte manuale {name}"
+    },
+    "errors": {
+      "request_failed": "Cererea a eșuat ({status})",
+      "open_from_event": "Deschideți Date dintr-un eveniment pentru a continua.",
+      "save_or_cancel_tab": "Salvați sau anulați modificările înainte de a schimba modulul.",
+      "save_or_cancel_leave": "Salvați sau anulați modificările înainte de a părăsi pagina.",
+      "invalid_player_name": "Introduceți numele jucătorului (maximum 120 de caractere).",
+      "save_failed": "Nu s-a putut finaliza salvarea: {message}",
+      "response_save_failed": "Răspunsul nu a fost salvat: {message}"
+    },
+    "notices": {
+      "row_saved": "Modificările au fost salvate pentru {name}.",
+      "manual_target_saved": "Setarea pentru introducerea manuală a fost salvată. Punctele existente sunt păstrate.",
+      "response_saved": "Răspuns salvat."
+    }
   },
   "quiz_config": {
     "title": "Editor Quiz",
@@ -354,7 +448,8 @@
       "points": "Puncte",
       "default_hint": "imp.",
       "answer_placeholder": "Introdu variantă de răspuns",
-      "multi_select_warning":"Marchează cel puțin {count} răspunsuri ca fiind corecte pentru o întrebare cu selecție multiplă.","mark_correct":"Marchează ca răspuns corect",
+      "multi_select_warning": "Marchează cel puțin {count} răspunsuri ca fiind corecte pentru o întrebare cu selecție multiplă.",
+      "mark_correct": "Marchează ca răspuns corect",
       "types": {
         "classic": "Clasic",
         "multi_select": "Selecție Multiplă",
@@ -363,7 +458,9 @@
         "correct_picture": "Imagine Corectă",
         "wrong_pictures": "Imagini Greșite",
         "number": "Număr",
-        "simple_text": "Răspuns text"
+        "simple_text": "Răspuns text",
+        "multiple_choice": "Opțiuni multiple",
+        "single_select": "Selecție unică"
       },
       "type_descriptions": {
         "classic": "Întrebare cu patru variante și un singur răspuns corect.",
@@ -381,7 +478,9 @@
         "description_hint": "Selectează un tip pentru a vedea ce face"
       },
       "number": {
-        "configuration":"Configurare răspuns numeric","configuration_hint":"Jucătorii trebuie să introducă exact acest număr. Nu se aplică bonus pentru timp.","correct_answer": "Răspuns Corect",
+        "configuration": "Configurare răspuns numeric",
+        "configuration_hint": "Jucătorii trebuie să introducă exact acest număr. Nu se aplică bonus pentru timp.",
+        "correct_answer": "Răspuns Corect",
         "points": "Puncte"
       },
       "wrong_pictures": {
@@ -393,7 +492,10 @@
         "points_short": "Puncte",
         "tolerance_short": "Toleranță %",
         "time_short": "Timp (s)",
-        "show_count": "Arată Nr.","add_round":"+ Adaugă rundă","remove_round":"Elimină runda","remove_round_confirm":"Elimini această rundă?"
+        "show_count": "Arată Nr.",
+        "add_round": "+ Adaugă rundă",
+        "remove_round": "Elimină runda",
+        "remove_round_confirm": "Elimini această rundă?"
       },
       "range": {
         "range_unit": "Interval & Unități",
@@ -419,7 +521,8 @@
         "placing_hint": "Apasă pe imagine...",
         "no_targets": "Nicio țintă setată.",
         "label_placeholder": "Etichetă...",
-        "radius_label": "Rază:"
+        "radius_label": "Rază:",
+        "remove_target": "Elimină ținta"
       },
       "no_limit": "Fără limită",
       "simple_text": {
@@ -526,7 +629,8 @@
       "radio": "Buton radio",
       "checkbox": "Căsuță de selectare",
       "dropdown": "Listă derulantă"
-    }
+    },
+    "remove_answer": "Elimină răspunsul"
   },
   "image_uploader": {
     "remove": "✕ Elimină",
@@ -535,12 +639,15 @@
     "click_drag": "Apasă sau trage imaginea aici",
     "hint": "JPEG, PNG, GIF, WebP · Comprimat automat în WebP",
     "uploading": "Se încarcă...",
-    "error_upload": "Încărcarea imaginii a eșuat: {error}"
+    "error_upload": "Încărcarea imaginii a eșuat: {error}",
+    "change_image": "Schimbă imaginea",
+    "remove_short": "Elimină"
   },
   "image_options_editor": {
     "label": "Selectează imaginea corectă (2-4 opțiuni)",
     "add_image": "+ Adaugă Imagine",
-    "correct": "Corect"
+    "correct": "Corect",
+    "remove_option": "Elimină opțiunea"
   },
   "event": {
     "no_data": "Nu s-au găsit date despre eveniment.",
@@ -552,7 +659,10 @@
     "tap_to_start": "Apasă pentru a începe",
     "waiting_msg": "Se așteaptă ca gazda să înceapă următoarea activitate...",
     "waiting_submsg": "Fii pe fază!",
-    "leave_btn": "Părăsește Evenimentul", "toggle_theme":"Schimbă tema", "guest":"Invitat", "points_short":"PCT"
+    "leave_btn": "Părăsește Evenimentul",
+    "toggle_theme": "Schimbă tema",
+    "guest": "Invitat",
+    "points_short": "PCT"
   },
   "quiz": {
     "player": {
@@ -583,7 +693,10 @@
       "quiz_over": "Quiz Finalizat",
       "place": "locul",
       "final_score": "Scor Final: {score}",
-      "exit_btn": "Ieșire", "select_multiple":"Selectează toate variantele potrivite", "leaderboard":"Clasament", "points":"Puncte",
+      "exit_btn": "Ieșire",
+      "select_multiple": "Selectează toate variantele potrivite",
+      "leaderboard": "Clasament",
+      "points": "Puncte",
       "wrong_picture_review": {
         "eyebrow": "Imagini greșite",
         "title": "Răspunsurile tale",
@@ -617,10 +730,13 @@
       "quiz_complete": "Quiz Complet!",
       "final_standings": "Clasament Final",
       "enable_sound": "🔊 Activează Sunetul",
-      "wrong_picture_title":"Ce este în neregulă cu imaginea?", "show_leaderboard":"Afișează clasamentul", "question_of":"Întrebarea {current} din {total}",
+      "wrong_picture_title": "Ce este în neregulă cu imaginea?",
+      "show_leaderboard": "Afișează clasamentul",
+      "question_of": "Întrebarea {current} din {total}",
       "toast": {
         "link_copied": "Link-ul proiectorului a fost copiat!"
-      }
+      },
+      "question_image_alt": "Imaginea întrebării"
     }
   },
   "projector": {
@@ -675,12 +791,18 @@
     "members_count": "Membri: {count}",
     "no_team": "Nu sunteți într-o echipă",
     "go_back": "Înapoi",
-    "change_team": "Schimbă Echipa", "you":"Tu"
+    "change_team": "Schimbă Echipa",
+    "you": "Tu"
   },
   "common": {
     "cancel": "Anulează",
     "loading": "Încărcare...",
-    "data_btn": "📊 Date", "close":"Închide", "open":"Deschide", "previous":"Anterior", "next":"Următorul"
+    "data_btn": "📊 Date",
+    "close": "Închide",
+    "open": "Deschide",
+    "previous": "Anterior",
+    "next": "Următorul",
+    "close_notification": "Închide notificarea"
   },
   "simple_quiz": {
     "config": {
@@ -716,7 +838,11 @@
       "paused": "Întrerupt — necesită reluare",
       "confirm_end": "Închei răspunsurile?",
       "confirm_publish": "Publici? Necesită toate notate.",
-      "reveal_hint": "Necesită răspuns public și setare activă."
+      "reveal_hint": "Necesită răspuns public și setare activă.",
+      "grading_ready": "Evaluare gata",
+      "event_identities": "Identități eveniment",
+      "link_participant_aria": "Asociază {name} cu un participant al evenimentului",
+      "separate_score_row": "Rând separat de scor"
     },
     "player": {
       "logo": "Quiz Simplu!",
@@ -755,7 +881,11 @@
       "review": "amânate",
       "received": "primite",
       "empty": "Niciun răspuns încă.",
-      "next_pending": "Următorul apare după notare.", "missing_token":"Lipsește tokenul arbitrului.", "notes":"Notele arbitrului"
+      "next_pending": "Următorul apare după notare.",
+      "missing_token": "Lipsește tokenul arbitrului.",
+      "notes": "Notele arbitrului",
+      "question_all": "Toate ({total})",
+      "points_short": "{points} pct"
     },
     "projector": {
       "join_title": "Alătură-te!",
@@ -764,7 +894,13 @@
       "results": "Rezultate"
     }
   },
-  "map_coordinate_picker": {"close_selection":"Închide selecția","answers":"Răspunsuri","place_answer":"Plasează răspunsul","drop_pin":"Plasează marcajul","interaction_hint":"Panorează și mărește imaginea pentru a alinia ținta cu selectorul"},
+  "map_coordinate_picker": {
+    "close_selection": "Închide selecția",
+    "answers": "Răspunsuri",
+    "place_answer": "Plasează răspunsul",
+    "drop_pin": "Plasează marcajul",
+    "interaction_hint": "Panorează și mărește imaginea pentru a alinia ținta cu selectorul"
+  },
   "appearance": {
     "label": "Aspect",
     "light": "Luminos",
@@ -959,7 +1095,9 @@
       "wrong_pictures": "Imagini Greșite",
       "form": "Formular",
       "teams": "Echipe"
-    }
+    },
+    "not_found": "Evenimentul nu a fost găsit",
+    "load_failed": "Nu s-au putut încărca detaliile evenimentului"
   },
   "add_module": {
     "title": "Adaugă Modul",
@@ -1041,6 +1179,9 @@
     "search_templates": "Caută șabloane...",
     "saved_success": "Modulul a fost salvat!",
     "save_error": "Nu s-a putut salva modulul.",
-    "validation_banner": "{count} problemă de validare necesită atenție înainte de salvare. | {count} probleme de validare necesită atenție înainte de salvare."
+    "validation_banner": "{count} problemă de validare necesită atenție înainte de salvare. | {count} probleme de validare necesită atenție înainte de salvare.",
+    "export_default_name": "Export",
+    "export_description": "Exportat din evenimentul {eventId}",
+    "template_description": "Creat din evenimentul {eventId}"
   }
 }
