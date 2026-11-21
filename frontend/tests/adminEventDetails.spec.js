@@ -35,13 +35,10 @@ const mountOpts = {
   global: {
     mocks: { $t: k => k, $i18n: { locale: 'en' } },
     stubs: {
+      RouterLink: true,
       QRCodeVue: true,
       AppIcon: true,
-      FormModuleConfig: true,
-      QuizModuleConfig: true,
-      WrongPicturesModuleConfig: true,
-      SimpleQuizModuleConfig: true,
-      TeamsModuleConfig: true,
+      AddModuleModal: true,
     },
   },
 }

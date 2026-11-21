@@ -1,71 +1,63 @@
 <template>
-  <div class="access-page">
-    <header class="users-header">
-      <div class="users-header-inner">
-        <nav class="users-nav" :aria-label="$t('auth.backToAdmin')">
-          <RouterLink to="/admin" class="back-link">
-            <AppIcon name="arrowLeft" :size="18" aria-hidden="true" />
-            <span>{{ $t('auth.backToAdmin') }}</span>
-          </RouterLink>
-        </nav>
+  <AdminLayout :breadcrumbs="breadcrumbs">
+    <div class="access-page">
+      <main class="users-content">
         <h1 class="users-title">{{ $t('auth.manageUsers') }}</h1>
-      </div>
-    </header>
 
-    <main class="users-content">
-      <p v-if="error" class="error-msg" role="alert">{{ error }}</p>
+        <p v-if="error" class="error-msg" role="alert">{{ error }}</p>
 
-      <div v-if="loading && !users.length" class="state-card loading-state" aria-live="polite">
-        <p>{{ $t('common.loading') }}</p>
-      </div>
+        <div v-if="loading && !users.length" class="state-card loading-state" aria-live="polite">
+          <p>{{ $t('common.loading') }}</p>
+        </div>
 
-      <div v-else-if="!users.length && !error" class="state-card empty-state">
-        <p>{{ $t('auth.noUsers') }}</p>
-      </div>
+        <div v-else-if="!users.length && !error" class="state-card empty-state">
+          <p>{{ $t('auth.noUsers') }}</p>
+        </div>
 
-      <div v-else-if="users.length" class="users-list">
-        <div v-for="user in users" :key="user.id" class="user-row">
-          <div class="user-info">
-            <strong class="user-name">{{ user.name || user.email }}</strong>
-            <span class="user-email">{{ user.email }}</span>
-            <span class="user-meta">
-              <span class="status-pill" :class="`status-${user.status}`">{{ user.status }}</span>
-              <span class="role-label">{{ user.role }}</span>
-            </span>
-          </div>
-          <div v-if="user.role !== 'owner'" class="user-actions">
-            <button
-              v-if="user.status !== 'active'"
-              type="button"
-              class="primary approve-btn"
-              :disabled="busy"
-              @click="changeStatus(user, 'active')"
-            >{{ $t('auth.approve') }}</button>
-            <button
-              v-if="user.status === 'active'"
-              type="button"
-              class="danger disable-btn"
-              :disabled="busy"
-              @click="changeStatus(user, 'disabled')"
-            >{{ $t('auth.disable') }}</button>
+        <div v-else-if="users.length" class="users-list">
+          <div v-for="user in users" :key="user.id" class="user-row">
+            <div class="user-info">
+              <strong class="user-name">{{ user.name || user.email }}</strong>
+              <span class="user-email">{{ user.email }}</span>
+              <span class="user-meta">
+                <span class="status-pill" :class="`status-${user.status}`">{{ user.status }}</span>
+                <span class="role-label">{{ user.role }}</span>
+              </span>
+            </div>
+            <div v-if="user.role !== 'owner'" class="user-actions">
+              <button
+                v-if="user.status !== 'active'"
+                type="button"
+                class="primary approve-btn"
+                :disabled="busy"
+                @click="changeStatus(user, 'active')"
+              >{{ $t('auth.approve') }}</button>
+              <button
+                v-if="user.status === 'active'"
+                type="button"
+                class="danger disable-btn"
+                :disabled="busy"
+                @click="changeStatus(user, 'disabled')"
+              >{{ $t('auth.disable') }}</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div v-if="hasMore" class="load-more-wrap">
-        <button type="button" class="load-more-btn" :disabled="loading || busy" @click="nextPage">
-          {{ loading ? $t('common.loading') : $t('auth.loadMore') }}
-        </button>
-      </div>
-    </main>
-  </div>
+        <div v-if="hasMore" class="load-more-wrap">
+          <button type="button" class="load-more-btn" :disabled="loading || busy" @click="nextPage">
+            {{ loading ? $t('common.loading') : $t('auth.loadMore') }}
+          </button>
+        </div>
+      </main>
+    </div>
+  </AdminLayout>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { listAdminUsers, setAdminStatus } from '../session'
-import AppIcon from '../components/AppIcon.vue'
+import AdminLayout from '../components/AdminLayout.vue'
 
 const { t } = useI18n()
 const users = ref([])
@@ -74,6 +66,10 @@ const hasMore = ref(false)
 const error = ref('')
 const busy = ref(false)
 const loading = ref(true)
+
+const breadcrumbs = computed(() => [
+  { label: t('admin_shell.users') }
+])
 
 async function load(targetPage = page.value) {
   error.value = ''
@@ -115,12 +111,11 @@ onMounted(load)
 <style scoped>
 .access-page {
   container: users-page / inline-size;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 0 max(16px, env(safe-area-inset-right, 0px)) max(84px, calc(76px + env(safe-area-inset-bottom, 0px))) max(16px, env(safe-area-inset-left, 0px));
+  min-height: 100%;
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) max(64px, calc(48px + env(safe-area-inset-bottom, 0px))) max(16px, env(safe-area-inset-left, 0px));
   box-sizing: border-box;
-  background: #121212;
-  color: white;
+  background: var(--admin-bg, #121212);
+  color: var(--admin-text, white);
 }
 
 .access-page,
@@ -128,53 +123,14 @@ onMounted(load)
   box-sizing: border-box;
 }
 
-.users-header {
-  margin-inline-start: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
-  margin-inline-end: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
-  margin-bottom: 24px;
-  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px));
-  background: var(--admin-surface, #1E1E1E);
-  border-bottom: 1px solid var(--admin-border, #2C2C2C);
-}
-
-.users-header-inner,
 .users-content {
   width: 100%;
   max-width: 820px;
   margin: 0 auto;
 }
 
-.users-nav {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--admin-primary, #75b7ff);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 6px 10px;
-  margin-left: -10px;
-  min-block-size: 36px;
-  min-inline-size: 36px;
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-.back-link:hover {
-  background: var(--admin-surface-hover, rgba(255, 255, 255, 0.08));
-  border-color: var(--admin-border, #333);
-}
-
 .users-title {
-  margin: 0;
+  margin: 0 0 20px;
   font-size: clamp(1.35rem, 1.1rem + 1.2vw, 1.75rem);
   font-weight: 700;
   line-height: 1.2;
@@ -351,7 +307,6 @@ button:disabled {
 }
 
 @media (pointer: coarse) {
-  .back-link,
   .user-actions button,
   .load-more-btn {
     min-block-size: 44px;

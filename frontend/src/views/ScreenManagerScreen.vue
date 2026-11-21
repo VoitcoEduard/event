@@ -1,14 +1,7 @@
 <template>
-  <div ref="screenManagerRef" class="screen-manager">
-    <header class="header">
-      <div class="header-left">
-        <button type="button" class="back-btn" @click="goBack">
-          <AppIcon name="arrowLeft" :size="18" aria-hidden="true" />
-          <span>{{ $t('library.back_btn') }}</span>
-        </button>
-        <h1>{{ $t('screen_manager.editor.title') }}</h1>
-      </div>
-      <div class="header-right">
+  <AdminLayout :breadcrumbs="breadcrumbs">
+    <template #actions>
+      <div class="sm-header-actions">
         <button
           type="button"
           class="launch-btn"
@@ -24,9 +17,10 @@
           {{ $t('screen_manager.editor.save_all') }}
         </button>
       </div>
-    </header>
+    </template>
 
-    <main class="editor-layout">
+    <div ref="screenManagerRef" class="screen-manager">
+      <main class="editor-layout">
       <!-- Center Canvas -->
       <div class="canvas-area">
         <div
@@ -59,7 +53,7 @@
               top: element.y + '%',
               width: element.width + '%',
               height: element.height + '%',
-              color: element.color || '#ffffff',
+              color: getPreviewTextColor(element, activeSlide),
               fontSize: getScaledFontSize(element.fontSize) + 'px',
               textAlign: element.textAlign || 'center',
               fontWeight: element.fontWeight || 'normal'
@@ -330,6 +324,7 @@
       </div>
     </div>
   </div>
+  </AdminLayout>
 </template>
 
 <script setup>
@@ -340,6 +335,7 @@ import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import { getImageUrl, getScreensavers } from '../services/media'
+import AdminLayout from '../components/AdminLayout.vue'
 import AppIcon from '../components/AppIcon.vue'
 
 const { t } = useI18n()
@@ -347,7 +343,21 @@ const router = useRouter()
 const route = useRoute()
 const { success, error } = useToast()
 
-const eventId = route.params.id
+const eventId = computed(() => {
+  const raw = route.params?.eventId ?? route.params?.id ?? route.query?.eventId
+  if (Array.isArray(raw)) return raw[0] ? String(raw[0]) : ''
+  return raw ? String(raw) : ''
+})
+
+const eventName = ref('')
+const breadcrumbs = computed(() => [
+  { label: t('admin_shell.events'), to: '/admin/events' },
+  {
+    label: eventName.value || t('event_details.event_fallback'),
+    to: eventId.value ? `/admin/events/${encodeURIComponent(eventId.value)}` : '/admin/events'
+  },
+  { label: t('screen_manager.breadcrumb') }
+])
 
 const screenManagerRef = ref(null)
 const isCompactLayout = ref(typeof window !== 'undefined' ? window.innerWidth <= 900 : false)
@@ -365,7 +375,7 @@ const activeSlideId = ref(null)
 
 const activeSlide = computed(() => slides.value.find(s => s.id === activeSlideId.value))
 const activeSlideElements = computed(() => activeSlide.value?.elements || [])
-const qrCodeValue = computed(() => `${window.location.origin}/?pin=${eventPin.value || eventId}`)
+const qrCodeValue = computed(() => `${window.location.origin}/?pin=${eventPin.value || eventId.value}`)
 
 const selectedElementId = ref(null)
 const selectedElement = computed(() => activeSlideElements.value.find(e => e.id === selectedElementId.value))
@@ -573,14 +583,56 @@ onUnmounted(() => {
   layoutObserver = null
 })
 
+const parseHexColor = (color) => {
+  if (typeof color !== 'string') return null
+  const hex = color.trim().replace(/^#/, '')
+  if (hex.length === 3) {
+    return [
+      parseInt(hex[0] + hex[0], 16),
+      parseInt(hex[1] + hex[1], 16),
+      parseInt(hex[2] + hex[2], 16)
+    ]
+  }
+  if (hex.length === 6) {
+    return [
+      parseInt(hex.slice(0, 2), 16),
+      parseInt(hex.slice(2, 4), 16),
+      parseInt(hex.slice(4, 6), 16)
+    ]
+  }
+  return null
+}
+
+const relativeLuminance = (rgb) => {
+  if (!rgb) return 0
+  const [r, g, b] = rgb.map((c) => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+const getPreviewTextColor = (element, slide) => {
+  const rawColor = element?.color || '#ffffff'
+  if (element?.type !== 'text') return rawColor
+  const bgRgb = parseHexColor(slide?.backgroundColor || '#000000')
+  const bgLum = relativeLuminance(bgRgb)
+  if (bgLum < 0.2 && rawColor.trim().toLowerCase() === '#3b82f6') {
+    return '#93c5fd'
+  }
+  return rawColor
+}
+
 const fetchEventMeta = async () => {
+  if (!eventId.value) return
   try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+    const res = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId.value)}`, {
       headers: getAuthHeaders()
     })
     if (res.ok) {
       const data = await res.json()
       eventPin.value = data?.pin || ''
+      eventName.value = data?.name || ''
     }
   } catch (err) {
     console.error(err)
@@ -588,8 +640,9 @@ const fetchEventMeta = async () => {
 }
 
 const fetchSlides = async () => {
+  if (!eventId.value) return
   try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}/slides`, {
+    const res = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId.value)}/slides`, {
       headers: getAuthHeaders()
     })
     if (!res.ok) {
@@ -607,8 +660,9 @@ const fetchSlides = async () => {
 }
 
 const saveSlides = async () => {
+  if (!eventId.value) return false
   try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}/slides`, {
+    const res = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId.value)}/slides`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(slides.value)
@@ -627,7 +681,7 @@ const saveSlides = async () => {
 }
 
 const pushToScreen = async () => {
-  if (!activeSlide.value) return
+  if (!activeSlide.value || !eventId.value) return
 
   // First save to make sure changes are synced
   const saved = await saveSlides()
@@ -639,7 +693,7 @@ const pushToScreen = async () => {
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/events/${eventId}/screen-state`, {
+    const res = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId.value)}/screen-state`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload)
@@ -918,8 +972,17 @@ const handleImageSelect = (mediaId) => {
 }
 
 const goBack = () => {
-  router.push(`/admin/event/${eventId}`)
+  router.push(eventId.value ? `/admin/events/${encodeURIComponent(eventId.value)}` : '/admin/events')
 }
+
+watch(eventId, (nextId, prevId) => {
+  if (nextId && nextId !== prevId) {
+    activeSlideId.value = null
+    selectedElementId.value = null
+    fetchEventMeta()
+    fetchSlides()
+  }
+})
 
 const stopProjectorPoll = () => {
   if (projectorPollTimer !== null) {
@@ -951,7 +1014,7 @@ const openProjector = () => {
     isProjectorOpen.value = true
     return
   }
-  const win = window.open(`/projector/${eventId}`, 'projector', 'width=1200,height=800')
+  const win = window.open(`/projector/${encodeURIComponent(eventId.value)}`, 'projector', 'width=1200,height=800')
   if (win && !win.closed) {
     projectorWindow.value = win
     isProjectorOpen.value = true
@@ -974,11 +1037,60 @@ const closeProjector = () => {
 </script>
 
 <style scoped>
+.sm-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.sm-header-actions .launch-btn,
+.sm-header-actions .push-btn,
+.sm-header-actions .save-btn {
+  min-block-size: 38px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.sm-header-actions .launch-btn { background: #3b82f6; color: white; }
+.sm-header-actions .launch-btn.close-btn { background: #ef4444; color: white; }
+.sm-header-actions .push-btn { background: #10b981; color: white; }
+.sm-header-actions .push-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sm-header-actions .save-btn { background: var(--admin-primary-solid, #0969da); color: white; }
+
+:global(html[data-admin-appearance="true"] .sm-header-actions .launch-btn) {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+:global(html[data-admin-appearance="true"] .sm-header-actions .launch-btn.close-btn) {
+  background: var(--admin-danger-solid) !important;
+  border-color: var(--admin-danger-solid) !important;
+  color: #fff !important;
+}
+:global(html[data-admin-appearance="true"] .sm-header-actions .push-btn) {
+  background: var(--admin-success-solid) !important;
+  border-color: var(--admin-success-solid) !important;
+  color: #fff !important;
+}
+:global(html[data-admin-appearance="true"] .sm-header-actions .save-btn) {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+
 .screen-manager {
   container: screen-manager / inline-size;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100%;
   background-color: #0d0d0d;
   color: #fff;
   display: flex;
@@ -1513,14 +1625,45 @@ const closeProjector = () => {
   color: #fff !important;
 }
 
-@media (pointer: coarse) {
+@media (max-width: 768px) {
+  .sm-header-actions {
+    width: 100%;
+  }
+
+  .sm-header-actions button {
+    flex: 1 1 120px;
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
   .screen-manager button,
   .screen-manager input,
   .screen-manager textarea,
-  .screen-manager .slide-item {
+  .screen-manager .slide-item,
+  .screen-manager .slide-select-btn {
+    min-block-size: 44px;
+  }
+
+  .screen-manager .delete-slide,
+  .screen-manager .icon-btn,
+  .screen-manager .modal-header .close-btn,
+  .screen-manager input[type="color"] {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+  }
+}
+
+@media (pointer: coarse) {
+  .sm-header-actions button,
+  .screen-manager button,
+  .screen-manager input,
+  .screen-manager textarea,
+  .screen-manager .slide-item,
+  .screen-manager .slide-select-btn {
     min-block-size: 44px;
   }
   .screen-manager .delete-slide,
+  .screen-manager .icon-btn,
   .screen-manager .modal-header .close-btn,
   .screen-manager input[type="color"] {
     min-inline-size: 44px;

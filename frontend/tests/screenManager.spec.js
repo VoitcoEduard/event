@@ -35,6 +35,7 @@ const mountOpts = {
   global: {
     mocks: { $t: k => k },
     stubs: {
+      RouterLink: true,
       AppIcon: true,
       QRCodeVue: {
         name: 'QRCodeVue',
