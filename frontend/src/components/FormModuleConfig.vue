@@ -131,7 +131,7 @@
               {{ $t('common.cancel') }}
             </button>
             <button type="button" class="dialog-btn save" @click="saveAsTemplate">
-              {{ $t('admin.details.add_modal_title') }}
+              {{ $t('library.actions.save_btn') }}
             </button>
           </div>
         </div>

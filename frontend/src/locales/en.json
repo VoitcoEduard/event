@@ -973,5 +973,34 @@
         "desc": "Organize players into teams and award collaborative points."
       }
     }
+  },
+  "module_editor": {
+    "untitled_module": "Untitled Module",
+    "name_placeholder": "Module name",
+    "save": "Save",
+    "host": "Host",
+    "more_actions": "More",
+    "unsaved_indicator": "Unsaved changes",
+    "loading": "Loading module editor...",
+    "load_error": "Failed to load module.",
+    "retry": "Retry",
+    "back_to_event": "Back to Event",
+    "quiz_settings": "Quiz Settings",
+    "audio_settings": "Audio Settings",
+    "load_json": "Load JSON",
+    "export_json": "Export JSON",
+    "save_template": "Save as Template",
+    "exported_json": "JSON exported.",
+    "import_invalid_format": "Invalid JSON format.",
+    "template_name_label": "Template Name",
+    "template_name_required": "Please enter a template name.",
+    "replace_title": "Replace current content?",
+    "confirm_replace_steps": "This will replace your current steps. Continue?",
+    "replace_confirm": "Replace",
+    "delete_question_title": "Delete question?",
+    "search_templates": "Search templates...",
+    "saved_success": "Module saved successfully!",
+    "save_error": "Failed to save module.",
+    "validation_banner": "{count} validation issue needs attention before saving. | {count} validation issues need attention before saving."
   }
 }

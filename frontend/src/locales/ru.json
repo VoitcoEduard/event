@@ -948,5 +948,34 @@
         "desc": "Распределение игроков по командам и начисление командных баллов."
       }
     }
+  },
+  "module_editor": {
+    "untitled_module": "Модуль без названия",
+    "name_placeholder": "Название модуля",
+    "save": "Сохранить",
+    "host": "Вести",
+    "more_actions": "Ещё",
+    "unsaved_indicator": "Есть несохранённые изменения",
+    "loading": "Загрузка редактора модуля...",
+    "load_error": "Не удалось загрузить модуль.",
+    "retry": "Повторить",
+    "back_to_event": "Назад к событию",
+    "quiz_settings": "Настройки викторины",
+    "audio_settings": "Настройки аудио",
+    "load_json": "Загрузить JSON",
+    "export_json": "Экспорт JSON",
+    "save_template": "Сохранить как шаблон",
+    "exported_json": "JSON экспортирован.",
+    "import_invalid_format": "Неверный формат JSON.",
+    "template_name_label": "Название шаблона",
+    "template_name_required": "Введите название шаблона.",
+    "replace_title": "Заменить текущее содержимое?",
+    "confirm_replace_steps": "Это заменит текущие шаги. Продолжить?",
+    "replace_confirm": "Заменить",
+    "delete_question_title": "Удалить вопрос?",
+    "search_templates": "Поиск шаблонов...",
+    "saved_success": "Модуль успешно сохранён!",
+    "save_error": "Не удалось сохранить модуль.",
+    "validation_banner": "Перед сохранением исправьте ошибки ({count})."
   }
 }

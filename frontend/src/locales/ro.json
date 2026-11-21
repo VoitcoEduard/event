@@ -948,5 +948,34 @@
         "desc": "Organizează jucătorii în echipe și acordă puncte de grup."
       }
     }
+  },
+  "module_editor": {
+    "untitled_module": "Modul fără titlu",
+    "name_placeholder": "Numele modulului",
+    "save": "Salvează",
+    "host": "Găzduiește",
+    "more_actions": "Mai mult",
+    "unsaved_indicator": "Modificări nesalvate",
+    "loading": "Se încarcă editorul modulului...",
+    "load_error": "Nu s-a putut încărca modulul.",
+    "retry": "Reîncearcă",
+    "back_to_event": "Înapoi la eveniment",
+    "quiz_settings": "Setări Quiz",
+    "audio_settings": "Setări Audio",
+    "load_json": "Încarcă JSON",
+    "export_json": "Exportă JSON",
+    "save_template": "Salvează ca șablon",
+    "exported_json": "JSON exportat.",
+    "import_invalid_format": "Format JSON invalid.",
+    "template_name_label": "Nume șablon",
+    "template_name_required": "Introduceți un nume pentru șablon.",
+    "replace_title": "Înlocuiești conținutul curent?",
+    "confirm_replace_steps": "Aceasta va înlocui pașii curenți. Continui?",
+    "replace_confirm": "Înlocuiește",
+    "delete_question_title": "Ștergi întrebarea?",
+    "search_templates": "Caută șabloane...",
+    "saved_success": "Modulul a fost salvat!",
+    "save_error": "Nu s-a putut salva modulul.",
+    "validation_banner": "{count} problemă de validare necesită atenție înainte de salvare. | {count} probleme de validare necesită atenție înainte de salvare."
   }
 }
