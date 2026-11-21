@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import FormModule from '../src/components/FormModule.vue'
@@ -45,12 +47,7 @@ beforeEach(() => {
   toastMock.error.mockClear()
   toastMock.info.mockClear()
 
-  fetchMock = vi.fn(async (url) => {
-    if (String(url).endsWith('/templates')) {
-      return { ok: true, json: async () => [] }
-    }
-    return { ok: true, json: async () => ({ id: 'resp-1' }) }
-  })
+  fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ id: 'resp-1' }) }))
   vi.stubGlobal('fetch', fetchMock)
 })
 
@@ -84,13 +81,13 @@ describe('FormModule "Other" answers, validation, and checkbox selection mode', 
     // Empty custom text should fail validation
     await wrapper.find('.next-button').trigger('click')
     expect(toastMock.info).toHaveBeenCalledWith('form_module.validation.specify_other')
-    expect(fetchMock).toHaveBeenCalledTimes(1) // Only initial /templates fetch
+    expect(fetchMock).not.toHaveBeenCalled()
 
     // Whitespace-only custom text should also fail validation
     await wrapper.find('.other-input').setValue('   ')
     await wrapper.find('.next-button').trigger('click')
     expect(toastMock.info).toHaveBeenCalledTimes(2)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
 
     // Typing custom text allows submission and resolves __other__
     await wrapper.find('.other-input').setValue('  Teal  ')
@@ -124,7 +121,7 @@ describe('FormModule "Other" answers, validation, and checkbox selection mode', 
 
     await wrapper.find('.next-button').trigger('click')
     expect(toastMock.info).toHaveBeenCalledWith('form_module.validation.specify_other')
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
 
     await wrapper.find('.other-input').setValue('Moldova')
     await wrapper.find('.next-button').trigger('click')
@@ -210,5 +207,27 @@ describe('FormModule "Other" answers, validation, and checkbox selection mode', 
     const postCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/response'))
     const body = JSON.parse(postCall[1].body)
     expect(body.data).toEqual({ 'step-cb-multi': ['alpha', 'beta', 'Delta'] })
+  })
+
+  it('does not fetch, render, or delete admin /templates on player-facing FormModule', async () => {
+    wrapper = mountForm([
+      {
+        id: 'step-text',
+        type: 'field',
+        data: { label: 'Your name', fieldType: 'text' },
+      },
+    ])
+    await flushPromises()
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(wrapper.find('.template-button').exists()).toBe(false)
+    expect(wrapper.find('.modal-overlay').exists()).toBe(false)
+    expect(wrapper.find('.delete-template-btn').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('form_module.load_template')
+
+    const source = readFileSync(resolve(process.cwd(), 'src/components/FormModule.vue'), 'utf8')
+    expect(source).not.toContain('/templates')
+    expect(source).not.toContain('deleteTemplate')
+    expect(source).not.toContain('loadTemplate')
   })
 })

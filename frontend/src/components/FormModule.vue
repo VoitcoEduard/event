@@ -173,55 +173,19 @@
           <span v-else>{{ isLastStep ? $t('form_module.submit') : $t('form_module.next') }}</span>
         </button>
       </div>
-
-      <button class="template-button" @click="showTemplateModal = true">
-        {{ $t('form_module.load_template') }}
-      </button>
     </template>
 
     <div v-if="!currentStep" class="empty-view">
       <p>{{ $t('form_module.empty_config') }}</p>
     </div>
-
-    <div v-if="showTemplateModal" class="modal-overlay" @click.self="showTemplateModal = false">
-      <div class="dialog">
-        <h3 class="dialog-title">{{ $t('quiz_config.load_library') }}</h3>
-        <div class="template-list">
-          <div v-if="loadingTemplates" class="loading-templates">
-            <div class="loading-spinner-small"></div>
-          </div>
-          <template v-else>
-            <div 
-              v-for="template in templates" 
-              :key="template.id" 
-              class="template-item-wrapper"
-            >
-              <div class="template-item" @click="loadTemplate(template)">
-                <p class="template-item-name">{{ template.name }}</p>
-                <p class="template-item-desc">{{ template.description }}</p>
-              </div>
-              <button class="delete-template-btn" @click.stop="deleteTemplate(template.id, template.name)">
-                <AppIcon name="trash" :size="16" />
-              </button>
-            </div>
-            <p v-if="templates.length === 0" class="no-templates">
-              {{ $t('quiz_config.no_templates') }}
-            </p>
-          </template>
-        </div>
-        <button class="dialog-close-btn" @click="showTemplateModal = false">
-          {{ $t('common.cancel') }}
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppIcon from './AppIcon.vue'
-import { API_BASE_URL, getAuthHeaders } from '../utils'
+import { API_BASE_URL } from '../utils'
 import { useToast } from '../composables/useToast'
 
 const { t } = useI18n()
@@ -239,34 +203,12 @@ const answers = ref({})
 const otherAnswers = ref({})
 const submitting = ref(false)
 const completed = ref(false)
-const templates = ref([])
-const showTemplateModal = ref(false)
-const loadingTemplates = ref(false)
 
 const currentStep = computed(() => timeline.value[currentStepIndex.value])
 const isLastStep = computed(() => currentStepIndex.value === timeline.value.length - 1)
 const progressWidth = computed(() => ((currentStepIndex.value + 1) / timeline.value.length) * 100)
 
-const { success, error, info } = useToast()
-
-const fetchTemplates = async () => {
-  loadingTemplates.value = true
-  try {
-    const response = await fetch(`${API_BASE_URL}/templates`)
-    if (response.ok) {
-      const data = await response.json()
-      templates.value = data || []
-    }
-  } catch (error) {
-    console.error('Error fetching templates:', error)
-  } finally {
-    loadingTemplates.value = false
-  }
-}
-
-onMounted(() => {
-  fetchTemplates()
-})
+const { error, info } = useToast()
 
 const updateAnswer = (e) => {
   const value = e.target.value
@@ -308,33 +250,6 @@ const isCheckboxSelected = (stepId, value) => {
 const updateDropdownAnswer = (e) => {
   const value = e.target.value
   answers.value = { ...answers.value, [currentStep.value.id]: value }
-}
-
-const loadTemplate = (template) => {
-  if (template.data?.answers) {
-    answers.value = { ...answers.value, ...template.data.answers }
-  }
-  if (template.data?.otherAnswers) {
-    otherAnswers.value = { ...otherAnswers.value, ...template.data.otherAnswers }
-  }
-  showTemplateModal.value = false
-  success(t('quiz_config.loaded_template', { name: template.name }))
-}
-
-const deleteTemplate = async (id, name) => {
-  if (!confirm(t('library.actions.delete_confirm', { name: name }))) return
-  
-  try {
-    const response = await fetch(`${API_BASE_URL}/templates/${id}`, { method: 'DELETE', headers: getAuthHeaders() })
-    if (response.ok) {
-      fetchTemplates()
-    } else {
-      error(t('quiz_config.save_failed')) // Reusing save_failed as generic error or add new key
-    }
-  } catch (err) {
-    console.error(err)
-    error(t('quiz_config.save_failed'))
-  }
 }
 
 const handleBack = () => {
@@ -712,30 +627,6 @@ const handleSubmit = async () => {
 .next-button:active:not(:disabled) { transform: translateY(0); }
 .next-button:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* ── Template button ── */
-.template-button {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  align-items: center;
-  padding: 7px 12px;
-  background: #1a1a2a;
-  border: 1px solid #2a2a45;
-  border-radius: 10px;
-  color: #2d8cff;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  font-family: 'Inter', sans-serif;
-}
-
-.template-button:hover {
-  background: #1e1e35;
-  border-color: var(--ops-blue);
-}
-
 /* ── Completed view ── */
 .completed-view {
   display: flex;
@@ -797,121 +688,6 @@ const handleSubmit = async () => {
   color: #444;
   font-size: 14px;
 }
-
-/* ── Modal overlay ── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-  backdrop-filter: blur(4px);
-}
-
-.dialog {
-  background: #161619;
-  border-radius: 22px;
-  padding: 26px 24px;
-  width: 88%;
-  max-width: 400px;
-  border: 1px solid #2a2a35;
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
-}
-
-.dialog-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: #fff;
-  margin-bottom: 18px;
-  text-align: center;
-  letter-spacing: -0.3px;
-}
-
-.template-list {
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.template-list::-webkit-scrollbar { width: 4px; }
-.template-list::-webkit-scrollbar-thumb { background: #2a2a35; border-radius: 4px; }
-
-.loading-templates {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-}
-
-.template-item-wrapper {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  gap: 8px;
-}
-
-.template-item {
-  flex: 1;
-  background: #0d0d0f;
-  border: 1px solid #2a2a35;
-  border-radius: 14px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.template-item:hover {
-  background: #111115;
-  border-color: var(--ops-blue);
-}
-
-.template-item-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #f0f0f8;
-  margin-bottom: 2px;
-}
-
-.template-item-desc {
-  font-size: 13px;
-  color: #555;
-  line-height: 1.4;
-}
-
-.delete-template-btn {
-  padding: 8px;
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
-}
-.delete-template-btn:hover { opacity: 1; }
-
-.no-templates {
-  color: #444;
-  text-align: center;
-  padding: 24px;
-  font-size: 14px;
-}
-
-.dialog-close-btn {
-  margin-top: 16px;
-  padding: 14px;
-  background: #1e1e26;
-  border: 1px solid #2a2a35;
-  border-radius: 14px;
-  width: 100%;
-  color: #aaa;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  font-family: 'Inter', sans-serif;
-}
-.dialog-close-btn:hover { background: #252530; color: #fff; }
 
 /* ── Spinner ── */
 .loading-spinner-small {
