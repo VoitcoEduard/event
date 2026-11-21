@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/user/go-expo-sample/backend/auth"
@@ -26,7 +27,8 @@ type Dependencies struct {
 }
 
 type Handler struct {
-	deps Dependencies
+	deps                  Dependencies
+	checkParticipantProof func(ctx context.Context, eventID, participantID, secret string) (bool, bool, error)
 }
 
 func New(deps Dependencies) *Handler {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -259,5 +260,87 @@ func TestSimpleQuizResultsIncludesOnlyRevealedAnswers(t *testing.T) {
 	}
 	if len(got.RevealedAnswers) != 1 || got.RevealedAnswers[0].Index != 0 || got.RevealedAnswers[0].Text != "Paris" {
 		t.Fatalf("revealedAnswers = %+v, want [{Index:0 Text:Paris}]", got.RevealedAnswers)
+	}
+}
+
+func TestJoinSimpleQuizRejectsDuplicateParticipantAndPreservesReconnect(t *testing.T) {
+	h, _ := seedHandlerSimpleQuiz(models.SimpleQuizStateLobby)
+	h.checkParticipantProof = func(_ context.Context, eventID, participantID, secret string) (bool, bool, error) {
+		return true, eventID == "e1" && secret == "proof-"+participantID, nil
+	}
+
+	doJoin := func(payload string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/events/e1/modules/m1/simple-quiz/join", strings.NewReader(payload))
+		req.SetPathValue("eventID", "e1")
+		req.SetPathValue("moduleID", "m1")
+		rec := httptest.NewRecorder()
+		h.JoinSimpleQuiz(rec, req)
+		return rec
+	}
+
+	// First join with valid participant proof succeeds.
+	rec1 := doJoin(`{"nickname":"Alice","participantId":"part-1","participantSecret":"proof-part-1"}`)
+	if rec1.Code != http.StatusOK {
+		t.Fatalf("first join status = %d body=%q, want 200", rec1.Code, rec1.Body.String())
+	}
+	var joined struct {
+		PlayerID string `json:"playerId"`
+		Secret   string `json:"secret"`
+		Nickname string `json:"nickname"`
+	}
+	if err := json.Unmarshal(rec1.Body.Bytes(), &joined); err != nil {
+		t.Fatalf("decode first join: %v", err)
+	}
+	if joined.PlayerID == "" || joined.Secret == "" {
+		t.Fatalf("missing player identity: %+v", joined)
+	}
+
+	// Second join with same participantId and a different nickname must return 409 Conflict.
+	recDup := doJoin(`{"nickname":"AliceClone","participantId":"part-1","participantSecret":"proof-part-1"}`)
+	if recDup.Code != http.StatusConflict {
+		t.Fatalf("duplicate participant join status = %d body=%q, want 409", recDup.Code, recDup.Body.String())
+	}
+
+	// Reconnect with original secret + nickname succeeds (with and without participantId).
+	recRecon1 := doJoin(`{"nickname":"alice","secret":"` + joined.Secret + `"}`)
+	if recRecon1.Code != http.StatusOK {
+		t.Fatalf("reconnect without participantId status = %d body=%q, want 200", recRecon1.Code, recRecon1.Body.String())
+	}
+	var recon1 struct {
+		PlayerID    string `json:"playerId"`
+		Reconnected bool   `json:"reconnected"`
+	}
+	if err := json.Unmarshal(recRecon1.Body.Bytes(), &recon1); err != nil {
+		t.Fatalf("decode recon1: %v", err)
+	}
+	if !recon1.Reconnected || recon1.PlayerID != joined.PlayerID {
+		t.Fatalf("recon1 = %+v, want playerId=%q reconnected=true", recon1, joined.PlayerID)
+	}
+
+	recRecon2 := doJoin(`{"nickname":"Alice","secret":"` + joined.Secret + `","participantId":"part-1","participantSecret":"proof-part-1"}`)
+	if recRecon2.Code != http.StatusOK {
+		t.Fatalf("reconnect with participantId status = %d body=%q, want 200", recRecon2.Code, recRecon2.Body.String())
+	}
+	var recon2 struct {
+		PlayerID    string `json:"playerId"`
+		Reconnected bool   `json:"reconnected"`
+	}
+	if err := json.Unmarshal(recRecon2.Body.Bytes(), &recon2); err != nil {
+		t.Fatalf("decode recon2: %v", err)
+	}
+	if !recon2.Reconnected || recon2.PlayerID != joined.PlayerID {
+		t.Fatalf("recon2 = %+v, want playerId=%q reconnected=true", recon2, joined.PlayerID)
+	}
+
+	// Different participant joins cleanly.
+	recOther := doJoin(`{"nickname":"Charlie","participantId":"part-2","participantSecret":"proof-part-2"}`)
+	if recOther.Code != http.StatusOK {
+		t.Fatalf("distinct participant join status = %d body=%q, want 200", recOther.Code, recOther.Body.String())
+	}
+
+	// Ensure only 2 new players (Alice + Charlie) were added to the 3 seeded players.
+	sess := h.deps.QuizHub.GetSimpleQuiz("m1")
+	if len(sess.Players) != 5 {
+		t.Fatalf("player count = %d, want 5", len(sess.Players))
 	}
 }

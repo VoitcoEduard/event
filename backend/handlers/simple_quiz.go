@@ -607,11 +607,19 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.ParticipantID != "" {
-		if len(body.ParticipantID) > 120 || len(body.ParticipantSecret) > 128 || h.deps.DB == nil {
+		if len(body.ParticipantID) > 120 || len(body.ParticipantSecret) > 128 {
 			http.Error(w, "Invalid participant proof", http.StatusForbidden)
 			return
 		}
-		hasProof, valid, err := h.deps.DB.CheckParticipantProof(r.Context(), eventID, body.ParticipantID, body.ParticipantSecret)
+		proofCheck := h.checkParticipantProof
+		if proofCheck == nil {
+			if h.deps.DB == nil {
+				http.Error(w, "Invalid participant proof", http.StatusForbidden)
+				return
+			}
+			proofCheck = h.deps.DB.CheckParticipantProof
+		}
+		hasProof, valid, err := proofCheck(r.Context(), eventID, body.ParticipantID, body.ParticipantSecret)
 		if err != nil || !hasProof || !valid {
 			http.Error(w, "Invalid participant proof", http.StatusForbidden)
 			return
@@ -629,6 +637,9 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	case hub.SimpleQuizJoinTaken:
 		http.Error(w, "Nickname is already taken", http.StatusConflict)
+		return
+	case hub.SimpleQuizJoinParticipantTaken:
+		http.Error(w, "Participant already linked to another quiz player", http.StatusConflict)
 		return
 	case hub.SimpleQuizJoinStorageError:
 		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)

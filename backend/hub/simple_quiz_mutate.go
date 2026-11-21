@@ -218,11 +218,12 @@ func (h *QuizHub) SubmitSimpleQuizAnswer(moduleID, playerID, secret, answerID st
 }
 
 const (
-	SimpleQuizJoinOK           = "ok"
-	SimpleQuizJoinNoSession    = "no_session"
-	SimpleQuizJoinClosed       = "closed"
-	SimpleQuizJoinTaken        = "taken"
-	SimpleQuizJoinStorageError = "storage_error"
+	SimpleQuizJoinOK               = "ok"
+	SimpleQuizJoinNoSession        = "no_session"
+	SimpleQuizJoinClosed           = "closed"
+	SimpleQuizJoinTaken            = "taken"
+	SimpleQuizJoinParticipantTaken = "participant_taken"
+	SimpleQuizJoinStorageError     = "storage_error"
 )
 
 func (h *QuizHub) JoinSimpleQuiz(moduleID, nick, providedSecret, newID, newSecret string, now time.Time) (models.SimpleQuizPlayer, bool, string) {
@@ -259,6 +260,14 @@ func (h *QuizHub) JoinSimpleQuizWithParticipant(moduleID, nick, providedSecret, 
 			if strings.EqualFold(p.Nickname, nick) {
 				code = SimpleQuizJoinTaken
 				return errNoSimpleChange
+			}
+		}
+		if participantID != "" {
+			for _, p := range s.Players {
+				if p.ParticipantID == participantID {
+					code = SimpleQuizJoinParticipantTaken
+					return errNoSimpleChange
+				}
 			}
 		}
 		if s.Players == nil {
