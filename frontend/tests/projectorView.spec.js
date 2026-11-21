@@ -281,3 +281,26 @@ describe('ProjectorView distribution chart on text-only questions (Bug #7)', () 
     expect(wrapper.findAll('.dist-count').map(n => n.text())).toEqual(['2', '0', '2', '0'])
   })
 })
+
+describe('ProjectorView range marker with maxValue 0 (Bug #8)', () => {
+  it('computes correctMarkerPercentage accurately when maxValue is 0', async () => {
+    wrapper = mount(ProjectorView, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('data:batch', {
+      startIndex: 0,
+      totalQuestions: 1,
+      questions: [{
+        id: 'r1',
+        type: 'range',
+        text: 'Below freezing',
+        rangeConfig: { minValue: -100, maxValue: 0, step: 1, unit: '°C', decimalPlaces: 0 },
+      }],
+    })
+    mockQuizWS.emit('data:reveal', { questionIndex: 0, correctValue: -25 })
+    mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0, totalQuestions: 1 })
+    await flushPromises()
+
+    expect(wrapper.find('.srt-marker').attributes('style')).toContain('bottom: 75%')
+  })
+})

@@ -158,6 +158,8 @@ const applyValue = (raw) => {
   }
   const pow = Math.pow(10, props.decimalPlaces)
   v = Math.round(v * pow) / pow
+  v = Math.max(props.min, Math.min(props.max, v))
+  if (Object.is(v, -0)) v = 0
   if (v !== props.modelValue) {
     if (lastHapticValue === null || Math.abs(v - lastHapticValue) >= props.step) {
       buzz()

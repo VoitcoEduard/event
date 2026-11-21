@@ -330,3 +330,33 @@ describe('QuizHostScreen distribution chart on text-only questions (Bug #7)', ()
     expect(wrapper.findAll('.dist-count').map(n => n.text())).toEqual(['1', '3', '1', '0'])
   })
 })
+
+describe('QuizHostScreen range marker with maxValue 0 (Bug #8)', () => {
+  it('computes correctMarkerPercentage accurately when maxValue is 0', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: async () => ({
+        pin: '4321',
+        modules: [{
+          id: 'm1',
+          data: {
+            questions: [{
+              text: 'Celsius below zero',
+              type: 'range',
+              rangeConfig: { minValue: -100, maxValue: 0, step: 1, unit: '°C', decimalPlaces: 0 },
+              correctValue: -25,
+            }],
+          },
+        }],
+      }),
+    })))
+
+    wrapper = mount(QuizHostScreen, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0 })
+    await flushPromises()
+
+    expect(wrapper.find('.srt-marker').attributes('style')).toContain('bottom: 75%')
+  })
+})

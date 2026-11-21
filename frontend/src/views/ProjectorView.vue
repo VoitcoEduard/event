@@ -844,8 +844,8 @@ const getHistogramBarHeight = (count) => {
 const correctMarkerPercentage = computed(() => {
   if (!isRange.value) return 0
   const q = currentQuestion.value
-  const min = q?.rangeConfig?.minValue || 0
-  const max = q?.rangeConfig?.maxValue || 100
+  const min = q?.rangeConfig?.minValue ?? 0
+  const max = q?.rangeConfig?.maxValue ?? 100
   const range = max - min
   if (range === 0) return 0
   return ((q.correctValue - min) / range) * 100
