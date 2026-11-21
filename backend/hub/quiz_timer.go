@@ -73,7 +73,7 @@ func (h *QuizHub) activateQuizQuestion(moduleID string, pending *quizTransition)
 	h.broadcastToSessionLocked(moduleID, ServerMessage{
 		Type: "cmd:state",
 		Payload: map[string]interface{}{
-			"state": "question-active", "currentIndex": idx, "timeLimit": limit, "runId": session.RunID, "serverNow": time.Now().UnixMilli(), "deadline": windowDeadlineMillis(session.QuestionWindows, idx),
+			"state": "question-active", "currentIndex": idx, "totalQuestions": len(session.Questions), "timeLimit": limit, "runId": session.RunID, "serverNow": time.Now().UnixMilli(), "deadline": windowDeadlineMillis(session.QuestionWindows, idx),
 		},
 	})
 }

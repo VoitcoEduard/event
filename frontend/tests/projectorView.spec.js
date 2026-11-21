@@ -184,3 +184,81 @@ describe('ProjectorView reconnect stability (Bug #5)', () => {
     expect(wrapper.text()).toContain('Persisted Q1')
   })
 })
+
+describe('ProjectorView question count and Wrong Pictures target sequence (Bug #6)', () => {
+  it('shows 1 / N and 2 / N using server totalQuestions instead of 1 / 1 and 2 / 2', async () => {
+    wrapper = mount(ProjectorView, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('data:batch', {
+      startIndex: 0,
+      totalQuestions: 5,
+      questions: [{ id: 'q1', type: 'classic', text: 'Q1', answers: ['A', 'B'] }],
+    })
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, totalQuestions: 5 })
+    await flushPromises()
+    expect(wrapper.find('.question-counter').text()).toBe('1 / 5')
+
+    mockQuizWS.emit('data:batch', {
+      startIndex: 1,
+      totalQuestions: 5,
+      questions: [{ id: 'q2', type: 'classic', text: 'Q2', answers: ['A', 'B'] }],
+    })
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 1, totalQuestions: 5 })
+    await flushPromises()
+    expect(wrapper.find('.question-counter').text()).toBe('2 / 5')
+  })
+
+  it('starts and advances Wrong Pictures result target sequence when data:reveal arrives after cmd:state results', async () => {
+    wrapper = mount(ProjectorView, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('data:batch', {
+      startIndex: 0,
+      totalQuestions: 2,
+      questions: [{
+        id: 'wp1',
+        type: 'wrong_pictures',
+        text: 'Spot the mistakes',
+        imageId: 'img-1',
+        wrongPictureConfig: { showTargetCount: true, targetCount: 2, maxPoints: 100 },
+      }],
+    })
+    // Projector joins during results: cmd:state arrives before data:reveal
+    mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0, totalQuestions: 2 })
+    await flushPromises()
+
+    mockQuizWS.emit('data:reveal', {
+      questionIndex: 0,
+      wrongPictureConfig: {
+        showTargetCount: true,
+        maxPoints: 100,
+        targets: [
+          { id: 't1', label: 'First', xPercent: 20, yPercent: 30, radius: 10 },
+          { id: 't2', label: 'Second', xPercent: 70, yPercent: 60, radius: 10 },
+        ],
+      },
+    })
+    await flushPromises()
+
+    // Initial delay 300ms reveals Target #1
+    await vi.advanceTimersByTimeAsync(350)
+    await flushPromises()
+    let dots = wrapper.findAll('.wp-result-progress span')
+    expect(dots).toHaveLength(2)
+    expect(dots[0].classes()).toContain('is-active')
+    expect(dots[1].classes()).not.toContain('is-active')
+
+    // After focusDuration (2800ms), advances to Target #2 (not stuck on Target #1)
+    await vi.advanceTimersByTimeAsync(2800)
+    await flushPromises()
+    dots = wrapper.findAll('.wp-result-progress span')
+    expect(dots[0].classes()).toContain('is-complete')
+    expect(dots[1].classes()).toContain('is-active')
+
+    // After second focusDuration (2800ms), transitions to overview
+    await vi.advanceTimersByTimeAsync(2800)
+    await flushPromises()
+    expect(wrapper.find('.wp-result-overview').exists()).toBe(true)
+  })
+})

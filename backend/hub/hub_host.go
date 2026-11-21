@@ -159,7 +159,7 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		}
 		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime, "runId": session.RunID},
+			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "timeLimit": explainTime, "runId": session.RunID},
 		})
 		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 			Type:    "state:update",
@@ -248,7 +248,7 @@ func (h *QuizHub) processHostNextQuestion(client *Client, msg ClientMessage) {
 		}
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime, "runId": session.RunID},
+			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "timeLimit": explainTime, "runId": session.RunID},
 		})
 
 		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)
@@ -272,7 +272,7 @@ func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
 
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID},
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "runId": session.RunID},
 		})
 
 		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES/ANSWERS
@@ -293,7 +293,7 @@ func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) 
 		session.State = "leaderboard"
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "cmd:state",
-			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID},
+			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "runId": session.RunID},
 		})
 
 		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES

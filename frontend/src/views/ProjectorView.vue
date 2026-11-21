@@ -584,7 +584,8 @@ const realTimeAnsweredCount = ref(0)
 
 const totalAnswered = computed(() => realTimeAnsweredCount.value)
 
-const totalQuestions = computed(() => questions.value.length)
+const totalQuestions = computed(() => Math.max(serverTotalQuestions.value, questions.value.length))
+const serverTotalQuestions = ref(0)
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const isLastQuestion = computed(() => currentQuestionIndex.value >= totalQuestions.value - 1)
 const isTrueFalse = computed(() => currentQuestion.value?.type === 'true_false')
@@ -616,19 +617,24 @@ const wpResultTargetIndex = ref(0)
 const wpResultMode = ref('targets')
 const activeWrongPictureTarget = computed(() => wrongPictureTargets.value[wpResultTargetIndex.value])
 let wrongPicturesResultTimers = []
+let wrongPicturesSequenceStarted = false
 
 const clearWrongPicturesResultTimers = () => {
   wrongPicturesResultTimers.forEach(clearTimeout)
   wrongPicturesResultTimers = []
+  wrongPicturesSequenceStarted = false
 }
 
 const startWrongPicturesResultSequence = () => {
+  clearTimeout(revealTimer)
+  revealTimer = null
   clearWrongPicturesResultTimers()
   revealCorrect.value = false
   wpResultTargetIndex.value = 0
   wpResultMode.value = 'targets'
 
   if (!wrongPictureTargets.value.length) return
+  wrongPicturesSequenceStarted = true
 
   const focusDuration = 2800
   wrongPicturesResultTimers.push(setTimeout(() => {
@@ -965,6 +971,7 @@ const resetModuleState = () => {
   gameState.value = 'lobby'
   players.value = []
   questions.value = []
+  serverTotalQuestions.value = 0
   currentQuestionIndex.value = 0
   timeRemaining.value = 20
   explainTimeRemaining.value = 0
@@ -1022,6 +1029,9 @@ const connectToModule = (module) => {
 
     if (payload.currentIndex !== undefined) {
       currentQuestionIndex.value = payload.currentIndex
+    }
+    if (typeof payload.totalQuestions === 'number' && payload.totalQuestions > 0) {
+      serverTotalQuestions.value = payload.totalQuestions
     }
     const questionChanged = payload.currentIndex !== undefined && payload.currentIndex !== prevIndex
 
@@ -1103,27 +1113,60 @@ const connectToModule = (module) => {
         3: counts["3"] || 0,
       }
     }
+    if (typeof session.totalQuestions === 'number' && session.totalQuestions > 0) {
+      serverTotalQuestions.value = session.totalQuestions
+    }
     if (session.answeredCount !== undefined) {
       realTimeAnsweredCount.value = session.answeredCount
     }
   })
 
   quizWS.on('data:batch', (batch) => {
+    if (typeof batch.totalQuestions === 'number' && batch.totalQuestions > 0) {
+      serverTotalQuestions.value = batch.totalQuestions
+    }
     if (batch.questions) {
       const updated = [...questions.value]
       batch.questions.forEach((question, index) => {
-        updated[batch.startIndex + index] = question
+        const existing = updated[batch.startIndex + index]
+        if (existing) {
+          updated[batch.startIndex + index] = {
+            ...existing,
+            ...question,
+            wrongPictureConfig: existing.wrongPictureConfig?.targets
+              ? { ...question.wrongPictureConfig, ...existing.wrongPictureConfig }
+              : question.wrongPictureConfig,
+          }
+        } else {
+          updated[batch.startIndex + index] = question
+        }
       })
       questions.value = updated
+      if (
+        gameState.value === 'results' &&
+        isWrongPictures.value &&
+        wrongPictureTargets.value.length > 0 &&
+        !wrongPicturesSequenceStarted
+      ) {
+        startWrongPicturesResultSequence()
+      }
     }
   })
 
   quizWS.on('data:reveal', (payload) => {
-    const question = questions.value[payload.questionIndex]
-    if (!question) return
+    const existing = questions.value[payload.questionIndex]
     const updated = [...questions.value]
-    updated[payload.questionIndex] = { ...question, ...payload }
+    updated[payload.questionIndex] = existing ? { ...existing, ...payload } : { ...payload }
     questions.value = updated
+    if (
+      gameState.value === 'results' &&
+      payload.questionIndex === currentQuestionIndex.value &&
+      isWrongPictures.value &&
+      wrongPictureTargets.value.length > 0 &&
+      !wrongPicturesSequenceStarted
+    ) {
+      startWrongPicturesResultSequence()
+    }
   })
 
   quizWS.on('disconnect', () => {

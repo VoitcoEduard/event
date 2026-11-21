@@ -430,7 +430,7 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 		if !ok || session == nil {
 			return nil
 		}
-		return publicBatchMessage(batch, session.CurrentIndex)
+		return publicBatchMessage(batch, session.CurrentIndex, len(session.Questions))
 	}
 	if m.Type != "state:update" {
 		return original
@@ -455,7 +455,8 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 	}
 	b, err := json.Marshal(ServerMessage{Type: m.Type, Payload: map[string]any{
 		"eventId": s.EventID, "moduleId": s.ModuleID, "state": s.State,
-		"currentIndex": s.CurrentIndex, "players": players, "rank": rank,
+		"currentIndex": s.CurrentIndex, "totalQuestions": len(s.Questions),
+		"players": players, "rank": rank,
 		"answerCounts": s.AnswerCounts, "answeredCount": len(s.AnsweredPlayerIDs),
 		"questionWindows": s.QuestionWindows, "startTime": s.StartTime,
 	}})
@@ -465,7 +466,7 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 	return b
 }
 
-func publicBatchMessage(batch models.QuestionBatch, currentIndex int) []byte {
+func publicBatchMessage(batch models.QuestionBatch, currentIndex, totalQuestions int) []byte {
 	questions := []map[string]any{}
 	if currentIndex >= batch.StartIndex && currentIndex <= batch.EndIndex {
 		localIndex := currentIndex - batch.StartIndex
@@ -475,6 +476,7 @@ func publicBatchMessage(batch models.QuestionBatch, currentIndex int) []byte {
 	}
 	return mustMarshal(ServerMessage{Type: "data:batch", Payload: map[string]any{
 		"batchIndex": batch.BatchIndex, "totalBatches": batch.TotalBatches,
+		"totalQuestions": totalQuestions,
 		"startIndex": currentIndex, "endIndex": currentIndex,
 		"nextBatchAt": currentIndex, "questions": questions,
 	}})

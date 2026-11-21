@@ -181,7 +181,7 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 	if session.CurrentIndex >= 0 && session.CurrentIndex/MaxQuestionsPerBatch < len(session.Batches) {
 		batch := session.Batches[session.CurrentIndex/MaxQuestionsPerBatch]
 		select {
-		case client.send <- publicBatchMessage(batch, session.CurrentIndex):
+		case client.send <- publicBatchMessage(batch, session.CurrentIndex, len(session.Questions)):
 		default:
 		}
 	}
@@ -426,7 +426,7 @@ func (h *QuizHub) processPlayerBatchRequest(client *Client, msg ClientMessage) {
 	session := h.sessions[client.ModuleID]
 	if session != nil && currentBatchIndex >= 0 && currentBatchIndex < len(session.Batches) {
 		// Send the requested batch.
-		h.sendToClientLocked(client, publicBatchMessage(session.Batches[currentBatchIndex], session.CurrentIndex))
+		h.sendToClientLocked(client, publicBatchMessage(session.Batches[currentBatchIndex], session.CurrentIndex, len(session.Questions)))
 	}
 }
 

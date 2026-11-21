@@ -49,10 +49,46 @@ func TestPublicBatchOmitsAnswersAndFutureQuestions(t *testing.T) {
 		{ID: "now", Text: "Current", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 1},
 		{ID: "future", Text: "Future secret", Type: "wrong_pictures", WrongPictureConfig: &models.WrongPictureConfig{Targets: []models.WrongPictureTarget{{ID: "hidden-target", XPercent: 70}}}},
 	}}
-	public := publicBatchMessage(batch, 0)
+	public := publicBatchMessage(batch, 0, len(batch.Questions))
+	if !bytes.Contains(public, []byte(`"totalQuestions":2`)) {
+		t.Fatalf("public batch missing totalQuestions: %s", public)
+	}
 	for _, secret := range [][]byte{[]byte("correctIndex"), []byte("Future secret"), []byte("hidden-target")} {
 		if bytes.Contains(public, secret) {
 			t.Fatalf("public batch leaked %s: %s", secret, public)
+		}
+	}
+}
+
+func TestProjectorJoinIncludesTotalQuestions(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	h.CreateSession("m", "e")
+	questions := []models.QuizQuestion{
+		{ID: "q1", Text: "Q1", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 0},
+		{ID: "q2", Text: "Q2", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 1},
+		{ID: "q3", Text: "Q3", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 0},
+	}
+	h.UpdateSession("m", func(s *models.QuizSession) {
+		s.State = "question-active"
+		s.CurrentIndex = 1
+		s.Questions = questions
+		s.Batches = CalculateBatches(questions)
+	})
+	projector := &Client{send: make(chan []byte, 8)}
+	h.Register(projector)
+	h.mu.Lock()
+	h.processProjectorJoin(projector, ClientMessage{
+		Type:    "projector:join",
+		Payload: map[string]interface{}{"moduleId": "m", "eventId": "e"},
+	})
+	h.mu.Unlock()
+
+	cmdState := <-projector.send
+	stateUpdate := <-projector.send
+	dataBatch := <-projector.send
+	for name, msg := range map[string][]byte{"cmd:state": cmdState, "state:update": stateUpdate, "data:batch": dataBatch} {
+		if !bytes.Contains(msg, []byte(`"totalQuestions":3`)) {
+			t.Fatalf("%s missing totalQuestions:3 in %s", name, msg)
 		}
 	}
 }
