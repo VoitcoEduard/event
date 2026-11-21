@@ -184,4 +184,53 @@ describe('QuizHostScreen question-presenting transitions', () => {
     const counts = wrapper.findAll('.dist-count').map(el => el.text())
     expect(counts).toEqual(['0', '0', '0', '0'])
   })
+
+  it('clears displayedScores when a fresh quiz starts at question 0', async () => {
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (url === '/events/e1') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            pin: '4321',
+            modules: [
+              {
+                id: 'm1',
+                data: {
+                  questions: [
+                    {
+                      text: 'Question 1',
+                      type: 'classic',
+                      timeLimit: 20,
+                      answers: ['A', 'B', 'C', 'D'],
+                      correctIndex: 0,
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+        })
+      }
+      return Promise.resolve({ ok: false })
+    }))
+
+    wrapper = mount(QuizHostScreen, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('state:update', {
+      players: { p1: { id: 'p1', nickname: 'Alice', score: 250 } },
+    })
+    await flushPromises()
+
+    // Restart quiz at question 0 with zeroed player score
+    mockQuizWS.emit('cmd:state', { state: 'question-presenting', currentIndex: 0, timeLimit: 5 })
+    mockQuizWS.emit('state:update', {
+      players: { p1: { id: 'p1', nickname: 'Alice', score: 0 } },
+    })
+    mockQuizWS.emit('cmd:state', { state: 'leaderboard', currentIndex: 0 })
+    await flushPromises()
+
+    expect(wrapper.find('.lb-score-value').text()).toBe('0')
+    expect(wrapper.find('.lb-diff-anim').exists()).toBe(false)
+  })
 })

@@ -930,6 +930,9 @@ onMounted(async () => {
                 startLocalTimer(currentQuestion.value?.timeLimit || 20)
             }
         } else if (payload.state === 'question-presenting') {
+            if (currentQuestionIndex.value === 0) {
+                displayedScores.value = {}
+            }
             // Set time remaining to question time without starting timer
             if (currentQuestion.value?.timeLimit) {
                 timeRemaining.value = currentQuestion.value.timeLimit

@@ -120,6 +120,11 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		session.AnswerCounts = make(map[int]int)
 		session.AnsweredPlayerIDs = make(map[string]struct{})
 		session.Streaks = make(map[string]int)
+		for _, player := range session.Players {
+			if player != nil {
+				player.Score = 0
+			}
+		}
 		session.WrongPictureAspects = aspects
 		session.Questions = questions // Assigned loaded questions
 		session.Batches = CalculateBatches(questions)
@@ -155,6 +160,10 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
 			Type:    "cmd:state",
 			Payload: map[string]interface{}{"state": "question-presenting", "currentIndex": session.CurrentIndex, "timeLimit": explainTime, "runId": session.RunID},
+		})
+		h.broadcastToSessionLocked(client.ModuleID, ServerMessage{
+			Type:    "state:update",
+			Payload: session,
 		})
 
 		h.scheduleQuizTransitionLocked(session, time.Duration(explainTime)*time.Second)

@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -372,5 +373,146 @@ func TestResetAndRejoinScoresInNextRun(t *testing.T) {
 	defer h.mu.RUnlock()
 	if s.Players["p1"] == nil || s.Players["p1"].Score <= 0 {
 		t.Fatalf("rejoined player score not recorded: %+v", s.Players["p1"])
+	}
+}
+
+func TestStartQuizWithoutResetClearsPreviousScores(t *testing.T) {
+	h := NewQuizHub(Dependencies{})
+	t.Cleanup(h.Shutdown)
+	h.eventByModule = func(_ context.Context, moduleID string) (*models.Event, error) {
+		return &models.Event{
+			ID: "e",
+			Modules: []models.Module{{ID: moduleID, Type: models.ModuleTypeQuiz, Data: map[string]any{
+				"questions": []models.QuizQuestion{{
+					ID: "q0", Type: "classic", TimeLimit: 20, ExplainTime: 60,
+					CorrectIndex: 1, Answers: []string{"no", "yes"},
+					ScoringConfig: models.ScoringConfig{MaxPoints: 100},
+				}},
+			}}},
+		}, nil
+	}
+
+	h.CreateSession("m", "e")
+	host := &Client{ModuleID: "m", IsHost: true, send: make(chan []byte, 16)}
+	player := &Client{send: make(chan []byte, 16)}
+	h.Register(host)
+	h.Register(player)
+	h.ProcessMessage(player, []byte(`{"type":"player:join","payload":{"moduleId":"m","userId":"p1","nickname":"Alice"}}`))
+
+	// Start run 1, score points, and finish without calling ResetSession.
+	h.processHostStartQuiz(host, ClientMessage{})
+	h.mu.Lock()
+	player.quizBinding = &quizPlayerBinding{eventID: "e", moduleID: "m", playerID: "p1"}
+	s := h.sessions["m"]
+	run1 := s.RunID
+	s.State = "question-active"
+	h.mu.Unlock()
+	for len(player.send) > 0 {
+		<-player.send
+	}
+
+	h.ProcessMessage(player, []byte(fmt.Sprintf(`{"type":"player:signal","payload":{"questionIndex":0,"answerIndex":1,"submissionId":"00000000-0000-4000-8000-000000000001","runId":%q}}`, run1)))
+
+	h.mu.Lock()
+	run1Score := s.Players["p1"].Score
+	if run1Score <= 0 {
+		h.mu.Unlock()
+		t.Fatalf("run 1 score = %d, want > 0", run1Score)
+	}
+	s.State = "finished"
+	h.mu.Unlock()
+	for len(player.send) > 0 {
+		<-player.send
+	}
+	for len(host.send) > 0 {
+		<-host.send
+	}
+
+	// Restart directly with processHostStartQuiz without resetting.
+	h.processHostStartQuiz(host, ClientMessage{})
+
+	h.mu.Lock()
+	run2 := s.RunID
+	if run2 == "" || run2 == run1 {
+		h.mu.Unlock()
+		t.Fatalf("runId did not advance: run1=%q run2=%q", run1, run2)
+	}
+	if s.Players["p1"] == nil {
+		h.mu.Unlock()
+		t.Fatal("existing player dropped on restart")
+	}
+	if s.Players["p1"].Score != 0 {
+		score := s.Players["p1"].Score
+		h.mu.Unlock()
+		t.Fatalf("previous score carried over on restart: got %d, want 0", score)
+	}
+	if len(s.PlayerSignals) != 0 || len(s.Streaks) != 0 || len(s.AnswerCounts) != 0 || len(s.AnsweredPlayerIDs) != 0 {
+		h.mu.Unlock()
+		t.Fatalf("stale run state retained on restart: signals=%d streaks=%v counts=%v answered=%v",
+			len(s.PlayerSignals), s.Streaks, s.AnswerCounts, s.AnsweredPlayerIDs)
+	}
+	s.State = "question-active"
+	h.mu.Unlock()
+
+	var sawZeroStateUpdate bool
+	for len(player.send) > 0 {
+		raw := <-player.send
+		var msg struct {
+			Type    string `json:"type"`
+			Payload struct {
+				Players map[string]struct {
+					Score int `json:"score"`
+				} `json:"players"`
+			} `json:"payload"`
+		}
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			t.Fatal(err)
+		}
+		if msg.Type == "state:update" {
+			sawZeroStateUpdate = true
+			if p, ok := msg.Payload.Players["p1"]; !ok || p.Score != 0 {
+				t.Fatalf("state:update carried stale score: %s", raw)
+			}
+		}
+	}
+	if !sawZeroStateUpdate {
+		t.Fatal("player did not receive state:update with reset score on restart")
+	}
+
+	// Answering in run 2 must start from 0, not add on top of run 1's score.
+	h.ProcessMessage(player, []byte(fmt.Sprintf(`{"type":"player:signal","payload":{"questionIndex":0,"answerIndex":1,"submissionId":"00000000-0000-4000-8000-000000000002","runId":%q}}`, run2)))
+
+	var ackTotal, ackAwarded int
+	var acked bool
+	for len(player.send) > 0 {
+		raw := <-player.send
+		var msg struct {
+			Type    string `json:"type"`
+			Payload struct {
+				Accepted bool `json:"accepted"`
+				Awarded  int  `json:"awarded"`
+				Total    int  `json:"total"`
+			} `json:"payload"`
+		}
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			t.Fatal(err)
+		}
+		if msg.Type == "answer:ack" {
+			acked = true
+			ackAwarded = msg.Payload.Awarded
+			ackTotal = msg.Payload.Total
+		}
+	}
+	if !acked {
+		t.Fatal("did not receive answer:ack in run 2")
+	}
+	if ackAwarded <= 0 || ackTotal != ackAwarded {
+		t.Fatalf("run 2 total (%d) != awarded (%d); old points leaked", ackTotal, ackAwarded)
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if got := s.Players["p1"].Score; got != ackAwarded {
+		t.Fatalf("run 2 player score = %d, want %d", got, ackAwarded)
 	}
 }
