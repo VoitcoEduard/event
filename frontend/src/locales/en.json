@@ -56,6 +56,11 @@
     "update_btn": "Update Event",
     "create_btn": "Create Event",
     "upcoming_events": "Upcoming Events",
+    "events_heading": "Events",
+    "public_portal_link": "Player Join Portal",
+    "new_event_btn": "+ New Event",
+    "close_form_btn": "Close",
+    "name_required": "Please enter an event name.",
     "loading_events": "Loading events...",
     "status_active": "ACTIVE",
     "status_inactive": "INACTIVE",
@@ -65,10 +70,13 @@
     "no_events": "No events found. Create one above!",
     "back_to_main": "Back to Main",
     "confirm_delete": "Are you sure you want to delete this event?",
+    "delete_event_title": "Delete event?",
+    "confirm_delete_named": "Are you sure you want to delete \"{name}\"? All modules and event data will be permanently removed.",
     "messages": {
       "fill_fields": "Please fill in all fields",
       "created": "Event created successfully",
       "updated": "Event updated successfully",
+      "deleted": "Event deleted",
       "save_failed": "Failed to save event",
       "delete_failed": "Failed to delete event"
     },
@@ -128,6 +136,7 @@
   },
   "screen_manager": {
     "title": "Projector",
+    "breadcrumb": "Slides",
     "open_projector": "🖥️ Open Projector",
     "push_to_screen": "Push to Screen",
     "welcome_slide": "Welcome Slide",
@@ -205,7 +214,9 @@
       "total_score": "Total Score"
     },
     "scoring_note": "Only the latest completed run of each game counts. Manual adjustments are added separately. Teams activity awards give the full award to each recorded member; legacy team adjustments stay with the team.",
-    "modules": "Modules", "all_points": "All points", "show": "Show", "players": "Players", "teams": "Teams", "players_and_teams": "Players and teams", "manual_points_for": "Manual points for", "edit_hint": "Edit a player name and save the row. Choose a module to enter or correct points.", "manual_disabled": "Manual entry for {target} is disabled for this module. Previously saved points still count.", "spreadsheet": "Event points spreadsheet", "player": "Player", "team": "Team", "latest_game": "Latest game", "manual_adjustments": "Manual adjustments", "total_points": "Total points", "actions": "Actions", "save": "Save", "player_scores": "Player scores", "team_scores": "Team scores", "saving": "Saving…", "unsaved": "Unsaved changes — save each edited row", "up_to_date": "Up to date", "no_rows": "No {target} yet. Add them to the event before entering points.", "form_responses": "Form responses", "no_responses": "No responses yet."
+    "modules": "Modules", "all_points": "All points", "show": "Show", "players": "Players", "teams": "Teams", "players_and_teams": "Players and teams", "manual_points_for": "Manual points for", "edit_hint": "Edit a player name and save the row. Choose a module to enter or correct points.", "manual_disabled": "Manual entry for {target} is disabled for this module. Previously saved points still count.", "spreadsheet": "Event points spreadsheet", "player": "Player", "team": "Team", "latest_game": "Latest game", "manual_adjustments": "Manual adjustments", "total_points": "Total points", "actions": "Actions", "save": "Save", "player_scores": "Player scores", "team_scores": "Team scores", "saving": "Saving…", "unsaved": "Unsaved changes — save each edited row", "up_to_date": "Up to date", "no_rows": "No {target} yet. Add them to the event before entering points.", "form_responses": "Form responses", "no_responses": "No responses yet.",
+    "breadcrumb": "Data",
+    "page_title": "{name} — Data"
   },
   "quiz_config": {
     "title": "Quiz Editor",
@@ -823,5 +834,88 @@
     "message": "You have unsaved changes. Leave without saving?",
     "leave": "Leave",
     "stay": "Stay"
+  },
+  "event_details": {
+    "event_fallback": "Event",
+    "nav_label": "Event sections",
+    "tab_modules": "Modules",
+    "tab_slides": "Slides",
+    "tab_data": "Data",
+    "tab_library": "Library",
+    "copy_projector_link": "Copy Projector Link",
+    "share_qr_toggle": "Share & QR",
+    "edit_module": "Edit",
+    "host_module": "Host",
+    "delete_module_title": "Delete module?",
+    "delete_module_confirm": "Delete \"{name}\"? This removes the module and its configuration from the event.",
+    "toast_event_started": "Event started",
+    "toast_event_stopped": "Event stopped",
+    "toast_status_failed": "Failed to update event status",
+    "toast_module_started": "Module started",
+    "toast_module_stopped": "Module stopped",
+    "toast_module_status_failed": "Failed to update module status",
+    "toast_module_deleted": "Module deleted",
+    "toast_module_delete_failed": "Failed to delete module",
+    "retry": "Retry",
+    "module_types": {
+      "quiz": "Quiz",
+      "simple_quiz": "Simple Quiz",
+      "wrong_pictures": "Wrong Pictures",
+      "form": "Form",
+      "teams": "Teams"
+    }
+  },
+  "add_module": {
+    "title": "Add Module",
+    "step_label": "Step {step} of 2",
+    "choose_type": "Choose what kind of activity to add",
+    "change_type": "Change type",
+    "name_label": "Module Name",
+    "start_label": "Starting content",
+    "start_blank": "Start blank",
+    "from_template": "Copy from Library template",
+    "template_copy_note": "Creates an independent copy for this event.",
+    "search_templates": "Search templates…",
+    "no_matching_templates": "No matching templates found.",
+    "create_and_edit": "Create & Edit",
+    "creating": "Creating…",
+    "items_count_questions": "{count} questions",
+    "items_count_steps": "{count} steps",
+    "items_count_rounds": "{count} rounds",
+    "errors": {
+      "name_required": "Please enter a module name.",
+      "select_template": "Please select a template to copy.",
+      "templates_load_failed": "Failed to load templates.",
+      "create_failed": "Failed to create module."
+    },
+    "placeholders": {
+      "quiz": "e.g. Friday Trivia",
+      "simple_quiz": "e.g. Open Q&A Round",
+      "wrong_pictures": "e.g. Spot the Mistake",
+      "form": "e.g. Check-in Form",
+      "teams": "e.g. House Teams"
+    },
+    "types": {
+      "quiz": {
+        "title": "Quiz",
+        "desc": "Timed interactive quiz with leaderboard and multiple question types."
+      },
+      "simple_quiz": {
+        "title": "Simple Quiz",
+        "desc": "Written-answer rounds reviewed live by a host or judge."
+      },
+      "wrong_pictures": {
+        "title": "Wrong Pictures",
+        "desc": "Visual challenge where players tap mistakes inside an image."
+      },
+      "form": {
+        "title": "Form",
+        "desc": "Collect registrations, feedback, or custom participant inputs."
+      },
+      "teams": {
+        "title": "Teams",
+        "desc": "Organize players into teams and award collaborative points."
+      }
+    }
   }
 }

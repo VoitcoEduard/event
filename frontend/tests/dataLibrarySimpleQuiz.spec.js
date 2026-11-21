@@ -22,7 +22,11 @@ let wrapper = null
 const mountOpts = {
   global: {
     mocks: { $t: k => k },
-    stubs: { AppIcon: true, 'router-link': true },
+    stubs: {
+      AppIcon: true,
+      'router-link': true,
+      AdminLayout: { template: '<div><slot name="actions" /><slot /></div>' },
+    },
   },
 }
 

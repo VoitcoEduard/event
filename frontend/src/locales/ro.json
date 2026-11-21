@@ -56,6 +56,11 @@
     "update_btn": "Actualizează Eveniment",
     "create_btn": "Creează Eveniment",
     "upcoming_events": "Evenimente Viitoare",
+    "events_heading": "Evenimente",
+    "public_portal_link": "Portal pentru participanți",
+    "new_event_btn": "+ Eveniment nou",
+    "close_form_btn": "Închide",
+    "name_required": "Introdu numele evenimentului.",
     "loading_events": "Se încarcă evenimentele...",
     "status_active": "ACTIV",
     "status_inactive": "INACTIV",
@@ -65,10 +70,13 @@
     "no_events": "Nu au fost găsite evenimente. Creează unul mai sus!",
     "back_to_main": "Înapoi la Pagina Principală",
     "confirm_delete": "Ești sigur că vrei să ștergi acest eveniment?",
+    "delete_event_title": "Ștergi evenimentul?",
+    "confirm_delete_named": "Sigur dorești să ștergi «{name}»? Toate modulele și datele evenimentului vor fi eliminate definitiv.",
     "messages": {
       "fill_fields": "Te rugăm să completezi toate câmpurile",
       "created": "Eveniment creat cu succes",
       "updated": "Eveniment actualizat cu succes",
+      "deleted": "Eveniment șters",
       "save_failed": "Salvarea evenimentului a eșuat",
       "delete_failed": "Ștergerea evenimentului a eșuat"
     },
@@ -128,6 +136,7 @@
   },
   "screen_manager": {
     "title": "Manager Proiector",
+    "breadcrumb": "Slide-uri",
     "open_projector": "🖥️ Deschide Proiector",
     "push_to_screen": "Afișează pe ecran",
     "welcome_slide": "Slide de Bun Venit",
@@ -202,7 +211,9 @@
       "name": "Nume",
       "total_score": "Scor total"
     },
-    "scoring_note":"Este luată în calcul doar ultima rundă finalizată a fiecărui joc. Ajustările manuale sunt adăugate separat. Premiile activității pe echipe se acordă integral fiecărui membru înregistrat; ajustările vechi rămân la echipă.","modules":"Module","all_points":"Toate punctele","show":"Afișează","players":"Jucători","teams":"Echipe","players_and_teams":"Jucători și echipe","manual_points_for":"Puncte manuale pentru","edit_hint":"Editează numele unui jucător și salvează rândul. Alege un modul pentru a introduce sau corecta puncte.","manual_disabled":"Introducerea manuală pentru „{target}” este dezactivată în acest modul. Punctele salvate anterior rămân valabile.","spreadsheet":"Tabel cu punctele evenimentului","player":"Jucător","team":"Echipă","latest_game":"Ultimul joc","manual_adjustments":"Ajustări manuale","total_points":"Total puncte","actions":"Acțiuni","save":"Salvează","player_scores":"Punctele jucătorilor","team_scores":"Punctele echipelor","saving":"Se salvează…","unsaved":"Modificări nesalvate — salvează fiecare rând editat","up_to_date":"La zi","no_rows":"Nu există încă {target}. Adaugă-i în eveniment înainte de a introduce puncte.","form_responses":"Răspunsuri formular","no_responses":"Nu există încă răspunsuri."
+    "scoring_note":"Este luată în calcul doar ultima rundă finalizată a fiecărui joc. Ajustările manuale sunt adăugate separat. Premiile activității pe echipe se acordă integral fiecărui membru înregistrat; ajustările vechi rămân la echipă.","modules":"Module","all_points":"Toate punctele","show":"Afișează","players":"Jucători","teams":"Echipe","players_and_teams":"Jucători și echipe","manual_points_for":"Puncte manuale pentru","edit_hint":"Editează numele unui jucător și salvează rândul. Alege un modul pentru a introduce sau corecta puncte.","manual_disabled":"Introducerea manuală pentru „{target}” este dezactivată în acest modul. Punctele salvate anterior rămân valabile.","spreadsheet":"Tabel cu punctele evenimentului","player":"Jucător","team":"Echipă","latest_game":"Ultimul joc","manual_adjustments":"Ajustări manuale","total_points":"Total puncte","actions":"Acțiuni","save":"Salvează","player_scores":"Punctele jucătorilor","team_scores":"Punctele echipelor","saving":"Se salvează…","unsaved":"Modificări nesalvate — salvează fiecare rând editat","up_to_date":"La zi","no_rows":"Nu există încă {target}. Adaugă-i în eveniment înainte de a introduce puncte.","form_responses":"Răspunsuri formular","no_responses":"Nu există încă răspunsuri.",
+    "breadcrumb": "Date",
+    "page_title": "{name} — Date"
   },
   "quiz_config": {
     "title": "Editor Quiz",
@@ -797,5 +808,88 @@
     "message": "Ai modificări nesalvate. Pleci fără să salvezi?",
     "leave": "Pleacă",
     "stay": "Rămâi"
+  },
+  "event_details": {
+    "event_fallback": "Eveniment",
+    "nav_label": "Secțiunile evenimentului",
+    "tab_modules": "Module",
+    "tab_slides": "Slide-uri",
+    "tab_data": "Date",
+    "tab_library": "Librărie",
+    "copy_projector_link": "Copiază link proiector",
+    "share_qr_toggle": "Partajează & QR",
+    "edit_module": "Editează",
+    "host_module": "Găzduiește",
+    "delete_module_title": "Ștergi modulul?",
+    "delete_module_confirm": "Ștergi «{name}»? Modulul și configurarea acestuia vor fi eliminate din eveniment.",
+    "toast_event_started": "Eveniment pornit",
+    "toast_event_stopped": "Eveniment oprit",
+    "toast_status_failed": "Nu s-a putut actualiza starea evenimentului",
+    "toast_module_started": "Modul pornit",
+    "toast_module_stopped": "Modul oprit",
+    "toast_module_status_failed": "Nu s-a putut actualiza starea modulului",
+    "toast_module_deleted": "Modul șters",
+    "toast_module_delete_failed": "Nu s-a putut șterge modulul",
+    "retry": "Reîncearcă",
+    "module_types": {
+      "quiz": "Quiz",
+      "simple_quiz": "Quiz Simplu",
+      "wrong_pictures": "Imagini Greșite",
+      "form": "Formular",
+      "teams": "Echipe"
+    }
+  },
+  "add_module": {
+    "title": "Adaugă Modul",
+    "step_label": "Pasul {step} din 2",
+    "choose_type": "Alege tipul de activitate",
+    "change_type": "Schimbă tipul",
+    "name_label": "Nume Modul",
+    "start_label": "Conținut inițial",
+    "start_blank": "Începe de la zero",
+    "from_template": "Copiază din șablon",
+    "template_copy_note": "Creează o copie independentă pentru acest eveniment.",
+    "search_templates": "Caută șabloane…",
+    "no_matching_templates": "Nu au fost găsite șabloane potrivite.",
+    "create_and_edit": "Creează și editează",
+    "creating": "Se creează…",
+    "items_count_questions": "{count} întrebări",
+    "items_count_steps": "{count} pași",
+    "items_count_rounds": "{count} runde",
+    "errors": {
+      "name_required": "Introdu numele modulului.",
+      "select_template": "Selectează un șablon de copiat.",
+      "templates_load_failed": "Nu s-au putut încărca șabloanele.",
+      "create_failed": "Nu s-a putut crea modulul."
+    },
+    "placeholders": {
+      "quiz": "ex. Trivia de vineri",
+      "simple_quiz": "ex. Rundă deschisă",
+      "wrong_pictures": "ex. Găsește greșeala",
+      "form": "ex. Formular de înscriere",
+      "teams": "ex. Echipe"
+    },
+    "types": {
+      "quiz": {
+        "title": "Quiz",
+        "desc": "Quiz interactiv cu cronometru, clasament și tipuri multiple de întrebări."
+      },
+      "simple_quiz": {
+        "title": "Quiz Simplu",
+        "desc": "Runde cu răspuns scris evaluate live de gazdă sau arbitru."
+      },
+      "wrong_pictures": {
+        "title": "Imagini Greșite",
+        "desc": "Provocare vizuală unde jucătorii ating greșelile dintr-o imagine."
+      },
+      "form": {
+        "title": "Formular",
+        "desc": "Colectează înscrieri, feedback sau date ale participanților."
+      },
+      "teams": {
+        "title": "Echipe",
+        "desc": "Organizează jucătorii în echipe și acordă puncte de grup."
+      }
+    }
   }
 }

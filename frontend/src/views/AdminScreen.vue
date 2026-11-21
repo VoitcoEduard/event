@@ -1,157 +1,170 @@
 <template>
-  <div class="admin-screen">
-    <header class="header">
-      <div class="header-brand">
-        <h1 class="header-title">{{ $t('admin.title') }}</h1>
-        <p class="header-subtitle">{{ $t('admin.subtitle') }}</p>
-      </div>
-      <div class="language-switcher">
-        <select
-          v-model="$i18n.locale"
-          :aria-label="$t('library.language_label')"
-          @change="changeLanguage"
-        >
-          <option value="en">English</option>
-          <option value="ru">Русский</option>
-          <option value="ro">Română</option>
-        </select>
-      </div>
-      <div class="header-actions">
-        <button type="button" class="library-btn" @click="goToLibrary">{{ $t('admin.library_btn') }}</button>
-        <RouterLink v-if="session.user?.role === 'owner'" class="library-btn" to="/admin/users">{{ $t('auth.manageUsers') }}</RouterLink>
-        <button type="button" class="library-btn" @click="leave">{{ $t('auth.signOut') }}</button>
-      </div>
-    </header>
-
-    <main class="scroll-content">
-      <form class="form-card" @submit.prevent="handleSubmit">
-        <h2 class="form-title">{{ editingId ? $t('admin.edit_event') : $t('admin.new_event') }}</h2>
-        
-        <label class="field-label" for="admin-event-name">{{ $t('admin.event_name_placeholder') }}</label>
-        <input
-          id="admin-event-name"
-          v-model="name"
-          type="text"
-          :placeholder="$t('admin.event_name_placeholder')"
-          class="input"
-        />
-        
-        <label class="field-label" for="admin-event-description">{{ $t('admin.description_placeholder') }}</label>
-        <textarea
-          id="admin-event-description"
-          v-model="description"
-          :placeholder="$t('admin.description_placeholder')"
-          class="input text-area"
-          rows="3"
-        ></textarea>
-
-        <label class="field-label" for="admin-event-language">{{ $t('appearance.language') }}</label>
-        <select id="admin-event-language" v-model="eventLanguage" class="input lang-select">
-          <option value="en">English</option>
-          <option value="ru">Русский</option>
-          <option value="ro">Română</option>
-        </select>
-        
-        <div class="form-actions">
-          <button 
-            v-if="editingId" 
-            type="button"
-            class="cancel-button" 
-            @click="cancelEdit"
-          >
-            {{ $t('admin.cancel_btn') }}
-          </button>
-          <button type="submit" class="submit-button">
-            {{ editingId ? $t('admin.update_btn') : $t('admin.create_btn') }}
-          </button>
-        </div>
-      </form>
-
-      <h2 class="section-title">{{ $t('admin.upcoming_events') }}</h2>
-
-      <div class="events-grid">
-        <p v-if="isLoading" class="empty-text">{{ $t('admin.loading_events') }}</p>
-        <template v-else>
-          <div v-for="event in events" :key="event.id" class="event-card">
-            <div class="card-header" @click="viewDetails(event)">
-              <div class="card-title-group">
-                <p class="event-name">{{ event.name }}</p>
-                <p class="event-id">ID: {{ event.id }}</p>
-              </div>
-              <span 
-                class="status-badge"
-                :class="event.isActive ? 'status-active' : 'status-inactive'"
-              >
-                {{ event.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
-              </span>
-            </div>
-            
-            <p class="event-description">{{ event.description }}</p>
-            
-            <div class="card-actions">
-              <button type="button" class="card-action view-action" @click="viewDetails(event)">
-                {{ $t('admin.manage_btn') }}
-              </button>
-              <button type="button" class="card-action edit-action" @click="editEvent(event)">
-                {{ $t('admin.edit_btn') }}
-              </button>
-              <button type="button" class="card-action delete-action" @click="deleteEvent(event.id)">
-                {{ $t('admin.delete_btn') }}
-              </button>
-            </div>
-          </div>
-          
-          <p v-if="events.length === 0" class="empty-text">
-            {{ $t('admin.no_events') }}
-          </p>
-        </template>
-      </div>
-
-      <button type="button" class="back-button" @click="goToMain">
-        {{ $t('admin.back_to_main') }}
+  <AdminLayout>
+    <template #actions>
+      <RouterLink to="/" class="portal-link">
+        <AppIcon name="external" :size="15" aria-hidden="true" />
+        <span>{{ $t('admin.public_portal_link') }}</span>
+      </RouterLink>
+      <button
+        type="button"
+        class="submit-button create-toggle-btn"
+        :aria-expanded="showForm ? 'true' : 'false'"
+        @click="toggleNewEventForm"
+      >
+        <AppIcon :name="showForm && !editingId ? 'close' : 'plus'" :size="16" aria-hidden="true" />
+        <span>{{ showForm && !editingId ? $t('admin.close_form_btn') : $t('admin.new_event_btn') }}</span>
       </button>
-    </main>
-  </div>
+    </template>
+
+    <div class="admin-screen">
+      <main class="scroll-content">
+        <form
+          v-if="showForm"
+          ref="formCardRef"
+          class="form-card"
+          novalidate
+          @submit.prevent="handleSubmit"
+        >
+          <div class="form-header">
+            <h2 class="form-title">{{ editingId ? $t('admin.edit_event') : $t('admin.new_event') }}</h2>
+            <button
+              type="button"
+              class="form-close-btn"
+              :aria-label="$t('common.close')"
+              @click="cancelEdit"
+            >
+              <AppIcon name="close" :size="18" aria-hidden="true" />
+            </button>
+          </div>
+
+          <label class="field-label" for="admin-event-name">{{ $t('admin.event_name_placeholder') }}</label>
+          <input
+            id="admin-event-name"
+            ref="nameInputRef"
+            v-model="name"
+            type="text"
+            :placeholder="$t('admin.event_name_placeholder')"
+            class="input"
+            :class="{ 'input-error': Boolean(nameError) }"
+            :aria-invalid="nameError ? 'true' : undefined"
+            :aria-describedby="nameError ? 'admin-event-name-error' : undefined"
+            @input="nameError = ''"
+          />
+          <p v-if="nameError" id="admin-event-name-error" class="field-error" role="alert">
+            {{ nameError }}
+          </p>
+
+          <label class="field-label" for="admin-event-description">{{ $t('admin.description_placeholder') }}</label>
+          <textarea
+            id="admin-event-description"
+            v-model="description"
+            :placeholder="$t('admin.description_placeholder')"
+            class="input text-area"
+            rows="3"
+          ></textarea>
+
+          <label class="field-label" for="admin-event-language">{{ $t('appearance.language') }}</label>
+          <select id="admin-event-language" v-model="eventLanguage" class="input lang-select">
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="ro">Română</option>
+          </select>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="cancel-button"
+              :disabled="isSubmitting"
+              @click="cancelEdit"
+            >
+              {{ $t('admin.cancel_btn') }}
+            </button>
+            <button type="submit" class="submit-button" :disabled="isSubmitting">
+              {{ editingId ? $t('admin.update_btn') : $t('admin.create_btn') }}
+            </button>
+          </div>
+        </form>
+
+        <div class="section-header">
+          <h1 class="section-title">{{ $t('admin.events_heading') }}</h1>
+        </div>
+
+        <div class="events-grid">
+          <p v-if="isLoading" class="empty-text">{{ $t('admin.loading_events') }}</p>
+          <template v-else>
+            <div v-for="event in events" :key="event.id" class="event-card">
+              <div class="card-header" @click="viewDetails(event)">
+                <div class="card-title-group">
+                  <p class="event-name">{{ event.name }}</p>
+                  <p class="event-id">ID: {{ event.id }}</p>
+                </div>
+                <span
+                  class="status-badge"
+                  :class="event.isActive ? 'status-active' : 'status-inactive'"
+                >
+                  {{ event.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
+                </span>
+              </div>
+
+              <p v-if="event.description" class="event-description">{{ event.description }}</p>
+
+              <div class="card-actions">
+                <button type="button" class="card-action view-action" @click="viewDetails(event)">
+                  {{ $t('admin.manage_btn') }}
+                </button>
+                <button type="button" class="card-action edit-action" @click="editEvent(event)">
+                  {{ $t('admin.edit_btn') }}
+                </button>
+                <button type="button" class="card-action delete-action" @click="deleteEvent(event)">
+                  {{ $t('admin.delete_btn') }}
+                </button>
+              </div>
+            </div>
+
+            <div v-if="events.length === 0" class="empty-state-box">
+              <p class="empty-text">{{ $t('admin.no_events') }}</p>
+            </div>
+          </template>
+        </div>
+      </main>
+    </div>
+  </AdminLayout>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import AdminLayout from '../components/AdminLayout.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
-import { session, signOut } from '../session'
 import { useToast } from '../composables/useToast'
+import { useDialog } from '../composables/useDialog'
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const { success, error } = useToast()
+const { confirm } = useDialog()
 
-async function leave() { await signOut(); router.push('/login') }
 const events = ref([])
 const name = ref('')
 const description = ref('')
 const eventLanguage = ref(locale.value)
 const editingId = ref(null)
+const showForm = ref(false)
 const isLoading = ref(false)
+const isSubmitting = ref(false)
+const nameError = ref('')
 
-const { success, error, info } = useToast()
-
-const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
-  if (!editingId.value) {
-    eventLanguage.value = locale.value
-  }
-}
+const formCardRef = ref(null)
+const nameInputRef = ref(null)
 
 const fetchEvents = async () => {
   isLoading.value = true
   try {
     const response = await fetch(`${API_BASE_URL}/events`)
     const data = await response.json()
-    if (Array.isArray(data)) {
-      events.value = data
-    } else {
-      events.value = []
-    }
+    events.value = Array.isArray(data) ? data : []
   } catch (err) {
     console.error('Error fetching events:', err)
   } finally {
@@ -163,31 +176,57 @@ onMounted(() => {
   fetchEvents()
 })
 
+const focusForm = async () => {
+  await nextTick()
+  formCardRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+  nameInputRef.value?.focus?.()
+}
+
+const toggleNewEventForm = async () => {
+  if (showForm.value && !editingId.value) {
+    cancelEdit()
+    return
+  }
+  editingId.value = null
+  name.value = ''
+  description.value = ''
+  eventLanguage.value = locale.value
+  nameError.value = ''
+  showForm.value = true
+  await focusForm()
+}
+
 const handleSubmit = async () => {
-  if (!name.value || !description.value) {
-    info(t('admin.messages.fill_fields'))
+  if (isSubmitting.value) return
+  const trimmedName = name.value.trim()
+  if (!trimmedName) {
+    nameError.value = t('admin.name_required')
+    nameInputRef.value?.focus?.()
     return
   }
 
+  isSubmitting.value = true
+  nameError.value = ''
   try {
-    const url = editingId.value 
-      ? `${API_BASE_URL}/events/${editingId.value}` 
+    const wasEditing = Boolean(editingId.value)
+    const url = wasEditing
+      ? `${API_BASE_URL}/events/${encodeURIComponent(editingId.value)}`
       : `${API_BASE_URL}/events`
-    const method = editingId.value ? 'PUT' : 'POST'
+    const method = wasEditing ? 'PUT' : 'POST'
 
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ name: name.value, description: description.value, language: eventLanguage.value })
+      body: JSON.stringify({
+        name: trimmedName,
+        description: description.value.trim(),
+        language: eventLanguage.value
+      })
     })
 
     if (response.ok) {
-      name.value = ''
-      description.value = ''
-      eventLanguage.value = locale.value
-      const wasEditing = !!editingId.value
-      editingId.value = null
-      fetchEvents()
+      cancelEdit()
+      await fetchEvents()
       success(t(`admin.messages.${wasEditing ? 'updated' : 'created'}`))
     } else {
       error(t('admin.messages.save_failed'))
@@ -195,16 +234,32 @@ const handleSubmit = async () => {
   } catch (err) {
     console.error('Error saving event:', err)
     error(t('admin.messages.save_failed'))
+  } finally {
+    isSubmitting.value = false
   }
 }
 
-const deleteEvent = async (id) => {
-  if (!confirm(t('admin.confirm_delete'))) return
-  
+const deleteEvent = async (event) => {
+  const confirmed = await confirm({
+    title: t('admin.delete_event_title'),
+    message: t('admin.confirm_delete_named', { name: event.name }),
+    confirmLabel: t('admin.delete_btn'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (!confirmed) return
+
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${id}`, { method: 'DELETE', headers: { ...getAuthHeaders() } })
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(event.id)}`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() }
+    })
     if (response.ok) {
-      fetchEvents()
+      if (editingId.value === event.id) {
+        cancelEdit()
+      }
+      await fetchEvents()
+      success(t('admin.messages.deleted'))
     } else {
       error(t('admin.messages.delete_failed'))
     }
@@ -214,11 +269,14 @@ const deleteEvent = async (id) => {
   }
 }
 
-const editEvent = (event) => {
-  name.value = event.name
-  description.value = event.description
+const editEvent = async (event) => {
+  name.value = event.name || ''
+  description.value = event.description || ''
   eventLanguage.value = event.language || locale.value
   editingId.value = event.id
+  nameError.value = ''
+  showForm.value = true
+  await focusForm()
 }
 
 const cancelEdit = () => {
@@ -226,29 +284,53 @@ const cancelEdit = () => {
   description.value = ''
   editingId.value = null
   eventLanguage.value = locale.value
+  nameError.value = ''
+  showForm.value = false
 }
 
 const viewDetails = (event) => {
   try { sessionStorage.setItem('currentEvent', JSON.stringify(event)) } catch { /* storage unavailable */ }
-  router.push(`/admin/event/${event.id}`)
-}
-
-const goToMain = () => {
-  router.push('/')
-}
-
-const goToLibrary = () => {
-  router.push('/quiz/library')
+  router.push(`/admin/events/${encodeURIComponent(event.id)}`)
 }
 </script>
 
 <style scoped>
+.portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--admin-text-muted, #c5c5ca);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.portal-link:hover {
+  background: var(--admin-surface-hover, #303034);
+  color: var(--admin-text, #ffffff);
+}
+
+.create-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .admin-screen {
   container: admin-dashboard / inline-size;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background-color: #121212;
+  background: var(--admin-bg, #121212);
   scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -257,147 +339,83 @@ const goToLibrary = () => {
   box-sizing: border-box;
 }
 
-.header {
-  padding: 24px clamp(16px, 4vw, 64px);
-  background-color: #1E1E1E;
-  border-bottom: 1px solid #2C2C2C;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  grid-template-areas:
-    "title actions lang"
-    "subtitle actions lang";
-  align-items: center;
-  gap: 2px 20px;
-}
-
-.header-brand {
-  display: contents;
-}
-
-.language-switcher {
-  grid-area: lang;
-  position: static;
-  margin-inline-start: auto;
-  flex-shrink: 0;
-}
-
-.language-switcher select {
-  background-color: #252525;
-  color: white;
-  border: 1px solid #333333;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  outline: none;
-  font-size: 14px;
-  min-block-size: 40px;
-  max-inline-size: 100%;
-}
-
-.header-title {
-  grid-area: title;
-  font-size: clamp(1.375rem, 1.1rem + 1.4vw, 1.75rem);
-  font-weight: 800;
-  color: #FFFFFF;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  margin: 0;
-  min-inline-size: 0;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-
-.header-actions {
-  grid-area: actions;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.library-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #333;
-  border: 1px solid #555;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-decoration: none;
-  text-align: center;
-  min-block-size: 40px;
-  transition: background 0.2s;
-}
-.library-btn:hover { background-color: #444; }
-
-:global(html[data-admin-appearance="true"] .admin-screen .header .header-actions .library-btn) {
-  min-block-size: max(40px, var(--target-size, 24px));
-}
-
-.header-subtitle {
-  grid-area: subtitle;
-  font-size: 14px;
-  color: #888888;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
-  margin: 0;
-  min-inline-size: 0;
-  overflow-wrap: break-word;
-  text-wrap: pretty;
-}
-
 .scroll-content,
 :global(html[data-admin-appearance="true"] .admin-screen > main.scroll-content) {
-  padding: 40px max(clamp(24px, 4vw, 64px), env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(clamp(24px, 4vw, 64px), env(safe-area-inset-left, 0px));
+  padding: 28px max(clamp(16px, 4vw, 48px), env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(clamp(16px, 4vw, 48px), env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .form-card {
-  background-color: #1E1E1E;
+  background-color: var(--admin-surface, #1E1E1E);
   border-radius: 12px;
-  padding: 28px;
-  margin-bottom: 38px;
-  border: 1px solid #2C2C2C;
-  width: min(100%, 540px);
-  max-width: 540px;
+  padding: 24px;
+  margin-bottom: 28px;
+  border: 1px solid var(--admin-border, #2C2C2C);
+  width: min(100%, 600px);
+  max-width: 600px;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .form-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  color: #FFF;
-  margin: 0 0 16px;
-  text-align: center;
+  color: var(--admin-text, #FFF);
+  margin: 0;
   text-wrap: balance;
   overflow-wrap: break-word;
+}
+
+.form-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--admin-text-muted, #aaa);
+  cursor: pointer;
 }
 
 .input {
   width: 100%;
   min-inline-size: 0;
   font-size: 16px;
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid #333;
-  background-color: #121212;
-  color: #fff;
+  border: 1px solid var(--admin-border-strong, #333);
+  background-color: var(--admin-surface, #121212);
+  color: var(--admin-text, #fff);
   margin-bottom: 12px;
   min-block-size: 44px;
 }
 
+.input.input-error {
+  border-color: var(--admin-danger, #ff453a) !important;
+  margin-bottom: 6px;
+}
+
+.field-error {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-danger, #ff453a);
+}
+
 .field-label {
   display: block;
-  margin: 2px 0 7px;
+  margin: 2px 0 6px;
   color: var(--admin-text, #fff);
   font-size: 13px;
   font-weight: 700;
@@ -413,7 +431,7 @@ const goToLibrary = () => {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .submit-button,
@@ -422,33 +440,41 @@ const goToLibrary = () => {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.25;
   min-block-size: 40px;
+  cursor: pointer;
 }
 
 .submit-button {
-  background-color: #007AFF;
-  border: 1px solid #007AFF;
+  background-color: var(--admin-primary-solid, #007AFF);
+  border: 1px solid var(--admin-primary-solid, #007AFF);
   color: #FFF;
 }
 
 .cancel-button {
-  border: 1px solid #333;
-  color: #AAA;
-  background: none;
+  border: 1px solid var(--admin-border-strong, #333);
+  color: var(--admin-text-muted, #AAA);
+  background: transparent;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin-bottom: 16px;
 }
 
 .section-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #FFFFFF;
-  margin: 10px 0 20px;
-  width: 100%;
-  max-width: 1200px;
+  color: var(--admin-text, #FFFFFF);
+  margin: 0;
   text-align: left;
   text-wrap: balance;
   overflow-wrap: break-word;
@@ -463,20 +489,20 @@ const goToLibrary = () => {
 }
 
 .event-card {
-  background-color: #1E1E1E;
+  background-color: var(--admin-surface, #1E1E1E);
   border-radius: 12px;
   padding: 20px;
   min-width: 0;
   min-inline-size: 0;
   max-width: none;
-  border: 1px solid #2C2C2C;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--admin-border, #2C2C2C);
+  box-shadow: var(--admin-shadow, 0 1px 3px rgba(0, 0, 0, 0.3));
   display: flex;
   flex-direction: column;
 }
 
 .event-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
 }
 
 .card-header {
@@ -494,17 +520,17 @@ const goToLibrary = () => {
 }
 
 .event-name {
-  font-size: 20px;
-  font-weight: 600;
-  color: #FFFFFF;
-  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--admin-text, #FFFFFF);
+  margin: 0 0 4px;
   text-wrap: balance;
   overflow-wrap: break-word;
 }
 
 .event-id {
   font-size: 12px;
-  color: #666;
+  color: var(--admin-text-dim, #666);
   font-family: monospace;
   margin: 0;
   overflow-wrap: break-word;
@@ -512,8 +538,8 @@ const goToLibrary = () => {
 
 .status-badge {
   padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
   white-space: nowrap;
@@ -531,7 +557,7 @@ const goToLibrary = () => {
 
 .event-description {
   font-size: 14px;
-  color: #AAAAAA;
+  color: var(--admin-text-muted, #AAAAAA);
   line-height: 1.5;
   margin: 0 0 12px;
   text-wrap: pretty;
@@ -545,9 +571,10 @@ const goToLibrary = () => {
 
 .card-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   margin-top: auto;
+  padding-top: 8px;
 }
 
 .card-action {
@@ -556,10 +583,11 @@ const goToLibrary = () => {
   justify-content: center;
   text-align: center;
   padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  min-block-size: 36px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  min-block-size: 38px;
+  cursor: pointer;
 }
 
 .view-action {
@@ -580,49 +608,22 @@ const goToLibrary = () => {
   color: #FF453A;
 }
 
-.empty-text {
+.empty-state-box {
   grid-column: 1 / -1;
-  color: #666;
-  font-style: italic;
+  padding: 36px 20px;
+  border: 1px dashed var(--admin-border, #333);
+  border-radius: 12px;
   text-align: center;
-  margin-top: 20px;
-  width: 100%;
 }
 
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #FFFFFF;
-  padding: 14px 18px;
-  border-radius: 14px;
-  margin-top: 24px;
+.empty-text {
+  grid-column: 1 / -1;
+  color: var(--admin-text-muted, #666);
+  margin: 0;
   width: 100%;
-  max-width: 1200px;
-  min-block-size: 48px;
-  color: #000000;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-align: center;
 }
 
 @container admin-dashboard (inline-size <= 900px) {
-  .header {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "title lang"
-      "subtitle subtitle"
-      "actions actions";
-    gap: 4px 12px;
-    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px));
-  }
-
-  .header-actions {
-    justify-content: flex-start;
-    margin-top: 12px;
-  }
-
   .events-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -635,28 +636,18 @@ const goToLibrary = () => {
   }
 
   .form-card {
-    padding: 20px;
+    padding: 18px;
   }
 }
 
 @container admin-dashboard (inline-size <= 560px) {
   .scroll-content,
   :global(html[data-admin-appearance="true"] .admin-screen > main.scroll-content) {
-    padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-  }
-
-  .language-switcher select {
-    font-size: 16px;
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
   }
 
   .input {
-    width: 100%;
-    min-inline-size: 0;
     font-size: 16px;
-  }
-
-  .form-actions {
-    flex-wrap: wrap;
   }
 
   .form-actions > button {
@@ -664,37 +655,42 @@ const goToLibrary = () => {
     min-block-size: 44px;
   }
 
-  .card-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
   .card-action {
     flex: 1 1 auto;
     min-block-size: 44px;
-    text-align: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .portal-link,
+  .create-toggle-btn,
+  .form-close-btn,
+  .card-action,
+  .submit-button,
+  .cancel-button {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .portal-link,
+  .create-toggle-btn {
+    width: 100%;
     justify-content: center;
   }
 }
 
 @media (pointer: coarse) {
-  .library-btn,
-  .language-switcher select,
   .submit-button,
   .cancel-button,
   .card-action,
-  .back-button,
+  .form-close-btn,
+  .portal-link,
   .input,
   input,
   select,
   textarea {
     min-block-size: 44px;
     min-inline-size: 44px;
-  }
-
-  .language-switcher select {
-    font-size: 16px;
   }
 }
 </style>

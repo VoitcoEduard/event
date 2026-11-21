@@ -1,54 +1,95 @@
 <template>
-  <div class="teams-admin-wrapper">
-    <nav class="teams-admin-nav">
-      <div class="teams-admin-nav-content">
-        <div class="teams-admin-nav-left">
-          <button type="button" class="teams-admin-back" @click="router.push(`/admin/event/${eventId}`)">
-            <AppIcon name="arrowLeft" :size="18" aria-hidden="true" />
-            {{ $t('teams_module.back_event') }}
-          </button>
+  <AdminLayout :breadcrumbs="breadcrumbs">
+    <div class="teams-admin-wrapper">
+      <div class="teams-admin-header">
+        <div class="teams-admin-nav-content">
           <div class="teams-admin-context">
-            <span>{{ eventName }}</span>
+            <span v-if="eventName">{{ eventName }}</span>
             <h1>{{ selected?.name || $t('teams_module.teams') }}</h1>
           </div>
+          <label v-if="teamModules.length > 1" class="teams-admin-picker">
+            <span>{{ $t('teams_module.activity') }}</span>
+            <select v-model="selectedId" :aria-label="$t('teams_module.activity')">
+              <option value="">{{ $t('teams_module.select_activity') }}</option>
+              <option v-for="module in teamModules" :key="module.id" :value="module.id">{{ module.name }}</option>
+            </select>
+          </label>
         </div>
-        <label v-if="teamModules.length > 1" class="teams-admin-picker">
-          <span>{{ $t('teams_module.activity') }}</span>
-          <select v-model="selectedId" :aria-label="$t('teams_module.activity')">
-            <option value="">{{ $t('teams_module.select_activity') }}</option>
-            <option v-for="module in teamModules" :key="module.id" :value="module.id">{{ module.name }}</option>
-          </select>
-        </label>
       </div>
-    </nav>
-    <p v-if="error" class="teams-error teams-page-message" role="alert">{{ error }}</p>
-    <TeamsActivityAdmin v-if="selected" :key="selected.id" :event-id="eventId" :module="selected" :modules="modules" />
-    <p v-else class="teams-picker-message">{{ $t('teams_module.select_activity') }}</p>
-  </div>
+
+      <p v-if="error" class="teams-error teams-page-message" role="alert">{{ error }}</p>
+      <TeamsActivityAdmin v-if="selected" :key="selected.id" :event-id="eventId" :module="selected" :modules="modules" />
+      <p v-else class="teams-picker-message">{{ $t('teams_module.select_activity') }}</p>
+    </div>
+  </AdminLayout>
 </template>
+
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { API_BASE_URL } from '../utils'
+import AdminLayout from '../components/AdminLayout.vue'
 import TeamsActivityAdmin from '../components/TeamsActivityAdmin.vue'
-import AppIcon from '../components/AppIcon.vue'
-const route = useRoute(), router = useRouter()
-const eventId = route.params.id || route.query.eventId
-const modules = ref([]), eventName = ref(''), error = ref(''), selectedId = ref(route.query.moduleId || '')
+
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+
+const eventId = computed(() => {
+  const raw = route.params?.eventId ?? route.params?.id ?? route.query?.eventId
+  if (Array.isArray(raw)) return raw[0] ? String(raw[0]) : ''
+  return raw ? String(raw) : ''
+})
+
+const modules = ref([])
+const eventName = ref('')
+const error = ref('')
+const selectedId = ref(route.query.moduleId || '')
+
 const teamModules = computed(() => modules.value.filter(module => module.type === 'teams'))
 const selected = computed(() => teamModules.value.find(module => module.id === selectedId.value))
-watch(selectedId, value => router.replace({ query: { ...route.query, moduleId: value || undefined } }))
-onMounted(async () => {
-  try { const response = await fetch(`${API_BASE_URL}/events/${eventId}`); if (!response.ok) throw new Error(await response.text()); const event = await response.json(); eventName.value = event.name || ''; modules.value = event.modules || []; if (!selectedId.value && teamModules.value.length === 1) selectedId.value = teamModules.value[0].id }
-  catch (err) { error.value = err.message }
+
+const breadcrumbs = computed(() => [
+  { label: t('admin_shell.events'), to: '/admin/events' },
+  {
+    label: eventName.value || t('event_details.event_fallback'),
+    to: eventId.value ? `/admin/events/${encodeURIComponent(eventId.value)}` : '/admin/events'
+  },
+  { label: t('teams_module.teams') }
+])
+
+watch(selectedId, value => {
+  router.replace({ query: { ...route.query, moduleId: value || undefined } })
 })
+
+async function loadEventTeams(id) {
+  if (!id) return
+  error.value = ''
+  try {
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(id)}`)
+    if (!response.ok) throw new Error(await response.text())
+    const event = await response.json()
+    eventName.value = event.name || ''
+    modules.value = event.modules || []
+    if (!selectedId.value && teamModules.value.length === 1) {
+      selectedId.value = teamModules.value[0].id
+    }
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+watch(eventId, (id) => {
+  loadEventTeams(id)
+}, { immediate: true })
 </script>
+
 <style scoped>
 .teams-admin-wrapper {
-  background: #121212;
-  min-height: 100vh;
-  min-height: 100dvh;
-  color: #fff;
+  background: var(--admin-bg, #121212);
+  min-height: 100%;
+  color: var(--admin-text, #fff);
   box-sizing: border-box;
 }
 
@@ -56,47 +97,19 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
-.teams-admin-nav {
-  padding: 20px 40px;
-  background: #1e1e1e;
-  border-bottom: 1px solid #333;
-  box-shadow: 0 2px 4px #0003;
+.teams-admin-header {
+  padding: 18px clamp(16px, 3vw, 40px);
+  background: var(--admin-surface, #1e1e1e);
+  border-bottom: 1px solid var(--admin-border, #333);
 }
 
 .teams-admin-nav-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
   max-width: 1400px;
   margin: 0 auto;
-}
-
-.teams-admin-nav-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  min-width: 0;
-}
-
-.teams-admin-back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 0;
-  border-radius: 8px;
-  padding: 12px 20px;
-  background: #607d8b;
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.teams-admin-back:hover {
-  background: #546e7a;
 }
 
 .teams-admin-context {
@@ -114,7 +127,6 @@ onMounted(async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  overflow-wrap: break-word;
 }
 
 .teams-admin-context h1 {
@@ -144,11 +156,12 @@ onMounted(async () => {
 .teams-admin-picker select {
   min-width: 220px;
   max-width: 360px;
-  background: #252525;
-  border: 1px solid #444;
-  color: #fff;
+  min-height: 44px;
+  background: var(--admin-surface, #252525);
+  border: 1px solid var(--admin-border-strong, #444);
+  color: var(--admin-text, #fff);
   border-radius: 8px;
-  padding: 11px 36px 11px 12px;
+  padding: 10px 36px 10px 12px;
   font: inherit;
   text-transform: none;
   letter-spacing: normal;
@@ -169,25 +182,15 @@ onMounted(async () => {
 }
 
 @media (max-width: 760px) {
-  .teams-admin-nav {
-    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+  .teams-admin-header {
+    padding: 14px 16px;
   }
 
   .teams-admin-nav-content,
   .teams-admin-picker {
     align-items: stretch;
     flex-direction: column;
-    gap: 14px;
-  }
-
-  .teams-admin-nav-left {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 12px 16px;
-  }
-
-  .teams-admin-context {
-    flex: 1 1 180px;
+    gap: 12px;
   }
 
   .teams-admin-context span {
@@ -209,13 +212,12 @@ onMounted(async () => {
 
   .teams-page-message,
   .teams-picker-message {
-    margin: 16px max(16px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    margin: 16px max(16px, env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
     padding: 16px;
   }
 }
 
 @media (pointer: coarse) {
-  .teams-admin-back,
   .teams-admin-picker select {
     min-block-size: 44px;
   }

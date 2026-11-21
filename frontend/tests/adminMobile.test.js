@@ -27,6 +27,7 @@ const ADMIN_COMPONENTS = [
   'AdminLayout.vue',
   'AdminThemeToggle.vue',
   'AppDialogHost.vue',
+  'AddModuleModal.vue',
   'Toast.vue',
   'FormEditor.vue',
   'FormModuleConfig.vue',
@@ -200,13 +201,12 @@ test('no SFC in views/ or components/ places a descendant selector outside :glob
   }
 })
 
-test('ScreenManagerScreen.vue uses library.back_btn alongside arrowLeft icon and teams-activity.css themes .teams-notice', () => {
+test('ScreenManagerScreen.vue wraps in AdminLayout with breadcrumbs and teams-activity.css themes .teams-notice', () => {
   const { descriptor, errors } = parse(src('src/views/ScreenManagerScreen.vue'))
   assert.deepEqual(errors, [])
 
   const template = descriptor.template?.content || ''
-  assert.match(template, /<AppIcon\s+name="arrowLeft"/)
-  assert.match(template, /\$t\('library\.back_btn'\)/)
+  assert.match(template, /<AdminLayout\b[^>]*:breadcrumbs=/)
   assert.doesNotMatch(template, /\$t\('admin\.details\.back_btn'\)/)
 
   const teamsCss = src('src/styles/teams-activity.css')
