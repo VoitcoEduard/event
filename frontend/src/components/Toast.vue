@@ -1,12 +1,13 @@
 <template>
   <Teleport to="body">
-    <div class="toast-container">
+    <div class="toast-container" aria-live="polite" aria-atomic="false">
       <TransitionGroup name="toast">
         <div
           v-for="toast in toasts"
           :key="toast.id"
           class="toast"
           :class="toast.type"
+          :role="toast.type === 'error' ? 'alert' : 'status'"
         >
           <span class="toast-icon">
             <AppIcon :name="getIcon(toast.type)" :size="15" aria-hidden="true" />
@@ -40,13 +41,15 @@ const getIcon = (type) => {
 <style scoped>
 .toast-container {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  top: 76px;
+  right: 20px;
+  bottom: auto;
   z-index: 9999;
   display: flex;
   flex-direction: column;
   gap: 12px;
   max-width: 400px;
+  pointer-events: none;
 }
 
 .toast {
@@ -56,6 +59,7 @@ const getIcon = (type) => {
   padding: 14px 16px;
   min-width: 0;
   max-width: 100%;
+  pointer-events: auto;
   background-color: var(--admin-surface, #1E1E1E);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
@@ -141,10 +145,10 @@ const getIcon = (type) => {
 
 @media (max-width: 640px) {
   .toast-container {
-    top: max(12px, env(safe-area-inset-top, 0px));
+    top: auto;
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
     left: max(12px, env(safe-area-inset-left, 0px));
     right: max(12px, env(safe-area-inset-right, 0px));
-    bottom: auto;
     max-width: none;
   }
 }

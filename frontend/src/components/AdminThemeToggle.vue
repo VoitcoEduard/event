@@ -1,5 +1,10 @@
 <template>
-  <div class="admin-theme-control" role="group" :aria-label="$t('appearance.label')">
+  <div
+    class="admin-theme-control"
+    :class="{ 'admin-theme-control--inline': variant === 'inline' }"
+    role="group"
+    :aria-label="$t('appearance.label')"
+  >
     <button
       v-for="option in options"
       :key="option.value"
@@ -18,6 +23,14 @@
 <script setup>
 import AppIcon from './AppIcon.vue'
 import { useAdminTheme } from '../composables/useAdminTheme'
+
+defineProps({
+  variant: {
+    type: String,
+    default: 'floating',
+    validator: (value) => ['floating', 'inline'].includes(value)
+  }
+})
 
 const { theme, setTheme } = useAdminTheme()
 const options = [

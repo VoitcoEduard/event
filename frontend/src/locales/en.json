@@ -800,5 +800,28 @@
     "earned": "Individual points earned",
     "award_history": "Award history",
     "rank": "Rank"
+  },
+  "admin_shell": {
+    "brand": "Event Admin",
+    "nav_label": "Admin navigation",
+    "breadcrumb_label": "Breadcrumb",
+    "events": "Events",
+    "library": "Library",
+    "users": "Administrators",
+    "menu_open": "Open navigation menu",
+    "menu_close": "Close navigation menu"
+  },
+  "dialog": {
+    "confirm_title": "Confirm action",
+    "prompt_title": "Enter value",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close dialog"
+  },
+  "unsaved_changes": {
+    "title": "Unsaved changes",
+    "message": "You have unsaved changes. Leave without saving?",
+    "leave": "Leave",
+    "stay": "Stay"
   }
 }
