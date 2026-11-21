@@ -263,6 +263,7 @@ func (s *Store) InsertResponse(ctx context.Context, v *models.Response) error {
 	if v.ID == "" {
 		v.ID = uuid.NewString()
 	}
+	v.ResolveOtherAnswers()
 	data, err := marshal(v.Data)
 	if err != nil {
 		return err

@@ -42,6 +42,7 @@ func (s *ModuleService) SubmitResponse(ctx context.Context, eventID, moduleID st
 	response.EventID = eventID
 	response.ModuleID = moduleID
 	response.CreatedAt = time.Now()
+	response.ResolveOtherAnswers()
 	return s.Repo.InsertResponse(ctx, response)
 }
 

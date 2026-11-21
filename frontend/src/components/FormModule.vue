@@ -283,25 +283,20 @@ const selectRadioOption = (stepId, value) => {
 }
 
 const toggleCheckboxOption = (stepId, value) => {
+  const step = timeline.value.find(s => s.id === stepId) || currentStep.value
+  const allowMultiple = Boolean(step?.data?.allowMultiple)
   const currentValues = answers.value[stepId] || []
   const newValues = Array.isArray(currentValues) ? [...currentValues] : []
-  
-  if (value === '__other__') {
-    const otherIndex = newValues.indexOf('__other__')
-    if (otherIndex >= 0) {
-      newValues.splice(otherIndex, 1)
-    } else {
-      newValues.push('__other__')
-    }
+
+  const existingIndex = newValues.indexOf(value)
+  if (existingIndex >= 0) {
+    newValues.splice(existingIndex, 1)
+  } else if (allowMultiple) {
+    newValues.push(value)
   } else {
-    const optionIndex = newValues.indexOf(value)
-    if (optionIndex >= 0) {
-      newValues.splice(optionIndex, 1)
-    } else {
-      newValues.push(value)
-    }
+    newValues.splice(0, newValues.length, value)
   }
-  
+
   answers.value = { ...answers.value, [stepId]: newValues }
 }
 
@@ -372,8 +367,11 @@ const handleNext = async () => {
         return
       }
       
-      // For checkbox with allowOther, the __other__ value should have text
-      if (fieldType === 'checkbox' && Array.isArray(answer) && answer.includes('__other__')) {
+      // For any selection type (radio, dropdown, checkbox), selecting __other__ requires custom text
+      const isOtherSelected = Array.isArray(answer)
+        ? answer.includes('__other__')
+        : answer === '__other__'
+      if (isOtherSelected) {
         const otherValue = otherAnswers.value[stepId]
         if (!otherValue || !otherValue.trim()) {
           info(t('form_module.validation.specify_other'))
@@ -396,22 +394,41 @@ const handleNext = async () => {
   }
 }
 
+const buildSubmittedAnswers = () => {
+  const resolved = {}
+  for (const [stepId, value] of Object.entries(answers.value)) {
+    const customText = typeof otherAnswers.value[stepId] === 'string'
+      ? otherAnswers.value[stepId].trim()
+      : ''
+
+    if (value === '__other__') {
+      resolved[stepId] = customText || value
+    } else if (Array.isArray(value)) {
+      resolved[stepId] = value.map(item => (item === '__other__' && customText ? customText : item))
+    } else {
+      resolved[stepId] = value
+    }
+  }
+  return resolved
+}
+
 const handleSubmit = async () => {
   submitting.value = true
   try {
+    const submittedData = buildSubmittedAnswers()
     const response = await fetch(`${API_BASE_URL}/events/${props.eventId}/modules/${props.module.id}/response`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: props.userId,
-        data: answers.value,
+        data: submittedData,
         otherAnswers: otherAnswers.value
       })
     })
 
     if (response.ok) {
       completed.value = true
-      emit('complete', answers.value)
+      emit('complete', submittedData)
     } else {
       error(t('form_module.error_submit'))
     }
