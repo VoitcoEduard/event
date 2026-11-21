@@ -719,8 +719,8 @@ const saveTemplate = async () => {
   const isWrongPictures = currentTemplate.value.moduleType === 'wrong_pictures'
   
   if ((isQuiz || isWrongPictures) && currentTemplate.value.questions.length === 0) {
-       if(!confirm(t('library.actions.discard_confirm'))) return
-   }
+    if (!confirm(t('library.actions.save_empty_confirm'))) return
+  }
 
    saving.value = true
   try {

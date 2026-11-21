@@ -40,7 +40,7 @@
               <th scope="row" class="name-cell" :title="row.id"><input v-if="target === 'players' && row.registered" :aria-label="`${row.name} player name`" :disabled="busy" :value="drafts[row.id]?.name ?? row.name" @input="setDraft(row, 'name', $event.target.value)" /><span v-else>{{ row.name }}</span><small>{{ row.id }}</small></th>
               <template v-for="module in visibleModules" :key="module.id">
                 <td v-if="target === 'players' && isGame(module)" :data-label="`${module.name} · ${t('data_library.latest_game')}`">
-                  <input v-if="selectedModule && row.game[module.id] !== undefined" :aria-label="`${row.name} game points`" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
+                  <input v-if="selectedModule && isEditableGameScore(module) && row.game[module.id] !== undefined" :aria-label="`${row.name} game points`" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
                   <span v-else>{{ row.game[module.id] ?? '—' }}</span>
                 </td>
                 <td v-if="module.type === 'teams'" :data-label="`${module.name} · ${t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score')}`">{{ row.awards[module.id] ?? 0 }}</td>
@@ -85,7 +85,7 @@ import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vu
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import AppIcon from '../components/AppIcon.vue'
 import { extractLabel } from '../utils/labelExtractor'
-import { isGame, manualTarget, allowsManual, scoreRows, parsePoints } from '../utils/eventScores'
+import { isGame, isEditableGameScore, manualTarget, allowsManual, scoreRows, parsePoints } from '../utils/eventScores'
 const route = useRoute(), router = useRouter()
 const instance = getCurrentInstance()
 const t = (...args) => instance?.appContext.config.globalProperties.$t?.(...args) ?? args[0]
@@ -141,7 +141,7 @@ async function saveRow(row) {
   busy.value = true; error.value = ''; notice.value = ''
   try {
     const values = drafts.value[row.id]
-    const game = values.game === undefined ? undefined : parsePoints(values.game, true)
+    const game = values.game === undefined || !isEditableGameScore(selectedModule.value) ? undefined : parsePoints(values.game, true)
     const manual = values.manual === undefined ? undefined : parsePoints(values.manual)
     const name = values.name === undefined ? undefined : values.name.trim()
     if (name !== undefined && (!name || name.length > 120)) throw new Error('Enter a player name (up to 120 characters).')

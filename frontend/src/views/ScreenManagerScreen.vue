@@ -356,14 +356,16 @@ const slidesTabRef = ref(null)
 const propertiesTabRef = ref(null)
 
 const projectorWindow = ref(null)
-const isProjectorOpen = computed(() => projectorWindow.value && !projectorWindow.value.closed)
+const isProjectorOpen = ref(false)
+let projectorPollTimer = null
 
+const eventPin = ref('')
 const slides = ref([])
 const activeSlideId = ref(null)
 
 const activeSlide = computed(() => slides.value.find(s => s.id === activeSlideId.value))
 const activeSlideElements = computed(() => activeSlide.value?.elements || [])
-const qrCodeValue = computed(() => `${window.location.origin}/?eventId=${eventId}`)
+const qrCodeValue = computed(() => `${window.location.origin}/?pin=${eventPin.value || eventId}`)
 
 const selectedElementId = ref(null)
 const selectedElement = computed(() => activeSlideElements.value.find(e => e.id === selectedElementId.value))
@@ -455,9 +457,11 @@ const saveAsTemplate = async () => {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload)
     })
-    if (res.ok) {
-      success(t('screen_manager.editor.template_saved'))
+    if (!res.ok) {
+      error(t('screen_manager.editor.template_save_failed'))
+      return
     }
+    success(t('screen_manager.editor.template_saved'))
   } catch (err) {
     error(t('screen_manager.editor.template_save_failed'))
   }
@@ -544,10 +548,12 @@ const updateLayoutMetrics = () => {
 }
 
 onMounted(() => {
+  fetchEventMeta()
   fetchSlides()
   updateLayoutMetrics()
   window.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener('resize', updateLayoutMetrics)
+  window.addEventListener('focus', syncProjectorState)
 
   if (typeof ResizeObserver !== 'undefined') {
     layoutObserver = new ResizeObserver(() => {
@@ -561,20 +567,38 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
   window.removeEventListener('resize', updateLayoutMetrics)
+  window.removeEventListener('focus', syncProjectorState)
+  stopProjectorPoll()
   layoutObserver?.disconnect()
   layoutObserver = null
 })
+
+const fetchEventMeta = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+      headers: getAuthHeaders()
+    })
+    if (res.ok) {
+      const data = await res.json()
+      eventPin.value = data?.pin || ''
+    }
+  } catch (err) {
+    console.error(err)
+  }
+}
 
 const fetchSlides = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/events/${eventId}/slides`, {
       headers: getAuthHeaders()
     })
-    if (res.ok) {
-      slides.value = await res.json()
-      if (slides.value.length > 0 && !activeSlideId.value) {
-        activeSlideId.value = slides.value[0].id
-      }
+    if (!res.ok) {
+      error(t('screen_manager.editor.load_failed'))
+      return
+    }
+    slides.value = await res.json()
+    if (slides.value.length > 0 && !activeSlideId.value) {
+      activeSlideId.value = slides.value[0].id
     }
   } catch (err) {
     console.error(err)
@@ -589,12 +613,16 @@ const saveSlides = async () => {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(slides.value)
     })
-    if (res.ok) {
-      success(t('screen_manager.editor.saved'))
+    if (!res.ok) {
+      error(t('screen_manager.editor.save_failed'))
+      return false
     }
+    success(t('screen_manager.editor.saved'))
+    return true
   } catch (err) {
     console.error(err)
     error(t('screen_manager.editor.save_failed'))
+    return false
   }
 }
 
@@ -602,7 +630,8 @@ const pushToScreen = async () => {
   if (!activeSlide.value) return
 
   // First save to make sure changes are synced
-  await saveSlides()
+  const saved = await saveSlides()
+  if (!saved) return
 
   const payload = {
     currentView: 'slide',
@@ -615,9 +644,11 @@ const pushToScreen = async () => {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload)
     })
-    if (res.ok) {
-      success(t('screen_manager.editor.pushed'))
+    if (!res.ok) {
+      error(t('screen_manager.editor.push_failed'))
+      return
     }
+    success(t('screen_manager.editor.pushed'))
   } catch (err) {
     error(t('screen_manager.editor.push_failed'))
   }
@@ -890,19 +921,55 @@ const goBack = () => {
   router.push(`/admin/event/${eventId}`)
 }
 
+const stopProjectorPoll = () => {
+  if (projectorPollTimer !== null) {
+    clearInterval(projectorPollTimer)
+    projectorPollTimer = null
+  }
+}
+
+const syncProjectorState = () => {
+  if (projectorWindow.value && !projectorWindow.value.closed) {
+    isProjectorOpen.value = true
+  } else {
+    projectorWindow.value = null
+    isProjectorOpen.value = false
+    stopProjectorPoll()
+  }
+}
+
+const startProjectorPoll = () => {
+  stopProjectorPoll()
+  if (typeof window !== 'undefined') {
+    projectorPollTimer = window.setInterval(syncProjectorState, 500)
+  }
+}
+
 const openProjector = () => {
   if (projectorWindow.value && !projectorWindow.value.closed) {
     projectorWindow.value.focus()
+    isProjectorOpen.value = true
+    return
+  }
+  const win = window.open(`/projector/${eventId}`, 'projector', 'width=1200,height=800')
+  if (win && !win.closed) {
+    projectorWindow.value = win
+    isProjectorOpen.value = true
+    startProjectorPoll()
   } else {
-    projectorWindow.value = window.open(`/projector/${eventId}`, 'projector', 'width=1200,height=800')
+    projectorWindow.value = null
+    isProjectorOpen.value = false
+    stopProjectorPoll()
   }
 }
 
 const closeProjector = () => {
   if (projectorWindow.value && !projectorWindow.value.closed) {
     projectorWindow.value.close()
-    projectorWindow.value = null
   }
+  projectorWindow.value = null
+  isProjectorOpen.value = false
+  stopProjectorPoll()
 }
 </script>
 

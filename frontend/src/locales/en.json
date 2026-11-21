@@ -176,6 +176,7 @@
       "export_btn": "Export",
       "delete_confirm": "Delete {name}?",
       "discard_confirm": "Discard changes?",
+      "save_empty_confirm": "This template has no questions. Save it anyway?",
       "save_btn": "Save Template",
       "saving_btn": "Saving...",
       "template_name_placeholder": "Template Name",

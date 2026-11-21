@@ -26,12 +26,13 @@
             </span>
           </div>
           <div class="header-right">
-            <button type="button" class="nav-button screen-manager-btn" @click="goToScreenManager">
+            <button type="button" class="nav-button screen-manager-btn" :disabled="!currentEvent" @click="goToScreenManager">
               {{ $t('admin.details.screen_manager') }}
             </button>
             <button
               type="button"
               class="nav-button copy-link-btn"
+              :disabled="!currentEvent"
               @click="copyProjectorLink"
               :title="$t('quiz.host.copy_link')"
               :aria-label="$t('quiz.host.copy_link')"
@@ -42,7 +43,7 @@
             <button type="button" class="nav-button library-btn" @click="goToLibrary">
               {{ $t('admin.details.library_btn') }}
             </button>
-            <button type="button" class="nav-button data-btn" @click="goToDataView">
+            <button type="button" class="nav-button data-btn" :disabled="!currentEvent" @click="goToDataView">
               {{ $t('common.data_btn') }}
             </button>
           </div>
@@ -51,6 +52,21 @@
     </header>
 
     <main class="scroll-content">
+      <div v-if="!currentEvent && isLoadingEvent" class="card event-state-card">
+        <p class="card-title">{{ $t('admin.loading_events') }}</p>
+      </div>
+      <div v-else-if="!currentEvent && eventLoadError" class="card event-state-card">
+        <p class="card-title">{{ eventLoadError }}</p>
+        <div class="state-actions">
+          <button type="button" class="nav-button library-btn" @click="fetchEventDetails()">
+            Retry
+          </button>
+          <button type="button" class="nav-button back-btn" @click="goBack">
+            {{ $t('admin.details.back_btn') }}
+          </button>
+        </div>
+      </div>
+      <template v-else>
       <div class="card event-sidebar">
         <div class="card-header">
           <div class="card-header-text">
@@ -170,6 +186,7 @@
           <p class="empty-modules-text">{{ $t('admin.details.no_modules') }}</p>
         </div>
       </div>
+      </template>
     </main>
 
     <FormModuleConfig
@@ -293,6 +310,8 @@ const route = useRoute()
 const screenRef = ref(null)
 const addModuleDialogRef = ref(null)
 const currentEvent = ref(null)
+const isLoadingEvent = ref(false)
+const eventLoadError = ref('')
 const showModuleModal = ref(false)
 const newModuleName = ref('')
 const selectedModuleType = ref('form')
@@ -302,6 +321,7 @@ const selectedModule = ref(null)
 let moduleModalTriggerEl = null
 let configModalTriggerEl = null
 let configModalTriggerModuleId = null
+let eventFetchSeq = 0
 
 // Screensaver state
 const screensaverPreview = ref('')
@@ -311,14 +331,50 @@ const showLibrarySelector = ref(false)
 
 const { success, error, info } = useToast()
 
+const routeEventId = computed(() => {
+  const id = route.params?.id
+  if (Array.isArray(id)) return id[0] ? String(id[0]) : ''
+  return id ? String(id) : ''
+})
+
 const copyProjectorLabel = computed(() => t('quiz.host.copy_link').replace(/^🔗\s*/, ''))
 
 const changeLanguage = () => {
-  localStorage.setItem('userLanguage', locale.value)
+  try {
+    localStorage.setItem('userLanguage', locale.value)
+  } catch {
+    // ignore storage errors
+  }
 }
 
-const storedEvent = sessionStorage.getItem('currentEvent')
-currentEvent.value = storedEvent ? JSON.parse(storedEvent) : null
+const readStoredEventForId = (targetId) => {
+  if (!targetId) return null
+  try {
+    const raw = sessionStorage.getItem('currentEvent')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed && parsed.id != null && String(parsed.id) === String(targetId)) {
+      return parsed
+    }
+  } catch {
+    // ignore corrupted or unavailable sessionStorage
+  }
+  return null
+}
+
+const writeStoredEvent = (eventData) => {
+  try {
+    if (eventData) {
+      sessionStorage.setItem('currentEvent', JSON.stringify(eventData))
+    } else {
+      sessionStorage.removeItem('currentEvent')
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+currentEvent.value = readStoredEventForId(routeEventId.value)
 
 const qrCodeValue = computed(() => {
   return currentEvent.value 
@@ -326,18 +382,45 @@ const qrCodeValue = computed(() => {
     : ''
 })
 
-const fetchEventDetails = async () => {
-  if (!currentEvent.value?.id) return
+const fetchEventDetails = async (targetId = routeEventId.value) => {
+  const seq = ++eventFetchSeq
+  const eventId = targetId ? String(targetId) : ''
+  if (!eventId) {
+    currentEvent.value = null
+    eventLoadError.value = 'Event not found'
+    isLoadingEvent.value = false
+    return
+  }
+
+  isLoadingEvent.value = true
+  eventLoadError.value = ''
 
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}`)
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId)}`)
+    if (seq !== eventFetchSeq) return
     if (response.ok) {
       const data = await response.json()
+      if (seq !== eventFetchSeq) return
       currentEvent.value = data
-      sessionStorage.setItem('currentEvent', JSON.stringify(data))
+      writeStoredEvent(data)
+      eventLoadError.value = ''
+    } else if (response.status === 404) {
+      currentEvent.value = null
+      writeStoredEvent(null)
+      eventLoadError.value = 'Event not found'
+    } else {
+      eventLoadError.value = 'Failed to load event details'
+      error(eventLoadError.value)
     }
   } catch (err) {
+    if (seq !== eventFetchSeq) return
     console.error('Error fetching event details:', err)
+    eventLoadError.value = 'Failed to load event details'
+    error(eventLoadError.value)
+  } finally {
+    if (seq === eventFetchSeq) {
+      isLoadingEvent.value = false
+    }
   }
 }
 
@@ -406,9 +489,21 @@ const handleGlobalKeydown = (event) => {
   }
 }
 
+watch(routeEventId, (newId, oldId) => {
+  if (newId === oldId) return
+  showModuleModal.value = false
+  showConfigModal.value = false
+  selectedModule.value = null
+  screensaverPreview.value = ''
+  eventLoadError.value = ''
+  currentEvent.value = readStoredEventForId(newId)
+  fetchEventDetails(newId)
+  fetchScreensaverConfig(newId)
+})
+
 onMounted(() => {
-  fetchEventDetails()
-  fetchScreensaverConfig()
+  fetchEventDetails(routeEventId.value)
+  fetchScreensaverConfig(routeEventId.value)
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', handleGlobalKeydown)
   }
@@ -421,14 +516,15 @@ onUnmounted(() => {
 })
 
 // Screensaver functions
-const fetchScreensaverConfig = async () => {
-  if (!currentEvent.value?.id) return
+const fetchScreensaverConfig = async (targetId = routeEventId.value) => {
+  const eventId = targetId || currentEvent.value?.id
+  if (!eventId) return
   
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`)
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId)}/screensaver`)
     if (response.ok) {
       const data = await response.json()
-      if (data.imageId) {
+      if (data.imageId && currentEvent.value && String(currentEvent.value.id) === String(eventId)) {
         currentEvent.value.screensaverConfig = data
         screensaverPreview.value = getImageUrl(data.imageId)
       }
@@ -454,6 +550,7 @@ const handleScreensaverUpload = async () => {
 }
 
 const selectScreensaver = async (screensaver) => {
+  if (!currentEvent.value?.id) return
   try {
     // Save screensaver config using the library screensaver's mediaId
     const configResponse = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
@@ -477,6 +574,7 @@ const selectScreensaver = async (screensaver) => {
 }
 
 const removeScreensaver = async () => {
+  if (!currentEvent.value?.id) return
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
       method: 'PUT',
@@ -498,6 +596,7 @@ const removeScreensaver = async () => {
 }
 
 const toggleStatus = async () => {
+  if (!currentEvent.value?.id) return
   try {
     const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/status`, {
       method: 'PUT',
@@ -507,6 +606,7 @@ const toggleStatus = async () => {
 
     if (response.ok) {
       currentEvent.value.isActive = !currentEvent.value.isActive
+      writeStoredEvent(currentEvent.value)
       success(t(`admin.status_${currentEvent.value.isActive ? 'active' : 'inactive'}`))
     } else {
       error('Failed to update status')
@@ -518,11 +618,15 @@ const toggleStatus = async () => {
 }
 
 const getShareLink = () => {
+  if (!currentEvent.value) return ''
   return `${window.location.origin}/?pin=${currentEvent.value.pin || currentEvent.value.id}`
 }
 
 const copyLink = () => {
-  navigator.clipboard.writeText(getShareLink())
+  if (!currentEvent.value) return
+  const link = getShareLink()
+  if (!link) return
+  navigator.clipboard?.writeText(link)
   success(t('admin.details.toast.event_link_copied'))
 }
 
@@ -541,6 +645,7 @@ const closeConfigModal = () => {
 }
 
 const hostQuiz = (module) => {
+  if (!currentEvent.value?.id) return
   if (module.type === 'teams') {
     router.push({ name: 'teams-admin', params: { id: currentEvent.value.id }, query: { moduleId: module.id } })
     return
@@ -555,6 +660,7 @@ const hostQuiz = (module) => {
 }
 
 const addModule = async () => {
+  if (!currentEvent.value?.id) return
   if (!newModuleName.value.trim()) {
     info(t('admin.messages.fill_fields'))
     return
@@ -572,7 +678,7 @@ const addModule = async () => {
     })
 
     if (response.ok) {
-      const moduleData = await response.json()
+      await response.json()
       fetchEventDetails()
       showModuleModal.value = false
       newModuleName.value = ''
@@ -587,6 +693,7 @@ const addModule = async () => {
 }
 
 const toggleModuleStatus = async (module) => {
+  if (!currentEvent.value?.id) return
   
   // If stopping a quiz/wrong_pictures module, reset the quiz session first
   if (module.isActive && (module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz')) {
@@ -623,6 +730,7 @@ const toggleModuleStatus = async (module) => {
 }
 
 const deleteModule = async (module) => {
+  if (!currentEvent.value?.id) return
   if (!confirm(t('admin.confirm_delete'))) return
 
   try {
@@ -652,6 +760,7 @@ const goToLibrary = () => {
 }
 
 const goToDataView = () => {
+  if (!currentEvent.value?.id) return
   router.push(`/data/library?eventId=${currentEvent.value.id}`)
 }
 
@@ -668,8 +777,9 @@ const goToTeams = () => {
 }
 
 const copyProjectorLink = () => {
+  if (!currentEvent.value?.id) return
   const fullUrl = `${window.location.origin}/projector/${currentEvent.value.id}`
-  navigator.clipboard.writeText(fullUrl)
+  navigator.clipboard?.writeText(fullUrl)
   success(t('quiz.host.toast.link_copied'))
 }
 </script>
@@ -1582,6 +1692,31 @@ const copyProjectorLink = () => {
   .module-btn.delete-btn {
     margin-left: 0;
   }
+}
+
+.event-state-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.state-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 @media (pointer: coarse) {

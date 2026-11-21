@@ -316,13 +316,54 @@ func (s *Store) SetModuleActive(ctx context.Context, eventID, moduleID string, a
 	tag, err := s.Pool.Exec(ctx, `UPDATE modules SET is_active=$3 WHERE event_id=$1 AND id=$2`, eventID, moduleID, active)
 	return tag.RowsAffected() > 0, translate(err)
 }
+var preservedModuleDataKeys = []string{"manualScoreTarget", "judgeToken"}
+
+func mergePreservedModuleData(existing, next map[string]any) map[string]any {
+	merged := make(map[string]any, len(next)+len(preservedModuleDataKeys))
+	for k, v := range next {
+		merged[k] = v
+	}
+	for _, key := range preservedModuleDataKeys {
+		if _, hasKey := merged[key]; hasKey {
+			continue
+		}
+		if val, ok := existing[key]; ok && val != nil {
+			merged[key] = val
+		}
+	}
+	return merged
+}
+
 func (s *Store) PublishModule(ctx context.Context, eventID, moduleID string, data map[string]any) (bool, error) {
-	raw, err := marshal(data)
+	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
 		return false, err
 	}
-	tag, err := s.Pool.Exec(ctx, `UPDATE modules SET data=$3 WHERE event_id=$1 AND id=$2`, eventID, moduleID, raw)
-	return tag.RowsAffected() > 0, translate(err)
+	defer tx.Rollback(ctx)
+	var existingRaw []byte
+	err = tx.QueryRow(ctx, `SELECT data FROM modules WHERE event_id=$1 AND id=$2 FOR UPDATE`, eventID, moduleID).Scan(&existingRaw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, translate(err)
+	}
+	var existing map[string]any
+	if err = unmarshal(existingRaw, &existing); err != nil {
+		return false, err
+	}
+	raw, err := marshal(mergePreservedModuleData(existing, data))
+	if err != nil {
+		return false, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE modules SET data=$3 WHERE event_id=$1 AND id=$2`, eventID, moduleID, raw)
+	if err != nil {
+		return false, translate(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return false, translate(err)
+	}
+	return tag.RowsAffected() > 0, nil
 }
 func (s *Store) PatchModule(ctx context.Context, eventID, moduleID string, data map[string]any) error {
 	if data == nil {

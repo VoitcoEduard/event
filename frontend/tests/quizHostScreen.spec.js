@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import QuizHostScreen from '../src/views/QuizHostScreen.vue'
 
-const { wsHandlers, mockQuizWS } = vi.hoisted(() => {
+const { wsHandlers, mockQuizWS, toastMock } = vi.hoisted(() => {
   const wsHandlers = new Map()
+  const toastMock = { success: vi.fn(), error: vi.fn() }
   const mockQuizWS = {
     on: vi.fn((type, fn) => {
       if (!wsHandlers.has(type)) wsHandlers.set(type, [])
@@ -23,7 +24,7 @@ const { wsHandlers, mockQuizWS } = vi.hoisted(() => {
     disconnect: vi.fn(),
     clearHandlers: vi.fn(() => wsHandlers.clear()),
   }
-  return { wsHandlers, mockQuizWS }
+  return { wsHandlers, mockQuizWS, toastMock }
 })
 
 vi.mock('vue-router', () => ({
@@ -37,7 +38,7 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('../src/services/websocket', () => ({ quizWS: mockQuizWS }))
 vi.mock('../src/services/media', () => ({ getImageUrl: id => `/media/${id}` }))
-vi.mock('../src/composables/useToast', () => ({ useToast: () => ({ success: vi.fn(), error: vi.fn() }) }))
+vi.mock('../src/composables/useToast', () => ({ useToast: () => toastMock }))
 vi.mock('../src/utils', () => ({ API_BASE_URL: '' }))
 vi.mock('../src/utils/imagePreload', () => ({
   preloader: {
@@ -64,6 +65,8 @@ beforeEach(() => {
   mockQuizWS.connect.mockClear()
   mockQuizWS.disconnect.mockClear()
   mockQuizWS.clearHandlers.mockClear()
+  toastMock.success.mockClear()
+  toastMock.error.mockClear()
 })
 
 afterEach(() => {
@@ -232,5 +235,66 @@ describe('QuizHostScreen question-presenting transitions', () => {
 
     expect(wrapper.find('.lb-score-value').text()).toBe('0')
     expect(wrapper.find('.lb-diff-anim').exists()).toBe(false)
+  })
+
+  it('copies projector link via execCommand fallback when navigator.clipboard is unavailable (HTTP LAN)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: async () => ({ pin: '4321', modules: [{ id: 'm1', data: { questions: [] } }] }),
+    })))
+
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    const originalExecCommand = Object.getOwnPropertyDescriptor(document, 'execCommand')
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
+    const execSpy = vi.fn(() => true)
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: execSpy })
+
+    try {
+      wrapper = mount(QuizHostScreen, mountOpts)
+      await flushPromises()
+
+      await wrapper.find('.copy-link-btn').trigger('click')
+      await flushPromises()
+
+      expect(execSpy).toHaveBeenCalledWith('copy')
+      expect(toastMock.success).toHaveBeenCalledWith('quiz.host.toast.link_copied')
+      expect(toastMock.error).not.toHaveBeenCalled()
+    } finally {
+      if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard)
+      else delete navigator.clipboard
+      if (originalExecCommand) Object.defineProperty(document, 'execCommand', originalExecCommand)
+      else delete document.execCommand
+    }
+  })
+
+  it('shows error toast and does not show success when both clipboard API and fallback fail', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: async () => ({ pin: '4321', modules: [{ id: 'm1', data: { questions: [] } }] }),
+    })))
+
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    const originalExecCommand = Object.getOwnPropertyDescriptor(document, 'execCommand')
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.reject(new Error('Permission denied'))) },
+    })
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: vi.fn(() => false) })
+
+    try {
+      wrapper = mount(QuizHostScreen, mountOpts)
+      await flushPromises()
+
+      await wrapper.find('.copy-link-btn').trigger('click')
+      await flushPromises()
+
+      expect(toastMock.success).not.toHaveBeenCalled()
+      expect(toastMock.error).toHaveBeenCalledTimes(1)
+    } finally {
+      if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard)
+      else delete navigator.clipboard
+      if (originalExecCommand) Object.defineProperty(document, 'execCommand', originalExecCommand)
+      else delete document.execCommand
+    }
   })
 })

@@ -207,6 +207,7 @@ const handlePublish = async () => {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ 
         data: { 
+          ...(props.module?.data && typeof props.module.data === 'object' ? props.module.data : {}),
           timeline: timeline.value,
           mandatoryOnEntry: mandatoryOnEntry.value,
           hideAfterCompletion: hideAfterCompletion.value
