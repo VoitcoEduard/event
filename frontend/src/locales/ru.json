@@ -393,7 +393,26 @@
   },
   "quiz_editor": {
     "empty_text": "Начните с добавления вопроса в вашу викторину!",
-    "add_question": "+ Добавить вопрос"
+    "add_question": "+ Добавить вопрос",
+    "add_classic": "+ Классический вопрос",
+    "add_other_type": "+ Другой тип",
+    "move_up": "Переместить вопрос вверх",
+    "move_down": "Переместить вопрос вниз",
+    "correct_label": "Верно",
+    "outline_title": "Вопросы",
+    "untitled_question": "Вопрос без текста",
+    "question_short": "В{number}",
+    "has_errors": "Есть ошибки проверки",
+    "type_hints": {
+      "classic": "4 варианта, 1 правильный ответ",
+      "multi_select": "Несколько правильных вариантов",
+      "true_false": "Два варианта: Верно или Неверно",
+      "range": "Угадайте значение на шкале",
+      "number": "Точный числовой ответ",
+      "correct_picture": "Выберите правильное изображение",
+      "wrong_pictures": "Найдите объекты на картинке",
+      "simple_text": "Свободный ответ с проверкой судьи"
+    }
   },
   "form_editor": {
     "empty_text": "Начните с добавления вопроса или сообщения",
@@ -416,7 +435,14 @@
     "date_label": "Выберите дату:",
     "radio_label": "Выберите вариант:",
     "checkbox_label": "Выберите все подходящие варианты:",
-    "welcome_msg": "Добро пожаловать в форму!", "delete_question":"Удалить вопрос",
+    "welcome_msg": "Добро пожаловать в форму!",
+    "delete_question": "Удалить вопрос",
+    "move_up": "Переместить шаг вверх",
+    "move_down": "Переместить шаг вниз",
+    "delete_step": "Удалить шаг",
+    "delete_step_title": "Удалить шаг?",
+    "delete_step_confirm": "Вы уверены, что хотите удалить этот шаг из формы?",
+    "delete_step_btn": "Удалить",
     "types": {
       "text": "Текст",
       "number": "Число",
@@ -810,5 +836,23 @@
     "qr_alt": "QR-код для входа в событие с PIN {pin}",
     "placeholder_module_editor": "Редактор модуля",
     "placeholder_template_editor": "Редактор шаблона"
+  },
+  "wrong_pictures": {
+    "empty_text": "Начните с добавления раунда!",
+    "round_title": "Раунд {number}",
+    "instructions_label": "Название раунда / Инструкция",
+    "instructions_placeholder": "например, Найдите 3 лишних предмета на фото",
+    "points": "Баллы",
+    "tolerance": "Допуск %",
+    "time_limit": "Время (с)",
+    "show_count": "Показать кол-во",
+    "add_round": "+ Добавить раунд",
+    "remove_round": "Удалить раунд",
+    "remove_round_title": "Удалить раунд?",
+    "remove_round_confirm": "Вы уверены, что хотите удалить этот раунд? Это действие нельзя отменить.",
+    "move_up": "Переместить раунд вверх",
+    "move_down": "Переместить раунд вниз",
+    "image_required": "Сначала загрузите изображение, чтобы отметить цели.",
+    "rounds_count": "{count} раунд(ов)"
   }
 }

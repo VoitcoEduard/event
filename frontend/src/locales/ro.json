@@ -393,7 +393,26 @@
   },
   "quiz_editor": {
     "empty_text": "Începe prin a adăuga o întrebare la quiz-ul tău!",
-    "add_question": "+ Adaugă Întrebare"
+    "add_question": "+ Adaugă Întrebare",
+    "add_classic": "+ Întrebare Clasică",
+    "add_other_type": "+ Alt Tip",
+    "move_up": "Mută întrebarea în sus",
+    "move_down": "Mută întrebarea în jos",
+    "correct_label": "Corect",
+    "outline_title": "Întrebări",
+    "untitled_question": "Întrebare fără text",
+    "question_short": "Î{number}",
+    "has_errors": "Conține erori de validare",
+    "type_hints": {
+      "classic": "4 opțiuni, 1 răspuns corect",
+      "multi_select": "Mai multe răspunsuri corecte",
+      "true_false": "Două opțiuni: Adevărat sau Fals",
+      "range": "Estimează o valoare pe glisor",
+      "number": "Răspuns numeric exact",
+      "correct_picture": "Alege imaginea corectă",
+      "wrong_pictures": "Găsește țintele pe imagine",
+      "simple_text": "Răspuns scris, evaluat de juriu"
+    }
   },
   "form_editor": {
     "empty_text": "Începe prin a adăuga o întrebare sau un mesaj",
@@ -416,7 +435,14 @@
     "date_label": "Selectează o dată:",
     "radio_label": "Alege o opțiune:",
     "checkbox_label": "Selectează tot ce se aplică:",
-    "welcome_msg": "Bine ai venit la formular!", "delete_question":"Șterge întrebarea",
+    "welcome_msg": "Bine ai venit la formular!",
+    "delete_question": "Șterge întrebarea",
+    "move_up": "Mută pasul în sus",
+    "move_down": "Mută pasul în jos",
+    "delete_step": "Șterge pasul",
+    "delete_step_title": "Ștergi pasul?",
+    "delete_step_confirm": "Sigur doriți să ștergeți acest pas din formular?",
+    "delete_step_btn": "Șterge",
     "types": {
       "text": "Text",
       "number": "Număr",
@@ -810,5 +836,23 @@
     "qr_alt": "Cod QR pentru conectare la eveniment cu PIN {pin}",
     "placeholder_module_editor": "Editor modul",
     "placeholder_template_editor": "Editor șablon"
+  },
+  "wrong_pictures": {
+    "empty_text": "Începe prin a adăuga o rundă!",
+    "round_title": "Runda {number}",
+    "instructions_label": "Titlu rundă / Instrucțiuni",
+    "instructions_placeholder": "ex., Găsește cele 3 greșeli din imagine",
+    "points": "Puncte",
+    "tolerance": "Toleranță %",
+    "time_limit": "Timp (s)",
+    "show_count": "Arată numărul",
+    "add_round": "+ Adaugă Rundă",
+    "remove_round": "Șterge runda",
+    "remove_round_title": "Ștergi runda?",
+    "remove_round_confirm": "Sigur doriți să ștergeți această rundă? Această acțiune nu poate fi anulată.",
+    "move_up": "Mută runda în sus",
+    "move_down": "Mută runda în jos",
+    "image_required": "Vă rugăm să încărcați mai întâi o imagine pentru a seta țintele.",
+    "rounds_count": "{count} runde"
   }
 }

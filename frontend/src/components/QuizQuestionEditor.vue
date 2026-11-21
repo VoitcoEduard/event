@@ -1,16 +1,29 @@
 <template>
-  <div class="question-editor">
+  <div class="question-editor" :class="{ 'is-active': active, 'has-errors': hasAnyErrors }">
     <div class="question-editor-inner">
     <div class="editor-header">
       <div class="header-left">
         <span class="question-number">{{ $t('quiz_config.question_editor.question_number', { number: index + 1 }) }}</span>
-        <button type="button" class="question-type-tag" @click="$emit('change-type')">{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</button>
+        <span
+          v-if="isTypeLocked"
+          class="question-type-tag question-type-tag--locked"
+        >{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</span>
+        <button
+          v-else
+          type="button"
+          class="question-type-tag"
+          @click="$emit('change-type')"
+        >{{ $t('quiz_config.question_editor.types.' + localQuestion.type) }}</button>
       </div>
-      <button type="button" class="delete-btn" @click="$emit('delete')" :aria-label="$t('form_editor.delete_question')">
+      <button type="button" class="delete-btn" @click="$emit('delete')" :title="$t('form_editor.delete_question')" :aria-label="$t('form_editor.delete_question')">
         <AppIcon name="trash" :size="16" aria-hidden="true" />
       </button>
     </div>
 
+    <div v-if="fieldError('type')" class="field-error-banner" role="alert">
+      <AppIcon name="alert" :size="16" aria-hidden="true" />
+      <span>{{ fieldError('type') }}</span>
+    </div>
 
     <div class="editor-main-row">
       <div v-if="localQuestion.type !== 'wrong_pictures'" class="image-section">
@@ -55,7 +68,16 @@
             <span v-if="localMaxPoints === 100 && localQuestion.type === 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
             <span v-if="localMaxPoints === 50 && localQuestion.type !== 'range'" class="default-hint">({{ $t('quiz_config.question_editor.default_hint') }})</span>
           </label>
-          <input type="number" v-model.number="localMaxPoints" class="select-input" @input="emitUpdate" />
+          <input
+            type="number"
+            min="1"
+            v-model.number="localMaxPoints"
+            class="select-input"
+            :class="{ 'has-field-error': !!fieldError('points') }"
+            :aria-invalid="!!fieldError('points') || undefined"
+            @input="emitUpdate"
+          />
+          <p v-if="fieldError('points')" class="field-error" role="alert">{{ fieldError('points') }}</p>
         </div>
       </div>
     </div>
@@ -67,35 +89,50 @@
         type="text" 
         v-model="localQuestion.text" 
         class="main-input"
+        :class="{ 'has-field-error': !!fieldError('text') }"
+        :aria-invalid="!!fieldError('text') || undefined"
         :placeholder="$t('quiz_config.question_editor.text_placeholder')"
         @input="emitUpdate"
       />
+      <p v-if="fieldError('text')" class="field-error" role="alert">{{ fieldError('text') }}</p>
     </div>
 
 
     <!-- STANDARD ANSWERS (MC/TF/MS) -->
     <!-- Multi-select warning -->
-    <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning" class="multi-select-warning">
+    <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning && !choiceSectionError" class="multi-select-warning">
       <AppIcon name="alert" :size="16" aria-hidden="true" /> {{ $t('quiz_config.question_editor.multi_select_warning', { count: 2 }) }}
     </div>
-    <div v-if="localQuestion.type !== 'range' && localQuestion.type !== 'number' && localQuestion.type !== 'correct_picture' && localQuestion.type !== 'wrong_pictures' && localQuestion.type !== 'simple_text'" class="answers-grid" :class="{ 'true-false-grid': localQuestion.type === 'true_false' }">
+    <div v-if="isChoiceType && choiceSectionError" class="field-error-banner" role="alert">
+      <AppIcon name="alert" :size="16" aria-hidden="true" />
+      <span>{{ choiceSectionError }}</span>
+    </div>
+    <div
+      v-if="isChoiceType"
+      class="answers-grid"
+      :class="{
+        'true-false-grid': localQuestion.type === 'true_false',
+        'has-field-error': !!choiceSectionError
+      }"
+    >
       <div 
         v-for="(answer, idx) in localQuestion.answers" 
         :key="idx"
         class="answer-card"
-        :class="[getAnswerColorClass(idx), { 'hidden-answer': !isAnswerVisible(idx) }]"
+        :class="[getAnswerColorClass(idx), { 'hidden-answer': !isAnswerVisible(idx), 'is-correct': isCorrect(idx) }]"
         v-show="isAnswerVisible(idx)"
       >
         <div class="answer-header">
           <AppIcon class="shape-icon" :name="getShapeIcon(idx)" :size="20" aria-hidden="true" />
-          <label class="correct-toggle">
+          <label class="correct-toggle" :title="$t('quiz_config.question_editor.mark_correct')">
             <input 
               :type="localQuestion.type === 'multi_select' ? 'checkbox' : 'radio'"
               :name="`correct-${question.id}`" 
               :checked="isCorrect(idx)"
               @change="toggleCorrect(idx)"
             />
-            <span class="checkmark" :title="$t('quiz_config.question_editor.mark_correct')"></span>
+            <span class="checkmark"></span>
+            <span class="correct-label">{{ $t('quiz_editor.correct_label') }}</span>
           </label>
         </div>
         <textarea 
@@ -116,21 +153,43 @@
         <div class="config-grid">
            <div class="input-group">
               <label>{{ $t('quiz_config.question_editor.range.min_value') }}</label>
-              <input type="number" v-model.number="localQuestion.rangeConfig.minValue" class="config-input" @input="emitUpdate" />
+              <input
+                type="number"
+                v-model.number="localQuestion.rangeConfig.minValue"
+                class="config-input"
+                :class="{ 'has-field-error': !!fieldError('rangeConfig') }"
+                @input="emitUpdate"
+              />
            </div>
            <div class="input-group">
               <label>{{ $t('quiz_config.question_editor.range.max_value') }}</label>
-              <input type="number" v-model.number="localQuestion.rangeConfig.maxValue" class="config-input" @input="emitUpdate" />
+              <input
+                type="number"
+                v-model.number="localQuestion.rangeConfig.maxValue"
+                class="config-input"
+                :class="{ 'has-field-error': !!fieldError('rangeConfig') }"
+                @input="emitUpdate"
+              />
            </div>
            <div class="input-group">
               <label>{{ $t('quiz_config.question_editor.range.step') }}</label>
-              <input type="number" v-model.number="localQuestion.rangeConfig.step" class="config-input" min="0" step="any" @input="emitUpdate" />
+              <input
+                type="number"
+                v-model.number="localQuestion.rangeConfig.step"
+                class="config-input"
+                :class="{ 'has-field-error': !!fieldError('step') }"
+                min="0"
+                step="any"
+                @input="emitUpdate"
+              />
+              <p v-if="fieldError('step')" class="field-error" role="alert">{{ fieldError('step') }}</p>
            </div>
            <div class="input-group">
               <label>{{ $t('quiz_config.question_editor.range.unit') }}</label>
               <input type="text" v-model="localQuestion.rangeConfig.unit" class="config-input" :placeholder="$t('quiz_config.question_editor.range.unit_placeholder')" @input="emitUpdate" />
            </div>
         </div>
+        <p v-if="fieldError('rangeConfig')" class="field-error" role="alert">{{ fieldError('rangeConfig') }}</p>
       </div>
 
       <div class="config-section">
@@ -138,7 +197,14 @@
         <div class="config-grid">
            <div class="input-group">
               <label>{{ $t('quiz_config.question_editor.range.correct_value') }}</label>
-              <input type="number" v-model.number="localQuestion.correctValue" class="config-input correct-value-input" @input="emitUpdate" />
+              <input
+                type="number"
+                v-model.number="localQuestion.correctValue"
+                class="config-input correct-value-input"
+                :class="{ 'has-field-error': !!fieldError('correctValue') }"
+                @input="emitUpdate"
+              />
+              <p v-if="fieldError('correctValue')" class="field-error" role="alert">{{ fieldError('correctValue') }}</p>
            </div>
            
            <div class="input-group">
@@ -161,7 +227,14 @@
            </div>
            <div class="input-group">
               <label>{{ $t('quiz_config.question_editor.range.tolerance') }}</label>
-              <input type="number" v-model.number="localQuestion.scoringConfig.tolerance" class="config-input" @input="emitUpdate" />
+              <input
+                type="number"
+                v-model.number="localQuestion.scoringConfig.tolerance"
+                class="config-input"
+                :class="{ 'has-field-error': !!fieldError('tolerance') }"
+                @input="emitUpdate"
+              />
+              <p v-if="fieldError('tolerance')" class="field-error" role="alert">{{ fieldError('tolerance') }}</p>
            </div>
         </div>
       </div>
@@ -194,9 +267,17 @@
         <div class="config-grid">
            <div class="input-group">
               <label>{{ $t('quiz_config.question_editor.number.correct_answer') }}</label>
-              <input type="number" v-model.number="localQuestion.correctNumber" class="config-input correct-value-input" @input="emitUpdate" />
+              <input
+                type="number"
+                v-model.number="localQuestion.correctNumber"
+                class="config-input correct-value-input"
+                :class="{ 'has-field-error': !!fieldError('correctNumber') }"
+                @input="emitUpdate"
+              />
+              <p v-if="fieldError('correctNumber')" class="field-error" role="alert">{{ fieldError('correctNumber') }}</p>
            </div>
         </div>
+        <p v-if="fieldError('tolerance')" class="field-error" role="alert">{{ fieldError('tolerance') }}</p>
         <p class="config-note">{{ $t('quiz_config.question_editor.number.configuration_hint') }}</p>
       </div>
 
@@ -208,7 +289,15 @@
     </div>
 
     <!-- CORRECT PICTURE EDITOR -->
-    <div v-if="localQuestion.type === 'correct_picture'" class="image-options-section">
+    <div
+      v-if="localQuestion.type === 'correct_picture'"
+      class="image-options-section"
+      :class="{ 'has-field-error': !!(fieldError('imageOptions') || fieldError('correctIndex')) }"
+    >
+      <div v-if="fieldError('imageOptions') || fieldError('correctIndex')" class="field-error-banner" role="alert">
+        <AppIcon name="alert" :size="16" aria-hidden="true" />
+        <span>{{ fieldError('imageOptions') || fieldError('correctIndex') }}</span>
+      </div>
       <ImageOptionEditor
         v-model="localQuestion.imageOptions"
         v-model:correct-index="localQuestion.correctIndex"
@@ -226,10 +315,13 @@
           <label>{{ $t('quiz_config.question_editor.wrong_pictures.tolerance_short') }}</label>
           <input 
             type="number" 
+            min="0"
             v-model.number="localQuestion.wrongPictureConfig.tolerancePercent"
             class="config-input"
+            :class="{ 'has-field-error': !!fieldError('tolerancePercent') }"
             @input="emitUpdate"
           />
+          <p v-if="fieldError('tolerancePercent')" class="field-error" role="alert">{{ fieldError('tolerancePercent') }}</p>
         </div>
 
         <div class="input-group mini center">
@@ -254,15 +346,20 @@
           :hidePreview="true"
         />
 
-        <div v-if="localQuestion.imageId" class="coordinate-picker-wrapper">
+        <div
+          v-if="localQuestion.imageId"
+          class="coordinate-picker-wrapper"
+          :class="{ 'has-field-error': !!fieldError('targets') }"
+        >
+          <p v-if="fieldError('targets')" class="field-error" role="alert">{{ fieldError('targets') }}</p>
           <CoordinatePicker
             :image-id="localQuestion.imageId"
             :targets="localQuestion.wrongPictureConfig.targets"
             @update:targets="updateTargets"
           />
         </div>
-        <div v-else class="image-required-warning">
-          <AppIcon name="alert" :size="16" aria-hidden="true" /> {{ $t('quiz_config.question_editor.wrong_pictures.image_required') }}
+        <div v-else class="image-required-warning" :class="{ 'has-field-error': !!fieldError('imageId') }">
+          <AppIcon name="alert" :size="16" aria-hidden="true" /> {{ fieldError('imageId') || $t('quiz_config.question_editor.wrong_pictures.image_required') }}
         </div>
       </div>
     </div>
@@ -321,10 +418,35 @@ const props = defineProps({
   moduleId: {
     type: String,
     default: ''
+  },
+  lockedType: {
+    type: [String, Boolean],
+    default: ''
+  },
+  errors: {
+    type: Object,
+    default: null
+  },
+  active: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits(['update', 'delete', 'change-type'])
+
+const isTypeLocked = computed(() => Boolean(props.lockedType))
+const hasAnyErrors = computed(() => Boolean(props.errors && Object.keys(props.errors).length > 0))
+const fieldError = (field) => {
+  const err = props.errors?.[field]
+  return err ? t(err.messageKey, err.params || {}) : ''
+}
+const isChoiceType = computed(() => (
+  !['range', 'number', 'correct_picture', 'wrong_pictures', 'simple_text'].includes(localQuestion.type)
+))
+const choiceSectionError = computed(() => (
+  fieldError('answers') || fieldError('correctIndex') || fieldError('correctIndices')
+))
 
 // Initialize local state from props
 const localQuestion = reactive({
@@ -414,10 +536,14 @@ watch(() => props.question, (newVal) => {
   // Here we just ensure we don't lose the range/scoring config objects structure.
   
   if (newVal.id !== localQuestion.id || newVal.type !== localQuestion.type) {
+       const sameQuestion = newVal.id === localQuestion.id
+       const previousType = localQuestion.type
        const typeChanged = newVal.type !== localQuestion.type
        Object.assign(localQuestion, {
           ...newVal,
           type: newVal.type || 'classic',
+          answers: newVal.answers && newVal.answers.length >= 2 ? [...newVal.answers] : ['', '', '', ''],
+          correctIndices: Array.isArray(newVal.correctIndices) ? [...newVal.correctIndices] : [],
           rangeConfig: newVal.rangeConfig || { minValue: 0, maxValue: 100, step: 1, unit: '', decimalPlaces: 0 },
           scoringConfig: newVal.scoringConfig || { mode: 'symmetric', maxPoints: newVal.type === 'range' ? 100 : 50, tolerance: 10, partialPercent: 0 },
           explainTime: newVal.explainTime !== undefined ? newVal.explainTime : 5,
@@ -426,10 +552,12 @@ watch(() => props.question, (newVal) => {
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',
           imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }],
-          wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 50 }
+          wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 50 },
+          judgeNotes: newVal.judgeNotes || '',
+          correctAnswerText: newVal.correctAnswerText || ''
       })
       if (typeChanged) {
-          handleTypeChange()
+          handleTypeChange(sameQuestion ? previousType : null)
       }
   }
 }, { deep: true })
@@ -438,7 +566,7 @@ const emitUpdate = () => {
   emit('update', { ...localQuestion })
 }
 
-const handleTypeChange = () => {
+const handleTypeChange = (previousType = null) => {
     if (localQuestion.type === 'true_false') {
         localQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
         if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
@@ -482,8 +610,8 @@ const handleTypeChange = () => {
         if (localQuestion.correctAnswerText === undefined) localQuestion.correctAnswerText = ''
         if (localQuestion.timeLimit === undefined) localQuestion.timeLimit = 0
     } else {
-        // Reset to empty if switching back from T/F
-        if (localQuestion.answers[0] === 'True' && localQuestion.answers[1] === 'False') {
+        // Reset localized T/F options when switching away from true_false
+        if (previousType === 'true_false') {
              localQuestion.answers = ['', '', '', '']
         }
         // A7: classic / true_false / multi_select score from
@@ -574,6 +702,16 @@ const isAnswerReadOnly = (idx) => {
   border: 1px solid #3A3A3C;
   width: 100%;
   min-inline-size: 0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.question-editor.is-active {
+  border-color: var(--admin-primary, #0A84FF);
+  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.22);
+}
+
+.question-editor.has-errors {
+  border-color: var(--admin-danger, #FF453A);
 }
 
 .question-editor,
@@ -626,6 +764,14 @@ const isAnswerReadOnly = (idx) => {
 
 .question-type-tag:hover {
   background-color: #48484A;
+}
+
+.question-type-tag.question-type-tag--locked {
+  cursor: default;
+}
+
+.question-type-tag.question-type-tag--locked:hover {
+  background-color: #3A3A3C;
 }
 
 .question-number {
@@ -783,11 +929,85 @@ const isAnswerReadOnly = (idx) => {
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 24px;
+  min-height: 24px;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.correct-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #E5E5EA;
+  user-select: none;
+}
+
+.answer-card.is-correct .correct-label {
+  color: #32D74B;
+}
+
+.field-error {
+  margin: 6px 0 0;
+  color: var(--admin-danger, #FF453A);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.field-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--admin-danger-soft, rgba(255, 69, 58, 0.14));
+  border: 1px solid var(--admin-danger, #FF453A);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: var(--admin-danger, #FF6961);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.has-field-error {
+  border-color: var(--admin-danger, #FF453A) !important;
+  box-shadow: 0 0 0 2px rgba(255, 69, 58, 0.24) !important;
+}
+
+.answers-grid.has-field-error,
+.image-options-section.has-field-error,
+.coordinate-picker-wrapper.has-field-error {
+  border: 1px solid var(--admin-danger, #FF453A);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+:global(html[data-admin-appearance="true"] .question-editor.is-active) {
+  border-color: var(--admin-primary) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--admin-primary) 24%, transparent) !important;
+}
+
+:global(html[data-admin-appearance="true"] .question-editor.has-errors) {
+  border-color: var(--admin-danger) !important;
+}
+
+:global(html[data-admin-appearance="true"] .question-editor .has-field-error) {
+  border-color: var(--admin-danger) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--admin-danger) 24%, transparent) !important;
+}
+
+:global(html[data-admin-appearance="true"] .question-editor .correct-label) {
+  color: var(--admin-text);
+}
+
+:global(html[data-admin-appearance="true"] .question-editor .answer-card.is-correct .correct-label) {
+  color: var(--admin-success);
+}
+
+:global(html[data-admin-appearance="true"] .question-editor .question-type-tag--locked:hover) {
+  background: var(--admin-primary-soft) !important;
 }
 
 .correct-toggle input {
@@ -1120,8 +1340,9 @@ const isAnswerReadOnly = (idx) => {
   }
 
   .correct-toggle {
-    width: 44px;
-    height: 44px;
+    width: auto;
+    height: auto;
+    padding: 0 6px;
     min-block-size: 44px;
     min-inline-size: 44px;
   }

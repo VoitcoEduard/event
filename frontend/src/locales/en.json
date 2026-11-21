@@ -402,7 +402,26 @@
   },
   "quiz_editor": {
     "empty_text": "Start by adding a question to your quiz!",
-    "add_question": "+ Add Question"
+    "add_question": "+ Add Question",
+    "add_classic": "+ Add Classic",
+    "add_other_type": "+ Other Type",
+    "move_up": "Move question up",
+    "move_down": "Move question down",
+    "correct_label": "Correct",
+    "outline_title": "Questions",
+    "untitled_question": "Untitled question",
+    "question_short": "Q{number}",
+    "has_errors": "Has validation errors",
+    "type_hints": {
+      "classic": "4 choices, 1 correct answer",
+      "multi_select": "Multiple correct choices",
+      "true_false": "Two choices: True or False",
+      "range": "Guess a number on a slider",
+      "number": "Exact numeric answer",
+      "correct_picture": "Pick the right image",
+      "wrong_pictures": "Spot targets on an image",
+      "simple_text": "Written answer, judge-marked"
+    }
   },
   "form_editor": {
     "empty_text": "Start by adding a question or message",
@@ -427,6 +446,12 @@
     "checkbox_label": "Select all that apply:",
     "welcome_msg": "Welcome to the form!",
     "delete_question": "Delete question",
+    "move_up": "Move step up",
+    "move_down": "Move step down",
+    "delete_step": "Delete step",
+    "delete_step_title": "Delete step?",
+    "delete_step_confirm": "Are you sure you want to delete this step from the form?",
+    "delete_step_btn": "Delete",
     "types": {
       "text": "Text",
       "number": "Number",
@@ -836,5 +861,23 @@
     "qr_alt": "QR code to join event with PIN {pin}",
     "placeholder_module_editor": "Module Editor",
     "placeholder_template_editor": "Template Editor"
+  },
+  "wrong_pictures": {
+    "empty_text": "Start by adding a round!",
+    "round_title": "Round {number}",
+    "instructions_label": "Round Title / Instructions",
+    "instructions_placeholder": "e.g., Find all 3 anachronisms in this photo",
+    "points": "Points",
+    "tolerance": "Tolerance %",
+    "time_limit": "Time (s)",
+    "show_count": "Show Count",
+    "add_round": "+ Add Round",
+    "remove_round": "Remove round",
+    "remove_round_title": "Remove round?",
+    "remove_round_confirm": "Are you sure you want to remove this round? This action cannot be undone.",
+    "move_up": "Move round up",
+    "move_down": "Move round down",
+    "image_required": "Please upload an image first to set wrong picture targets.",
+    "rounds_count": "{count} Rounds"
   }
 }
