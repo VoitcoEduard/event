@@ -469,6 +469,7 @@ const players = ref([])
 const questions = ref([])
 const currentQuestionIndex = ref(0)
 const timeRemaining = ref(20)
+const explainTimeRemaining = ref(0)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 }) 
 const playerSignals = ref([]) // Store signals for slider histogram
 const realTimeAnsweredCount = ref(0)
