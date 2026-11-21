@@ -72,12 +72,38 @@ func TestHostEndTeamsSavesAndBroadcastsWithoutDeadlock(t *testing.T) {
 		assertHubUnlocked(t, h)
 		return &models.TeamResult{EventID: eventID, ModuleID: moduleID}, nil
 	}
-	admin := &Client{EventID: "event-1", IsTeamsAdmin: true, send: make(chan []byte, 1)}
+	admin := &Client{EventID: "event-1", IsTeamsAdmin: true, send: make(chan []byte, 2)}
 	h.Register(admin)
 	h.processHostEndTeams(&Client{IsHost: true}, ClientMessage{Payload: map[string]any{
 		"eventId": "event-1", "moduleId": "module-1", "moduleName": "Teams",
 	}})
 	assertMessageType(t, admin.send, "teams:ended")
+
+	// Teams admin for the matching event can also end teams.
+	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
+		"eventId": "event-1", "moduleId": "module-1", "moduleName": "Teams",
+	}})
+	assertMessageType(t, admin.send, "teams:ended")
+
+	// Teams admin for another event is rejected.
+	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
+		"eventId": "event-other", "moduleId": "module-1", "moduleName": "Teams",
+	}})
+	if len(admin.send) != 0 {
+		t.Fatalf("cross-event teams admin end should be ignored")
+	}
+
+	// Save error sends cmd:error to requester and does NOT broadcast teams:ended.
+	h.saveTeams = func(_, _, _ string) (*models.TeamResult, error) {
+		return nil, errors.New("db write failed")
+	}
+	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
+		"eventId": "event-1", "moduleId": "module-1", "moduleName": "Teams",
+	}})
+	assertMessageType(t, admin.send, "cmd:error")
+	if len(admin.send) != 0 {
+		t.Fatalf("unexpected extra message after save error")
+	}
 }
 
 func TestParticipantJoinLoadsTeamsAndBroadcastsWithoutDeadlock(t *testing.T) {
