@@ -150,7 +150,10 @@ func (h *Handler) OpenSimpleQuizQuestion(w http.ResponseWriter, r *http.Request)
 	var body struct {
 		QuestionIndex *int `json:"questionIndex"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	if err := decodeOptionalJSON(w, r, &body); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
 	idx := s.CurrentIndex
 	if body.QuestionIndex != nil {
 		idx = *body.QuestionIndex
@@ -362,7 +365,10 @@ func (h *Handler) RevealSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 	var body struct {
 		QuestionIndex *int `json:"questionIndex"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	if err := decodeOptionalJSON(w, r, &body); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
 	idx := s.CurrentIndex
 	if body.QuestionIndex != nil {
 		idx = *body.QuestionIndex
@@ -939,7 +945,10 @@ func (h *Handler) UndoSimpleQuizGrade(w http.ResponseWriter, r *http.Request) {
 		JudgeToken string `json:"judgeToken"`
 		JudgeKey   string `json:"judgeKey"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	if err := decodeJSON(w, r, &body); err != nil {
+		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
 	if body.JudgeToken == "" {
 		body.JudgeToken = r.Header.Get("X-Judge-Token")
 	}

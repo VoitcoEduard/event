@@ -26,6 +26,19 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	return nil
 }
 
+func decodeOptionalJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	if r.Body == nil || r.Body == http.NoBody {
+		return nil
+	}
+	if err := decodeJSON(w, r, dst); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
 func writeRequestError(w http.ResponseWriter, err error, status int) {
 	if errors.Is(err, postgres.ErrInvalidValue) {
 		http.Error(w, "Points must be finite", http.StatusBadRequest)

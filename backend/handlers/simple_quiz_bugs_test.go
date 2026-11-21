@@ -344,3 +344,119 @@ func TestJoinSimpleQuizRejectsDuplicateParticipantAndPreservesReconnect(t *testi
 		t.Fatalf("player count = %d, want 5", len(sess.Players))
 	}
 }
+
+func TestSimpleQuizBodyLimitsAndDecodeErrors(t *testing.T) {
+	oversized := `{"pad":"` + strings.Repeat("x", 4<<20) + `"}`
+	oversizedSpaces := strings.Repeat(" ", (4<<20)+16)
+
+	t.Run("open", func(t *testing.T) {
+		for _, tc := range []struct {
+			name       string
+			body       string
+			nilBody    bool
+			wantStatus int
+			wantIndex  int
+		}{
+			{"oversized_json", oversized, false, http.StatusRequestEntityTooLarge, 0},
+			{"oversized_whitespace", oversizedSpaces, false, http.StatusRequestEntityTooLarge, 0},
+			{"malformed_json", `{bad`, false, http.StatusBadRequest, 0},
+			{"wrong_field_type", `{"questionIndex":"one"}`, false, http.StatusBadRequest, 0},
+			{"trailing_json", `{"questionIndex":0}{"questionIndex":1}`, false, http.StatusBadRequest, 0},
+			{"nil_body", "", true, http.StatusOK, 0},
+			{"empty_body", "", false, http.StatusOK, 0},
+			{"empty_object", `{}`, false, http.StatusOK, 0},
+			{"explicit_index", `{"questionIndex":1}`, false, http.StatusOK, 1},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				h, _ := seedHandlerSimpleQuiz(models.SimpleQuizStateLobby)
+				var req *http.Request
+				if tc.nilBody {
+					req = httptest.NewRequest(http.MethodPost, "/events/e1/modules/m1/simple-quiz/open", nil)
+				} else {
+					req = httptest.NewRequest(http.MethodPost, "/events/e1/modules/m1/simple-quiz/open", strings.NewReader(tc.body))
+				}
+				req.SetPathValue("eventID", "e1")
+				req.SetPathValue("moduleID", "m1")
+				rec := httptest.NewRecorder()
+				h.OpenSimpleQuizQuestion(rec, req)
+				if rec.Code != tc.wantStatus {
+					t.Fatalf("status = %d, want %d (body=%q)", rec.Code, tc.wantStatus, rec.Body.String())
+				}
+				if tc.wantStatus == http.StatusOK {
+					sess := h.deps.QuizHub.GetSimpleQuiz("m1")
+					if sess.CurrentIndex != tc.wantIndex || sess.Status != models.SimpleQuizStateQuestionOpen {
+						t.Fatalf("session = status=%s idx=%d, want question_open idx=%d", sess.Status, sess.CurrentIndex, tc.wantIndex)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("reveal", func(t *testing.T) {
+		for _, tc := range []struct {
+			name       string
+			body       string
+			nilBody    bool
+			wantStatus int
+			wantIdx    int
+		}{
+			{"oversized_json", oversized, false, http.StatusRequestEntityTooLarge, 0},
+			{"oversized_whitespace", oversizedSpaces, false, http.StatusRequestEntityTooLarge, 0},
+			{"malformed_json", `{bad`, false, http.StatusBadRequest, 0},
+			{"wrong_field_type", `{"questionIndex":"one"}`, false, http.StatusBadRequest, 0},
+			{"trailing_json", `{"questionIndex":0}{"questionIndex":1}`, false, http.StatusBadRequest, 0},
+			{"nil_body", "", true, http.StatusOK, 0},
+			{"empty_body", "", false, http.StatusOK, 0},
+			{"explicit_index", `{"questionIndex":1}`, false, http.StatusOK, 1},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				h, _ := seedHandlerSimpleQuiz(models.SimpleQuizStateAnswersLocked)
+				var req *http.Request
+				if tc.nilBody {
+					req = httptest.NewRequest(http.MethodPost, "/events/e1/modules/m1/simple-quiz/reveal", nil)
+				} else {
+					req = httptest.NewRequest(http.MethodPost, "/events/e1/modules/m1/simple-quiz/reveal", strings.NewReader(tc.body))
+				}
+				req.SetPathValue("eventID", "e1")
+				req.SetPathValue("moduleID", "m1")
+				rec := httptest.NewRecorder()
+				h.RevealSimpleQuizAnswer(rec, req)
+				if rec.Code != tc.wantStatus {
+					t.Fatalf("status = %d, want %d (body=%q)", rec.Code, tc.wantStatus, rec.Body.String())
+				}
+				if tc.wantStatus == http.StatusOK {
+					sess := h.deps.QuizHub.GetSimpleQuiz("m1")
+					if !sess.Revealed[tc.wantIdx] {
+						t.Fatalf("question %d not marked revealed: %+v", tc.wantIdx, sess.Revealed)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("undo", func(t *testing.T) {
+		for _, tc := range []struct {
+			name       string
+			body       string
+			wantStatus int
+		}{
+			{"oversized_json", oversized, http.StatusRequestEntityTooLarge},
+			{"malformed_json", `{bad`, http.StatusBadRequest},
+			{"wrong_field_type", `{"judgeKey":123}`, http.StatusBadRequest},
+			{"trailing_json", `{"judgeKey":"j1"}{"judgeKey":"j2"}`, http.StatusBadRequest},
+			{"empty_body", ``, http.StatusBadRequest},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				h, _ := seedHandlerSimpleQuiz(models.SimpleQuizStateWaitingGrading)
+				req := httptest.NewRequest(http.MethodPost, "/events/e1/modules/m1/simple-quiz/undo", strings.NewReader(tc.body))
+				req.SetPathValue("eventID", "e1")
+				req.SetPathValue("moduleID", "m1")
+				rec := httptest.NewRecorder()
+				h.UndoSimpleQuizGrade(rec, req)
+				if rec.Code != tc.wantStatus {
+					t.Fatalf("status = %d, want %d (body=%q)", rec.Code, tc.wantStatus, rec.Body.String())
+				}
+			})
+		}
+	})
+}
