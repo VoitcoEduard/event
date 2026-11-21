@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { scoreRows, manualID, allowsManual, isGame, parsePoints } from '../src/utils/eventScores.js'
+import { scoreRows, manualID, allowsManual, isGame, isEditableGameScore, parsePoints } from '../src/utils/eventScores.js'
 const event = { id: 'e', modules: [{ id: 'q', type: 'quiz' }, { id: 'w', type: 'wrong_pictures' }] }
 const participants = [{ id: 'p', displayName: 'Player' }, { id: 'new', displayName: 'New player' }]
 const teams = [{ id: 't', name: 'Team' }]
@@ -36,4 +36,10 @@ test('blank and nonfinite points cannot silently become zero; game scores requir
  assert.throws(() => parsePoints('2.5', true))
  assert.equal(parsePoints('0'), 0)
  assert.equal(parsePoints('-1.5'), -1.5)
+})
+test('simple_quiz is displayed as a game score but is read-only for direct quiz-score edits', () => {
+ assert.equal(isGame({ type: 'simple_quiz' }), true)
+ assert.equal(isEditableGameScore({ type: 'simple_quiz' }), false)
+ assert.equal(isEditableGameScore({ type: 'quiz' }), true)
+ assert.equal(isEditableGameScore({ type: 'wrong_pictures' }), true)
 })
