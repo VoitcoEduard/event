@@ -81,11 +81,63 @@
 .state-container {
     z-index: 1;
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
     padding: 20px;
+}
+
+.host-topbar {
+    position: relative;
+    z-index: 20;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 20px 4px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.host-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.host-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-block-size: 38px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.host-back-link:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.host-topbar-context {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.72);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* LOBBY */
@@ -111,12 +163,15 @@
 
 .qr-container {
     margin-top: 20px;
-    width: 150px;
-    height: 150px;
-    background: white;
+    padding: 10px;
+    border-radius: 12px;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     margin-left: auto;
     margin-right: auto;
-    color: black;
+    color: #000000;
 }
 
 .lobby-actions {
@@ -180,6 +235,18 @@
 .lobby-footer {
     margin-top: auto;
     margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.lobby-start-hint {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    text-align: center;
 }
 
 .start-btn {
@@ -200,8 +267,9 @@
 .question-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    padding: 2vw;
+    flex: 1;
+    min-height: 0;
+    padding: 1.5vw 2vw 2vw;
     box-sizing: border-box;
 }
 
@@ -2355,6 +2423,7 @@
 }
 
 @media (pointer: coarse) {
+  .host-back-link,
   .copy-link-btn,
   .start-btn,
   .control-btn,

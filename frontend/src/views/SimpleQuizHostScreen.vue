@@ -2,6 +2,17 @@
   <div class="quiz-host-screen simple-quiz-host-screen">
     <div class="bg-layer"></div>
 
+    <div class="host-topbar">
+      <div class="host-topbar-left">
+        <a :href="backToEventUrl" class="host-back-link" @click="goBackToEvent">
+          <AppIcon name="arrowLeft" :size="16" aria-hidden="true" />
+          <span>{{ $t('host.back_to_event') }}</span>
+        </a>
+        <span v-if="hostContextLabel" class="host-topbar-context">{{ hostContextLabel }}</span>
+      </div>
+      <AdminThemeToggle variant="inline" />
+    </div>
+
     <div v-if="stateStatus === 'inactive' || !launched || stateStatus === 'lobby'" class="state-container lobby-container">
       <div class="lobby-header">
         <h1 class="game-title">{{ $t('simple_quiz.host.join_title') }}</h1>
@@ -101,18 +112,38 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import * as vueRouter from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '../components/AppIcon.vue'
+import AdminThemeToggle from '../components/AdminThemeToggle.vue'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { simpleQuizApi } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
 
-const route = useRoute()
+const props = defineProps({
+  eventName: { type: String, default: '' },
+  moduleName: { type: String, default: '' }
+})
+
+const route = vueRouter.useRoute()
+let router = null
+try {
+  router = typeof vueRouter.useRouter === 'function' ? vueRouter.useRouter() : null
+} catch {
+  router = null
+}
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
+const backToEventUrl = `/admin/events/${eventId}`
+const hostContextLabel = computed(() => [props.eventName, props.moduleName].filter(Boolean).join(' / '))
+const goBackToEvent = (event) => {
+  if (router) {
+    event?.preventDefault?.()
+    router.push(backToEventUrl)
+  }
+}
 const { t } = useI18n()
 const { success } = useToast()
 

@@ -19,7 +19,7 @@
   },
   "main": {
     "title": "Hello",
-    "subtitle": "Minimalist Design",
+    "subtitle": "Interactive Live Events",
     "connect_title": "Connect to Event",
     "connect_desc": "Enter the 6-digit PIN code to join the live event.",
     "pin_placeholder": "000000",
@@ -823,5 +823,18 @@
     "message": "You have unsaved changes. Leave without saving?",
     "leave": "Leave",
     "stay": "Stay"
+  },
+  "host": {
+    "back_to_event": "Back to Event",
+    "waiting_for_players": "Waiting for at least 1 player to join...",
+    "loading": "Loading host controls...",
+    "load_error": "Could not load module host view.",
+    "unsupported_module": "This module type does not have a live host screen.",
+    "edit_module": "Edit Module",
+    "retry": "Retry",
+    "copy_link_failed": "Failed to copy projector link",
+    "qr_alt": "QR code to join event with PIN {pin}",
+    "placeholder_module_editor": "Module Editor",
+    "placeholder_template_editor": "Template Editor"
   }
 }

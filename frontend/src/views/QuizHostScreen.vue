@@ -1,6 +1,17 @@
 <template>
   <div class="quiz-host-screen">
     <div class="bg-layer"></div>
+
+    <div class="host-topbar">
+      <div class="host-topbar-left">
+        <a :href="backToEventUrl" class="host-back-link" @click="goBackToEvent">
+          <AppIcon name="arrowLeft" :size="16" aria-hidden="true" />
+          <span>{{ $t('host.back_to_event') }}</span>
+        </a>
+        <span v-if="hostContextLabel" class="host-topbar-context">{{ hostContextLabel }}</span>
+      </div>
+      <AdminThemeToggle variant="inline" />
+    </div>
     
     <!-- LOBBY STATE -->
     <div v-if="gameState === 'lobby'" class="state-container lobby-container">
@@ -11,7 +22,14 @@
           <span class="pin-code">{{ pinCode }}</span>
         </div>
         <div class="qr-container">
-           <div class="qr-placeholder">{{ $t('quiz.host.qr_placeholder') }}</div>
+          <QRCodeVue
+            :value="qrCodeUrl"
+            :size="150"
+            level="H"
+            render-as="svg"
+            role="img"
+            :aria-label="$t('host.qr_alt', { pin: pinCode })"
+          />
         </div>
         <div class="lobby-actions">
             <button type="button" class="copy-link-btn" @click="copyProjectorLink">
@@ -35,6 +53,9 @@
         <button type="button" class="start-btn" @click="startQuiz" :disabled="players.length === 0">
           {{ $t('quiz.host.start_btn') }}
         </button>
+        <p v-if="players.length === 0" class="lobby-start-hint">
+          {{ $t('host.waiting_for_players') }}
+        </p>
       </div>
     </div>
 
@@ -120,7 +141,7 @@
             <div class="sbs-label sbs-label-min">
               {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
             </div>
-            <div class="sbs-hint">↕ Scroll to select</div>
+            <div class="sbs-hint">↕ {{ $t('quiz.host.range_to_answer') }}</div>
           </div>
           <template v-else-if="isNumber">
             <div class="number-host-view">
@@ -146,12 +167,12 @@
       <!-- Small Answer Counter in Corner -->
       <div class="answer-counter-widget">
           <div class="counter-value">{{ totalAnswered }}</div>
-          <div class="counter-label">Answers</div>
+          <div class="counter-label">{{ $t('quiz.host.answers_label') }}</div>
       </div>
       
       <div class="host-controls">
-         <button v-if="timeRemaining > 0" type="button" class="control-btn" @click="endQuestionEarly">Skip Timer</button>
-         <button v-else type="button" class="control-btn primary" @click="goToResults">Go to Results</button>
+         <button v-if="timeRemaining > 0" type="button" class="control-btn" @click="endQuestionEarly">{{ $t('quiz.host.skip_timer') }}</button>
+         <button v-else type="button" class="control-btn primary" @click="goToResults">{{ $t('quiz.host.go_to_results') }}</button>
       </div>
     </div>
 
@@ -159,7 +180,7 @@
     <div v-else-if="gameState === 'results'" class="state-container results-container-new">
        <div class="results-content-wrapper">
          <div class="question-header" style="margin-bottom: 1rem;">
-             <div class="results-mode-title">Question {{ currentQuestionIndex + 1 }} Results</div>
+             <div class="results-mode-title">{{ $t('quiz.host.results_title', { num: currentQuestionIndex + 1 }) }}</div>
              <!-- <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div> -->
          </div>
 
@@ -438,7 +459,7 @@
     
     <div v-if="showUnmuteButton" class="unmute-overlay">
         <button type="button" @click="enableAudio" class="unmute-btn">
-            🔊 Enable Sound
+            {{ $t('quiz.host.enable_sound') }}
         </button>
     </div>
 
@@ -448,6 +469,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import QRCodeVue from 'qrcode.vue'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
@@ -457,15 +479,31 @@ import { preloader } from '../utils/imagePreload'
 import { copyTextToClipboard } from '../utils/clipboard'
 import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
 import AppIcon from '../components/AppIcon.vue'
+import AdminThemeToggle from '../components/AdminThemeToggle.vue'
+
+const props = defineProps({
+  eventName: { type: String, default: '' },
+  moduleName: { type: String, default: '' }
+})
 
 const route = useRoute()
 const router = useRouter()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
+const backToEventUrl = `/admin/events/${eventId}`
+const hostContextLabel = computed(() => [props.eventName, props.moduleName].filter(Boolean).join(' / '))
+const goBackToEvent = (event) => {
+  event?.preventDefault?.()
+  router.push(backToEventUrl)
+}
 
 // State
 const gameState = ref('lobby') 
 const pinCode = ref(eventId)
+const qrCodeUrl = computed(() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    return `${origin}/?pin=${pinCode.value}`
+})
 const players = ref([])
 const questions = ref([])
 const currentQuestionIndex = ref(0)
@@ -813,7 +851,7 @@ const exitQuiz = async () => {
     
     // Wait a bit to ensure message is sent before disconnecting
     await new Promise(resolve => setTimeout(resolve, 300))
-    router.push({ name: 'admin-event-details', params: { id: eventId } })
+    router.push(backToEventUrl)
     // Note: disconnect is handled by onUnmounted, don't call it here to avoid double-disconnect
 }
 
@@ -878,7 +916,7 @@ const copyProjectorLink = async () => {
     if (copied) {
         success(t('quiz.host.toast.link_copied'))
     } else {
-        showError('Failed to copy projector link')
+        showError(t('host.copy_link_failed'))
     }
 }
 

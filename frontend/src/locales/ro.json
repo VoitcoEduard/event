@@ -19,7 +19,7 @@
   },
   "main": {
     "title": "Salut",
-    "subtitle": "Design Minimalist",
+    "subtitle": "Evenimente Live Interactive",
     "connect_title": "Conectare la Eveniment",
     "connect_desc": "Introdu codul PIN de 6 cifre pentru a te alătura evenimentului live.",
     "pin_placeholder": "000000",
@@ -797,5 +797,18 @@
     "message": "Ai modificări nesalvate. Pleci fără să salvezi?",
     "leave": "Pleacă",
     "stay": "Rămâi"
+  },
+  "host": {
+    "back_to_event": "Înapoi la eveniment",
+    "waiting_for_players": "Se așteaptă cel puțin 1 jucător...",
+    "loading": "Se încarcă panoul de gazdă...",
+    "load_error": "Nu s-a putut încărca ecranul de gazdă.",
+    "unsupported_module": "Acest tip de modul nu are un ecran de gazdă live.",
+    "edit_module": "Editează modulul",
+    "retry": "Reîncearcă",
+    "copy_link_failed": "Copierea linkului pentru proiector a eșuat",
+    "qr_alt": "Cod QR pentru conectare la eveniment cu PIN {pin}",
+    "placeholder_module_editor": "Editor modul",
+    "placeholder_template_editor": "Editor șablon"
   }
 }

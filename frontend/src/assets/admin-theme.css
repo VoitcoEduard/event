@@ -1197,6 +1197,18 @@ html[data-admin-appearance="true"] .quiz-host-screen .control-btn:not(.primary) 
   border: 1px solid var(--admin-border-strong) !important;
   color: var(--admin-text) !important;
 }
+html[data-admin-appearance="true"] .quiz-host-screen .host-back-link {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .host-back-link:hover {
+  background: var(--admin-surface-hover) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.host-topbar-context, .lobby-start-hint) {
+  color: var(--admin-text-muted) !important;
+}
 
 /* Preserve authored slide/media content in the editor. */
 html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content, .slide-preview, .element-preview, .screensaver-preview) {
