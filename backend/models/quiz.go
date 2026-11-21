@@ -92,9 +92,10 @@ type QuizModuleData struct {
 
 // Player in quiz
 type Player struct {
-	ID       string `json:"id"`
-	Nickname string `json:"nickname"`
-	Score    int    `json:"score"`
+	ID                  string `json:"id"`
+	Nickname            string `json:"nickname"`
+	Score               int    `json:"score"`
+	JoinedQuestionIndex int    `json:"joinedQuestionIndex,omitempty"`
 }
 
 // PlayerSignal represents a player's answer signal with metadata

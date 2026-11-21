@@ -123,6 +123,7 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		for _, player := range session.Players {
 			if player != nil {
 				player.Score = 0
+				player.JoinedQuestionIndex = 0
 			}
 		}
 		session.WrongPictureAspects = aspects
