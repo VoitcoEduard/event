@@ -59,6 +59,7 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 				"eventId": s.EventID, "moduleId": moduleID,
 				"state": s.State, "currentIndex": s.CurrentIndex,
 				"players": s.Players, "answerCounts": s.AnswerCounts,
+				"answeredCount": len(s.AnsweredPlayerIDs),
 				"questionWindows": s.QuestionWindows, "startTime": s.StartTime,
 			},
 		})

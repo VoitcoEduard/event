@@ -580,11 +580,9 @@ const timeRemaining = ref(20)
 const explainTimeRemaining = ref(0)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 })
 const playerSignals = ref([])
+const realTimeAnsweredCount = ref(0)
 
-const totalAnswered = computed(() => {
-  if (isRange.value) return playerSignals.value.length
-  return Object.values(answerCounts.value).reduce((a, b) => a + b, 0)
-})
+const totalAnswered = computed(() => realTimeAnsweredCount.value)
 
 const totalQuestions = computed(() => questions.value.length)
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
@@ -972,6 +970,7 @@ const resetModuleState = () => {
   explainTimeRemaining.value = 0
   answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
   playerSignals.value = []
+  realTimeAnsweredCount.value = 0
   displayedScores.value = {}
   revealCorrect.value = false
   backgroundMusicUrl.value = ''
@@ -1017,11 +1016,19 @@ const connectToModule = (module) => {
 
   quizWS.on('cmd:state', (payload) => {
     const prevState = gameState.value
+    const prevIndex = currentQuestionIndex.value
     gameState.value = payload.state
     displayMode.value = 'module'
 
     if (payload.currentIndex !== undefined) {
       currentQuestionIndex.value = payload.currentIndex
+    }
+    const questionChanged = payload.currentIndex !== undefined && payload.currentIndex !== prevIndex
+
+    if (payload.state === 'question-presenting' || payload.state === 'lobby' || questionChanged) {
+      realTimeAnsweredCount.value = 0
+      answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
+      playerSignals.value = []
     }
 
     if (payload.state === 'get-ready' || payload.state === 'question-active' || payload.state === 'question-presenting') {
@@ -1053,6 +1060,8 @@ const connectToModule = (module) => {
   })
 
   quizWS.on('sync:minimal', (payload) => {
+    if (payload.questionIndex !== undefined && payload.questionIndex !== currentQuestionIndex.value) return
+
     if (payload.answerCounts) {
       answerCounts.value = {
         0: payload.answerCounts["0"] || 0,
@@ -1060,6 +1069,9 @@ const connectToModule = (module) => {
         2: payload.answerCounts["2"] || 0,
         3: payload.answerCounts["3"] || 0,
       }
+    }
+    if (payload.answeredCount !== undefined) {
+      realTimeAnsweredCount.value = payload.answeredCount
     }
   })
 
@@ -1080,6 +1092,19 @@ const connectToModule = (module) => {
     if (session.PlayerSignals || session.playerSignals) {
       const signals = session.PlayerSignals || session.playerSignals
       playerSignals.value = signals.filter(s => s.questionIndex === currentQuestionIndex.value)
+    }
+
+    if (session.AnswerCounts || session.answerCounts) {
+      const counts = session.AnswerCounts || session.answerCounts
+      answerCounts.value = {
+        0: counts["0"] || 0,
+        1: counts["1"] || 0,
+        2: counts["2"] || 0,
+        3: counts["3"] || 0,
+      }
+    }
+    if (session.answeredCount !== undefined) {
+      realTimeAnsweredCount.value = session.answeredCount
     }
   })
 

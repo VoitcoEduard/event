@@ -456,8 +456,8 @@ func publicSessionMessage(message interface{}, original []byte, session *models.
 	b, err := json.Marshal(ServerMessage{Type: m.Type, Payload: map[string]any{
 		"eventId": s.EventID, "moduleId": s.ModuleID, "state": s.State,
 		"currentIndex": s.CurrentIndex, "players": players, "rank": rank,
-		"answerCounts": s.AnswerCounts, "questionWindows": s.QuestionWindows,
-		"startTime": s.StartTime,
+		"answerCounts": s.AnswerCounts, "answeredCount": len(s.AnsweredPlayerIDs),
+		"questionWindows": s.QuestionWindows, "startTime": s.StartTime,
 	}})
 	if err != nil {
 		return nil

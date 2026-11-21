@@ -13,6 +13,7 @@ func TestPublicSessionUpdateOmitsAnswerHistory(t *testing.T) {
 	h.UpdateSession("m", func(s *models.QuizSession) {
 		s.PlayerSignals = []models.PlayerSignal{{PlayerID: "p", AnswerIndex: 2}}
 		s.Players["p"] = &models.Player{ID: "p", Nickname: "Player", Score: 10}
+		s.AnsweredPlayerIDs = map[string]struct{}{"p": {}}
 	})
 	projector := &Client{ModuleID: "m", IsProjector: true, send: make(chan []byte, 2)}
 	host := &Client{ModuleID: "m", IsHost: true, send: make(chan []byte, 2)}
@@ -23,7 +24,7 @@ func TestPublicSessionUpdateOmitsAnswerHistory(t *testing.T) {
 	h.mu.Unlock()
 	public := <-projector.send
 	private := <-host.send
-	if bytes.Contains(public, []byte("playerSignals")) || !bytes.Contains(public, []byte("Player")) {
+	if bytes.Contains(public, []byte("playerSignals")) || !bytes.Contains(public, []byte("Player")) || !bytes.Contains(public, []byte(`"answeredCount":1`)) {
 		t.Fatalf("bad public projection: %s", public)
 	}
 	if !bytes.Contains(private, []byte("playerSignals")) {
