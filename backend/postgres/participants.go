@@ -191,6 +191,28 @@ func (s *Store) DeleteTeamsForEvent(ctx context.Context, eventID string) error {
 	return translate(tx.Commit(ctx))
 }
 
+// assignBalancedTeams assigns each participant in people to the team with the
+// smallest current count, breaking ties consistently by team list order.
+func assignBalancedTeams(teams []models.Team, existingCounts map[string]int, people []models.Participant) {
+	if len(teams) == 0 || len(people) == 0 {
+		return
+	}
+	counts := make(map[string]int, len(teams))
+	for _, team := range teams {
+		counts[team.ID] = existingCounts[team.ID]
+	}
+	for i := range people {
+		best := 0
+		for j := 1; j < len(teams); j++ {
+			if counts[teams[j].ID] < counts[teams[best].ID] {
+				best = j
+			}
+		}
+		people[i].TeamID = teams[best].ID
+		counts[teams[best].ID]++
+	}
+}
+
 // AutoAssignParticipants assigns only unassigned participants in one transaction.
 func (s *Store) AutoAssignParticipants(ctx context.Context, eventID string) ([]models.Participant, error) {
 	tx, err := s.Pool.Begin(ctx)
@@ -219,6 +241,25 @@ func (s *Store) AutoAssignParticipants(ctx context.Context, eventID string) ([]m
 	if len(teams) == 0 {
 		return nil, ErrNotFound
 	}
+	countRows, err := tx.Query(ctx, `SELECT team_id::text, COUNT(*) FROM participants WHERE event_id=$1 AND team_id IS NOT NULL GROUP BY team_id`, eventID)
+	if err != nil {
+		return nil, translate(err)
+	}
+	existingCounts := make(map[string]int, len(teams))
+	for countRows.Next() {
+		var teamID string
+		var count int
+		if e := countRows.Scan(&teamID, &count); e != nil {
+			countRows.Close()
+			return nil, e
+		}
+		existingCounts[teamID] = count
+	}
+	err = countRows.Err()
+	countRows.Close()
+	if err != nil {
+		return nil, err
+	}
 	rows, err = tx.Query(ctx, `SELECT `+participantColumns+` FROM participants WHERE event_id=$1 AND team_id IS NULL ORDER BY created_at,id FOR UPDATE`, eventID)
 	if err != nil {
 		return nil, translate(err)
@@ -237,8 +278,8 @@ func (s *Store) AutoAssignParticipants(ctx context.Context, eventID string) ([]m
 	if err != nil {
 		return nil, err
 	}
+	assignBalancedTeams(teams, existingCounts, people)
 	for i := range people {
-		people[i].TeamID = teams[i%len(teams)].ID
 		people[i].UpdatedAt = time.Now().UTC()
 		if _, err = tx.Exec(ctx, `UPDATE participants SET team_id=$3,updated_at=$4 WHERE event_id=$1 AND id=$2`, eventID, people[i].ID, people[i].TeamID, people[i].UpdatedAt); err != nil {
 			return nil, translate(err)
