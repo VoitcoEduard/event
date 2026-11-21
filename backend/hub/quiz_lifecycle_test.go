@@ -591,3 +591,32 @@ func TestLateJoinerReconnectPreservesActiveStreak(t *testing.T) {
 		t.Fatalf("server streak = %d, want 2", serverStreak)
 	}
 }
+
+func TestFinishedQuizCannotReopenViaResultsOrLeaderboard(t *testing.T) {
+	for _, state := range []string{"finishing", "finished"} {
+		t.Run(state, func(t *testing.T) {
+			h := NewQuizHub(Dependencies{})
+			h.CreateSession("m", "e")
+			h.UpdateSession("m", func(s *models.QuizSession) {
+				s.State = state
+				s.CurrentIndex = 0
+				s.Questions = []models.QuizQuestion{{ID: "q0", Text: "Q0", Type: "classic", Answers: []string{"A", "B"}, CorrectIndex: 0}}
+			})
+			host := &Client{ModuleID: "m", IsHost: true, send: make(chan []byte, 8)}
+			h.Register(host)
+
+			h.mu.Lock()
+			h.processHostShowResults(host, ClientMessage{})
+			h.processHostShowLeaderboard(host, ClientMessage{})
+			got := h.sessions["m"].State
+			h.mu.Unlock()
+
+			if got != state {
+				t.Fatalf("session state changed from %q to %q", state, got)
+			}
+			if len(host.send) != 0 {
+				t.Fatalf("unexpected broadcast for %q session", state)
+			}
+		})
+	}
+}

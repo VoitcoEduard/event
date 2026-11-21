@@ -262,6 +262,9 @@ func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		if session.State == "finishing" || session.State == "finished" {
+			return
+		}
 		h.cancelQuizTransitionLocked(client.ModuleID)
 		session.State = "results"
 		if session.CurrentIndex >= 0 && session.CurrentIndex < len(session.Questions) {
@@ -290,6 +293,9 @@ func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) 
 	}
 	session := h.sessions[client.ModuleID]
 	if session != nil {
+		if session.State == "finishing" || session.State == "finished" {
+			return
+		}
 		h.cancelQuizTransitionLocked(client.ModuleID)
 		session.State = "leaderboard"
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
