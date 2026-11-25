@@ -3,7 +3,7 @@
     <header class="admin-topbar">
       <div class="admin-topbar-inner">
         <div class="admin-topbar-start">
-          <RouterLink to="/admin/events" class="admin-brand">
+          <RouterLink to="/admin/events" class="admin-brand" @click="mobileMenuOpen = false">
             <AppIcon name="sliders" :size="18" aria-hidden="true" />
             <span class="admin-brand-text">{{ $t('admin_shell.brand') }}</span>
           </RouterLink>
@@ -27,7 +27,7 @@
           <nav class="admin-primary-nav" :aria-label="$t('admin_shell.nav_label')">
             <RouterLink
               to="/admin/events"
-              class="admin-nav-link"
+              class="admin-nav-link" @click="mobileMenuOpen = false"
               :class="{ active: isEventsActive }"
               :aria-current="isEventsActive ? 'page' : undefined"
             >
@@ -35,7 +35,7 @@
             </RouterLink>
             <RouterLink
               to="/admin/library/quizzes"
-              class="admin-nav-link"
+              class="admin-nav-link" @click="mobileMenuOpen = false"
               :class="{ active: isLibraryActive }"
               :aria-current="isLibraryActive ? 'page' : undefined"
             >
@@ -44,7 +44,7 @@
             <RouterLink
               v-if="session.user?.role === 'owner'"
               to="/admin/users"
-              class="admin-nav-link"
+              class="admin-nav-link" @click="mobileMenuOpen = false"
               :class="{ active: isUsersActive }"
               :aria-current="isUsersActive ? 'page' : undefined"
             >
@@ -138,6 +138,10 @@ import AppIcon from './AppIcon.vue'
 import AdminThemeToggle from './AdminThemeToggle.vue'
 import { session, signOut } from '../session.js'
 import { safeLocalSet } from '../utils/storage.js'
+import {
+  confirmActiveUnsavedChanges,
+  runBypassingUnsavedGuard
+} from '../composables/useUnsavedChanges.js'
 
 const props = defineProps({
   breadcrumbs: {
@@ -185,8 +189,12 @@ async function handleSignOut() {
   if (signingOut.value) return
   signingOut.value = true
   try {
+    // Confirm unsaved changes BEFORE signing out: choosing "Stay" must leave
+    // the session (and CSRF token) intact.
+    const allowed = await confirmActiveUnsavedChanges()
+    if (!allowed) return
     await signOut()
-    await router.push('/login')
+    await runBypassingUnsavedGuard(() => router.push('/login'))
   } catch {
     // Preserve current screen if signOut fails.
   } finally {

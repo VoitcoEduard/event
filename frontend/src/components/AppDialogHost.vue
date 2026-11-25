@@ -96,13 +96,16 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import i18n from '../i18n.js'
 import AppIcon from './AppIcon.vue'
-import { useDialog } from '../composables/useDialog'
+import { clearDialogQueue, useDialog } from '../composables/useDialog'
 
 const t = (...args) => i18n.global.t(...args)
 const { activeDialog, resolveDialog, cancelDialog } = useDialog()
+
+// Never leave pending dialog promises dangling when the host unmounts.
+onUnmounted(() => { clearDialogQueue() })
 
 const dialogRef = ref(null)
 const inputRef = ref(null)

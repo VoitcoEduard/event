@@ -13,7 +13,9 @@ vi.mock('vue-router', () => ({
   useRouter: () => routerMock,
 }))
 
-vi.mock('vue-i18n', () => ({
+vi.mock('vue-i18n', async (importOriginal) => ({
+  // Keep createI18n available: the layout chain now imports src/i18n.js.
+  ...await importOriginal(),
   useI18n: () => ({ t: k => k }),
 }))
 

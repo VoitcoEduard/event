@@ -191,7 +191,7 @@ export function hasActiveBlockingModal(containerEl) {
   if (containerEl?.closest?.('[inert]')) return true
 
   const overlays = document.querySelectorAll(
-    'dialog[open], .dialog-overlay, .library-modal-overlay, .selector-modal'
+    'dialog[open], [role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"], .app-dialog-overlay, .modal-overlay, .dialog-overlay, .library-modal-overlay, .selector-modal'
   )
   for (const el of overlays) {
     if (!containerEl || (!el.contains(containerEl) && !containerEl.contains(el))) {

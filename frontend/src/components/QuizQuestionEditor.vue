@@ -502,7 +502,7 @@ const localQuestion = reactive({
   ],
   wrongPictureConfig: props.question.wrongPictureConfig || {
       targets: [],
-      tolerancePercent: 10,
+      tolerancePercent: 5,
       maxPoints: 50
   },
   judgeNotes: props.question.judgeNotes || '',
@@ -570,7 +570,7 @@ watch(() => props.question, (newVal) => {
           imageId: newVal.imageId || null,
           imageAlt: newVal.imageAlt || '',
           imageOptions: newVal.imageOptions || [{ id: '1', imageId: '', label: '' }, { id: '2', imageId: '', label: '' }],
-          wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 10, maxPoints: 50 },
+          wrongPictureConfig: newVal.wrongPictureConfig || { targets: [], tolerancePercent: 5, maxPoints: 50 },
           judgeNotes: newVal.judgeNotes || '',
           correctAnswerText: newVal.correctAnswerText || ''
       })
@@ -616,7 +616,7 @@ const handleTypeChange = (previousType = null) => {
         }
     } else if (localQuestion.type === 'wrong_pictures') {
         if (!localQuestion.wrongPictureConfig) {
-             localQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 50 }
+             localQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 5, maxPoints: 50 }
         }
     } else if (localQuestion.type === 'simple_text') {
         if (!localQuestion.scoringConfig) {

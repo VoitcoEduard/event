@@ -366,6 +366,9 @@
       "save_or_cancel_leave": "Salvați sau anulați modificările înainte de a părăsi pagina.",
       "invalid_player_name": "Introduceți numele jucătorului (maximum 120 de caractere).",
       "save_failed": "Nu s-a putut finaliza salvarea: {message}",
+      "points_required": "Introduceți puncte; folosiți 0 pentru a șterge o contribuție.",
+      "points_integer": "Scorurile jocului trebuie să fie numere întregi.",
+      "points_invalid": "Introduceți un număr valid de puncte.",
       "response_save_failed": "Răspunsul nu a fost salvat: {message}"
     },
     "notices": {
@@ -382,6 +385,7 @@
     "settings": {
       "bg_music": "Muzică de Fundal",
       "none": "Niciuna",
+      "track_unavailable": "Melodia selectată anterior (indisponibilă)",
       "audio_output": "Ieșire Audio",
       "projector_only": "Doar Proiector",
       "admin_only": "Doar Admin",
@@ -429,7 +433,8 @@
       "wp_image_required": "Fiecare rundă trebuie să aibă o imagine încărcată.",
       "wp_targets_required": "Fiecare rundă trebuie să aibă cel puțin {min} zonă țintă definită.",
       "wp_tolerance": "Procentul de toleranță trebuie să fie 0 sau mai mare.",
-      "unknown_type": "Tip de întrebare nesuportat: {type}."
+      "unknown_type": "Tip de întrebare nesuportat: {type}.",
+      "time_limit_invalid": "Limita de timp trebuie să fie un număr întreg de secunde (0 sau mai mare)."
     },
     "import": {
       "note_images": "Notă: Imaginile din fișierele importate trebuie reîncărcate",

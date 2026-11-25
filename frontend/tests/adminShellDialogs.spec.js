@@ -152,6 +152,29 @@ describe('AdminLayout', () => {
     expect(fetchSpy).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({ method: 'POST' }))
     expect(router.currentRoute.value.path).toBe('/login')
   })
+
+  it('closes the mobile drawer when tapping the link for the current page (L7b)', async () => {
+    const { router } = makeTestRouter()
+    await router.push('/admin/events')
+    await router.isReady()
+
+    const wrapper = track(mount(AdminLayout, { global: { plugins: [i18n, router] } }))
+
+    const toggle = wrapper.find('.admin-menu-toggle')
+    await toggle.trigger('click')
+    expect(wrapper.find('#admin-shell-nav-panel').classes()).toContain('is-open')
+
+    // Same-route navigation must still close the drawer via the click handler.
+    await wrapper.find('.admin-brand').trigger('click')
+    expect(wrapper.find('#admin-shell-nav-panel').classes()).not.toContain('is-open')
+
+    await toggle.trigger('click')
+    const eventsLink = wrapper.findAll('.admin-nav-link')[0]
+    expect(eventsLink.attributes('href')).toBe('/admin/events')
+    await eventsLink.trigger('click')
+    expect(wrapper.find('#admin-shell-nav-panel').classes()).not.toContain('is-open')
+    expect(router.currentRoute.value.path).toBe('/admin/events')
+  })
 })
 
 describe('AppDialogHost & useDialog', () => {

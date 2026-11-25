@@ -73,7 +73,7 @@
               <input
                 type="number"
                 min="1"
-                :value="round.wrongPictureConfig?.maxPoints ?? 50"
+                :value="round.wrongPictureConfig?.maxPoints ?? ''"
                 class="setting-input"
                 :class="{ 'has-field-error': !!fieldError(index, 'points') }"
                 :aria-invalid="!!fieldError(index, 'points') || undefined"
@@ -87,7 +87,7 @@
               <input
                 type="number"
                 min="0"
-                :value="round.wrongPictureConfig?.tolerancePercent ?? 5"
+                :value="round.wrongPictureConfig?.tolerancePercent ?? ''"
                 class="setting-input"
                 :class="{ 'has-field-error': !!fieldError(index, 'tolerancePercent') }"
                 :aria-invalid="!!fieldError(index, 'tolerancePercent') || undefined"
@@ -101,10 +101,13 @@
               <input
                 type="number"
                 min="0"
-                :value="round.timeLimit ?? 60"
+                :value="round.timeLimit ?? ''"
                 class="setting-input"
+                :class="{ 'has-field-error': !!fieldError(index, 'timeLimit') }"
+                :aria-invalid="!!fieldError(index, 'timeLimit') || undefined"
                 @input="updateRoundField(index, 'timeLimit', parseNumber($event.target.value))"
               />
+              <p v-if="fieldError(index, 'timeLimit')" class="field-error" role="alert">{{ fieldError(index, 'timeLimit') }}</p>
             </div>
 
             <div class="input-group mini center">
@@ -278,9 +281,9 @@ const emitRounds = (nextRounds) => {
 }
 
 const parseNumber = (val) => {
-  if (val === '' || val === null || val === undefined) return ''
+  if (val === '' || val === null || val === undefined) return null
   const num = Number(val)
-  return Number.isNaN(num) ? '' : num
+  return Number.isFinite(num) ? num : null
 }
 
 const setRoundEl = (index, el) => {

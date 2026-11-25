@@ -366,6 +366,9 @@
       "save_or_cancel_leave": "Save or cancel your edits before leaving.",
       "invalid_player_name": "Enter a player name (up to 120 characters).",
       "save_failed": "Could not finish saving: {message}",
+      "points_required": "Enter points; use 0 to clear a contribution.",
+      "points_integer": "Game scores must be whole numbers.",
+      "points_invalid": "Enter a valid number of points.",
       "response_save_failed": "Response was not saved: {message}"
     },
     "notices": {
@@ -382,6 +385,7 @@
     "settings": {
       "bg_music": "Background Music",
       "none": "None",
+      "track_unavailable": "Previously selected track (unavailable)",
       "audio_output": "Audio Output",
       "projector_only": "Projector Only",
       "admin_only": "Admin Only",
@@ -429,7 +433,8 @@
       "wp_image_required": "Each round must have an uploaded image.",
       "wp_targets_required": "Each round must have at least {min} target location defined.",
       "wp_tolerance": "Tolerance percentage must be 0 or greater.",
-      "unknown_type": "Unsupported question type: {type}."
+      "unknown_type": "Unsupported question type: {type}.",
+      "time_limit_invalid": "Time limit must be a whole number of seconds (0 or greater)."
     },
     "import": {
       "note_images": "Note: Images from imported files need to be re-uploaded",

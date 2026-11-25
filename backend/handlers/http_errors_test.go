@@ -3,9 +3,12 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/user/go-expo-sample/backend/postgres"
@@ -49,5 +52,55 @@ func TestCreateEventRejectsTrailingJSON(t *testing.T) {
 	h.CreateEvent(w, r)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", w.Code)
+	}
+}
+
+// L7a: 4xx client mistakes must not be logged at error level; only 5xx are.
+func TestWriteRequestErrorLogLevels(t *testing.T) {
+	var mu sync.Mutex
+	var sawError bool
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.LevelKey {
+				mu.Lock()
+				if a.Value.String() == "ERROR" {
+					sawError = true
+				}
+				mu.Unlock()
+			}
+			return a
+		},
+	})))
+	t.Cleanup(func() { slog.SetDefault(old) })
+
+	w := httptest.NewRecorder()
+	writeRequestError(w, errors.New("bad json"), http.StatusBadRequest)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", w.Code)
+	}
+	w = httptest.NewRecorder()
+	writeRequestError(w, errors.New("too big"), http.StatusRequestEntityTooLarge)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413", w.Code)
+	}
+	mu.Lock()
+	if sawError {
+		mu.Unlock()
+		t.Fatal("4xx request errors were logged at error level")
+	}
+	mu.Unlock()
+
+	// Only genuine server failures log at error level.
+	w = httptest.NewRecorder()
+	writeRequestError(w, errors.New("boom"), http.StatusInternalServerError)
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", w.Code)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !sawError {
+		t.Fatal("500 was not logged at error level")
 	}
 }

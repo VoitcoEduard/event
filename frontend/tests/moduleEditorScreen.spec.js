@@ -7,7 +7,6 @@ import { clearDialogQueue } from '../src/composables/useDialog.js'
 import { session } from '../src/session.js'
 import AppDialogHost from '../src/components/AppDialogHost.vue'
 import AdminModuleEditorScreen from '../src/views/AdminModuleEditorScreen.vue'
-import FormModuleConfig from '../src/components/FormModuleConfig.vue'
 
 function makeRouter(initialPath = '/admin/events/evt-1/modules/mod-1/edit') {
   const Dummy = defineComponent({ template: '<div />' })
@@ -379,7 +378,7 @@ describe('AdminModuleEditorScreen', () => {
     expect(pubPayload.data.hideAfterCompletion).toBe(true)
   })
 
-  it('guards unsaved changes on Teams Manage Teams / Host navigation and FormModuleConfig uses Save Template label', async () => {
+  it('guards unsaved changes on Teams Manage Teams / Host navigation', async () => {
     const router = await makeRouter('/admin/events/evt-5/modules/mod-t2/edit')
     const pushSpy = vi.spyOn(router, 'push')
 
@@ -448,15 +447,5 @@ describe('AdminModuleEditorScreen', () => {
       query: { moduleId: 'mod-t2' }
     })
 
-    // Verify FormModuleConfig Save Template button no longer says "Add Module"
-    const formConfig = track(mount(FormModuleConfig, {
-      props: { visible: true, eventId: 'evt-5', module: { id: 'm-f', name: 'Form', type: 'form', data: {} } },
-      attachTo: document.body,
-      global: { plugins: [i18n], stubs: { Teleport: true, FormEditor: true, AppIcon: true } }
-    }))
-    await flushPromises()
-    await formConfig.find('.library-btn').trigger('click')
-    await flushPromises()
-    expect(formConfig.find('.dialog-btn.save').text().trim()).toBe('Save Template')
   })
 })

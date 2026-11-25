@@ -79,6 +79,12 @@ func (r *ModuleRepository) SetActive(ctx context.Context, eventID, moduleID stri
 func (r *ModuleRepository) Publish(ctx context.Context, eventID, moduleID string, data map[string]any) (bool, error) {
 	return r.DB.PublishModule(ctx, eventID, moduleID, data)
 }
+func (r *ModuleRepository) PublishWithName(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) (bool, error) {
+	return r.DB.PublishModuleWithName(ctx, eventID, moduleID, name, data)
+}
+func (r *ModuleRepository) Update(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) error {
+	return r.DB.UpdateModule(ctx, eventID, moduleID, name, data)
+}
 func (r *ModuleRepository) Delete(ctx context.Context, eventID, moduleID string) (bool, error) {
 	return r.DB.DeleteModule(ctx, eventID, moduleID)
 }

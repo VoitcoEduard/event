@@ -220,6 +220,12 @@
                     <label for="quiz-bg-music">{{ $t('quiz_config.settings.bg_music') }}</label>
                     <select id="quiz-bg-music" v-model="selectedMusicId" class="setting-select">
                       <option value="">{{ $t('quiz_config.settings.none') }}</option>
+                      <option
+                        v-if="selectedTrackMissingFromList"
+                        :value="selectedMusicId"
+                      >
+                        {{ $t('quiz_config.settings.track_unavailable') }}
+                      </option>
                       <option v-for="track in tracks" :key="track.id" :value="track.id">
                         {{ track.name }}
                       </option>
@@ -312,6 +318,12 @@
                     <label for="wp-bg-music">{{ $t('quiz_config.settings.bg_music') }}</label>
                     <select id="wp-bg-music" v-model="selectedMusicId" class="setting-select">
                       <option value="">{{ $t('quiz_config.settings.none') }}</option>
+                      <option
+                        v-if="selectedTrackMissingFromList"
+                        :value="selectedMusicId"
+                      >
+                        {{ $t('quiz_config.settings.track_unavailable') }}
+                      </option>
                       <option v-for="track in tracks" :key="track.id" :value="track.id">
                         {{ track.name }}
                       </option>
@@ -460,7 +472,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '../components/AdminLayout.vue'
 import AppIcon from '../components/AppIcon.vue'
@@ -560,6 +572,7 @@ const savedSnapshot = ref('')
 const stickyTopPx = ref(107)
 
 let loadSeq = 0
+let saveSeq = 0
 let previousLibraryFocus = null
 let topbarObserver = null
 
@@ -664,7 +677,16 @@ function normalizeQuizQuestion(raw, { regenerateId = false, clearImages = false 
     if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
   }
   if (q.type === 'true_false') {
-    q.answers = ['True', 'False', '', '']
+    // Only fill missing/blank True/False options; never overwrite existing
+    // (already localized) answers.
+    if (
+      !Array.isArray(q.answers) ||
+      q.answers.length < 2 ||
+      !String(q.answers[0] || '').trim() ||
+      !String(q.answers[1] || '').trim()
+    ) {
+      q.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
+    }
     if (q.correctIndex > 1) q.correctIndex = 0
   }
   if (q.type === 'number') {
@@ -693,11 +715,15 @@ function normalizeSimpleQuizQuestion(raw, { regenerateId = false } = {}) {
 
 function normalizeWrongPicturesRound(raw, { regenerateId = false, clearImages = false } = {}) {
   const r = JSON.parse(JSON.stringify(raw || {}))
+  // Guard against corrupted persisted rounds that carry timeLimit as ""/null.
+  const parsedTimeLimit = r.timeLimit === '' || r.timeLimit === null || r.timeLimit === undefined
+    ? 60
+    : Number(r.timeLimit)
   return {
     id: regenerateId || !r.id ? makeItemId() : r.id,
     type: 'wrong_pictures',
     text: r.text || '',
-    timeLimit: r.timeLimit !== undefined ? r.timeLimit : 60,
+    timeLimit: Number.isInteger(parsedTimeLimit) && parsedTimeLimit >= 0 ? parsedTimeLimit : 60,
     explainTime: r.explainTime !== undefined ? r.explainTime : 5,
     imageId: clearImages ? null : (r.imageId || null),
     imageAlt: clearImages ? '' : (r.imageAlt || ''),
@@ -745,7 +771,7 @@ function createDefaultQuestion(type = 'classic') {
     ]
     newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
   } else if (type === 'wrong_pictures') {
-    newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 10, maxPoints: 50 }
+    newQuestion.wrongPictureConfig = { targets: [], tolerancePercent: 5, maxPoints: 50 }
   } else if (type === 'true_false') {
     newQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
     newQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
@@ -756,8 +782,8 @@ function createDefaultQuestion(type = 'classic') {
   return newQuestion
 }
 
-function serializeState() {
-  const base = { name: moduleName.value }
+function serializeState(nameOverride = moduleName.value) {
+  const base = { name: nameOverride }
   if (moduleType.value === 'quiz' || moduleType.value === 'wrong_pictures') {
     return JSON.stringify({
       ...base,
@@ -795,13 +821,19 @@ const isDirty = computed(() => {
   return serializeState() !== savedSnapshot.value
 })
 
-useUnsavedChanges(isDirty)
+// L1: param-only navigation (mod-1 -> mod-2) must respect the dirty guard too.
+const { confirmLeave } = useUnsavedChanges(isDirty)
+onBeforeRouteUpdate(async () => confirmLeave())
+
+const tracksLoadFailed = ref(false)
 
 async function fetchTracks() {
   try {
     tracks.value = await getTracks()
+    tracksLoadFailed.value = false
   } catch {
     tracks.value = []
+    tracksLoadFailed.value = true
   }
 }
 
@@ -810,6 +842,9 @@ async function loadEditorContext() {
   const currentEventId = eventId.value
   const currentModuleId = moduleId.value
 
+  // A previous module's in-flight save must never keep this module's Save
+  // button stuck disabled.
+  saving.value = false
   loading.value = true
   loadError.value = ''
   nameError.value = ''
@@ -1016,10 +1051,28 @@ const updateTimeline = (nextTimeline) => {
   timeline.value = Array.isArray(nextTimeline) ? nextTimeline : []
 }
 
+// The resolved audio URL of the currently selected track. When /tracks fails
+// (or did not include the selected track yet), fall back to the URL previously
+// persisted on the module so saving does not silently wipe the music choice.
 function getSelectedMusicUrl() {
   if (!selectedMusicId.value) return ''
-  return tracks.value.find(tr => tr.id === selectedMusicId.value)?.url || ''
+  const found = tracks.value.find(tr => tr.id === selectedMusicId.value)
+  if (found?.url) return found.url
+  if (
+    selectedMusicId.value === moduleData.value?.backgroundMusicId &&
+    moduleData.value?.backgroundMusicUrl
+  ) {
+    return moduleData.value.backgroundMusicUrl
+  }
+  return ''
 }
+
+// Show the persisted selection even when it is missing from the loaded track
+// list, so the <select> never silently displays "None".
+const selectedTrackMissingFromList = computed(() => (
+  Boolean(selectedMusicId.value) &&
+  !tracks.value.some(tr => tr.id === selectedMusicId.value)
+))
 
 async function handleSave() {
   if (saving.value) return
@@ -1046,6 +1099,13 @@ async function handleSave() {
     return
   }
 
+  // Snapshot everything that participates in this save BEFORE awaiting so that
+  // neither in-flight edits nor navigation to another module (which bumps
+  // loadSeq) can corrupt what is persisted or what the dirty baseline becomes.
+  const activeLoadSeq = loadSeq
+  const activeSaveSeq = ++saveSeq
+  const snapshotBeingSaved = serializeState(trimmedName)
+
   saving.value = true
   try {
     const eId = encodeURIComponent(eventId.value)
@@ -1053,38 +1113,52 @@ async function handleSave() {
     const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() }
 
     if (moduleType.value === 'quiz' || moduleType.value === 'wrong_pictures') {
+      const questionsPayload = questions.value
+      const musicId = selectedMusicId.value
+      const musicUrl = getSelectedMusicUrl()
+      const audioOutputValue = audioOutput.value
+      const dataPayload = {
+        questions: questionsPayload,
+        backgroundMusicId: musicId,
+        backgroundMusicUrl: musicUrl,
+        audioOutput: audioOutputValue
+      }
       const questionsRes = await fetch(`${API_BASE_URL}/events/${eId}/modules/${mId}/quiz/questions`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify(questions.value)
+        body: JSON.stringify(questionsPayload)
       })
       if (!questionsRes.ok) throw new Error('Failed to save questions')
 
-      const musicUrl = getSelectedMusicUrl()
       const modRes = await fetch(`${API_BASE_URL}/events/${eId}/modules/${mId}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
           name: trimmedName,
-          data: {
-            questions: questions.value,
-            backgroundMusicId: selectedMusicId.value,
-            backgroundMusicUrl: musicUrl,
-            audioOutput: audioOutput.value
-          }
+          data: dataPayload
         })
       })
       if (!modRes.ok) throw new Error('Failed to save module config')
+      if (activeLoadSeq !== loadSeq) return
+      // Retain the resolved URL so subsequent saves keep it even if /tracks
+      // fails later on.
+      moduleData.value = {
+        ...moduleData.value,
+        backgroundMusicId: musicId,
+        backgroundMusicUrl: musicUrl,
+        audioOutput: audioOutputValue
+      }
     } else if (moduleType.value === 'simple_quiz') {
+      const dataPayload = {
+        questions: questions.value,
+        allowAnswerReveal: allowReveal.value
+      }
       const modRes = await fetch(`${API_BASE_URL}/events/${eId}/modules/${mId}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
           name: trimmedName,
-          data: {
-            questions: questions.value,
-            allowAnswerReveal: allowReveal.value
-          }
+          data: dataPayload
         })
       })
       if (!modRes.ok) throw new Error('Failed to save module config')
@@ -1104,12 +1178,14 @@ async function handleSave() {
         })
       })
       if (!modRes.ok) throw new Error('Failed to publish form configuration')
+      if (activeLoadSeq !== loadSeq) return
       moduleData.value = JSON.parse(JSON.stringify(nextData))
     } else if (moduleType.value === 'teams') {
+      const configPayload = teamsConfig.value
       if (teamsInitialized.value) {
         await teamsActivity.action(eventId.value, moduleId.value, {
           action: 'configure',
-          config: teamsConfig.value
+          config: configPayload
         })
       }
       const modRes = await fetch(`${API_BASE_URL}/events/${eId}/modules/${mId}`, {
@@ -1118,23 +1194,32 @@ async function handleSave() {
         body: JSON.stringify({
           name: trimmedName,
           data: {
-            teamsConfig: teamsConfig.value
+            teamsConfig: configPayload
           }
         })
       })
       if (!modRes.ok) throw new Error('Failed to save teams configuration')
     }
 
-    moduleName.value = trimmedName
+    if (activeLoadSeq !== loadSeq) return
+    // Never serializeState() here: edits made while the save was in flight
+    // must keep the screen dirty.
+    if (moduleName.value.trim() === trimmedName) {
+      moduleName.value = trimmedName
+    }
     if (moduleObj.value) {
       moduleObj.value = { ...moduleObj.value, name: trimmedName }
     }
-    savedSnapshot.value = serializeState()
+    savedSnapshot.value = snapshotBeingSaved
     success(t('module_editor.saved_success'))
   } catch {
-    error(t('module_editor.save_error'))
+    if (activeLoadSeq === loadSeq) {
+      error(t('module_editor.save_error'))
+    }
   } finally {
-    saving.value = false
+    if (activeLoadSeq === loadSeq && activeSaveSeq === saveSeq) {
+      saving.value = false
+    }
   }
 }
 
@@ -1199,14 +1284,14 @@ function closeLibraryModal() {
 function formatTemplateItemCount(tpl) {
   if (moduleType.value === 'form') {
     const count = Array.isArray(tpl.data?.timeline) ? tpl.data.timeline.length : 0
-    return t('add_module.items_count_steps', { count })
+    return t('add_module.items_count_steps', { count }, count)
   }
   if (moduleType.value === 'wrong_pictures') {
     const count = Array.isArray(tpl.data?.questions) ? tpl.data.questions.length : 0
-    return t('add_module.items_count_rounds', { count })
+    return t('add_module.items_count_rounds', { count }, count)
   }
   const count = Array.isArray(tpl.data?.questions) ? tpl.data.questions.length : 0
-  return t('add_module.items_count_questions', { count })
+  return t('add_module.items_count_questions', { count }, count)
 }
 
 async function loadTemplate(tpl) {

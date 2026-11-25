@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '../components/AdminLayout.vue'
@@ -140,6 +140,7 @@ import AppIcon from '../components/AppIcon.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
 import { useDialog } from '../composables/useDialog'
+import { useUnsavedChanges } from '../composables/useUnsavedChanges'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -158,6 +159,20 @@ const nameError = ref('')
 
 const formCardRef = ref(null)
 const nameInputRef = ref(null)
+
+// Dirty tracking for the create/edit event form (L1).
+const formInitialSnapshot = ref('')
+const serializeEventForm = () => JSON.stringify({
+  name: name.value,
+  description: description.value,
+  language: eventLanguage.value
+})
+const isFormDirty = computed(() => (
+  showForm.value &&
+  formInitialSnapshot.value !== '' &&
+  serializeEventForm() !== formInitialSnapshot.value
+))
+useUnsavedChanges(isFormDirty)
 
 const fetchEvents = async () => {
   isLoading.value = true
@@ -193,6 +208,7 @@ const toggleNewEventForm = async () => {
   eventLanguage.value = locale.value
   nameError.value = ''
   showForm.value = true
+  formInitialSnapshot.value = serializeEventForm()
   await focusForm()
 }
 
@@ -276,6 +292,7 @@ const editEvent = async (event) => {
   editingId.value = event.id
   nameError.value = ''
   showForm.value = true
+  formInitialSnapshot.value = serializeEventForm()
   await focusForm()
 }
 
@@ -286,6 +303,7 @@ const cancelEdit = () => {
   eventLanguage.value = locale.value
   nameError.value = ''
   showForm.value = false
+  formInitialSnapshot.value = ''
 }
 
 const viewDetails = (event) => {

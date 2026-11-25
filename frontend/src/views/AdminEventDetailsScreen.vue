@@ -101,6 +101,7 @@
                     type="button"
                     class="action-button"
                     :class="currentEvent?.isActive ? 'stop-button' : 'start-button'"
+                    :disabled="isTogglingStatus"
                     @click="toggleStatus"
                   >
                     {{ currentEvent?.isActive ? $t('admin.details.stop_event') : $t('admin.details.start_event') }}
@@ -387,16 +388,22 @@ const handleModuleCreated = () => {
   fetchEventDetails()
 }
 
+const isTogglingStatus = ref(false)
 const toggleStatus = async () => {
-  if (!currentEvent.value?.id) return
+  if (!currentEvent.value?.id || isTogglingStatus.value) return
+  // Guard against stale responses landing after the user switched events (L2).
+  const targetEventId = String(currentEvent.value.id)
+  const seq = eventFetchSeq
+  const nextActive = !currentEvent.value.isActive
+  isTogglingStatus.value = true
   try {
-    const nextActive = !currentEvent.value.isActive
-    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(currentEvent.value.id)}/status`, {
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(targetEventId)}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ isActive: nextActive })
     })
 
+    if (seq !== eventFetchSeq || String(currentEvent.value?.id || '') !== targetEventId) return
     if (response.ok) {
       currentEvent.value.isActive = nextActive
       writeStoredEvent(currentEvent.value)
@@ -407,6 +414,8 @@ const toggleStatus = async () => {
   } catch (err) {
     console.error('Error updating status:', err)
     error(t('event_details.toast_status_failed'))
+  } finally {
+    isTogglingStatus.value = false
   }
 }
 
@@ -435,31 +444,46 @@ const hostModule = (module) => {
 
 const toggleModuleStatus = async (module) => {
   if (!currentEvent.value?.id) return
+  const targetEventId = String(currentEvent.value.id)
+  const seq = eventFetchSeq
+  const eId = encodeURIComponent(targetEventId)
+  const mId = encodeURIComponent(module.id)
 
   if (module.isActive && (module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz')) {
     try {
       const resetPath = module.type === 'simple_quiz'
-        ? `${API_BASE_URL}/events/${encodeURIComponent(currentEvent.value.id)}/modules/${encodeURIComponent(module.id)}/simple-quiz/reset`
-        : `${API_BASE_URL}/events/${encodeURIComponent(currentEvent.value.id)}/modules/${encodeURIComponent(module.id)}/quiz/reset`
-      await fetch(resetPath, {
+        ? `${API_BASE_URL}/events/${eId}/modules/${mId}/simple-quiz/reset`
+        : `${API_BASE_URL}/events/${eId}/modules/${mId}/quiz/reset`
+      const resetRes = await fetch(resetPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }
       })
+      if (!resetRes.ok) {
+        // A live session that cannot be reset must not be silently flipped
+        // to inactive (L7c).
+        const msg = (await resetRes.text().catch(() => '')).trim()
+        error(msg || t('event_details.toast_module_status_failed'))
+        return
+      }
     } catch (err) {
       console.error('Error resetting quiz session:', err)
+      error(t('event_details.toast_module_status_failed'))
+      return
     }
   }
 
   try {
     const nextActive = !module.isActive
-    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(currentEvent.value.id)}/modules/${encodeURIComponent(module.id)}/status`, {
+    const response = await fetch(`${API_BASE_URL}/events/${eId}/modules/${mId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ isActive: nextActive })
     })
 
     if (response.ok) {
-      await fetchEventDetails()
+      if (seq === eventFetchSeq && String(currentEvent.value?.id || '') === targetEventId) {
+        await fetchEventDetails()
+      }
       success(t(nextActive ? 'event_details.toast_module_started' : 'event_details.toast_module_stopped'))
     } else {
       error(t('event_details.toast_module_status_failed'))

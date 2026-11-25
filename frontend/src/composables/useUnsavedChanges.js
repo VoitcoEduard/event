@@ -3,6 +3,38 @@ import { onBeforeRouteLeave } from 'vue-router'
 import i18n from '../i18n.js'
 import { useDialog } from './useDialog.js'
 
+// All active guards, so flows outside the router (e.g. signing out) can ask
+// every screen-mounted editor whether it is safe to leave.
+const activeGuards = []
+let bypassLeaveDepth = 0
+
+/**
+ * Confirm pending unsaved changes across all screens mounted by this
+ * application. Returns false (and shows a single confirm dialog) when any
+ * guard is dirty and the user chooses to stay.
+ */
+export async function confirmActiveUnsavedChanges() {
+  for (const guard of [...activeGuards]) {
+    if (!guard.isDirty.value) continue
+    const allowed = await guard.confirmLeave()
+    if (!allowed) return false
+  }
+  return true
+}
+
+/**
+ * Run fn (e.g. a navigation to /login) without triggering the unsaved-changes
+ * guards again.
+ */
+export async function runBypassingUnsavedGuard(fn) {
+  bypassLeaveDepth += 1
+  try {
+    return await fn()
+  } finally {
+    bypassLeaveDepth -= 1
+  }
+}
+
 export function useUnsavedChanges(isDirtySource, options = {}) {
   const { confirm } = useDialog()
   const isDirty = computed(() => Boolean(toValue(isDirtySource)))
@@ -56,10 +88,22 @@ export function useUnsavedChanges(isDirtySource, options = {}) {
     { immediate: true }
   )
 
-  onScopeDispose(detachBeforeUnload)
+  const guard = { isDirty, confirmLeave }
+  activeGuards.push(guard)
+  const removeGuard = () => {
+    const idx = activeGuards.indexOf(guard)
+    if (idx !== -1) activeGuards.splice(idx, 1)
+  }
+  onScopeDispose(() => {
+    detachBeforeUnload()
+    removeGuard()
+  })
 
   if (getCurrentInstance()) {
-    onBeforeRouteLeave(async () => confirmLeave())
+    onBeforeRouteLeave(async () => {
+      if (bypassLeaveDepth > 0) return true
+      return confirmLeave()
+    })
   }
 
   return {

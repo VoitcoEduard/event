@@ -217,6 +217,8 @@ const searchQuery = ref('')
 const selectedTemplateId = ref(null)
 const submitting = ref(false)
 
+let templatesFetchSeq = 0
+
 const nameError = ref('')
 const templateSelectionError = ref('')
 const submitError = ref('')
@@ -265,6 +267,11 @@ function resetState() {
   templateSelectionError.value = ''
   submitError.value = ''
   submitting.value = false
+  // Re-fetch the template list on every open so added/deleted templates show up.
+  templatesLoaded.value = false
+  templatesLoadError.value = false
+  loadingTemplates.value = false
+  templatesFetchSeq++
 }
 
 watch(
@@ -290,18 +297,24 @@ watch(
 )
 
 async function fetchTemplates() {
+  const seq = ++templatesFetchSeq
   loadingTemplates.value = true
   templatesLoadError.value = false
   try {
     const res = await fetch(`${API_BASE_URL}/templates`)
+    if (seq !== templatesFetchSeq) return
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const normalized = normalizeTemplates(await res.json())
+    if (seq !== templatesFetchSeq) return
     templates.value = normalized
     templatesLoaded.value = true
   } catch {
+    if (seq !== templatesFetchSeq) return
     templatesLoadError.value = true
   } finally {
-    loadingTemplates.value = false
+    if (seq === templatesFetchSeq) {
+      loadingTemplates.value = false
+    }
   }
 }
 
@@ -373,7 +386,16 @@ function cloneAndNormalizeTemplateData(type, rawData) {
         }
       }
       if (next.type === 'true_false') {
-        next.answers = ['True', 'False', '', '']
+        // Only fill missing/blank True/False options; never overwrite existing
+        // (already localized) answers.
+        if (
+          !Array.isArray(next.answers) ||
+          next.answers.length < 2 ||
+          !String(next.answers[0] || '').trim() ||
+          !String(next.answers[1] || '').trim()
+        ) {
+          next.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
+        }
         if (next.correctIndex > 1 || next.correctIndex < 0) next.correctIndex = 0
       }
       if (next.type === 'number') {
@@ -403,9 +425,9 @@ function cloneAndNormalizeTemplateData(type, rawData) {
           : target))
         : []
       next.wrongPictureConfig = {
-        maxPoints: wp.maxPoints ?? 100,
-        tolerancePercent: wp.tolerancePercent ?? 10,
-        showTargetCount: wp.showTargetCount ?? true,
+        maxPoints: wp.maxPoints ?? 50,
+        tolerancePercent: wp.tolerancePercent ?? 5,
+        showTargetCount: wp.showTargetCount ?? false,
         ...wp,
         targets
       }

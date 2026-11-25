@@ -271,11 +271,13 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 	event, err := h.eventByModule(ctx, moduleID)
 	if err != nil || event == nil {
 		log.Printf("Error finding event for module %s: %v", moduleID, err)
+		h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{"code": "start_failed", "message": "Could not load quiz event. Please try again."}}))
 		return
 	}
 	questions, err := questionsForModule(event, moduleID)
 	if err != nil {
 		log.Printf("Cannot start quiz for module %s: %v", moduleID, err)
+		h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{"code": "start_failed", "message": "Cannot start quiz: " + err.Error()}}))
 		return
 	}
 	aspects, err := h.WrongPictureAspects(ctx, questions)
@@ -290,7 +292,17 @@ func (h *QuizHub) processHostStartQuiz(client *Client, msg ClientMessage) {
 		return
 	}
 
-	_ = h.startQuizSessionLocked(h.sessions[moduleID], client.ModuleID, event.ID, questions, aspects)
+	if err := h.startQuizSessionLocked(h.sessions[moduleID], client.ModuleID, event.ID, questions, aspects); err != nil {
+		if errors.Is(err, ErrQuizFinishing) {
+			h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{
+				"code": "quiz_finishing", "message": "Quiz results are being saved. Wait a moment and try again.",
+			}}))
+		} else {
+			h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]any{
+				"code": "start_failed", "message": err.Error(),
+			}}))
+		}
+	}
 }
 
 func questionsForModule(event *models.Event, moduleID string) ([]models.QuizQuestion, error) {

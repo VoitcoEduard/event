@@ -32,16 +32,22 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 		defer cancel()
 		event, err := h.playerIdentity.GetEventByModule(ctx, moduleID)
 		if err != nil {
+			if errors.Is(err, postgres.ErrNotFound) {
+				h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This quiz is no longer available."}}))
+			} else {
+				h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_failed", "message": "Could not join the quiz. Please try again."}}))
+			}
 			return
 		}
 		quizModule := false
 		for _, module := range event.Modules {
-			if module.ID == moduleID && module.Type == models.ModuleTypeQuiz {
+			if module.ID == moduleID && (module.Type == models.ModuleTypeQuiz || module.Type == models.ModuleTypeWrongPictures) {
 				quizModule = true
 				break
 			}
 		}
 		if !quizModule {
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This module is not a live quiz."}}))
 			return
 		}
 		if !event.IsActive {
@@ -50,6 +56,7 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 		}
 		hasProof, validProof, proofErr := h.playerIdentity.CheckParticipantProof(ctx, event.ID, userID, participantSecret)
 		if proofErr != nil && !errors.Is(proofErr, postgres.ErrNotFound) {
+			h.sendToClient(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_failed", "message": "Could not verify player identity. Please try again."}}))
 			return
 		}
 		if !hasProof || !validProof {
@@ -230,9 +237,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 	if session != nil && client.quizBinding.eventID != session.EventID {
 		return
 	}
-	if session != nil && session.State == "finishing" {
-		return
-	}
 	if session != nil {
 		ack := func(accepted bool, reason string, awarded int) {
 			if client.send == nil || !h.clients[client] {
@@ -263,6 +267,12 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		}
 		if runID, _ := data["runId"].(string); runID != "" && runID != session.RunID {
 			ack(false, "wrong_run", 0)
+			return
+		}
+		if session.State == "finishing" {
+			// Results are being persisted: explicitly NACK so the player UI
+			// does not stay stuck on "Waiting for confirmation…".
+			ack(false, "quiz_finishing", 0)
 			return
 		}
 		DebugLog("player:signal - Session found, state: %s, currentIndex: %d, questionWindows: %d",

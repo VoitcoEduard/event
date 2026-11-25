@@ -158,7 +158,7 @@
                 v-show="!isTrueFalse || idx < 2"
             >
                 <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" aria-hidden="true" />
-                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ isTrueFalse ? (idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false')) : answer }}</div>
             </div>
           </template>
         </div>
@@ -344,7 +344,7 @@
                   v-show="!isTrueFalse || idx < 2"
                 >
                   <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" aria-hidden="true" />
-                  <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                  <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ isTrueFalse ? (idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false')) : answer }}</div>
                   <AppIcon v-if="isAnswerCorrect(idx)" class="result-check-icon" name="check" :size="18" aria-hidden="true" />
                 </div>
             </div>
@@ -954,7 +954,9 @@ onMounted(async () => {
 
     // 2. Register handlers BEFORE connecting (server sends messages immediately)
     quizWS.on('cmd:error', (payload) => {
-        if (payload?.code === 'save_failed' || payload?.code === 'invalid_image_metadata') showError(payload.message)
+        if (['save_failed', 'invalid_image_metadata', 'quiz_finishing', 'start_failed'].includes(payload?.code) && payload?.message) {
+            showError(payload.message)
+        }
     })
 
     quizWS.on('cmd:state', (payload) => {

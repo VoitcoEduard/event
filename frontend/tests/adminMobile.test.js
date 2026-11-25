@@ -20,7 +20,9 @@ const ADMIN_VIEWS = [
   'QuizHostScreen.vue',
   'SimpleQuizHostScreen.vue',
   'SimpleQuizJudgeScreen.vue',
-  'QuizLibraryScreen.vue'
+  'QuizLibraryScreen.vue',
+  'AdminModuleEditorScreen.vue',
+  'AdminTemplateEditorScreen.vue'
 ]
 
 const ADMIN_COMPONENTS = [
@@ -30,17 +32,13 @@ const ADMIN_COMPONENTS = [
   'AddModuleModal.vue',
   'Toast.vue',
   'FormEditor.vue',
-  'FormModuleConfig.vue',
   'QuizEditor.vue',
   'QuizQuestionEditor.vue',
   'QuestionTypeSelector.vue',
   'ImageOptionEditor.vue',
   'ImageUploader.vue',
   'CoordinatePicker.vue',
-  'QuizModuleConfig.vue',
-  'WrongPicturesModuleConfig.vue',
-  'SimpleQuizModuleConfig.vue',
-  'TeamsModuleConfig.vue',
+  'WrongPicturesEditor.vue',
   'TeamsConfigFields.vue',
   'TeamsActivityAdmin.vue'
 ]

@@ -177,6 +177,16 @@ function validateNumberQuestion(question, index, errors) {
   }
 }
 
+// A timeLimit of undefined means "not configured"; anything else must be a
+// whole number of seconds >= 0 so the JSON schema (Go int) can round-trip it.
+function validateTimeLimit(question, index, errors) {
+  if (question?.timeLimit === undefined) return
+  const limit = parseFiniteNumber(question.timeLimit)
+  if (!Number.isFinite(limit) || !Number.isInteger(limit) || limit < 0) {
+    errors.push(createError(index, 'timeLimit', 'quiz_config.validation.time_limit_invalid'))
+  }
+}
+
 function validateWrongPicturesItem(item, index, textMessageKey, errors) {
   if (!hasNonEmptyText(item?.text)) {
     errors.push(createError(index, 'text', textMessageKey))
@@ -200,6 +210,7 @@ function validateWrongPicturesItem(item, index, textMessageKey, errors) {
     }
   }
 
+  validateTimeLimit(item, index, errors)
   validatePoints(item, 'wrong_pictures', index, errors)
 }
 
@@ -242,6 +253,7 @@ export function validateQuizQuestion(question, index = 0, options = {}) {
     errors.push(createError(index, 'text', 'quiz_config.validation.text_required'))
   }
 
+  validateTimeLimit(question, index, errors)
   validatePoints(question, type, index, errors)
 
   if (SINGLE_CHOICE_TYPES.has(type)) {

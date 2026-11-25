@@ -401,3 +401,43 @@ describe('QuizHostScreen range marker with maxValue 0 (Bug #8)', () => {
     expect(wrapper.find('.timer').text()).toBe('15')
   })
 })
+
+describe('QuizHostScreen cmd:error surfacing (M1)', () => {
+  it('shows error toasts for quiz_finishing and start_failed cmd errors, ignores unmapped codes', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          pin: '4321',
+          modules: [{
+            id: 'm1',
+            data: {
+              questions: [
+                { text: 'Question 1', type: 'multiple_choice', timeLimit: 20, answers: ['A', 'B'], correctIndex: 0 }
+              ]
+            }
+          }]
+        })
+      })
+    ))
+
+    wrapper = mount(QuizHostScreen, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('cmd:error', { code: 'quiz_finishing', message: 'Quiz results are being saved. Wait a moment and try again.' })
+    await flushPromises()
+    expect(toastMock.error).toHaveBeenCalledWith('Quiz results are being saved. Wait a moment and try again.')
+
+    toastMock.error.mockClear()
+    mockQuizWS.emit('cmd:error', { code: 'start_failed', message: 'Cannot start quiz: no questions' })
+    await flushPromises()
+    expect(toastMock.error).toHaveBeenCalledWith('Cannot start quiz: no questions')
+
+    // Unmapped codes without a message stay silent.
+    toastMock.error.mockClear()
+    mockQuizWS.emit('cmd:error', { code: 'something_else' })
+    mockQuizWS.emit('cmd:error', { code: 'start_failed' })
+    await flushPromises()
+    expect(toastMock.error).not.toHaveBeenCalled()
+  })
+})

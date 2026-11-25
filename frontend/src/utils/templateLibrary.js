@@ -1,5 +1,13 @@
 import { sanitizeAdminReturnTo } from '../router/index.js'
 import { newUUID } from './index.js'
+import i18n from '../i18n.js'
+
+const trueFalseAnswers = () => [
+  i18n.global.t('quiz.player.true'),
+  i18n.global.t('quiz.player.false'),
+  '',
+  ''
+]
 
 /** Canonical library tabs in display order. */
 export const LIBRARY_TABS = [
@@ -100,12 +108,18 @@ export function normalizeWrongPictureRound(rawRound = {}) {
     ? cfg.maxPoints
     : (rawRound?.scoringConfig?.maxPoints !== undefined ? rawRound.scoringConfig.maxPoints : 50)
 
+  // Guard against corrupted legacy templates that persisted timeLimit as "".
+  const rawTimeLimit = rawRound?.timeLimit
+  const parsedTimeLimit = rawTimeLimit === '' || rawTimeLimit === null || rawTimeLimit === undefined
+    ? 60
+    : Number(rawTimeLimit)
+
   return {
     ...rawRound,
     id: rawRound?.id || newUUID(),
     type: 'wrong_pictures',
     text: rawRound?.text || '',
-    timeLimit: rawRound?.timeLimit !== undefined ? rawRound.timeLimit : 60,
+    timeLimit: Number.isInteger(parsedTimeLimit) && parsedTimeLimit >= 0 ? parsedTimeLimit : 60,
     explainTime: rawRound?.explainTime !== undefined ? rawRound.explainTime : 5,
     imageId: rawRound?.imageId || null,
     imageAlt: rawRound?.imageAlt || '',
@@ -157,7 +171,7 @@ export function sanitizeTemplateQuestions(moduleType, rawQuestions = []) {
 
     if (item.type === 'true_false') {
       if (!Array.isArray(item.answers) || item.answers.length < 2 || !String(item.answers[0] || '').trim() || !String(item.answers[1] || '').trim()) {
-        item.answers = ['True', 'False', '', '']
+        item.answers = trueFalseAnswers()
       }
       if (item.correctIndex > 1) item.correctIndex = 0
     }

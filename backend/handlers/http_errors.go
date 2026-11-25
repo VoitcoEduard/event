@@ -56,15 +56,23 @@ func writeRequestError(w http.ResponseWriter, err error, status int) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
-	slog.Error("request failed", "status", status, "error", err)
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
+		// Client-side body size violations are expected noise on public
+		// routes; never log them as server errors.
+		slog.Debug("request body too large", "error", err)
 		http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)
 		return
 	}
 	if status == http.StatusBadRequest {
+		// Malformed client payloads are not server errors; keep them out of
+		// error-level logs while still responding 400.
+		slog.Debug("bad request", "error", err)
 		http.Error(w, "Invalid request", status)
 		return
+	}
+	if status >= http.StatusInternalServerError {
+		slog.Error("request failed", "status", status, "error", err)
 	}
 	http.Error(w, "Internal server error", status)
 }

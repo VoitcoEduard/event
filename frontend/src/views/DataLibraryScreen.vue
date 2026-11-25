@@ -195,7 +195,11 @@ async function saveRow(row) {
     await loadResponses()
     notice.value = t('data_library.notices.row_saved', { name: name ?? row.name })
   } catch (err) {
-    error.value = t('data_library.errors.save_failed', { message: err.message })
+    const code = err?.code
+    const message = ['points_required', 'points_integer', 'points_invalid'].includes(code)
+      ? t(`data_library.errors.${code}`)
+      : err.message
+    error.value = t('data_library.errors.save_failed', { message })
     try { await refreshScores() } catch { /* Keep the original save error visible. */ }
   } finally { busy.value = false }
 }
