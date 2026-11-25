@@ -960,6 +960,7 @@ onMounted(async () => {
     quizWS.on('cmd:state', (payload) => {
         // Handle state transitions from server
         const prevState = gameState.value
+        const prevIndex = currentQuestionIndex.value
         gameState.value = payload.state
         
         if (payload.currentIndex !== undefined) {
@@ -968,23 +969,22 @@ onMounted(async () => {
         
         // Handle transitions
         if (payload.state === 'question-active') {
-            // Restart timer when entering question state
-            if (prevState !== 'question-active' || payload.currentIndex !== currentQuestionIndex.value) {
+            // Restart timer when entering question state or advancing to a new question
+            if (prevState !== 'question-active' || (payload.currentIndex !== undefined && payload.currentIndex !== prevIndex)) {
                 startLocalTimer(currentQuestion.value?.timeLimit || 20)
             }
         } else if (payload.state === 'question-presenting') {
+            clearInterval(timerInterval)
             if (currentQuestionIndex.value === 0) {
                 displayedScores.value = {}
             }
             // Set time remaining to question time without starting timer
-            if (currentQuestion.value?.timeLimit) {
-                timeRemaining.value = currentQuestion.value.timeLimit
-            }
+            timeRemaining.value = currentQuestion.value?.timeLimit || 20
             startExplainTimer(payload.timeLimit || 5) // note: payload.timeLimit in cmd:state is the ExplainTime
             realTimeAnsweredCount.value = 0 // Reset for new question
             answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 } // Reset counts to zero
             playerSignals.value = [] // Reset slider player signals
-        } else if (payload.state === 'results') {
+        } else {
             clearInterval(timerInterval)
             clearInterval(explainTimerInterval)
         }

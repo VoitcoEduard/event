@@ -121,6 +121,7 @@ import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { simpleQuizApi } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
+import { useDialog } from '../composables/useDialog'
 
 const props = defineProps({
   eventName: { type: String, default: '' },
@@ -146,6 +147,7 @@ const goBackToEvent = (event) => {
 }
 const { t } = useI18n()
 const { success } = useToast()
+const { confirm: confirmDialog } = useDialog()
 
 const launched = ref(false)
 const stateStatus = ref('inactive')
@@ -222,9 +224,19 @@ const refresh = async () => {
   }
 }
 
-const wrap = (fn, confirmMsg = '') => async () => {
+const wrap = (fn, confirmOpts = null) => async () => {
   if (actionBusy.value) return
-  if (confirmMsg && !confirm(confirmMsg)) return
+  if (confirmOpts) {
+    const opts = typeof confirmOpts === 'string' ? { message: confirmOpts } : confirmOpts
+    const confirmed = await confirmDialog({
+      title: opts.title || t('dialog.confirm_title'),
+      message: opts.message,
+      confirmLabel: opts.confirmLabel || t('dialog.confirm'),
+      cancelLabel: t('dialog.cancel'),
+      destructive: opts.destructive ?? true
+    })
+    if (!confirmed) return
+  }
   actionBusy.value = true
   try {
     error.value = ''
@@ -247,8 +259,18 @@ const doOpen = wrap(() => simpleQuizApi.open(eventId, moduleId))
 const doLock = wrap(() => simpleQuizApi.lock(eventId, moduleId))
 const doNext = wrap(() => simpleQuizApi.next(eventId, moduleId))
 const doReveal = wrap(() => simpleQuizApi.reveal(eventId, moduleId))
-const doEnd = wrap(() => simpleQuizApi.endAnswering(eventId, moduleId), t('simple_quiz.host.confirm_end'))
-const doPublish = wrap(() => simpleQuizApi.publish(eventId, moduleId), t('simple_quiz.host.confirm_publish'))
+const doEnd = wrap(() => simpleQuizApi.endAnswering(eventId, moduleId), {
+  title: t('simple_quiz.host.end_answering'),
+  message: t('simple_quiz.host.confirm_end'),
+  confirmLabel: t('simple_quiz.host.end_answering'),
+  destructive: true
+})
+const doPublish = wrap(() => simpleQuizApi.publish(eventId, moduleId), {
+  title: t('simple_quiz.host.publish'),
+  message: t('simple_quiz.host.confirm_publish'),
+  confirmLabel: t('simple_quiz.host.publish'),
+  destructive: false
+})
 const doUpdate = wrap(() => simpleQuizApi.updatePublished(eventId, moduleId))
 const doComplete = wrap(() => simpleQuizApi.complete(eventId, moduleId))
 const doResume = wrap(() => simpleQuizApi.resume(eventId, moduleId))

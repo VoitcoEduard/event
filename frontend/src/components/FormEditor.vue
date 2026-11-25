@@ -357,14 +357,14 @@ const moveStep = (index, direction) => {
   display: none;
 }
 
-:global(.modal-container) .form-editor:not(.form-editor--page-flow) .scroll-content {
+.form-editor:not(.form-editor--page-flow) .scroll-content {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 20px;
   padding-bottom: 80px;
 }
 
-:global(.modal-container) .form-editor:not(.form-editor--page-flow) .modal-bottom-spacer {
+.form-editor:not(.form-editor--page-flow) .modal-bottom-spacer {
   display: block;
   height: 100px;
 }
@@ -581,7 +581,7 @@ const moveStep = (index, direction) => {
 }
 
 @container form-editor (inline-size <= 540px) {
-  :global(.modal-container) .form-editor:not(.form-editor--page-flow) .scroll-content {
+  .form-editor:not(.form-editor--page-flow) .scroll-content {
     padding: 12px;
     padding-bottom: 84px;
   }

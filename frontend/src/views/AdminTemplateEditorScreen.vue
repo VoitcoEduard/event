@@ -210,7 +210,7 @@ const breadcrumbs = computed(() => {
     ? (form.name.trim() || t('template_editor.untitled'))
     : t('template_editor.new_breadcrumb')
   return [
-    { label: t('admin_shell.library'), to: libraryTabLocation.value },
+    { label: t('admin_shell.library'), to: '/admin/library/quizzes' },
     { label: tabLabel.value, to: libraryTabLocation.value },
     { label: leaf }
   ]

@@ -334,6 +334,7 @@ import { useI18n } from 'vue-i18n'
 import QRCodeVue from 'qrcode.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
+import { useDialog } from '../composables/useDialog'
 import { getImageUrl, getScreensavers } from '../services/media'
 import AdminLayout from '../components/AdminLayout.vue'
 import AppIcon from '../components/AppIcon.vue'
@@ -342,6 +343,7 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const { success, error } = useToast()
+const { confirm: confirmDialog, prompt: promptDialog } = useDialog()
 
 const eventId = computed(() => {
   const raw = route.params?.eventId ?? route.params?.id ?? route.query?.eventId
@@ -449,8 +451,14 @@ const fetchTemplates = async () => {
 
 const saveAsTemplate = async () => {
   if (!activeSlide.value) return
-  const tplName = prompt(t('screen_manager.editor.template_name_prompt'), activeSlide.value.name)
-  if (!tplName) return
+  const tplName = await promptDialog({
+    title: t('screen_manager.editor.save_template'),
+    label: t('screen_manager.editor.template_name_prompt'),
+    defaultValue: activeSlide.value.name || '',
+    confirmLabel: t('dialog.confirm'),
+    cancelLabel: t('common.cancel')
+  })
+  if (!tplName || !tplName.trim()) return
 
   try {
     const payload = {
@@ -490,10 +498,17 @@ const closeImageSelector = () => {
   isImageSelectorOpen.value = false
 }
 
-const applyTemplate = (tpl) => {
+const applyTemplate = async (tpl) => {
   if (!activeSlide.value || !tpl.data) return
 
-  if (confirm(t('screen_manager.editor.apply_confirm', { name: tpl.name }))) {
+  const confirmed = await confirmDialog({
+    title: t('screen_manager.editor.apply_template'),
+    message: t('screen_manager.editor.apply_confirm', { name: tpl.name }),
+    confirmLabel: t('screen_manager.editor.apply_template'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (confirmed) {
     activeSlide.value.backgroundColor = tpl.data.backgroundColor || '#1E1E1E'
     activeSlide.value.backgroundImage = tpl.data.backgroundImage || ''
 
@@ -729,8 +744,15 @@ const addCustomSlide = () => {
   selectedElementId.value = null
 }
 
-const deleteSlide = (id) => {
-  if (confirm(t('screen_manager.editor.delete_slide_confirm'))) {
+const deleteSlide = async (id) => {
+  const confirmed = await confirmDialog({
+    title: t('dialog.confirm_title'),
+    message: t('screen_manager.editor.delete_slide_confirm'),
+    confirmLabel: t('admin.delete_btn'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (confirmed) {
     slides.value = slides.value.filter(s => s.id !== id)
     if (activeSlideId.value === id) {
       activeSlideId.value = slides.value[0]?.id || null

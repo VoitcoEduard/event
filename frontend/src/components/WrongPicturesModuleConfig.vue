@@ -38,6 +38,9 @@
               v-for="(question, index) in questions" 
               :key="question.id" 
               class="round-card"
+              @click="activeRoundIndex = index"
+              @focusin="activeRoundIndex = index"
+              @paste="(event) => handleRoundPaste(index, event)"
             >
               <div class="round-header">
                 <h3>Round {{ index + 1 }}</h3>
@@ -81,6 +84,7 @@
 
               <div class="image-management-section">
                 <ImageUploader 
+                  :ref="(el) => setRoundUploaderRef(index, el)"
                   v-model="question.imageId"
                   v-model:altText="question.imageAlt"
                   :eventId="eventId"
@@ -184,6 +188,7 @@ import { useI18n } from 'vue-i18n'
 import { API_BASE_URL, getAuthHeaders, normalizeTemplates } from '../utils'
 import { useToast } from '../composables/useToast'
 import { getTracks } from '../services/media'
+import { hasActiveBlockingModal, isPasteTargetInContainer } from '../utils/clipboard'
 import ImageUploader from './ImageUploader.vue'
 import CoordinatePicker from './CoordinatePicker.vue'
 import AppIcon from './AppIcon.vue'
@@ -209,6 +214,34 @@ const templates = ref([])
 const loadingTemplates = ref(false)
 const modalContainerRef = ref(null)
 const libraryModalRef = ref(null)
+const activeRoundIndex = ref(0)
+const roundUploaderRefs = new Map()
+
+const setRoundUploaderRef = (index, el) => {
+  if (el) {
+    roundUploaderRefs.set(index, el)
+  } else {
+    roundUploaderRefs.delete(index)
+  }
+}
+
+const handleRoundPaste = (index, event) => {
+  if (event?.defaultPrevented) return false
+  return roundUploaderRefs.get(index)?.handleClipboardPasteEvent?.(event) ?? false
+}
+
+const handleWindowPaste = (event) => {
+  if (!props.visible || showLibraryModal.value || event?.defaultPrevented) return
+  if (hasActiveBlockingModal(modalContainerRef.value)) return
+  if (!isPasteTargetInContainer(event?.target, modalContainerRef.value)) return
+
+  const idx = activeRoundIndex.value >= 0 && activeRoundIndex.value < questions.value.length
+    ? activeRoundIndex.value
+    : (questions.value.length === 1 ? 0 : -1)
+  if (idx >= 0) {
+    handleRoundPaste(idx, event)
+  }
+}
 
 let previouslyFocusedEl = null
 let previousLibraryTriggerEl = null
@@ -241,8 +274,10 @@ watch(() => props.visible, (isVisible, wasVisible) => {
   if (typeof window !== 'undefined') {
     if (isVisible) {
       window.addEventListener('keydown', handleGlobalKeydown)
+      window.addEventListener('paste', handleWindowPaste)
     } else {
       window.removeEventListener('keydown', handleGlobalKeydown)
+      window.removeEventListener('paste', handleWindowPaste)
     }
   }
   if (typeof document === 'undefined') return
@@ -286,6 +321,7 @@ watch(showLibraryModal, (isOpen, wasOpen) => {
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', handleGlobalKeydown)
+    window.removeEventListener('paste', handleWindowPaste)
   }
 })
 

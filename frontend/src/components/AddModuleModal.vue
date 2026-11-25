@@ -346,13 +346,13 @@ function selectTemplate(tpl) {
 function formatTemplateCount(tpl) {
   if (selectedType.value === 'form') {
     const count = Array.isArray(tpl.data?.timeline) ? tpl.data.timeline.length : 0
-    return t('add_module.items_count_steps', { count })
+    return t('add_module.items_count_steps', { count }, count)
   }
   const count = Array.isArray(tpl.data?.questions) ? tpl.data.questions.length : 0
   if (selectedType.value === 'wrong_pictures') {
-    return t('add_module.items_count_rounds', { count })
+    return t('add_module.items_count_rounds', { count }, count)
   }
-  return t('add_module.items_count_questions', { count })
+  return t('add_module.items_count_questions', { count }, count)
 }
 
 function cloneAndNormalizeTemplateData(type, rawData) {

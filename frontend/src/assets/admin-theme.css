@@ -695,17 +695,19 @@ html[data-admin-appearance="true"] :is(
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
 ) .upload-zone {
+  border-style: dashed !important;
+  border-width: 2px !important;
   border-color: var(--admin-border-strong) !important;
 }
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) .upload-zone:hover:not(.disabled) {
+) .upload-zone:hover:not(:disabled) {
   background: var(--admin-surface-hover) !important;
   border-color: var(--admin-primary) !important;
 }
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) .upload-zone.drag-over {
+) :is(.upload-zone.drag-over, .upload-zone.awaiting-paste) {
   background: var(--admin-primary-soft) !important;
   border-color: var(--admin-primary) !important;
 }
@@ -927,7 +929,7 @@ html[data-admin-appearance="true"] :is(
 
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn) {
+) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .paste-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn) {
   background: var(--admin-surface-subtle) !important;
   border: 1px solid var(--admin-border-strong) !important;
   color: var(--admin-text) !important;
@@ -935,7 +937,7 @@ html[data-admin-appearance="true"] :is(
 }
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn):hover:not(:disabled) {
+) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .paste-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn):hover:not(:disabled) {
   background: var(--admin-surface-hover) !important;
 }
 

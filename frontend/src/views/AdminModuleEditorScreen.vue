@@ -2074,7 +2074,7 @@ onUnmounted(() => {
   color: var(--admin-text-muted) !important;
 }
 
-:global(html[data-admin-appearance="true"] .module-editor-screen :is(.move-btn, .action-icon, .change-btn, .outline-move-btn)) {
+:global(html[data-admin-appearance="true"] .module-editor-screen :is(.move-btn, .action-icon, .change-btn, .paste-btn, .outline-move-btn)) {
   background: var(--admin-surface-subtle) !important;
   border: 1px solid var(--admin-border-strong) !important;
   color: var(--admin-text) !important;

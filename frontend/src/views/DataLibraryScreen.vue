@@ -96,11 +96,12 @@
 
 <script setup>
 import { ref, computed, watch, getCurrentInstance } from 'vue'
-import { useRoute, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
+import { useRoute, onBeforeRouteUpdate } from 'vue-router'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import AdminLayout from '../components/AdminLayout.vue'
 import { extractLabel } from '../utils/labelExtractor'
 import { isGame, isEditableGameScore, manualTarget, allowsManual, scoreRows, parsePoints } from '../utils/eventScores'
+import { useUnsavedChanges } from '../composables/useUnsavedChanges'
 
 const route = useRoute()
 const instance = getCurrentInstance()
@@ -224,12 +225,10 @@ async function saveResponse(response, key, value) {
   } catch (err) { error.value = t('data_library.errors.response_save_failed', { message: err.message }); try { await loadResponses() } catch { /* Preserve save error. */ } }
   finally { busy.value = false }
 }
-function canNavigate() {
-  if (busy.value || dirty.value) { error.value = t('data_library.errors.save_or_cancel_leave'); return false }
-  return true
-}
-onBeforeRouteLeave(canNavigate)
-onBeforeRouteUpdate(canNavigate)
+const { confirmLeave } = useUnsavedChanges(computed(() => busy.value || dirty.value), {
+  onConfirm: () => { drafts.value = {} }
+})
+onBeforeRouteUpdate(async () => confirmLeave())
 watch(target, () => { drafts.value = {}; notice.value = '' })
 watch(eventId, load, { immediate: true })
 </script>

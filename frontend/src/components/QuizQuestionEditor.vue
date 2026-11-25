@@ -1,5 +1,5 @@
 <template>
-  <div class="question-editor" :class="{ 'is-active': active, 'has-errors': hasAnyErrors }">
+  <div class="question-editor" :class="{ 'is-active': active, 'has-errors': hasAnyErrors }" @paste="handleQuestionPaste">
     <div class="question-editor-inner">
     <div class="editor-header">
       <div class="header-left">
@@ -29,6 +29,7 @@
       <div v-if="localQuestion.type !== 'wrong_pictures'" class="image-section">
         <label>{{ $t('quiz_config.question_editor.image_label') }}</label>
         <ImageUploader
+          ref="mainImageUploaderRef"
           v-model="localQuestion.imageId"
           v-model:altText="localQuestion.imageAlt"
           :event-id="eventId"
@@ -339,6 +340,7 @@
       
       <div class="image-management-section">
         <ImageUploader
+          ref="wrongPictureUploaderRef"
           v-model="localQuestion.imageId"
           v-model:altText="localQuestion.imageAlt"
           :event-id="eventId"
@@ -393,7 +395,7 @@
 </template>
 
 <script setup>
-import { reactive, watch, computed } from 'vue'
+import { reactive, ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import RangeComponent from './RangeComponent.vue'
 import ImageUploader from './ImageUploader.vue'
@@ -434,6 +436,22 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update', 'delete', 'change-type'])
+
+const mainImageUploaderRef = ref(null)
+const wrongPictureUploaderRef = ref(null)
+
+const handleQuestionPaste = (event) => {
+  if (event?.defaultPrevented) return false
+  if (localQuestion.type === 'correct_picture') return false
+  const uploader = localQuestion.type === 'wrong_pictures'
+    ? wrongPictureUploaderRef.value
+    : mainImageUploaderRef.value
+  return uploader?.handleClipboardPasteEvent?.(event) ?? false
+}
+
+defineExpose({
+  handleClipboardPasteEvent: handleQuestionPaste
+})
 
 const isTypeLocked = computed(() => Boolean(props.lockedType))
 const hasAnyErrors = computed(() => Boolean(props.errors && Object.keys(props.errors).length > 0))

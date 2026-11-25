@@ -1,5 +1,5 @@
 <template>
-  <div class="wrong-pictures-editor" :class="{ 'wrong-pictures-editor--page-flow': pageFlow }">
+  <div ref="editorRootRef" class="wrong-pictures-editor" :class="{ 'wrong-pictures-editor--page-flow': pageFlow }">
     <div class="scroll-content">
       <div v-if="localRounds.length === 0" class="empty-state">
         <AppIcon class="empty-icon" name="search" :size="42" aria-hidden="true" />
@@ -16,6 +16,7 @@
           :class="{ 'is-active': activeIndex === index, 'has-errors': hasRoundErrors(index) }"
           @click="handleRoundInteract(index)"
           @focusin="handleRoundInteract(index)"
+          @paste="(event) => handleRoundPaste(index, event)"
         >
           <div class="round-header">
             <h3>{{ $t('wrong_pictures.round_title', { number: index + 1 }) }}</h3>
@@ -121,6 +122,7 @@
 
           <div class="image-management-section">
             <ImageUploader
+              :ref="(el) => setRoundUploaderRef(index, el)"
               :model-value="round.imageId"
               :alt-text="round.imageAlt"
               :event-id="eventId"
@@ -164,12 +166,13 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDialog } from '../composables/useDialog'
 import ImageUploader from './ImageUploader.vue'
 import CoordinatePicker from './CoordinatePicker.vue'
 import AppIcon from './AppIcon.vue'
+import { hasActiveBlockingModal, isPasteTargetInContainer } from '../utils/clipboard'
 
 const { t } = useI18n()
 const { confirm: confirmDialog } = useDialog()
@@ -186,10 +189,58 @@ const props = defineProps({
 
 const emit = defineEmits(['update:rounds', 'update:modelValue', 'update:activeIndex', 'select-round'])
 
+const editorRootRef = ref(null)
 const localRounds = ref([])
+const lastInteractedIndex = ref(-1)
 const roundEls = new Map()
+const roundUploaderRefs = new Map()
 let lastEmittedRef = null
 let selfSelectedIndex = -1
+
+const setRoundUploaderRef = (index, el) => {
+  if (el) {
+    roundUploaderRefs.set(index, el)
+  } else {
+    roundUploaderRefs.delete(index)
+  }
+}
+
+const effectiveActiveIndex = computed(() => {
+  if (props.activeIndex >= 0 && props.activeIndex < localRounds.value.length) {
+    return props.activeIndex
+  }
+  if (lastInteractedIndex.value >= 0 && lastInteractedIndex.value < localRounds.value.length) {
+    return lastInteractedIndex.value
+  }
+  return localRounds.value.length === 1 ? 0 : -1
+})
+
+const handleRoundPaste = (index, event) => {
+  if (event?.defaultPrevented) return false
+  return roundUploaderRefs.get(index)?.handleClipboardPasteEvent?.(event) ?? false
+}
+
+const handleWindowPaste = (event) => {
+  if (event?.defaultPrevented) return
+  const targetIndex = effectiveActiveIndex.value
+  if (targetIndex < 0) return
+  if (hasActiveBlockingModal(editorRootRef.value)) return
+  if (!isPasteTargetInContainer(event?.target, editorRootRef.value)) return
+
+  handleRoundPaste(targetIndex, event)
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('paste', handleWindowPaste)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('paste', handleWindowPaste)
+  }
+})
 
 const normalizeRound = (round = {}) => ({
   id: round.id || `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -261,6 +312,7 @@ const scrollToRound = (index) => {
 }
 
 const handleRoundInteract = (index) => {
+  lastInteractedIndex.value = index
   if (props.activeIndex === index) return
   selfSelectedIndex = index
   emit('update:activeIndex', index)
@@ -362,7 +414,7 @@ defineExpose({
   padding: 0 0 24px;
 }
 
-:global(.modal-container) .wrong-pictures-editor:not(.wrong-pictures-editor--page-flow) .scroll-content {
+.wrong-pictures-editor:not(.wrong-pictures-editor--page-flow) .scroll-content {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 20px;

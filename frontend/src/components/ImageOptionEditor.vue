@@ -18,6 +18,7 @@
         :key="option.id"
         class="image-option-card"
         :class="{ 'is-correct': correctIndex === idx }"
+        @paste="(event) => handleOptionPaste(idx, event)"
       >
         <div class="option-header">
           <span class="option-number">{{ idx + 1 }}</span>
@@ -43,6 +44,7 @@
         </div>
         
         <ImageUploader
+          :ref="(el) => setOptionUploaderRef(idx, el)"
           v-model="option.imageId"
           :event-id="eventId"
           :module-id="moduleId"
@@ -79,6 +81,20 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'update:correctIndex'])
+
+const optionUploaderRefs = new Map()
+const setOptionUploaderRef = (idx, el) => {
+  if (el) {
+    optionUploaderRefs.set(idx, el)
+  } else {
+    optionUploaderRefs.delete(idx)
+  }
+}
+
+const handleOptionPaste = (idx, event) => {
+  if (event?.defaultPrevented) return
+  optionUploaderRefs.get(idx)?.handleClipboardPasteEvent?.(event)
+}
 
 const imageOptions = computed({
   get: () => props.modelValue,

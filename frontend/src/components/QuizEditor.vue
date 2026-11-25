@@ -1,5 +1,5 @@
 <template>
-  <div class="quiz-editor" :class="{ 'quiz-editor--page-flow': pageFlow, 'quiz-editor--with-outline': showOutline && questions.length > 0 }">
+  <div ref="quizEditorRef" class="quiz-editor" :class="{ 'quiz-editor--page-flow': pageFlow, 'quiz-editor--with-outline': showOutline && questions.length > 0 }">
     <aside
       v-if="showOutline && questions.length > 0"
       class="quiz-outline-sidebar"
@@ -99,6 +99,7 @@
            </div>
            <div class="question-component-wrapper">
               <QuizQuestionEditor 
+                 :ref="(el) => setQuestionEditorRef(index, el)"
                  :question="question" 
                  :index="index"
                  :event-id="eventId"
@@ -154,11 +155,12 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import QuizQuestionEditor from './QuizQuestionEditor.vue'
 import QuestionTypeSelector from './QuestionTypeSelector.vue'
 import AppIcon from './AppIcon.vue'
+import { hasActiveBlockingModal, isPasteTargetInContainer } from '../utils/clipboard'
 
 const TYPE_ICONS = {
   classic: 'quiz',
@@ -195,10 +197,53 @@ const emit = defineEmits([
   'select-question'
 ])
 
+const quizEditorRef = ref(null)
 const showTypeSelector = ref(false)
 const editingQuestionIndex = ref(null)
+const lastInteractedIndex = ref(-1)
 const questionEls = new Map()
+const questionEditorRefs = new Map()
 let selfSelectedIndex = -1
+
+const setQuestionEditorRef = (index, el) => {
+  if (el) {
+    questionEditorRefs.set(index, el)
+  } else {
+    questionEditorRefs.delete(index)
+  }
+}
+
+const effectiveActiveIndex = computed(() => {
+  if (props.activeIndex >= 0 && props.activeIndex < props.questions.length) {
+    return props.activeIndex
+  }
+  if (lastInteractedIndex.value >= 0 && lastInteractedIndex.value < props.questions.length) {
+    return lastInteractedIndex.value
+  }
+  return props.questions.length === 1 ? 0 : -1
+})
+
+const handleWindowPaste = (event) => {
+  if (event?.defaultPrevented || showTypeSelector.value) return
+  const targetIndex = effectiveActiveIndex.value
+  if (targetIndex < 0) return
+  if (hasActiveBlockingModal(quizEditorRef.value)) return
+  if (!isPasteTargetInContainer(event?.target, quizEditorRef.value)) return
+
+  questionEditorRefs.get(targetIndex)?.handleClipboardPasteEvent?.(event)
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('paste', handleWindowPaste)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('paste', handleWindowPaste)
+  }
+})
 
 const setQuestionEl = (index, el) => {
   if (el) {
@@ -232,12 +277,14 @@ const scrollToQuestion = (index) => {
 
 const selectAndScrollToQuestion = (index) => {
   selfSelectedIndex = -1
+  lastInteractedIndex.value = index
   emit('update:activeIndex', index)
   emit('select-question', index)
   scrollToQuestion(index)
 }
 
 const handleQuestionInteract = (index) => {
+  lastInteractedIndex.value = index
   if (props.activeIndex === index) return
   selfSelectedIndex = index
   emit('update:activeIndex', index)
@@ -302,6 +349,9 @@ defineExpose({
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-inline-size: 0;
 }
 
@@ -318,6 +368,9 @@ defineExpose({
 
 .quiz-outline-sidebar {
   width: 260px;
+  max-width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
   flex-shrink: 0;
   background-color: var(--admin-surface, #1C1C1E);
   border: 1px solid var(--admin-border, #3A3A3C);
@@ -361,12 +414,15 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-inline-size: 0;
+  max-width: 100%;
 }
 
 .outline-item {
   display: flex;
   align-items: center;
   gap: 4px;
+  box-sizing: border-box;
   border: 1px solid var(--admin-border, #3A3A3C);
   border-radius: 8px;
   background: var(--admin-surface-subtle, #2C2C2E);
@@ -597,14 +653,19 @@ defineExpose({
   display: none;
 }
 
-@container quiz-editor (inline-size <= 760px) {
+@media (max-width: 768px) {
   .quiz-editor--with-outline {
     flex-direction: column;
     gap: 12px;
   }
+}
 
+@container quiz-editor (inline-size <= 760px) {
   .quiz-outline-sidebar {
     width: 100%;
+    max-width: 100%;
+    min-inline-size: 0;
+    box-sizing: border-box;
     position: static;
     max-height: none;
     padding: 10px;
@@ -613,12 +674,14 @@ defineExpose({
   .outline-list {
     flex-direction: row;
     overflow-x: auto;
+    max-width: 100%;
+    min-inline-size: 0;
     padding-bottom: 4px;
   }
 
   .outline-item {
     flex: 0 0 auto;
-    max-width: 210px;
+    max-width: min(210px, 100%);
   }
 
   .outline-reorder {

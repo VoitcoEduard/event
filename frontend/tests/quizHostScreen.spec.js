@@ -359,4 +359,45 @@ describe('QuizHostScreen range marker with maxValue 0 (Bug #8)', () => {
 
     expect(wrapper.find('.srt-marker').attributes('style')).toContain('bottom: 75%')
   })
+
+  it('transitions cleanly from leaderboard to a true_false question and starts its timer even if question-presenting was skipped', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: async () => ({
+        pin: '4321',
+        modules: [{
+          id: 'm1',
+          data: {
+            questions: [
+              { text: 'Q1', type: 'classic', timeLimit: 20, answers: ['A', 'B', 'C', 'D'], correctIndex: 0 },
+              { text: 'Sky is blue?', type: 'true_false', timeLimit: 15, answers: ['True', 'False', '', ''], correctIndex: 0 },
+            ],
+          },
+        }],
+      }),
+    })))
+
+    wrapper = mount(QuizHostScreen, mountOpts)
+    await flushPromises()
+
+    // Simulate Q1 active -> leaderboard -> Q2 true_false presenting -> active
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0 })
+    await flushPromises()
+
+    mockQuizWS.emit('cmd:state', { state: 'leaderboard', currentIndex: 0 })
+    await flushPromises()
+
+    await wrapper.find('.host-controls .control-btn.primary').trigger('click')
+    expect(mockQuizWS.send).toHaveBeenCalledWith('host:next_question', { moduleId: 'm1' })
+
+    mockQuizWS.emit('cmd:state', { state: 'question-presenting', currentIndex: 1, timeLimit: 3 })
+    await flushPromises()
+    expect(wrapper.find('.question-counter').text()).toBe('2 / 2')
+    expect(wrapper.find('.question-text').text()).toBe('Sky is blue?')
+    expect(wrapper.find('.timer').text()).toBe('3')
+
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 1 })
+    await flushPromises()
+    expect(wrapper.find('.timer').text()).toBe('15')
+  })
 })

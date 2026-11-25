@@ -118,9 +118,11 @@ import { teamsActivity } from '../services/teamsActivity'
 import { newUUID } from '../utils'
 import { activityTotals, defaultTeamsConfig } from '../utils/teamsActivity'
 import TeamsConfigFields from './TeamsConfigFields.vue'
+import { useDialog } from '../composables/useDialog'
 import '../styles/teams-activity.css'
 const props = defineProps({ eventId: String, module: Object, modules: Array })
 const { t } = useI18n()
+const { confirm: confirmDialog } = useDialog()
 const { state, loading, disconnected, error, load } = useTeamsActivity(props.eventId, props.module.id, 'admin')
 const activity = computed(() => state.value?.activity)
 const visibleToPlayers = computed(() => !!(state.value?.module || props.module).isActive)
@@ -180,8 +182,26 @@ async function act(payload) {
 function award(team, points) { return act({ action: 'award', teamId: team.id, points, reason: reason.value }) }
 function editTeam(team) { teamForm.value = team ? { ...team } : { name: '', color: '#3B82F6', capacity: 0 } }
 async function saveTeam() { if (await act({ action: 'save_team', team: { ...teamForm.value } })) teamForm.value = null }
-function deleteTeam(team) { if (window.confirm(t('teams_module.confirm_delete', { name: team.name }))) act({ action: 'delete_team', teamId: team.id }) }
-function reshuffle() { if (window.confirm(t('teams_module.confirm_reshuffle'))) act({ action: 'distribute', reshuffle: true }) }
+async function deleteTeam(team) {
+  const confirmed = await confirmDialog({
+    title: t('teams_module.delete'),
+    message: t('teams_module.confirm_delete', { name: team.name }),
+    confirmLabel: t('teams_module.delete'),
+    cancelLabel: t('teams_module.cancel'),
+    destructive: true
+  })
+  if (confirmed) await act({ action: 'delete_team', teamId: team.id })
+}
+async function reshuffle() {
+  const confirmed = await confirmDialog({
+    title: t('teams_module.reshuffle'),
+    message: t('teams_module.confirm_reshuffle'),
+    confirmLabel: t('teams_module.reshuffle'),
+    cancelLabel: t('teams_module.cancel'),
+    destructive: true
+  })
+  if (confirmed) await act({ action: 'distribute', reshuffle: true })
+}
 async function toggleVisibility() {
   if (busy.value || loading.value) return
   busy.value = true; message.value = ''
@@ -198,8 +218,25 @@ async function showParticipants() { await nextTick(); focusPanel(participantPane
 async function assignToTeam() {
   if (await act({ action: 'assign', participantId: assignParticipantId.value, teamId: assignTeam.value.id })) assignTeam.value = null
 }
-function reopen() { if (window.confirm(t('teams_module.confirm_reopen'))) act({ action: 'reopen' }) }
-function complete() { if (window.confirm(t('teams_module.confirm_complete'))) act({ action: 'complete' }) }
+async function reopen() {
+  const confirmed = await confirmDialog({
+    title: t('teams_module.reopen'),
+    message: t('teams_module.confirm_reopen'),
+    confirmLabel: t('teams_module.reopen'),
+    cancelLabel: t('teams_module.cancel')
+  })
+  if (confirmed) await act({ action: 'reopen' })
+}
+async function complete() {
+  const confirmed = await confirmDialog({
+    title: t('teams_module.complete'),
+    message: t('teams_module.confirm_complete'),
+    confirmLabel: t('teams_module.complete'),
+    cancelLabel: t('teams_module.cancel'),
+    destructive: true
+  })
+  if (confirmed) await act({ action: 'complete' })
+}
 function showProjector() { window.open(`/projector/${props.eventId}`, '_blank', 'noopener') }
 watch(() => Boolean(assignTeam.value || teamForm.value), async (isOpen, wasOpen) => {
   if (typeof window !== 'undefined') {

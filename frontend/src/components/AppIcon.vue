@@ -40,6 +40,10 @@ const icons = {
   chevronRight: ['m9 18 6-6-6-6'],
   chevronUp: ['m18 15-6-6-6 6'],
   circle: ['M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z'],
+  clipboard: [
+    'M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z',
+    'M8 5H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2'
+  ],
   close: ['M6 6l12 12', 'M18 6 6 18'],
   copy: ['M8 8h11v11H8z', 'M5 16H4V5h11v1'],
   crown: ['m3 8 4 4 5-7 5 7 4-4-2 11H5L3 8Z', 'M5 16h14'],
