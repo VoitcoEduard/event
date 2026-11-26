@@ -1,4 +1,3 @@
-// Package database exposes application repositories backed by PostgreSQL.
 package database
 
 import (
@@ -181,7 +180,6 @@ func (r *EventSessionRepository) UpdateActiveModule(ctx context.Context, id, act
 	return r.DB.UpdateEventSessionActiveModule(ctx, id, activeModuleID, at)
 }
 
-// Used to preserve and verify the existing partial-update semantics.
 func buildEventSessionUpdate(v *models.EventSession) map[string]any {
 	m := map[string]any{"status": v.Status, "updatedAt": v.UpdatedAt}
 	if v.ActiveModuleID != "" {
@@ -346,5 +344,4 @@ func (r *TeamsActivityRepository) ByEvent(ctx context.Context, eventID string) (
 	return r.DB.TeamsActivities(ctx, eventID)
 }
 
-// EncodeJSON is shared by repository clients that handle polymorphic values.
 func EncodeJSON(v any) ([]byte, error) { return json.Marshal(v) }

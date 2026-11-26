@@ -33,7 +33,6 @@ type MediaResponse struct {
 	URL          string `json:"url"`
 }
 
-// Screensaver represents a screensaver image stored in the global library
 type Screensaver struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
@@ -43,7 +42,6 @@ type Screensaver struct {
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
-// ScreensaverResponse is the API response for screensaver items
 type ScreensaverResponse struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`

@@ -90,7 +90,6 @@ describe('AdminScreen (Phase 2)', () => {
     expect(wrapper.find('.back-button').exists()).toBe(false)
     expect(wrapper.find('.portal-link').attributes('href')).toBe('/')
 
-    // Open New Event form and test whitespace-only validation
     await wrapper.find('.create-toggle-btn').trigger('click')
     await wrapper.find('#admin-event-name').setValue('   ')
     await wrapper.find('form.form-card').trigger('submit')
@@ -99,7 +98,6 @@ describe('AdminScreen (Phase 2)', () => {
     expect(wrapper.find('#admin-event-name-error').text()).toBe('Please enter an event name.')
     expect(fetchMock.mock.calls.some(([, o]) => o?.method === 'POST')).toBe(false)
 
-    // Edit existing event populates and submits PUT
     await wrapper.find('.edit-action').trigger('click')
     await flushPromises()
     expect(wrapper.find('#admin-event-name').element.value).toBe('Spring Meetup')
@@ -111,7 +109,6 @@ describe('AdminScreen (Phase 2)', () => {
     expect(putCall).toBeTruthy()
     expect(JSON.parse(putCall[1].body).name).toBe('Updated Meetup')
 
-    // Delete triggers AppDialogHost confirmation naming the event
     await wrapper.find('.delete-action').trigger('click')
     await flushPromises()
     const dialogMsg = document.body.querySelector('.app-dialog-message')?.textContent || ''
@@ -170,14 +167,12 @@ describe('AddModuleModal (Phase 3)', () => {
     const typeCards = document.body.querySelectorAll('.module-type-card')
     expect(typeCards.length).toBe(5)
 
-    // Choose Quiz
     typeCards[0].click()
     await flushPromises()
 
     const nameInput = document.body.querySelector('#add-module-name')
     expect(nameInput.getAttribute('placeholder')).toBe('e.g. Friday Trivia')
 
-    // Switch to Copy from Library template
     const sourceBtns = document.body.querySelectorAll('.source-option')
     sourceBtns[1].click()
     await flushPromises()
@@ -188,7 +183,6 @@ describe('AddModuleModal (Phase 3)', () => {
     choices[0].click()
     await flushPromises()
 
-    // Name auto-filled from template when blank; customize it
     nameInput.value = 'Friday Trivia'
     nameInput.dispatchEvent(new Event('input', { bubbles: true }))
     await flushPromises()
@@ -250,11 +244,9 @@ describe('AdminEventDetailsScreen (Phase 2)', () => {
     }))
     await flushPromises()
 
-    // Human-readable module type badges
     const badges = wrapper.findAll('.module-type-badge').map((b) => b.text().trim())
     expect(badges).toEqual(['Quiz', 'Teams'])
 
-    // Edit & Host buttons route to canonical endpoints
     const editBtns = wrapper.findAll('.config-btn')
     expect(editBtns[0].text()).toBe('Edit')
     await editBtns[0].trigger('click')
@@ -268,10 +260,8 @@ describe('AdminEventDetailsScreen (Phase 2)', () => {
     await hostBtns[1].trigger('click')
     expect(pushSpy).toHaveBeenCalledWith('/admin/events/evt-1/teams?moduleId=m-2')
 
-    // Copy Projector Link is labeled
     expect(wrapper.find('.copy-link-label').text()).toBe('Copy Projector Link')
 
-    // Delete module opens confirmation naming the module
     await wrapper.find('.module-btn.delete-btn').trigger('click')
     await flushPromises()
     const msg = document.body.querySelector('.app-dialog-message')?.textContent || ''

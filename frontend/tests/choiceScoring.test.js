@@ -12,15 +12,12 @@ describe('A7 choice scoring honours admin maxPoints', () => {
     it('scales the curve to custom maxPoints', () => {
         assert.equal(calculateChoiceScore({ maxPoints: 500, timeLimit: 20, timeSpent: 0, streak: 0 }), 500)
         assert.equal(calculateChoiceScore({ maxPoints: 500, timeLimit: 20, timeSpent: 20, streak: 0 }), 125)
-        // half time: 500 - 10 * (375 / 20) = 312.5 -> floor 312
         assert.equal(calculateChoiceScore({ maxPoints: 500, timeLimit: 20, timeSpent: 10, streak: 0 }), 312)
     })
 
     it('scales the streak bonus with maxPoints', () => {
-        // 1000-point question: +100 per streak, capped at +500
         assert.equal(calculateChoiceScore({ maxPoints: 1000, timeLimit: 20, timeSpent: 0, streak: 3 }), 1300)
         assert.equal(calculateChoiceScore({ maxPoints: 1000, timeLimit: 20, timeSpent: 0, streak: 9 }), 1500)
-        // 500-point question: +50 per streak, capped at +250
         assert.equal(calculateChoiceScore({ maxPoints: 500, timeLimit: 20, timeSpent: 0, streak: 3 }), 650)
     })
 

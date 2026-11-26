@@ -22,7 +22,6 @@
         <div v-else class="field-card">
           <p class="field-label">{{ currentStep.data.label }}</p>
           
-          <!-- Text field -->
           <textarea
             v-if="currentStep.data.fieldType === 'text'"
             :value="answers[currentStep.id] || ''"
@@ -31,7 +30,6 @@
             class="field-input text-area"
           ></textarea>
           
-          <!-- Number field -->
           <input
             v-else-if="currentStep.data.fieldType === 'number'"
             type="number"
@@ -41,7 +39,6 @@
             class="field-input"
           />
           
-          <!-- Date field -->
           <input
             v-else-if="currentStep.data.fieldType === 'date'"
             type="date"
@@ -50,7 +47,6 @@
             class="field-input"
           />
           
-          <!-- Radio buttons -->
           <div v-else-if="currentStep.data.fieldType === 'radio'" class="selection-options">
             <div
               v-for="option in currentStep.data.predefinedAnswers"
@@ -83,7 +79,6 @@
             />
           </div>
           
-          <!-- Checkboxes -->
           <div v-else-if="currentStep.data.fieldType === 'checkbox'" class="selection-options">
             <div
               v-for="option in currentStep.data.predefinedAnswers"
@@ -116,7 +111,6 @@
             />
           </div>
           
-          <!-- Dropdown -->
           <div v-else-if="currentStep.data.fieldType === 'dropdown'" class="dropdown-wrapper">
             <select
               :value="answers[currentStep.id] || ''"
@@ -143,7 +137,6 @@
             />
           </div>
           
-          <!-- Default text input for unknown types -->
           <input
             v-else
             type="text"
@@ -277,13 +270,11 @@ const handleNext = async () => {
     const answer = answers.value[stepId]
     
     if (isSelectionType(fieldType)) {
-      // For selection types, check if at least one option is selected
       if (!hasSelection(stepId)) {
         info(t('form_module.validation.select_option'))
         return
       }
       
-      // For any selection type (radio, dropdown, checkbox), selecting __other__ requires custom text
       const isOtherSelected = Array.isArray(answer)
         ? answer.includes('__other__')
         : answer === '__other__'
@@ -295,7 +286,6 @@ const handleNext = async () => {
         }
       }
     } else {
-      // For text, number, date types
       if (!answer || (typeof answer === 'string' && !answer.trim())) {
         info(t('form_module.validation.provide_answer'))
         return
@@ -362,7 +352,6 @@ const handleSubmit = async () => {
 
 * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
 
-/* ── Shell ── */
 .form-module {
   width: 100%;
   height: 100%;
@@ -375,7 +364,6 @@ const handleSubmit = async () => {
   background: #0d0d0f;
 }
 
-/* ── Progress bar ── */
 .progress-bar {
   width: 100%;
   height: 4px;
@@ -390,7 +378,6 @@ const handleSubmit = async () => {
   border-radius: 0 2px 2px 0;
 }
 
-/* ── Scrollable area ── */
 .scroll-content {
   width: 100%;
   display: flex;
@@ -406,7 +393,6 @@ const handleSubmit = async () => {
 .scroll-content::-webkit-scrollbar-track { background: transparent; }
 .scroll-content::-webkit-scrollbar-thumb { background: #2a2a35; border-radius: 4px; }
 
-/* ── Step counter ── */
 .step-counter {
   color: #a8a8be;
   margin-bottom: 20px;
@@ -417,7 +403,6 @@ const handleSubmit = async () => {
   align-self: flex-start;
 }
 
-/* ── Message card ── */
 .message-card {
   background: #161619;
   border-radius: 20px;
@@ -437,7 +422,6 @@ const handleSubmit = async () => {
   font-weight: 500;
 }
 
-/* ── Field card ── */
 .field-card {
   background: #161619;
   border-radius: 20px;
@@ -454,7 +438,6 @@ const handleSubmit = async () => {
   line-height: 1.4;
 }
 
-/* ── Text / Number / Date inputs ── */
 .field-input {
   background: #0d0d0f;
   border-radius: 14px;
@@ -482,7 +465,6 @@ const handleSubmit = async () => {
 
 .field-input::placeholder { color: #9494ab; opacity: 1; }
 
-/* ── Selection options (radio + checkbox) ── */
 .selection-options {
   display: flex;
   flex-direction: column;
@@ -506,7 +488,6 @@ const handleSubmit = async () => {
   background: #111115;
 }
 
-/* selected state: full border highlight */
 .selection-option:has(.selection-indicator.selected) {
   border-color: var(--ops-blue);
   background: rgba(99, 102, 241, 0.05);
@@ -557,7 +538,6 @@ const handleSubmit = async () => {
   margin-top: 12px;
 }
 
-/* ── Dropdown ── */
 .dropdown-select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236366f1' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
@@ -572,7 +552,6 @@ const handleSubmit = async () => {
   color: #f0f0f8;
 }
 
-/* ── Footer ── */
 .footer {
   position: absolute;
   bottom: 0;
@@ -628,7 +607,6 @@ const handleSubmit = async () => {
 .next-button:active:not(:disabled) { transform: translateY(0); }
 .next-button:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* ── Completed view ── */
 .completed-view {
   display: flex;
   flex-direction: column;
@@ -680,7 +658,6 @@ const handleSubmit = async () => {
   font-style: italic;
 }
 
-/* ── Empty view ── */
 .empty-view {
   display: flex;
   align-items: center;
@@ -690,7 +667,6 @@ const handleSubmit = async () => {
   font-size: 14px;
 }
 
-/* ── Spinner ── */
 .loading-spinner-small {
   width: 20px;
   height: 20px;

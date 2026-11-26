@@ -154,7 +154,7 @@ func newController(cfg config) (*controller, error) {
 	if transport.TLSClientConfig == nil {
 		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 	}
-	transport.TLSClientConfig.InsecureSkipVerify = cfg.SkipTLSVerify // #nosec G402 -- explicit NAS setting
+	transport.TLSClientConfig.InsecureSkipVerify = cfg.SkipTLSVerify
 	c := &controller{
 		cfg:        cfg,
 		httpClient: &http.Client{Transport: transport, Timeout: 5 * time.Minute},

@@ -1,5 +1,4 @@
 #!/bin/sh
-# Restore into a new, empty database and media volume; never overwrite data.
 set -eu
 if [ "$#" -ne 1 ]; then
   printf 'Usage: COMPOSE_FILE=... %s BACKUP_DIRECTORY\n' "$0" >&2

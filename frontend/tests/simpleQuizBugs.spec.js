@@ -154,7 +154,6 @@ describe('SimpleQuiz bug and race fixes', () => {
     localStorage.setItem('sq-identity:e1:m1', JSON.stringify({ playerId: 'p1', secret: 'sec1', nickname: 'Ana' }))
     mockSimpleQuizApi.join.mockResolvedValue({ playerId: 'p1', secret: 'sec1', nickname: 'Ana', reconnected: true })
 
-    // Initial state loads at question 1 (currentIndex changed from default 0 -> 1) already submitted
     mockSimpleQuizApi.state.mockResolvedValueOnce({
       status: 'question_open',
       currentIndex: 1,
@@ -169,7 +168,6 @@ describe('SimpleQuiz bug and race fixes', () => {
     expect(wrapper.find('.sq-locked').exists()).toBe(true)
     expect(wrapper.find('.sq-answer-box').exists()).toBe(false)
 
-    // Advance to unsubmitted Q3
     mockSimpleQuizApi.state.mockResolvedValueOnce({
       status: 'question_open',
       currentIndex: 2,
@@ -181,7 +179,6 @@ describe('SimpleQuiz bug and race fixes', () => {
     await flushPromises()
     expect(wrapper.find('.sq-answer-box').exists()).toBe(true)
 
-    // Start an in-flight refresh that reports submitted: false while player submits
     let resolveStaleRefresh
     mockSimpleQuizApi.state.mockReturnValueOnce(new Promise(resolve => { resolveStaleRefresh = resolve }))
     mockQuizWS.emit('simple:state', {})
@@ -192,12 +189,10 @@ describe('SimpleQuiz bug and race fixes', () => {
     await flushPromises()
     expect(wrapper.find('.sq-locked').exists()).toBe(true)
 
-    // Stale refresh resolves afterwards; must NOT revert submitted back to false
     resolveStaleRefresh({ status: 'question_open', currentIndex: 2, total: 3, question: { text: 'Q3', points: 50 }, submitted: false })
     await flushPromises()
     expect(wrapper.find('.sq-locked').exists()).toBe(true)
 
-    // Session reset -> inactive returns player to Join screen and clears stored identity
     mockSimpleQuizApi.state.mockResolvedValueOnce({ status: 'inactive' })
     mockQuizWS.emit('simple:state', {})
     await flushPromises()

@@ -41,7 +41,7 @@ type Module struct {
 	Type            ModuleType               `json:"type"`
 	IsActive        bool                     `json:"isActive"`
 	Name            string                   `json:"name"`
-	Data            map[string]any           `json:"data"` // Generic data holder, now including timeline configuration
+	Data            map[string]any           `json:"data"`
 	Inputs          []ModuleInputBinding     `json:"inputs,omitempty"`
 	Outputs         []ModuleOutputDefinition `json:"outputs,omitempty"`
 	ActivationRules []ActivationRule         `json:"activationRules,omitempty"`
@@ -58,18 +58,18 @@ type Template struct {
 
 type ScreensaverConfig struct {
 	ImageID  string `json:"imageId"`
-	ImageURL string `json:"imageUrl"` // Computed field for display
+	ImageURL string `json:"imageUrl"`
 }
 
 type CanvasElement struct {
 	ID         string  `json:"id"`
-	Type       string  `json:"type"` // "text", "image", "qr"
+	Type       string  `json:"type"`
 	X          float64 `json:"x"`
 	Y          float64 `json:"y"`
 	Width      float64 `json:"width"`
 	Height     float64 `json:"height"`
-	Content    string  `json:"content"` // text content or image URL/ID
-	Color      string  `json:"color"`   // text color
+	Content    string  `json:"content"`
+	Color      string  `json:"color"`
 	FontSize   int     `json:"fontSize"`
 	TextAlign  string  `json:"textAlign"`
 	FontWeight string  `json:"fontWeight"`
@@ -77,7 +77,7 @@ type CanvasElement struct {
 
 type Slide struct {
 	ID              string          `json:"id"`
-	Type            string          `json:"type"` // "welcome", "screensaver", "custom"
+	Type            string          `json:"type"`
 	Name            string          `json:"name"`
 	BackgroundColor string          `json:"backgroundColor"`
 	BackgroundImage string          `json:"backgroundImage"`
@@ -85,10 +85,10 @@ type Slide struct {
 }
 
 type ScreenState struct {
-	CurrentView    string `json:"currentView"` // e.g., "screensaver", "welcome", "custom_text", "module", "slide"
+	CurrentView    string `json:"currentView"`
 	CustomText     string `json:"customText"`
 	ShowWelcomeQR  bool   `json:"showWelcomeQR"`
-	ActiveModuleID string `json:"activeModuleId"` // ID of the quiz/form if view is "module"
+	ActiveModuleID string `json:"activeModuleId"`
 	ActiveSlide    *Slide `json:"activeSlide"`
 }
 

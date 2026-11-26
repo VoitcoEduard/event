@@ -13,7 +13,6 @@ func TestBuildEventSessionUpdate_PartialDoesNotNullTimestamps(t *testing.T) {
 		EventID:   "ev-1",
 		Status:    models.EventSessionStatusPaused,
 		UpdatedAt: time.Now(),
-		// StartedAt, EndedAt, ModuleOrder, ModuleStates left nil/empty
 	}
 
 	set := buildEventSessionUpdate(partial)

@@ -352,8 +352,6 @@ func (s *Store) PatchModule(ctx context.Context, eventID, moduleID string, data 
 	tag, err := s.Pool.Exec(ctx, `UPDATE modules SET data=data || $3::jsonb WHERE event_id=$1 AND id=$2`, eventID, moduleID, raw)
 	return affected(tag, err)
 }
-// UpdateModule atomically updates a module's name and/or data (merged shallowly
-// like PatchModule). A nil name or nil data leaves the respective column alone.
 func (s *Store) UpdateModule(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) error {
 	if name == nil && data == nil {
 		return nil
@@ -373,8 +371,6 @@ func (s *Store) UpdateModule(ctx context.Context, eventID, moduleID string, name
 	return affected(tag, err)
 }
 
-// PublishModuleWithName publishes module data and optionally renames the module
-// in the same transaction, preserving manualScoreTarget and judgeToken.
 func (s *Store) PublishModuleWithName(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) (bool, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
@@ -449,7 +445,6 @@ func (s *Store) DeleteModule(ctx context.Context, eventID, moduleID string) (boo
 	return true, nil
 }
 
-// EnsureJudgeToken atomically preserves an existing judge token during races.
 func (s *Store) EnsureJudgeToken(ctx context.Context, eventID, moduleID, token string) (string, error) {
 	var result string
 	err := s.Pool.QueryRow(ctx, `UPDATE modules SET data=jsonb_set(data,'{judgeToken}',to_jsonb(COALESCE(NULLIF(data->>'judgeToken',''),$3::text)),true) WHERE event_id=$1 AND id=$2 RETURNING data->>'judgeToken'`, eventID, moduleID, token).Scan(&result)

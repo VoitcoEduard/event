@@ -6,15 +6,13 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// publicModule returns an independent projection so filtering never changes
-// the data used by the host or stored in the database.
 func publicModule(module models.Module) models.Module {
 	if module.Type != models.ModuleTypeSimpleQuiz && module.Type != models.ModuleTypeQuiz && module.Type != models.ModuleTypeWrongPictures {
 		return module
 	}
 	data, err := json.Marshal(module.Data)
 	if err != nil {
-		module.Data = nil // Fail closed if an unexpected value cannot be encoded.
+		module.Data = nil
 		return module
 	}
 	var filtered map[string]any
@@ -24,10 +22,8 @@ func publicModule(module models.Module) models.Module {
 	}
 	delete(filtered, "judgeToken")
 	if module.Type == models.ModuleTypeSimpleQuiz {
-		// The live state endpoint exposes the current question and revealed answer.
 		delete(filtered, "questions")
 	} else {
-		// Live questions arrive over the quiz socket one at a time.
 		delete(filtered, "questions")
 	}
 	module.Data = filtered

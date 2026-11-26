@@ -107,11 +107,10 @@ const updateCorrectIndex = (idx) => {
 
 const addOption = () => {
   const newOption = {
-    id: Date.now().toString(), // Simple unique ID
+    id: Date.now().toString(),
     imageId: '',
     label: ''
   }
-  // Create a new array to ensure reactivity
   const newOptions = [...props.modelValue, newOption]
   emit('update:modelValue', newOptions)
 }
@@ -121,7 +120,6 @@ const removeOption = (idx) => {
   newOptions.splice(idx, 1)
   emit('update:modelValue', newOptions)
   
-  // Adjust correct index if needed
   if (props.correctIndex === idx) {
     emit('update:correctIndex', 0)
   } else if (props.correctIndex > idx) {

@@ -58,7 +58,6 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check for userId in query
 	userID := r.URL.Query().Get("userId")
 	if len(userID) > 120 {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
@@ -96,8 +95,6 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 				DisplayName: participant.DisplayName, TotalPoints: points,
 			}
 		} else {
-			// Arbitrary identities must not create entries or churn the cache.
-			// Also avoid caching a missing status after a transient lookup error.
 			cacheResponse = false
 		}
 	}

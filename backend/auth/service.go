@@ -344,7 +344,6 @@ func (s *Service) ListUsers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Users unavailable", 503)
 		return
 	}
-	// The admin population is small; pagination still limits the response size.
 	end := 50
 	if end > len(users) {
 		end = len(users)

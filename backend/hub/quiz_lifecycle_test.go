@@ -40,7 +40,6 @@ func TestQuizTransitionRejectsAbandonedCallbacks(t *testing.T) {
 				h.scheduleQuizTransitionLocked(s, time.Hour)
 				h.mu.Unlock()
 			case "end failure":
-				// No result store: ending fails and must restore the pending transition.
 				h.processHostEndQuiz(host, ClientMessage{})
 			case "shutdown":
 				h.Shutdown()
@@ -57,7 +56,6 @@ func TestQuizTransitionRejectsAbandonedCallbacks(t *testing.T) {
 				h.mu.Unlock()
 			}
 			before := h.GetSession("m")
-			// Simulate an expired callback that was queued before Timer.Stop.
 			h.activateQuizQuestion("m", old)
 			after := h.GetSession("m")
 			if after.State != before.State || after.CurrentIndex != before.CurrentIndex || after.StartTime != before.StartTime {
@@ -122,8 +120,6 @@ func TestShutdownRejectsRegistrationsAndCancelsTimers(t *testing.T) {
 	if h.Register(&Client{send: make(chan []byte, 1)}) {
 		t.Fatal("registration accepted after shutdown")
 	}
-	// A late reconcile (e.g. an in-flight handler) must not re-arm timers on a
-	// shut-down hub.
 	if s := h.GetSimpleQuiz("m"); s != nil {
 		h.reconcileSimpleQuizTimer(s)
 	}
@@ -158,7 +154,6 @@ func TestForgetEventSessionsClearsModuleDataAndWaitsForWriters(t *testing.T) {
 		h.ForgetEventSessions("e", []string{"m"})
 		close(done)
 	}()
-	// Model an operation publishing its last snapshot before releasing the module lock.
 	h.mu.Lock()
 	h.simpleQuizSessions["m"] = &models.SimpleQuizSession{ModuleID: "m", EventID: "e", Status: "lobby"}
 	h.mu.Unlock()
@@ -169,9 +164,6 @@ func TestForgetEventSessionsClearsModuleDataAndWaitsForWriters(t *testing.T) {
 		t.Fatal("session eviction deadlocked")
 	}
 	h.activateQuizQuestion("m", old)
-	// A handler that finished opening a question before deletion may try to
-	// arm or fire its timer late; it must not recreate runtime entries for a
-	// deleted module.
 	if s := h.GetSimpleQuiz("m"); s != nil {
 		h.reconcileSimpleQuizTimer(s)
 	}
@@ -227,7 +219,6 @@ func TestResetSessionClearsRunStateAndUnbindsPlayers(t *testing.T) {
 		t.Fatal("ResetSession returned false")
 	}
 
-	// Player received the reset cmd:state before unbinding.
 	select {
 	case raw := <-player.send:
 		var msg struct {
@@ -267,7 +258,6 @@ func TestResetSessionClearsRunStateAndUnbindsPlayers(t *testing.T) {
 	}
 	h.mu.RUnlock()
 
-	// Start a new run and send a signal from the stale socket; it must be ignored.
 	h.mu.Lock()
 	s.RunID = "run-2"
 	s.State = "question-active"
@@ -299,7 +289,6 @@ func TestProcessPlayerSignalRejectsMissingSessionPlayer(t *testing.T) {
 	s.QuestionWindows = []models.QuestionWindow{{QuestionIndex: 0, StartTime: time.Now().Unix(), EndTime: time.Now().Unix() + 20, GraceEndTime: time.Now().Unix() + 22}}
 	h.mu.Unlock()
 
-	// Simulate a bound client missing from session.Players.
 	c := &Client{
 		ModuleID:    "m",
 		PlayerID:    "ghost",
@@ -354,7 +343,6 @@ func TestResetAndRejoinScoresInNextRun(t *testing.T) {
 		<-c.send
 	}
 
-	// Re-join after reset, then start run 2 and answer.
 	h.ProcessMessage(c, []byte(`{"type":"player:join","payload":{"moduleId":"m","userId":"p1","nickname":"Alice"}}`))
 	h.mu.Lock()
 	c.quizBinding = &quizPlayerBinding{eventID: "e", moduleID: "m", playerID: "p1"}
@@ -426,7 +414,6 @@ func TestStartQuizWithoutResetClearsPreviousScores(t *testing.T) {
 	h.Register(player)
 	h.ProcessMessage(player, []byte(`{"type":"player:join","payload":{"moduleId":"m","userId":"p1","nickname":"Alice"}}`))
 
-	// Start run 1, score points, and finish without calling ResetSession.
 	h.processHostStartQuiz(host, ClientMessage{})
 	h.mu.Lock()
 	player.quizBinding = &quizPlayerBinding{eventID: "e", moduleID: "m", playerID: "p1"}
@@ -455,7 +442,6 @@ func TestStartQuizWithoutResetClearsPreviousScores(t *testing.T) {
 		<-host.send
 	}
 
-	// Restart directly with processHostStartQuiz without resetting.
 	h.processHostStartQuiz(host, ClientMessage{})
 
 	h.mu.Lock()
@@ -506,7 +492,6 @@ func TestStartQuizWithoutResetClearsPreviousScores(t *testing.T) {
 		t.Fatal("player did not receive state:update with reset score on restart")
 	}
 
-	// Answering in run 2 must start from 0, not add on top of run 1's score.
 	h.ProcessMessage(player, []byte(fmt.Sprintf(`{"type":"player:signal","payload":{"questionIndex":0,"answerIndex":1,"submissionId":"00000000-0000-4000-8000-000000000002","runId":%q}}`, run2)))
 
 	var ackTotal, ackAwarded int
@@ -560,12 +545,10 @@ func TestLateJoinerReconnectPreservesActiveStreak(t *testing.T) {
 		s.Streaks = make(map[string]int)
 	})
 
-	// Late player joins at Q2
 	late := &Client{send: make(chan []byte, 16)}
 	h.Register(late)
 	h.ProcessMessage(late, []byte(`{"type":"player:join","payload":{"moduleId":"m","eventId":"e","nickname":"Late","userId":"late-1"}}`))
 
-	// Player answers Q2 and Q3 -> streak becomes 2
 	h.mu.Lock()
 	late.quizBinding = &quizPlayerBinding{eventID: "e", moduleID: "m", playerID: "late-1"}
 	s := h.sessions["m"]
@@ -584,7 +567,6 @@ func TestLateJoinerReconnectPreservesActiveStreak(t *testing.T) {
 		<-late.send
 	}
 
-	// Reconnect at Q4 with stale lastKnownQuestionIndex (-1 or 0)
 	h.ProcessMessage(late, []byte(`{"type":"player:reconnect","payload":{"moduleId":"m","nickname":"Late","lastKnownQuestionIndex":-1,"lastKnownState":"question-active"}}`))
 
 	var catchup struct {

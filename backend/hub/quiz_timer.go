@@ -21,7 +21,6 @@ func windowDeadlineMillis(windows []models.QuestionWindow, index int) int64 {
 	return windows[index].EndTime * 1000
 }
 
-// All timer-map changes use h.mu, including callbacks already queued by Stop.
 func (h *QuizHub) cancelQuizTransitionLocked(moduleID string) {
 	if pending := h.quizTimers[moduleID]; pending != nil {
 		pending.timer.Stop()
@@ -50,7 +49,6 @@ func (h *QuizHub) activateQuizQuestion(moduleID string, pending *quizTransition)
 	}()
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	// Identity also rejects callbacks from a replaced timer for the same question.
 	if h.closed || h.quizTimers[moduleID] != pending {
 		return
 	}

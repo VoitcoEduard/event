@@ -1,6 +1,5 @@
 <template>
   <div class="map-picker-container" ref="container">
-    <!-- The Image Layer (Pannable/Zoomable) -->
     <div 
       class="map-overflow-wrapper"
       @touchstart="handleTouchStart"
@@ -19,7 +18,6 @@
         <div class="image-wrapper" ref="imageElement">
           <img :src="imageUrl" @load="onImageLoad" @error="imageReady = false" draggable="false" decoding="async" />
           
-          <!-- Dropped Markers -->
           <div 
             v-for="(marker, index) in localMarkers" 
             :key="index"
@@ -36,7 +34,6 @@
       </div>
     </div>
 
-    <!-- Fixed Center Selector (Google Maps style) - Only in placement mode -->
     <Transition name="scale">
       <div class="fixed-selector-overlay" v-if="isPlacementMode && !isMaxTargets">
         <div class="center-crosshair">
@@ -53,7 +50,6 @@
       </div>
     </Transition>
 
-    <!-- Placement Mode Indicator / Layer -->
     <Transition name="fade">
       <div class="placement-layer-overlay" v-if="isPlacementMode">
         <button class="exit-placement-btn" @click="isPlacementMode = false">
@@ -63,7 +59,6 @@
       </div>
     </Transition>
 
-    <!-- UI Controls -->
     <div class="picker-controls">
       <div class="top-controls">
           <div class="target-counter" v-if="showTargetCount">
@@ -73,7 +68,6 @@
       </div>
       
       <div class="bottom-controls">
-          <!-- Main Toggle / Add Action -->
           <button 
             v-if="!isPlacementMode"
             class="enter-placement-btn" 
@@ -112,7 +106,6 @@
       </div>
     </div>
 
-    <!-- Mini Feedback Toast -->
     <Transition name="fade">
       <div v-if="showHint" class="interaction-hint">
         {{ $t('map_coordinate_picker.interaction_hint') }}
@@ -149,15 +142,11 @@ const imageReady = ref(false)
 watch(() => props.imageUrl, () => { imageReady.value = false; clearTimeout(hintTimer) })
 const isPlacementMode = ref(false)
 
-// Stay in sync with the parent: it owns the marker list (resets it on new
-// questions, replaces it with scored guesses on submit). Without this, pins
-// from the previous round would carry over visually.
 watch(() => props.initialMarkers, (newVal) => {
   if (newVal === localMarkers.value) return
   localMarkers.value = [...(Array.isArray(newVal) ? newVal : [])]
 })
 
-// Navigation state
 const isDragging = ref(false)
 const lastClientX = ref(0)
 const lastClientY = ref(0)
@@ -186,27 +175,22 @@ onUnmounted(() => clearTimeout(hintTimer))
 const addCurrentPosition = () => {
   if (isMaxTargets.value || !container.value || !imageElement.value) return
   
-  // Calculate center of container
   const rect = container.value.getBoundingClientRect()
   const centerX = rect.width / 2
   const centerY = rect.height / 2
 
-  // Get image dimensions (unscaled)
   const img = imageElement.value.querySelector('img')
   if (!img) return
   
   const imgNaturalWidth = img.naturalWidth
   const imgNaturalHeight = img.naturalHeight
   
-  // Get image display dimensions (current scaled size)
   const imgDisplayRect = img.getBoundingClientRect()
   if (!img.naturalWidth || !img.naturalHeight || !imgDisplayRect.width || !imgDisplayRect.height) return
   
-  // Find where the container's center falls relative to the image's top-left in the viewport
   const centerRelToImgX = centerX + rect.left - imgDisplayRect.left
   const centerRelToImgY = centerY + rect.top - imgDisplayRect.top
   
-  // Calculate percentage purely based on current display size
   const xPercent = (centerRelToImgX / imgDisplayRect.width) * 100
   const yPercent = (centerRelToImgY / imgDisplayRect.height) * 100
 
@@ -217,7 +201,6 @@ const addCurrentPosition = () => {
       isPlaced: true
     })
 
-    // Optional: auto-exit placement after drop
     isPlacementMode.value = false
 
     emit('update:markers', localMarkers.value)
@@ -243,7 +226,6 @@ const toggleZoom = () => {
 }
 
 const adjustZoom = (direction) => {
-  // Toggle between 1x and 5x
   if (scale.value === 1) {
     setZoomStep(5)
   } else {
@@ -251,7 +233,6 @@ const adjustZoom = (direction) => {
   }
 }
 
-// Interaction Handlers
 const getDistance = (touches) => {
   const dx = touches[0].clientX - touches[1].clientX
   const dy = touches[0].clientY - touches[1].clientY
@@ -273,10 +254,8 @@ const handleTouchStart = (e) => {
 const handleTouchMove = (e) => {
   if (e.touches.length === 2) {
     e.preventDefault()
-    // Pinch toggles between 1x and 5x based on distance
     const newDistance = getDistance(e.touches)
     const ratio = newDistance / initialDistance.value
-    // If pinching out (increasing), go to 5x; pinching in, go to 1x
     if (ratio > 1.5 && scale.value === 1) {
       setZoomStep(5)
     } else if (ratio < 0.7 && scale.value === 5) {
@@ -297,7 +276,6 @@ const handleTouchEnd = () => isDragging.value = false
 
 const handleWheel = (e) => {
   e.preventDefault()
-  // Toggle between 1x and 5x on wheel scroll
   adjustZoom()
 }
 
@@ -327,7 +305,7 @@ const handleMouseUp = () => isDragging.value = false
 .map-picker-container {
   position: relative;
   width: 100%;
-  height: 100%; /* Take full height of parent */
+  height: 100%;
   background: #000;
   overflow: hidden;
   touch-action: none;
@@ -351,7 +329,6 @@ const handleMouseUp = () => isDragging.value = false
   position: absolute;
   top: 50%;
   left: 50%;
-  /* We use the transform from state, plus the centering offset */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -365,13 +342,12 @@ const handleMouseUp = () => isDragging.value = false
 .image-wrapper img {
   display: block;
   max-width: none;
-  width: 100vw; /* Default to screen width */
+  width: 100vw;
   height: auto;
   pointer-events: none;
   -webkit-user-drag: none;
 }
 
-/* Fixed Selector Styles */
 .fixed-selector-overlay {
   position: absolute;
   top: 50%;
@@ -403,7 +379,7 @@ const handleMouseUp = () => isDragging.value = false
   position: relative;
   width: 44px;
   height: 44px;
-  margin-top: -44px; /* offset to point at center */
+  margin-top: -44px;
   animation: float-pin 2s ease-in-out infinite;
 }
 
@@ -450,7 +426,6 @@ const handleMouseUp = () => isDragging.value = false
   50% { transform: translateX(-50%) scale(0.6); opacity: 0.2; }
 }
 
-/* Dropped Markers */
 .dropped-marker {
   position: absolute;
   transform: translate(-50%, -100%);
@@ -507,7 +482,6 @@ const handleMouseUp = () => isDragging.value = false
   100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
 
-/* Controls Layer */
 .picker-controls {
   position: absolute;
   top: 0;
@@ -528,7 +502,7 @@ const handleMouseUp = () => isDragging.value = false
 .bottom-controls {
     margin-top: auto;
     padding: 1.5rem;
-    padding-bottom: 90px; /* Space for parent submit btn */
+    padding-bottom: 90px;
     display: flex;
     justify-content: center;
     pointer-events: none;
@@ -679,7 +653,6 @@ const handleMouseUp = () => isDragging.value = false
   z-index: 30;
 }
 
-/* Transitions */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s ease, transform 0.5s ease;
 }

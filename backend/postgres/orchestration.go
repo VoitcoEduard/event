@@ -76,8 +76,6 @@ func (s *Store) UpdateEventSession(ctx context.Context, v *models.EventSession) 
 	return affected(tag, err)
 }
 
-// UpdateEventSessionStatus atomically updates status and lifecycle timestamps
-// without overwriting active_module_id or other concurrently modified columns.
 func (s *Store) UpdateEventSessionStatus(ctx context.Context, id string, status models.EventSessionStatus, at time.Time) error {
 	tag, err := s.Pool.Exec(ctx, `UPDATE event_sessions
 		SET status=$2,
@@ -88,8 +86,6 @@ func (s *Store) UpdateEventSessionStatus(ctx context.Context, id string, status 
 	return affected(tag, err)
 }
 
-// UpdateEventSessionActiveModule atomically sets or clears active_module_id
-// ("" -> NULL) without overwriting status or timestamps.
 func (s *Store) UpdateEventSessionActiveModule(ctx context.Context, id, activeModuleID string, at time.Time) error {
 	tag, err := s.Pool.Exec(ctx, `UPDATE event_sessions
 		SET active_module_id=NULLIF($2,'')::uuid,
@@ -295,8 +291,6 @@ func (s *Store) InsertResponse(ctx context.Context, v *models.Response) error {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	// Ordinary forms can be submitted before the welcome/name form. Keep the
-	// response, but only add a roster entry once a display name is available.
 	name, _ := v.Data["step_welcome_name"].(string)
 	name = strings.TrimSpace(name)
 	if v.UserID != "" && name != "" {

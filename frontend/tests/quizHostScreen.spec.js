@@ -133,7 +133,6 @@ describe('QuizHostScreen question-presenting transitions', () => {
       isPaused = true
     })
 
-    // Transition from lobby -> question-presenting (Q1)
     expect(() => {
       mockQuizWS.emit('cmd:state', { state: 'question-presenting', currentIndex: 0, timeLimit: 4 })
     }).not.toThrow()
@@ -147,7 +146,6 @@ describe('QuizHostScreen question-presenting transitions', () => {
     await flushPromises()
     expect(wrapper.find('.timer').text()).toBe('3')
 
-    // Move to active question and record answers + signals
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0 })
     await flushPromises()
 
@@ -159,13 +157,11 @@ describe('QuizHostScreen question-presenting transitions', () => {
     await flushPromises()
     expect(wrapper.find('.counter-value').text()).toBe('5')
 
-    // Move to results (pauses audio) and simulate playback position advancing
     mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0 })
     await flushPromises()
     expect(pauseSpy).toHaveBeenCalled()
     audioEl.currentTime = 12
 
-    // Transition to next question's question-presenting state
     expect(() => {
       mockQuizWS.emit('cmd:state', { state: 'question-presenting', currentIndex: 1, timeLimit: 3 })
     }).not.toThrow()
@@ -176,12 +172,10 @@ describe('QuizHostScreen question-presenting transitions', () => {
     expect(audioEl.currentTime).toBe(0)
     expect(playSpy).toHaveBeenCalledTimes(2)
 
-    // Let explain countdown finish to zero
     vi.advanceTimersByTime(3000)
     await flushPromises()
     expect(wrapper.find('.timer').text()).toBe('quiz.player.get_ready')
 
-    // Verify answerCounts were reset (going to results without new sync:minimal shows 0s)
     mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 1 })
     await flushPromises()
     const counts = wrapper.findAll('.dist-count').map(el => el.text())
@@ -225,7 +219,6 @@ describe('QuizHostScreen question-presenting transitions', () => {
     })
     await flushPromises()
 
-    // Restart quiz at question 0 with zeroed player score
     mockQuizWS.emit('cmd:state', { state: 'question-presenting', currentIndex: 0, timeLimit: 5 })
     mockQuizWS.emit('state:update', {
       players: { p1: { id: 'p1', nickname: 'Alice', score: 0 } },
@@ -380,7 +373,6 @@ describe('QuizHostScreen range marker with maxValue 0 (Bug #8)', () => {
     wrapper = mount(QuizHostScreen, mountOpts)
     await flushPromises()
 
-    // Simulate Q1 active -> leaderboard -> Q2 true_false presenting -> active
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0 })
     await flushPromises()
 
@@ -433,7 +425,6 @@ describe('QuizHostScreen cmd:error surfacing (M1)', () => {
     await flushPromises()
     expect(toastMock.error).toHaveBeenCalledWith('Cannot start quiz: no questions')
 
-    // Unmapped codes without a message stay silent.
     toastMock.error.mockClear()
     mockQuizWS.emit('cmd:error', { code: 'something_else' })
     mockQuizWS.emit('cmd:error', { code: 'start_failed' })

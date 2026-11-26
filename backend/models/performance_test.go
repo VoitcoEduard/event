@@ -41,7 +41,6 @@ func BenchmarkSimpleQuizWorkingResults(b *testing.B) {
 	}
 }
 
-// This benchmark measures the in-memory snapshot serialization cost.
 func BenchmarkSimpleQuizSnapshotJSON(b *testing.B) {
 	for _, questions := range []int{1, 25, 100} {
 		b.Run(fmt.Sprintf("players=150/questions=%d", questions), func(b *testing.B) {

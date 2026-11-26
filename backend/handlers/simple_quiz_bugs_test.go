@@ -131,18 +131,15 @@ func TestSimpleQuizQueueCursorResilienceAndMetadata(t *testing.T) {
 		Revealed: map[int]bool{},
 	}
 
-	// Cursor "a1" was graded right after page 1 was fetched; page 2 in pending filter must still return a2, a3.
 	resp := buildSimpleQuizQueueResponse(s, -1, "pending", "a1", 2)
 	rows := resp["answers"].([]simpleQuizQueueRow)
 	if len(rows) != 2 || rows[0].AnswerID != "a2" || rows[1].AnswerID != "a3" {
 		t.Fatalf("unexpected rows after graded cursor: %+v", rows)
 	}
-	// Exact match for limit with no remaining items -> nextCursor must be empty.
 	if resp["nextCursor"] != "" {
 		t.Fatalf("nextCursor = %q, want empty when no more matching items", resp["nextCursor"])
 	}
 
-	// With limit=1 and 2 remaining items, nextCursor must point to a2.
 	respPage1 := buildSimpleQuizQueueResponse(s, -1, "pending", "", 1)
 	if respPage1["nextCursor"] != "a2" {
 		t.Fatalf("nextCursor = %q, want a2", respPage1["nextCursor"])
@@ -278,7 +275,6 @@ func TestJoinSimpleQuizRejectsDuplicateParticipantAndPreservesReconnect(t *testi
 		return rec
 	}
 
-	// First join with valid participant proof succeeds.
 	rec1 := doJoin(`{"nickname":"Alice","participantId":"part-1","participantSecret":"proof-part-1"}`)
 	if rec1.Code != http.StatusOK {
 		t.Fatalf("first join status = %d body=%q, want 200", rec1.Code, rec1.Body.String())
@@ -295,13 +291,11 @@ func TestJoinSimpleQuizRejectsDuplicateParticipantAndPreservesReconnect(t *testi
 		t.Fatalf("missing player identity: %+v", joined)
 	}
 
-	// Second join with same participantId and a different nickname must return 409 Conflict.
 	recDup := doJoin(`{"nickname":"AliceClone","participantId":"part-1","participantSecret":"proof-part-1"}`)
 	if recDup.Code != http.StatusConflict {
 		t.Fatalf("duplicate participant join status = %d body=%q, want 409", recDup.Code, recDup.Body.String())
 	}
 
-	// Reconnect with original secret + nickname succeeds (with and without participantId).
 	recRecon1 := doJoin(`{"nickname":"alice","secret":"` + joined.Secret + `"}`)
 	if recRecon1.Code != http.StatusOK {
 		t.Fatalf("reconnect without participantId status = %d body=%q, want 200", recRecon1.Code, recRecon1.Body.String())
@@ -332,13 +326,11 @@ func TestJoinSimpleQuizRejectsDuplicateParticipantAndPreservesReconnect(t *testi
 		t.Fatalf("recon2 = %+v, want playerId=%q reconnected=true", recon2, joined.PlayerID)
 	}
 
-	// Different participant joins cleanly.
 	recOther := doJoin(`{"nickname":"Charlie","participantId":"part-2","participantSecret":"proof-part-2"}`)
 	if recOther.Code != http.StatusOK {
 		t.Fatalf("distinct participant join status = %d body=%q, want 200", recOther.Code, recOther.Body.String())
 	}
 
-	// Ensure only 2 new players (Alice + Charlie) were added to the 3 seeded players.
 	sess := h.deps.QuizHub.GetSimpleQuiz("m1")
 	if len(sess.Players) != 5 {
 		t.Fatalf("player count = %d, want 5", len(sess.Players))

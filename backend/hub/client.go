@@ -12,16 +12,12 @@ import (
 )
 
 const (
-	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
 
-	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
 
-	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
 
-	// Maximum message size allowed from peer.
 	maxMessageSize = 65536
 )
 
@@ -33,34 +29,25 @@ var upgrader = websocket.Upgrader{
 
 type allowedOriginKey struct{}
 
-// Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	hub *QuizHub
 
-	// The websocket connection.
 	conn *websocket.Conn
 
-	// Buffered channel of outbound messages.
 	send chan []byte
 
-	// Session tracking
-	ModuleID     string // The quiz/module ID this client is connected to
-	EventID      string // The event ID this client is connected to (for big screen)
-	PlayerID     string // The player ID (if player)
-	IsHost       bool   // True if this client is the host
-	IsProjector  bool   // True if this client is a projector display
-	IsTeamsAdmin bool   // True if this client is a teams admin
+	ModuleID     string
+	EventID      string
+	PlayerID     string
+	IsHost       bool
+	IsProjector  bool
+	IsTeamsAdmin bool
 	AdminToken   string
 	quizBinding  *quizPlayerBinding
 }
 
 type quizPlayerBinding struct{ eventID, moduleID, playerID string }
 
-// readPump pumps messages from the websocket connection to the hub.
-//
-// The application runs readPump in a per-connection goroutine. The application
-// ensures that there is at most one reader on a connection by executing all
-// reads from this goroutine.
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.Unregister(c)
@@ -97,7 +84,6 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		// Process message through Hub logic
 		c.hub.ProcessMessage(c, message)
 	}
 }
@@ -110,11 +96,6 @@ func (c *Client) Reject() {
 	_ = c.conn.Close()
 }
 
-// writePump pumps messages from the hub to the websocket connection.
-//
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer to a connection by
-// executing all writes from this goroutine.
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -126,7 +107,6 @@ func (c *Client) writePump() {
 		case message, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				// The hub closed the channel.
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -136,9 +116,8 @@ func (c *Client) writePump() {
 				return
 			}
 			w.Write(message)
-			w.Write([]byte("\n")) // Add newline delimiter between messages
+			w.Write([]byte("\n"))
 
-			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
 				msg := <-c.send
@@ -158,9 +137,6 @@ func (c *Client) writePump() {
 	}
 }
 
-// ...
-
-// ServeWs handles websocket requests from the peer.
 func ServeWs(hub *QuizHub, w http.ResponseWriter, r *http.Request) {
 	if hub.authService == nil {
 		http.Error(w, "Authentication unavailable", http.StatusServiceUnavailable)
@@ -173,7 +149,6 @@ func ServeWs(hub *QuizHub, w http.ResponseWriter, r *http.Request) {
 	token := hub.authService.Token(r)
 	if token != "" {
 		if _, _, err := hub.authService.Current(r); err != nil {
-			// Expired sessions may reconnect as players, but database errors fail closed.
 			if err != auth.ErrNoSession {
 				http.Error(w, "Session unavailable", http.StatusServiceUnavailable)
 				return
@@ -192,8 +167,6 @@ func ServeWs(hub *QuizHub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
 	go client.writePump()
 	go client.readPump()
 }

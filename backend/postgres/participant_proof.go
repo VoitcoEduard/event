@@ -23,8 +23,6 @@ func newParticipantSecret() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// JoinEventParticipant grants proof only when a new participant is inserted.
-// Existing and legacy rows cannot be claimed by knowing a public player ID.
 func (s *Store) JoinEventParticipant(ctx context.Context, eventID, id, joinKey, name string, profile map[string]any, providedSecret string) (*models.Participant, error) {
 	if id == "" {
 		id = uuid.NewString()
@@ -121,8 +119,6 @@ func (s *Store) JoinEventParticipant(ctx context.Context, eventID, id, joinKey, 
 	return p, nil
 }
 
-// CheckParticipantProof reports whether a participant has a credential and
-// whether the supplied secret matches it. Legacy rows have hasProof=false.
 func (s *Store) CheckParticipantProof(ctx context.Context, eventID, id, secret string) (hasProof, valid bool, err error) {
 	var storedHash []byte
 	err = s.Pool.QueryRow(ctx, `SELECT secret_hash FROM participants WHERE event_id=$1 AND id=$2`, eventID, id).Scan(&storedHash)

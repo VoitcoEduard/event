@@ -283,7 +283,6 @@ const readStoredEventForId = (targetId) => {
       return parsed
     }
   } catch {
-    // ignore corrupted or unavailable sessionStorage
   }
   return null
 }
@@ -296,7 +295,6 @@ const writeStoredEvent = (eventData) => {
       sessionStorage.removeItem('currentEvent')
     }
   } catch {
-    // ignore storage errors
   }
 }
 
@@ -391,7 +389,6 @@ const handleModuleCreated = () => {
 const isTogglingStatus = ref(false)
 const toggleStatus = async () => {
   if (!currentEvent.value?.id || isTogglingStatus.value) return
-  // Guard against stale responses landing after the user switched events (L2).
   const targetEventId = String(currentEvent.value.id)
   const seq = eventFetchSeq
   const nextActive = !currentEvent.value.isActive
@@ -459,8 +456,6 @@ const toggleModuleStatus = async (module) => {
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }
       })
       if (!resetRes.ok) {
-        // A live session that cannot be reset must not be silently flipped
-        // to inactive (L7c).
         const msg = (await resetRes.text().catch(() => '')).trim()
         error(msg || t('event_details.toast_module_status_failed'))
         return

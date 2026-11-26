@@ -113,17 +113,13 @@ test('handles no targets and empty guesses', () => {
 })
 
 test('scales Y distance by image aspect ratio (radius is width-percent)', () => {
-  // Wide image: aspect 2, so 10% of height == 5% of width in pixels.
-  // Target radius 5 + tolerance 2 => hit boundary at 7 width-percent units.
   assert.equal(calculateDistance(50, 50, 50, 64, 2), 7)
   assert.equal(calculateGuessScore({ xPercent: 50, yPercent: 64 }, target('wide', 50, 50, 5), 2, 100, 2), 100)
   assert.equal(calculateGuessScore({ xPercent: 50, yPercent: 65 }, target('wide', 50, 50, 5), 2, 100, 2), 0)
 
-  // X distance is unaffected by aspect ratio.
   assert.equal(calculateDistance(50, 50, 57, 50, 2), 7)
   assert.equal(calculateGuessScore({ xPercent: 58, yPercent: 50 }, target('wide', 50, 50, 5), 2, 100, 2), 0)
 
-  // Tall image: aspect 0.5, so 2.5% of height == 5% of width in pixels.
   assert.equal(calculateDistance(50, 50, 50, 52.5, 0.5), 5)
   assert.equal(calculateGuessScore({ xPercent: 50, yPercent: 52.5 }, target('tall', 50, 50, 5), 0, 100, 0.5), 100)
   assert.equal(calculateGuessScore({ xPercent: 50, yPercent: 56 }, target('tall', 50, 50, 5), 0, 100, 0.5), 0)
@@ -131,8 +127,6 @@ test('scales Y distance by image aspect ratio (radius is width-percent)', () => 
 
 test('aspect correction matches pixel distance on a 1600x900 image', () => {
   const aspect = 1600 / 900
-  // 45px vertical offset on a 900px-tall image = 5 height-percent.
-  // In width-percent units that is 45 / 16 = 2.8125.
   const d = calculateDistance(50, 50, 50, 55, aspect)
   assert.ok(Math.abs(d - 2.8125) < 1e-10)
 })
@@ -148,7 +142,6 @@ test('calculateTotalScore accepts aspect ratio explicitly and via config', () =>
   const viaConfig = calculateTotalScore(guesses, targets, { ...config, aspectRatio: 2 })
   assert.equal(viaConfig.scoredGuesses[0].isCorrect, true)
 
-  // Same guess on a square image is out of range (distance 14 > 7).
   const square = calculateTotalScore(guesses, targets, config, 1)
   assert.equal(square.scoredGuesses[0].isCorrect, false)
   assert.equal(square.totalScore, 0)

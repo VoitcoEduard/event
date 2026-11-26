@@ -26,7 +26,6 @@
       </div>
     </div>
     
-    <!-- Navigation dots -->
     <div class="carousel-dots">
       <span 
         v-for="(_, idx) in images" 
@@ -54,7 +53,6 @@ const zoomScale = ref(1)
 const containerRef = ref(null)
 const trackRef = ref(null)
 
-// CSS for snap scrolling and visual effects
 const getItemStyle = (idx) => {
   const isCenter = idx === centerIndex.value
   return {
@@ -72,7 +70,6 @@ const onScroll = () => {
   const itemWidth = track.scrollWidth / props.images.length
   const scrollLeft = track.scrollLeft
   
-  // Calculate center index based on scroll position
   const rawIndex = Math.round(scrollLeft / itemWidth)
   const newIndex = Math.max(0, Math.min(props.images.length - 1, rawIndex))
   
@@ -99,19 +96,14 @@ const snapToIndex = (idx) => {
   emit('snap', idx)
 }
 
-// Initial scroll position
 onMounted(() => {
-    // Wait for next tick/render to ensure dimensions are correct
     setTimeout(() => {
         snapToIndex(props.initialIndex)
     }, 100)
     
-    // Add pinch zoom listeners manually if needed, or use a library
-    // For simplicity, we just basic tap-zoom toggling for now
 })
 
 const onImageLoad = () => {
-    // Optional: Recalculate layout if needed
 }
 </script>
 
@@ -131,7 +123,7 @@ const onImageLoad = () => {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
   height: 80%;
   align-items: center;
   padding: 0;
@@ -171,7 +163,6 @@ const onImageLoad = () => {
   border-radius: 12px;
   filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
   
-  /* The glow effect */
   outline: 3px solid rgba(255,255,255,0.0);
   transition: outline 0.3s ease;
 }

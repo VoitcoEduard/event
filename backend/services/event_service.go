@@ -160,11 +160,6 @@ func defaultSlidesForEvent(event *models.Event) []models.Slide {
 	}, {ID: "default-screensaver-" + event.ID, Type: "screensaver", Name: "Screensaver", BackgroundColor: "#000000"}}
 }
 
-// GetSlides is strictly read-only: if slides have never been saved (nil), it
-// computes default slides in memory without writing to the database; if an
-// admin explicitly saved slides (including an empty slice []), it returns them as-is.
-// When PUBLIC_BASE_URL is configured, stale origins in default welcome QR/URL
-// elements are normalized in memory to match the public portal origin.
 func (s *EventService) GetSlides(ctx context.Context, id string) ([]models.Slide, error) {
 	event, err := s.db().Get(ctx, id)
 	if err != nil {

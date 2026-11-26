@@ -13,7 +13,6 @@ func TestAssignBalancedTeamsRespectsExistingSizes(t *testing.T) {
 		{ID: "team-c"},
 	}
 
-	// Simulate uneven existing sizes: team-a=3, team-b=1, team-c=0
 	counts := map[string]int{
 		"team-a": 3,
 		"team-b": 1,
@@ -30,12 +29,6 @@ func TestAssignBalancedTeamsRespectsExistingSizes(t *testing.T) {
 
 	assignBalancedTeams(teams, counts, people)
 
-	// Step-by-step smallest team (ties broken by team order):
-	// p1 -> team-c (0 -> 1)
-	// p2 -> team-b (1 -> 2) (tie between b=1 and c=1 -> b comes first)
-	// p3 -> team-c (1 -> 2)
-	// p4 -> team-b (2 -> 3) (tie between b=2 and c=2 -> b comes first)
-	// p5 -> team-c (2 -> 3)
 	want := []string{"team-c", "team-b", "team-c", "team-b", "team-c"}
 	for i, w := range want {
 		if people[i].TeamID != w {
@@ -52,7 +45,6 @@ func TestAssignBalancedTeamsIncrementalLatecomers(t *testing.T) {
 	}
 	counts := map[string]int{}
 
-	// Assign 6 latecomers one by one (calling assignBalancedTeams each time)
 	for i := 0; i < 6; i++ {
 		batch := []models.Participant{{ID: "latecomer"}}
 		assignBalancedTeams(teams, counts, batch)

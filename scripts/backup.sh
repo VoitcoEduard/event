@@ -1,5 +1,4 @@
 #!/bin/sh
-# COMPOSE_FILE selects the stack; run this on the Docker host.
 set -eu
 umask 077
 if [ "$#" -ne 1 ]; then

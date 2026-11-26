@@ -177,8 +177,6 @@ function validateNumberQuestion(question, index, errors) {
   }
 }
 
-// A timeLimit of undefined means "not configured"; anything else must be a
-// whole number of seconds >= 0 so the JSON schema (Go int) can round-trip it.
 function validateTimeLimit(question, index, errors) {
   if (question?.timeLimit === undefined) return
   const limit = parseFiniteNumber(question.timeLimit)
@@ -214,14 +212,6 @@ function validateWrongPicturesItem(item, index, textMessageKey, errors) {
   validatePoints(item, 'wrong_pictures', index, errors)
 }
 
-/**
- * Validate a single quiz or simple_quiz question and return structured error objects.
- *
- * @param {object} question
- * @param {number} [index=0]
- * @param {{ mode?: 'quiz' | 'simple_quiz' }} [options]
- * @returns {Array<{ index: number, field: string, messageKey: string, params: Record<string, any> }>}
- */
 export function validateQuizQuestion(question, index = 0, options = {}) {
   const mode = options?.mode === 'simple_quiz' ? 'simple_quiz' : 'quiz'
   const type = mode === 'simple_quiz' ? 'simple_text' : question?.type || 'classic'
@@ -273,13 +263,6 @@ export function validateQuizQuestion(question, index = 0, options = {}) {
   return errors
 }
 
-/**
- * Validate all questions for a quiz or simple_quiz module.
- *
- * @param {Array<object>} questions
- * @param {{ mode?: 'quiz' | 'simple_quiz' }} [options]
- * @returns {Array<{ index: number, field: string, messageKey: string, params: Record<string, any> }>}
- */
 export function validateQuizQuestions(questions, options = {}) {
   if (!Array.isArray(questions) || questions.length === 0) {
     return [createError(-1, 'questions', 'quiz_config.validation.min_one')]
@@ -292,25 +275,12 @@ export function validateQuizQuestions(questions, options = {}) {
   return errors
 }
 
-/**
- * Validate a single wrong_pictures round and return structured error objects.
- *
- * @param {object} round
- * @param {number} [index=0]
- * @returns {Array<{ index: number, field: string, messageKey: string, params: Record<string, any> }>}
- */
 export function validateWrongPicturesRound(round, index = 0) {
   const errors = []
   validateWrongPicturesItem(round, index, 'quiz_config.validation.wp_title_required', errors)
   return errors
 }
 
-/**
- * Validate all rounds for a wrong_pictures module.
- *
- * @param {Array<object>} rounds
- * @returns {Array<{ index: number, field: string, messageKey: string, params: Record<string, any> }>}
- */
 export function validateWrongPicturesRounds(rounds) {
   if (!Array.isArray(rounds) || rounds.length === 0) {
     return [createError(-1, 'rounds', 'quiz_config.validation.wp_min_one')]
@@ -323,12 +293,6 @@ export function validateWrongPicturesRounds(rounds) {
   return errors
 }
 
-/**
- * Group structured validation errors by question/round index and field name.
- *
- * @param {Array<{ index: number, field: string, messageKey: string, params: Record<string, any> }>} errors
- * @returns {Record<number, Record<string, { index: number, field: string, messageKey: string, params: Record<string, any> }>>}
- */
 export function groupErrorsByIndex(errors) {
   if (!Array.isArray(errors)) return {}
   const grouped = {}

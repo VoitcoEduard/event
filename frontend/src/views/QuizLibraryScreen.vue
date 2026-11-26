@@ -112,7 +112,6 @@
             <p>{{ $t('common.loading') }}</p>
           </div>
 
-          <!-- Screensavers Tab Content -->
           <div v-else-if="activeTab === 'screensavers'" class="screensaver-view">
             <div v-if="screensavers.length === 0" class="empty-state">
               <AppIcon class="empty-icon" name="image" :size="48" aria-hidden="true" />
@@ -154,7 +153,6 @@
             </div>
           </div>
 
-          <!-- Music Tab Content -->
           <div v-else-if="activeTab === 'music'" class="music-view">
             <div v-if="tracks.length === 0" class="empty-state">
               <AppIcon class="empty-icon" name="music" :size="48" aria-hidden="true" />
@@ -191,7 +189,6 @@
             </div>
           </div>
 
-          <!-- Template Tabs Empty State -->
           <div v-else-if="filteredTemplates.length === 0" class="empty-state">
             <AppIcon class="empty-icon" :name="activeTabConfig.icon" :size="48" aria-hidden="true" />
             <p class="empty-text">{{ $t('library.empty.no_templates', { type: activeTabLabel }) }}</p>
@@ -201,7 +198,6 @@
             </button>
           </div>
 
-          <!-- Template Cards Grid -->
           <div v-else class="templates-grid">
             <div v-for="template in filteredTemplates" :key="template.id" class="template-card">
               <h2 class="template-name">{{ template.name }}</h2>
@@ -1012,7 +1008,6 @@ onUnmounted(() => {
 .icon-btn:hover { background-color: #333; color: white; }
 .delete-btn:hover { color: #ff3b30; }
 
-/* Screensavers Grid */
 .screensaver-view {
   padding: 0;
 }
@@ -1081,7 +1076,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* Music View Styles */
 .music-view {
   padding: 0;
   max-width: 860px;
@@ -1152,7 +1146,6 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-/* Mobile & vertical container adaptation: 2-row wrapped pill bar so all 5 tabs remain visible */
 @container library (inline-size <= 768px) {
   .header {
     padding: 14px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px));

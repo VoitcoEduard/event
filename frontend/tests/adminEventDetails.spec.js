@@ -18,7 +18,6 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('vue-i18n', async (importOriginal) => ({
-  // Keep createI18n available: the layout chain now imports src/i18n.js.
   ...await importOriginal(),
   useI18n: () => ({ t: lookupEn, locale: { value: 'en' } }),
 }))
@@ -143,14 +142,12 @@ describe('AdminEventDetailsScreen route-driven event loading (Bug #13)', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     wrapper = mount(AdminEventDetailsScreen, mountOpts)
-    // Before fetch resolves, stale event from another ID must NOT be shown
     expect(wrapper.find('.event-title').text()).toBe('')
 
     await flushPromises()
     expect(wrapper.find('.event-title').text()).toBe('Event Two')
     expect(JSON.parse(sessionStorage.getItem('currentEvent')).id).toBe('evt-2')
 
-    // Navigate to another event route while mounted
     mockRoute.params = { id: 'evt-3' }
     await flushPromises()
 

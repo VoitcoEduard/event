@@ -42,7 +42,6 @@ func TestProjectorJoinDoesNotAllocatePhantomSessions(t *testing.T) {
 			isHost, isTeamsAdmin, isProjector, playerID, moduleID)
 	}
 
-	// Verify initial cmd:state lobby messages were delivered.
 	if len(c.send) != 50 {
 		t.Fatalf("queued messages = %d, want 50", len(c.send))
 	}
@@ -81,7 +80,6 @@ func TestPreconnectedProjectorReceivesLiveUpdatesWhenHostStartsQuiz(t *testing.T
 		}, nil
 	}
 
-	// Projector connects BEFORE any session exists.
 	projector := &Client{send: make(chan []byte, 16)}
 	h.Register(projector)
 	h.ProcessMessage(projector, []byte(`{"type":"projector:join","payload":{"moduleId":"mod-live","eventId":"e1"}}`))
@@ -89,12 +87,10 @@ func TestPreconnectedProjectorReceivesLiveUpdatesWhenHostStartsQuiz(t *testing.T
 	if h.GetSession("mod-live") != nil {
 		t.Fatal("projector:join created a session before host started")
 	}
-	// Drain initial lobby cmd:state.
 	for len(projector.send) > 0 {
 		<-projector.send
 	}
 
-	// Host now creates the session and starts the quiz.
 	h.CreateSession("mod-live", "e1")
 	host := &Client{ModuleID: "mod-live", IsHost: true, send: make(chan []byte, 16)}
 	h.Register(host)

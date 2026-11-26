@@ -18,7 +18,6 @@
       </div>
     </div>
 
-    <!-- Horizontal Tabs Navigation -->
     <div class="horizontal-tabs">
       <button 
         v-for="tab in tabs" 
@@ -31,34 +30,28 @@
       </button>
     </div>
 
-    <!-- Tab Content Area -->
     <div class="tab-content">
-      <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <p>{{ $t('data_library.loading') }}</p>
       </div>
 
-      <!-- Error State -->
       <div v-else-if="error" class="error-state">
         <AppIcon class="error-icon" name="alert" :size="48" />
         <p>{{ $t('data_library.error', { error: error }) }}</p>
         <button class="retry-btn" @click="fetchData">{{ $t('data_library.retry') }}</button>
       </div>
 
-      <!-- No Data State (only if not loading and no error and no records) -->
       <div v-else-if="!loading && !error && recordCount === 0" class="no-data-state">
         <AppIcon class="empty-icon" name="chart" :size="56" />
         <p>{{ $t('data_library.no_data') }}</p>
         <p class="hint">{{ $t('data_library.hint_waiting') }}</p>
       </div>
 
-      <!-- Data Table View -->
       <div v-else class="data-table-view">
         <div class="handsontable-container">
           <HotTable ref="hotTableComponent" :settings="hotSettings" />
         </div>
-        <!-- Pagination reserved for future use -->
       </div>
     </div>
   </div>
@@ -77,35 +70,29 @@ import AppIcon from '../components/AppIcon.vue'
 import { extractLabel } from '../utils/labelExtractor';
 
 const { t, locale } = useI18n();
-// Register all Handsontable modules
 registerAllModules();
 
 const route = useRoute();
 const router = useRouter();
 
 const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
+  try { localStorage.setItem('userLanguage', locale.value) } catch {  }
 }
 const routeEventId = computed(() => route.query.eventId);
 const routeModuleId = computed(() => route.query.moduleId);
 
 const eventName = ref('');
 const tabs = ref([]);
-const activeTab = ref('unified'); // Default to unified view
+const activeTab = ref('unified');
 const loading = ref(false);
 const error = ref(null);
 
-// Data for Handsontable
 const tableData = ref([]);
 const tableHeaders = ref([]);
-const tableColumns = ref([]); // Column definitions for Handsontable
+const tableColumns = ref([]);
 
 const hotTableComponent = ref(null);
 const eventModules = ref([]); 
-
-// -----------------------------------------------------------------------------
-// Helper functions defined BEFORE usage in hotSettings to avoid hoisting issues
-// -----------------------------------------------------------------------------
 
 const updateResponse = async (moduleId, responseId, data) => {
   if (!responseId) {
@@ -129,7 +116,6 @@ const getModuleFieldMapping = (moduleDef) => {
   if (moduleDef && moduleDef.type === 'form' && moduleDef.data && moduleDef.data.timeline) {
     moduleDef.data.timeline.forEach(step => {
        if(step.type === 'field') {
-          // Always generate label from question text to ensure consistency
           const label = step.data.label ? extractLabel(step.data.label) : 'Question';
           mapping[step.id] = label;
        }
@@ -155,7 +141,7 @@ const handleTableChange = (changes, source) => {
   if (!changes || source === 'loadData') return;
 
   changes.forEach(([row, prop, oldValue, newValue]) => {
-    if (oldValue === newValue) return; // No change
+    if (oldValue === newValue) return;
 
     const rowData = tableData.value[row];
     if (!rowData) {
@@ -164,7 +150,6 @@ const handleTableChange = (changes, source) => {
     }
     const userId = rowData.userId;
 
-    // Determine what changed
     if (prop === 'name') {
       if (rowData.nameSourceModuleId && rowData.nameSourceKey) {
         const moduleId = rowData.nameSourceModuleId;
@@ -194,10 +179,6 @@ const handleTableChange = (changes, source) => {
     }
   });
 };
-
-// -----------------------------------------------------------------------------
-// HotSettings Initialization
-// -----------------------------------------------------------------------------
 
 const hotSettings = reactive({
   data: tableData,
@@ -230,10 +211,6 @@ const initializeUser = (map, userId) => {
   });
 };
 
-// -----------------------------------------------------------------------------
-// Data Fetching Logic
-// -----------------------------------------------------------------------------
-
 const fetchEventDetails = async () => {
   if (!routeEventId.value) return;
   try {
@@ -243,7 +220,6 @@ const fetchEventDetails = async () => {
     eventName.value = event.name;
     eventModules.value = event.modules || [];
 
-    // Build Tabs
     const newTabs = [{ id: 'unified', label: 'Unified View' }];
     event.modules.forEach(m => {
       newTabs.push({
@@ -253,7 +229,6 @@ const fetchEventDetails = async () => {
     });
     tabs.value = newTabs;
     
-    // Sync active tab with route or default
     if (routeModuleId.value) {
       if (event.modules.find(m => m.id === routeModuleId.value)) {
         activeTab.value = routeModuleId.value;
@@ -286,13 +261,11 @@ const fetchData = async () => {
   loading.value = true;
   error.value = null;
   
-  // Clear data first
   tableData.value = [];
   tableHeaders.value = [];
   tableColumns.value = [];
 
   try {
-    // RELOAD SCHEMA: Fetch event details to ensure we have the latest form definitions (labels/IDs)
     await fetchEventDetails();
 
     if (activeTab.value === 'unified') {
@@ -336,7 +309,6 @@ results.forEach(({ moduleId, type, responses }) => {
            });
          }
        } else if (type === 'teams') {
-        // Teams module - no individual scores, just track team membership
       } else {
         const userId = res.userId;
         if (!userId) return;
@@ -373,7 +345,6 @@ results.forEach(({ moduleId, type, responses }) => {
         readOnly: false 
       });
     } else if (m.type === 'teams') {
-      // Teams module - display team membership in unified view
       headers.push(`${m.name} (Team)`);
       columns.push({ 
         data: `team.${m.id}`, 
@@ -409,7 +380,6 @@ results.forEach(({ moduleId, type, responses }) => {
   tableColumns.value = columns;
   tableData.value = flattenedData;
   
-  // Force update settings to be safe
   if (hotTableComponent.value && hotTableComponent.value.hotInstance) {
     hotTableComponent.value.hotInstance.updateSettings({
       colHeaders: headers,
@@ -488,22 +458,12 @@ const fetchModuleData = async (moduleId) => {
 
   const headers = ['ID', ...Array.from(allKeys).map(k => fieldLabels[k] || k)];
   const columns = headers.map((h, index) => {
-      // First column is ID
       if (index === 0) return { data: 'ID' };
-      // Other columns, find the key that maps to this header or use the header itself (if it was a key)
-      // Actually we need to map data keys to columns, but since we flatmapped keys, we can just use the key for data access?
-      // Wait, Handsontable needs 'data' property to look up in the row object.
-      // If we change the header, the data property in the row object (which is the key) doesn't change.
-      // So we need to separate 'data' accessor from 'title' (header).
       
-      // But here headers array is determining the visual order AND the accessor if we use simple array of objects.
-      // In the Unified view we did: headers.push(label) AND columns.push({ data: key }).
       
-      // Here in fetchModuleData we construct 'columns' based on 'headers'.
-      return { data: Array.from(allKeys)[index - 1] }; // -1 because index 0 is ID
+      return { data: Array.from(allKeys)[index - 1] };
   }); 
   
-  // Re-write this part to be clearer and correct
   const sortedKeys = Array.from(allKeys);
   const displayHeaders = ['ID', ...sortedKeys.map(k => fieldLabels[k] || k)];
   const displayColumns = [{ data: 'ID' }, ...sortedKeys.map(k => ({ data: k }))];
@@ -611,7 +571,6 @@ watch(activeTab, () => {
   color: #888;
 }
 
-/* Horizontal Tabs Styles */
 .horizontal-tabs {
   display: flex;
   background-color: #1E1E1E;
@@ -642,14 +601,12 @@ watch(activeTab, () => {
   border-bottom-color: #007AFF;
 }
 
-/* Tab Content Styles */
 .tab-content {
   flex: 1;
   padding: 24px;
   background-color: #121212;
 }
 
-/* Loading State */
 .loading-state, .error-state, .no-data-state {
   display: flex;
   flex-direction: column;
@@ -682,7 +639,6 @@ watch(activeTab, () => {
   margin-top: 8px;
 }
 
-/* Data Table View */
 .data-table-view {
   height: 100%;
   display: flex;
@@ -695,6 +651,6 @@ watch(activeTab, () => {
   background-color: #1E1E1E;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  overflow: hidden; /* Ensure table stays within round corners */
+  overflow: hidden;
 }
 </style>

@@ -39,7 +39,6 @@ func TestResponsesDoNotCreateUnnamedParticipants(t *testing.T) {
 			}
 		})
 	}
-	// A later welcome response registers the same device with its actual name.
 	for _, data := range []map[string]any{
 		{"step_welcome_name": "  Alice  "},
 		{"answer": "ordinary form"},

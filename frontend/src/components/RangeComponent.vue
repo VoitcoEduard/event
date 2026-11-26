@@ -1,10 +1,8 @@
 <template>
   <div class="range-wrapper" ref="wrapperEl">
 
-    <!-- LEFT: Scale + Track -->
     <div class="range-left">
 
-      <!-- Tick labels -->
       <div class="scale-col">
         <div
           v-for="tick in ticks"
@@ -17,11 +15,9 @@
         </div>
       </div>
 
-      <!-- Track -->
       <div class="track-bar" ref="trackEl">
         <div class="track-fill" :style="{ height: fillPercentage + '%' }"></div>
 
-        <!-- Correct answer marker -->
         <div
           v-if="showCorrectMarker && correctValue !== null"
           class="correct-marker"
@@ -30,7 +26,6 @@
           <div class="correct-tag">{{ formatWithUnit(correctValue, unit) }}</div>
         </div>
 
-        <!-- Thumb -->
         <div
           class="thumb"
           :style="{ bottom: fillPercentage + '%' }"
@@ -43,13 +38,11 @@
       </div>
     </div>
 
-    <!-- CENTER: Value display -->
     <div class="value-display">
       <span class="value-num">{{ formattedValue }}</span>
       <span v-if="unit" class="value-unit">{{ unit }}</span>
     </div>
 
-    <!-- RIGHT: Scroll wheel zone -->
     <div
       class="scroll-zone"
       :class="{ active: isScrolling, hint: !hasInteracted && !isScrolling }"
@@ -61,7 +54,6 @@
       @mousedown="onMouseDown"
       @wheel.prevent="onWheel"
     >
-      <!-- Idle hint arrows -->
       <div v-if="!hasInteracted && !isScrolling" class="hint-arrows">
         <AppIcon class="arrow arrow-up" name="chevronUp" :size="24" />
         <AppIcon class="arrow arrow-down" name="chevronDown" :size="24" />
@@ -98,7 +90,6 @@ const scrollZoneEl = ref(null)
 const isScrolling  = ref(false)
 const hasInteracted = ref(false)
 
-// ── Number helpers ─────────────────────────────────────────
 const formatNumber = (n) => {
   if (n === null || n === undefined || !Number.isFinite(Number(n))) return ''
   return Number(n).toFixed(props.decimalPlaces)
@@ -112,7 +103,6 @@ const formatWithUnit = (n, unit) => {
 }
 const formattedValue = computed(() => formatNumber(props.modelValue))
 
-// ── Percentages ────────────────────────────────────────────
 const range = computed(() => props.max - props.min)
 const interactive = computed(() => !props.readonly && Number.isFinite(props.min) && Number.isFinite(props.max) && Number.isFinite(props.step) && props.max > props.min && props.step > 0)
 
@@ -126,7 +116,6 @@ const correctPercentage = computed(() => {
   return Math.max(0, Math.min(100, ((props.correctValue - props.min) / range.value) * 100))
 })
 
-// ── Tick marks ─────────────────────────────────────────────
 const ticks = computed(() => {
   const result = []
   const r = range.value
@@ -152,11 +141,9 @@ const ticks = computed(() => {
   return result
 })
 
-// ── Haptics ────────────────────────────────────────────────
 let lastHapticValue = null
 const buzz = () => { if (navigator.vibrate) navigator.vibrate(10) }
 
-// ── Core setter ────────────────────────────────────────────
 const applyValue = (raw) => {
   if (!interactive.value || !Number.isFinite(raw)) return
   let v = Math.max(props.min, Math.min(props.max, raw))
@@ -176,12 +163,9 @@ const applyValue = (raw) => {
   }
 }
 
-// ── Scroll sensitivity ─────────────────────────────────────
-// How many pixels of drag = full range. Larger = slower/more precise.
-const DRAG_PX_PER_FULL_RANGE = 600   // drag 600px to go 0→max
-const WHEEL_STEPS_PER_TICK = 1       // one step per wheel tick
+const DRAG_PX_PER_FULL_RANGE = 600
+const WHEEL_STEPS_PER_TICK = 1
 
-// ── Touch ──────────────────────────────────────────────────
 let touchStartY   = null
 let touchStartVal = null
 
@@ -196,7 +180,7 @@ const onTouchStart = (e) => {
 
 const onTouchMove = (e) => {
   if (!isScrolling.value || touchStartY === null) return
-  const dy    = touchStartY - e.touches[0].clientY   // up = positive = increase
+  const dy    = touchStartY - e.touches[0].clientY
   const delta = (dy / DRAG_PX_PER_FULL_RANGE) * range.value
   applyValue(touchStartVal + delta)
 }
@@ -208,7 +192,6 @@ const onTouchEnd = () => {
   if (navigator.vibrate) navigator.vibrate([15, 10, 15])
 }
 
-// ── Mouse drag ─────────────────────────────────────────────
 let activeMouseCleanup = null
 const onMouseDown = (e) => {
   if (!interactive.value) return
@@ -237,7 +220,6 @@ const onMouseDown = (e) => {
 }
 onBeforeUnmount(() => { if (activeMouseCleanup) activeMouseCleanup() })
 
-// ── Mouse wheel ────────────────────────────────────────────
 const onWheel = (e) => {
   if (!interactive.value) return
   hasInteracted.value = true
@@ -248,7 +230,6 @@ const onWheel = (e) => {
 </script>
 
 <style scoped>
-/* ── Root ──────────────────────────────────────────────────────── */
 .range-wrapper {
   display: flex;
   flex-direction: row;
@@ -261,7 +242,6 @@ const onWheel = (e) => {
   font-family: -apple-system, 'Inter', sans-serif;
 }
 
-/* ── Left panel ────────────────────────────────────────────────── */
 .range-left {
   flex: 1;
   display: flex;
@@ -271,7 +251,6 @@ const onWheel = (e) => {
   padding: 12px 0;
 }
 
-/* ── Tick scale ────────────────────────────────────────────────── */
 .scale-col {
   position: relative;
   width: 56px;
@@ -305,7 +284,6 @@ const onWheel = (e) => {
 }
 .tick-mark.active { background: #ffffff; }
 
-/* ── Track bar ─────────────────────────────────────────────────── */
 .track-bar {
   position: relative;
   width: 6px;
@@ -324,7 +302,6 @@ const onWheel = (e) => {
   transition: height 0.04s linear;
 }
 
-/* ── Thumb ─────────────────────────────────────────────────────── */
 .thumb {
   position: absolute;
   left: 50%;
@@ -357,7 +334,6 @@ const onWheel = (e) => {
   background: rgba(0,0,0,0.22);
 }
 
-/* ── Value display ─────────────────────────────────────────────── */
 .value-display {
   display: flex;
   flex-direction: column;
@@ -382,7 +358,6 @@ const onWheel = (e) => {
   letter-spacing: 0.03em;
 }
 
-/* ── Correct marker ────────────────────────────────────────────── */
 .correct-marker {
   position: absolute;
   left: 50%;
@@ -407,7 +382,6 @@ const onWheel = (e) => {
   white-space: nowrap;
 }
 
-/* ── Scroll zone ───────────────────────────────────────────────── */
 .scroll-zone {
   width: 64px;
   flex-shrink: 0;
@@ -426,7 +400,6 @@ const onWheel = (e) => {
   gap: 6px;
 }
 
-/* Idle hint: pulsing glow + bright border */
 @keyframes wheel-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.0),  0 0 0 0   rgba(10, 132, 255, 0.0); }
   30%  { box-shadow: 0 0 10px 3px rgba(10, 132, 255, 0.55), 0 0 22px 8px rgba(10, 132, 255, 0.2); }
@@ -447,7 +420,6 @@ const onWheel = (e) => {
   box-shadow: none;
 }
 
-/* ── Hint arrows ───────────────────────────────────────────────── */
 .hint-arrows {
   display: flex;
   flex-direction: column;
@@ -481,7 +453,6 @@ const onWheel = (e) => {
 .arrow-up   { animation: arrow-bob-up   1.4s ease-in-out infinite; }
 .arrow-down { animation: arrow-bob-down 1.4s ease-in-out infinite; }
 
-/* ── Notches ───────────────────────────────────────────────────── */
 .notches {
   display: flex;
   flex-direction: column;
@@ -501,7 +472,6 @@ const onWheel = (e) => {
   background: rgba(255,255,255,0.22);
 }
 
-/* The two middle notches are slightly wider/brighter — like a center indent */
 .notch.center {
   width: 42px;
   background: rgba(255,255,255,0.45);

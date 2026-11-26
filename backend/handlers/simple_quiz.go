@@ -19,7 +19,6 @@ import (
 	"github.com/user/go-expo-sample/backend/postgres"
 )
 
-// RequireSimpleQuizModule prevents a module from being accessed through another event's URL.
 func (h *Handler) RequireSimpleQuizModule(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if h.deps.DB == nil {
@@ -41,7 +40,6 @@ func (h *Handler) RequireSimpleQuizModule(next http.HandlerFunc) http.HandlerFun
 }
 
 func simpleQuizIDs(r *http.Request) (eventID, moduleID string) {
-	// Prefer PathValue (Go 1.22+ patterns), fall back to manual split.
 	if v := r.PathValue("eventID"); v != "" {
 		eventID = v
 	}
@@ -52,7 +50,6 @@ func simpleQuizIDs(r *http.Request) (eventID, moduleID string) {
 		return eventID, moduleID
 	}
 	parts := strings.Split(r.URL.Path, "/")
-	// /events/{eventID}/modules/{moduleID}/simple-quiz/...
 	if len(parts) >= 5 {
 		return parts[2], parts[4]
 	}
@@ -76,7 +73,6 @@ func (h *Handler) simpleQuizHub() *hub.QuizHub {
 	return h.deps.QuizHub
 }
 
-// LaunchSimpleQuiz snapshots template questions into a new live session.
 func (h *Handler) LaunchSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	if h.simpleQuizHub() == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
@@ -134,7 +130,6 @@ func (h *Handler) LaunchSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// OpenSimpleQuizQuestion opens the current (or specified) question.
 func (h *Handler) OpenSimpleQuizQuestion(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -192,7 +187,6 @@ func (h *Handler) OpenSimpleQuizQuestion(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
-// LockSimpleQuizAnswers closes submissions for the active question.
 func (h *Handler) LockSimpleQuizAnswers(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -224,7 +218,6 @@ func (h *Handler) LockSimpleQuizAnswers(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
-// NextSimpleQuizQuestion advances to between-questions for the next index.
 func (h *Handler) NextSimpleQuizQuestion(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -265,7 +258,6 @@ func (h *Handler) NextSimpleQuizQuestion(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
-// EndSimpleQuizAnswering moves the session into grading (no publish).
 func (h *Handler) EndSimpleQuizAnswering(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -301,7 +293,6 @@ func (h *Handler) EndSimpleQuizAnswering(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
-// ResumeSimpleQuiz resumes a paused session after restart.
 func (h *Handler) ResumeSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -345,7 +336,6 @@ func (h *Handler) ResumeSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
-// RevealSimpleQuizAnswer reveals the public correct answer if allowed.
 func (h *Handler) RevealSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -403,7 +393,6 @@ func (h *Handler) RevealSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
-// PublishSimpleQuizResults publishes working results (host only, gated).
 func (h *Handler) PublishSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -449,7 +438,6 @@ func (h *Handler) PublishSimpleQuizResults(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// UpdateSimpleQuizPublished recomputes the published snapshot after corrections.
 func (h *Handler) UpdateSimpleQuizPublished(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -490,7 +478,6 @@ func (h *Handler) UpdateSimpleQuizPublished(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// CompleteSimpleQuiz marks the session completed.
 func (h *Handler) CompleteSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -521,7 +508,6 @@ func (h *Handler) CompleteSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, publicSimpleQuizState(updated, "host", ""))
 }
 
-// ResetSimpleQuiz clears the session.
 func (h *Handler) ResetSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -537,8 +523,6 @@ func (h *Handler) ResetSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"message": "Simple quiz reset"})
 }
 
-// LinkSimpleQuizParticipant lets an administrator explicitly merge a legacy
-// Simple Quiz identity into an event participant after reviewing identity.
 func (h *Handler) LinkSimpleQuizParticipant(w http.ResponseWriter, r *http.Request) {
 	if h.simpleQuizHub() == nil || h.deps.DB == nil {
 		http.Error(w, "Quiz storage unavailable", http.StatusServiceUnavailable)
@@ -589,7 +573,6 @@ func (h *Handler) LinkSimpleQuizParticipant(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, map[string]string{"playerId": playerID, "participantId": body.ParticipantID})
 }
 
-// JoinSimpleQuiz registers a nickname and returns a private reconnect identity.
 func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	qh := h.simpleQuizHub()
 	if qh == nil {
@@ -660,7 +643,6 @@ func (h *Handler) JoinSimpleQuiz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"playerId": player.ID, "secret": player.Secret, "nickname": player.Nickname})
 }
 
-// SubmitSimpleQuizAnswer stores one locked answer per player per question.
 func (h *Handler) SubmitSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) {
 	qh := h.simpleQuizHub()
 	if qh == nil {
@@ -724,7 +706,6 @@ func (h *Handler) SubmitSimpleQuizAnswer(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// GetSimpleQuizState returns role-filtered state (never leaks notes/grades/secrets).
 func (h *Handler) GetSimpleQuizState(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -739,8 +720,6 @@ func (h *Handler) GetSimpleQuizState(w http.ResponseWriter, r *http.Request) {
 	}
 	view := r.URL.Query().Get("view")
 	if view == "" {
-		// Default BEFORE authorization so a bare ?playerId=X request cannot
-		// bypass the player-secret check with an empty (admin) view.
 		view = "player"
 	}
 	playerID := r.URL.Query().Get("playerId")
@@ -750,7 +729,6 @@ func (h *Handler) GetSimpleQuizState(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, publicSimpleQuizState(s, view, playerID))
 }
 
-// GetSimpleQuizQueue returns the anonymous grading queue (judge token required).
 func (h *Handler) GetSimpleQuizQueue(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -821,7 +799,6 @@ func buildSimpleQuizQueueResponse(s *models.SimpleQuizSession, qi int, filter, c
 		if filter == "pending" && graded && verdict != models.SimpleQuizVerdictReviewLater {
 			continue
 		}
-		// Hide review_later as unresolved for publish gate but show in queue.
 		if !graded {
 			verdict = "pending"
 		}
@@ -861,7 +838,6 @@ func buildSimpleQuizQueueResponse(s *models.SimpleQuizSession, qi int, filter, c
 	}
 }
 
-// GradeSimpleQuizAnswer marks one answer right/wrong/review_later.
 func (h *Handler) GradeSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -935,7 +911,6 @@ func (h *Handler) GradeSimpleQuizAnswer(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// UndoSimpleQuizGrade reverts the latest grading action for one judge key.
 func (h *Handler) UndoSimpleQuizGrade(w http.ResponseWriter, r *http.Request) {
 	quizHub := h.simpleQuizHub()
 	if quizHub == nil {
@@ -981,7 +956,6 @@ func (h *Handler) UndoSimpleQuizGrade(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"undone": answerID, "restored": previous, "gradingComplete": updated.GradingComplete()})
 }
 
-// GetSimpleQuizResults returns working (host/judge) and published snapshots.
 func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {
@@ -1005,7 +979,6 @@ func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 		"publishedVersion": s.PublishedVer,
 		"gradingComplete":  s.GradingComplete(),
 	}
-	// Working results only for host (admin) and judge (token).
 	if view == "host" || view == "judge" {
 		if view == "judge" {
 			token := r.URL.Query().Get("judgeToken")
@@ -1022,7 +995,6 @@ func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 		resp["working"] = s.ComputeWorkingResults()
 		resp["progress"] = progressAll(s)
 	}
-	// Player personal block when published.
 	if view == "player" && playerID != "" && s.Published != nil {
 		for _, p := range s.Published.Players {
 			if p.PlayerID == playerID {
@@ -1030,7 +1002,6 @@ func (h *Handler) GetSimpleQuizResults(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		// Include own answer texts.
 		mine := []models.SimpleQuizAnswer{}
 		for _, a := range s.Answers {
 			if a.PlayerID == playerID {
@@ -1071,7 +1042,6 @@ func (h *Handler) authorizeSimpleQuizView(w http.ResponseWriter, r *http.Request
 	return true
 }
 
-// RotateSimpleQuizJudgeToken creates a new secret link (host only).
 func (h *Handler) RotateSimpleQuizJudgeToken(w http.ResponseWriter, r *http.Request) {
 	hub := h.simpleQuizHub()
 	if hub == nil {

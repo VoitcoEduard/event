@@ -13,9 +13,6 @@ type entry struct {
 	expiresAt time.Time
 }
 
-// Cache is a small thread-safe TTL cache for byte payloads.
-// It is meant for hot read paths (e.g. polling) where the same
-// response is served many times per second.
 type Cache struct {
 	mu         sync.RWMutex
 	entries    map[string]entry
@@ -38,7 +35,6 @@ func New(ttl time.Duration) *Cache {
 	return c
 }
 
-// Close stops the cleanup worker. Calling Close more than once is safe.
 func (c *Cache) Close() {
 	if c.stop == nil {
 		return
@@ -47,7 +43,6 @@ func (c *Cache) Close() {
 	<-c.done
 }
 
-// Get returns the cached value. Expired entries are treated as misses.
 func (c *Cache) Get(key string) ([]byte, bool) {
 	c.mu.RLock()
 	e, ok := c.entries[key]
@@ -62,12 +57,10 @@ func (c *Cache) Get(key string) ([]byte, bool) {
 	return e.value, true
 }
 
-// Set stores value under key. The caller must not mutate value afterwards.
 func (c *Cache) Set(key string, value []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.entries) >= c.maxEntries {
-		// Evict an arbitrary entry to bound memory usage.
 		for k := range c.entries {
 			delete(c.entries, k)
 			break
@@ -82,7 +75,6 @@ func (c *Cache) Delete(key string) {
 	c.mu.Unlock()
 }
 
-// DeletePrefix removes all entries whose key starts with prefix.
 func (c *Cache) DeletePrefix(prefix string) {
 	c.mu.Lock()
 	for k := range c.entries {

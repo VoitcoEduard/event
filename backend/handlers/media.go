@@ -22,8 +22,6 @@ import (
 
 var mediaMemoryCache = cache.NewMediaCache(256 * 1024 * 1024)
 
-// Deletion and cache population are serialized so a concurrent read cannot
-// repopulate a cache entry after its metadata has been deleted.
 var mediaAccessMu sync.RWMutex
 
 func InvalidateMediaCache(id string) { mediaMemoryCache.Delete(id) }

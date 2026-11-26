@@ -24,8 +24,6 @@ func scanParticipant(row scanner) (*models.Participant, error) {
 	return &p, nil
 }
 
-// EnsureParticipant returns the same participant for repeated event/device or
-// event/join-key registration. Join keys do not merge unrelated event records.
 func (s *Store) EnsureParticipant(ctx context.Context, p *models.Participant) (*models.Participant, error) {
 	var profile []byte
 	var err error
@@ -191,8 +189,6 @@ func (s *Store) DeleteTeamsForEvent(ctx context.Context, eventID string) error {
 	return translate(tx.Commit(ctx))
 }
 
-// assignBalancedTeams assigns each participant in people to the team with the
-// smallest current count, breaking ties consistently by team list order.
 func assignBalancedTeams(teams []models.Team, existingCounts map[string]int, people []models.Participant) {
 	if len(teams) == 0 || len(people) == 0 {
 		return
@@ -213,7 +209,6 @@ func assignBalancedTeams(teams []models.Team, existingCounts map[string]int, peo
 	}
 }
 
-// AutoAssignParticipants assigns only unassigned participants in one transaction.
 func (s *Store) AutoAssignParticipants(ctx context.Context, eventID string) ([]models.Participant, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {

@@ -290,13 +290,13 @@ const copyJudgeLink = async () => {
   try {
     await navigator.clipboard.writeText(judgeUrl.value)
     success(t('simple_quiz.config.copied'))
-  } catch { /* ignore */ }
+  } catch {  }
 }
 const copyProjectorLink = async () => {
   try {
     await navigator.clipboard.writeText(`${window.location.origin}/projector/${eventId}`)
     success(t('quiz.host.toast.link_copied'))
-  } catch { /* ignore */ }
+  } catch {  }
 }
 
 let stopped = false
@@ -307,12 +307,12 @@ onMounted(async () => {
     const data = await res.json()
     if (stopped) return
     pinCode.value = data.pin || eventId
-  } catch { /* ignore */ }
+  } catch {  }
   if (stopped) return
 	try {
 		const response = await fetch(`${API_BASE_URL}/events/${eventId}/participants`, { headers: getAuthHeaders() })
 		if (response.ok && !stopped) participantOptions.value = await response.json()
-	} catch { /* identity linking is optional */ }
+	} catch {  }
 	if (stopped) return
   try {
     const modRes = await fetch(`${API_BASE_URL}/events/${eventId}/modules/${moduleId}`, { headers: getAuthHeaders() })
@@ -322,7 +322,7 @@ onMounted(async () => {
         judgeToken.value = mod.data.judgeToken
       }
     }
-  } catch { /* judge token load is best-effort */ }
+  } catch {  }
   if (stopped) return
   await refresh()
   if (stopped) return

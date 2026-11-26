@@ -1,6 +1,5 @@
 import { getImageUrl } from '../services/media'
 
-// Chunked image preloader for memory and bandwidth efficiency
 export class ImagePreloadManager {
     constructor() {
         this.preloadedImages = new Map();
@@ -8,7 +7,6 @@ export class ImagePreloadManager {
         this.maxConcurrent = 3;
     }
 
-    // Extract all image URLs from a question object or preload API response
     extractImageUrls(question) {
         if (!question) return [];
         const urls = [];
@@ -41,7 +39,6 @@ export class ImagePreloadManager {
         return urls;
     }
 
-    // Preload an array of questions or URLs
     async preloadQuestions(questions, onProgress) {
         if (!questions || questions.length === 0) return;
 
@@ -63,7 +60,6 @@ export class ImagePreloadManager {
         for (let i = 0; i < total; i++) {
             const url = allUrls[i];
 
-            // Load first question's images immediately
             if (i === 0) {
                 await this.loadImage(url).catch(() => {});
                 loaded++;
@@ -71,7 +67,6 @@ export class ImagePreloadManager {
                 continue;
             }
 
-            // Background load remaining
             this.loadInBackground(url).then(() => {
                 loaded++;
                 if (onProgress) onProgress(loaded / total);
@@ -83,7 +78,6 @@ export class ImagePreloadManager {
         }
     }
 
-    // Preload a single question with high priority (e.g. next question)
     async preloadQuestion(question) {
         const urls = this.extractImageUrls(question);
         return Promise.all(urls.map(url => this.loadImage(url).catch(() => null)));
@@ -113,7 +107,6 @@ export class ImagePreloadManager {
             return this.preloadedImages.get(url);
         }
 
-        // Wait for an available concurrency slot
         while (this.currentLoading >= this.maxConcurrent) {
             await new Promise(r => setTimeout(r, 100));
         }
@@ -135,6 +128,5 @@ export class ImagePreloadManager {
     }
 }
 
-// Export singleton instance
 export const preloader = new ImagePreloadManager();
 

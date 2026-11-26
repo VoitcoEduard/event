@@ -7,8 +7,6 @@ import (
 	"github.com/user/go-expo-sample/backend/handlers"
 )
 
-// registerRoutes keeps the public API paths and authentication requirements in
-// one place. Handlers still receive their original URL paths for compatibility.
 func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	mux.HandleFunc("GET /ws", h.ServeWs)
 

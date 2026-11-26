@@ -14,7 +14,6 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('vue-i18n', async (importOriginal) => ({
-  // Keep createI18n available: the layout chain now imports src/i18n.js.
   ...await importOriginal(),
   useI18n: () => ({ t: k => k }),
 }))
@@ -99,24 +98,20 @@ describe('ScreenManagerScreen fixes (Bug #16)', () => {
     const btn = wrapper.find('.launch-btn')
     expect(btn.text()).toBe('screen_manager.open_projector')
 
-    // Open projector
     await btn.trigger('click')
     expect(openSpy).toHaveBeenCalledTimes(1)
     expect(btn.text()).toBe('admin.details.close_projector')
 
-    // Simulate user closing the popup window manually
     popup1.closed = true
     vi.advanceTimersByTime(600)
     await flushPromises()
 
     expect(btn.text()).toBe('screen_manager.open_projector')
 
-    // Re-open works cleanly
     await btn.trigger('click')
     expect(openSpy).toHaveBeenCalledTimes(2)
     expect(btn.text()).toBe('admin.details.close_projector')
 
-    // Even if user clicks Close right after popup closed before poll fires, state clears cleanly
     popup2.closed = true
     await btn.trigger('click')
     expect(btn.text()).toBe('screen_manager.open_projector')
@@ -147,7 +142,6 @@ describe('ScreenManagerScreen fixes (Bug #16)', () => {
     wrapper = mount(ScreenManagerScreen, mountOpts)
     await flushPromises()
 
-    // Pushing when saveSlides fails must abort before calling /screen-state
     await wrapper.find('.push-btn').trigger('click')
     await flushPromises()
 
@@ -155,7 +149,6 @@ describe('ScreenManagerScreen fixes (Bug #16)', () => {
     expect(toastMock.success).not.toHaveBeenCalled()
     expect(fetchMock.mock.calls.some(([u]) => u === '/api/events/evt-42/screen-state')).toBe(false)
 
-    // Saving as template when server returns non-2xx must surface error
     toastMock.error.mockClear()
     const saveTplBtn = wrapper.findAll('button').find(b => b.text().includes('screen_manager.editor.save_template'))
     expect(saveTplBtn).toBeTruthy()

@@ -10,17 +10,8 @@ import (
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
-// =============================================================================
-// Test data
-// =============================================================================
-
 var testCtx = context.Background()
 
-// =============================================================================
-// Mock repository for testing
-// =============================================================================
-
-// MockParticipantRepository is a test double for ParticipantRepository
 type MockParticipantRepository struct {
 	CreateFunc          func(ctx context.Context, participant *models.Participant) error
 	GetByEventIDFunc    func(ctx context.Context, eventID string) ([]models.Participant, error)
@@ -50,11 +41,9 @@ func (m *MockParticipantRepository) GetByEventID(ctx context.Context, eventID st
 	if m.GetByEventIDFunc != nil {
 		return m.GetByEventIDFunc(ctx, eventID)
 	}
-	// If explicit results are set, use those (for pre-populated test data)
 	if results, ok := m.GetByEventIDResults[eventID]; ok {
 		return results, nil
 	}
-	// Otherwise auto-populate from created participants
 	var result []models.Participant
 	for _, p := range m.CreatedParticipants {
 		if p.EventID == eventID {
@@ -63,10 +52,6 @@ func (m *MockParticipantRepository) GetByEventID(ctx context.Context, eventID st
 	}
 	return result, nil
 }
-
-// =============================================================================
-// normalizeName tests
-// =============================================================================
 
 func TestNormalizeName(t *testing.T) {
 	tests := []struct {
@@ -126,10 +111,6 @@ func TestNormalizeName(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// ID generation tests
-// =============================================================================
-
 func TestNewID(t *testing.T) {
 	t.Run("returns UUID", func(t *testing.T) {
 		id := utils.NewID()
@@ -151,10 +132,6 @@ func TestNewID(t *testing.T) {
 	})
 }
 
-// =============================================================================
-// JoinEvent tests
-// =============================================================================
-
 func TestJoinEvent(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -172,7 +149,6 @@ func TestJoinEvent(t *testing.T) {
 			displayName: "Alice Smith",
 			profile:     map[string]any{"role": "player"},
 			setupMock: func(m *MockParticipantRepository) {
-				// No-op - Create succeeds by default
 			},
 			checkResult: func(t *testing.T, p *models.Participant, err error) {
 				if err != nil {
@@ -224,7 +200,6 @@ func TestJoinEvent(t *testing.T) {
 				if p == nil {
 					t.Fatal("expected participant, got nil")
 				}
-				// nil profile is valid - service stores whatever is passed
 				if p.Profile != nil {
 					t.Errorf("Profile = %v, want nil", p.Profile)
 				}
@@ -282,17 +257,12 @@ func TestJoinEvent(t *testing.T) {
 
 			tt.checkResult(t, participant, err)
 
-			// Verify participant was stored in mock
 			if err == nil && len(mock.CreatedParticipants) != 1 {
 				t.Errorf("Create was called %d times, want 1", len(mock.CreatedParticipants))
 			}
 		})
 	}
 }
-
-// =============================================================================
-// GetParticipantsByEvent tests
-// =============================================================================
 
 func TestGetParticipantsByEvent(t *testing.T) {
 	t.Run("returns empty list when no participants", func(t *testing.T) {
@@ -370,10 +340,6 @@ func TestGetParticipantsByEvent(t *testing.T) {
 	})
 }
 
-// =============================================================================
-// ParticipantStatus constants tests
-// =============================================================================
-
 func TestParticipantStatusConstants(t *testing.T) {
 	if models.ParticipantStatusJoined != "joined" {
 		t.Errorf("ParticipantStatusJoined = %q, want %q", models.ParticipantStatusJoined, "joined")
@@ -389,15 +355,10 @@ func TestParticipantStatusConstants(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Integration-style test (requires actual mock behavior verification)
-// =============================================================================
-
 func TestJoinEvent_And_GetParticipantsByEvent(t *testing.T) {
 	mock := NewMockRepo()
 	svc := &ParticipantService{Repo: mock}
 
-	// Join two participants
 	p1, err := svc.JoinEvent(testCtx, "event-integrate", "key-1", "Alice", map[string]any{"team": "red"})
 	if err != nil {
 		t.Fatalf("JoinEvent 1 failed: %v", err)
@@ -408,12 +369,10 @@ func TestJoinEvent_And_GetParticipantsByEvent(t *testing.T) {
 		t.Fatalf("JoinEvent 2 failed: %v", err)
 	}
 
-	// Verify stored participants
 	if len(mock.CreatedParticipants) != 2 {
 		t.Errorf("CreatedParticipants has %d items, want 2", len(mock.CreatedParticipants))
 	}
 
-	// Get participants and verify
 	participants, err := svc.GetParticipantsByEvent(testCtx, "event-integrate")
 	if err != nil {
 		t.Fatalf("GetParticipantsByEvent failed: %v", err)
@@ -423,7 +382,6 @@ func TestJoinEvent_And_GetParticipantsByEvent(t *testing.T) {
 		t.Errorf("got %d participants, want 2", len(participants))
 	}
 
-	// Verify IDs are valid and unique
 	ids := make(map[string]bool)
 	for _, p := range participants {
 		if _, err := uuid.Parse(p.ID); err != nil {
@@ -435,7 +393,6 @@ func TestJoinEvent_And_GetParticipantsByEvent(t *testing.T) {
 		ids[p.ID] = true
 	}
 
-	// Verify p1 and p2 are in the list (by ID)
 	foundP1, foundP2 := false, false
 	for _, p := range participants {
 		if p.ID == p1.ID {

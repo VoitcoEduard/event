@@ -10,7 +10,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// JoinEvent handles POST /events/{id}/participants/join
 func (h *Handler) JoinEvent(w http.ResponseWriter, r *http.Request) {
 	eventID := r.PathValue("eventID")
 	if eventID == "" {
@@ -59,7 +58,6 @@ func (h *Handler) JoinEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(participant)
 }
 
-// GetParticipants handles GET /events/{id}/participants
 func (h *Handler) GetParticipants(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
@@ -80,7 +78,6 @@ func (h *Handler) GetParticipants(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(participants)
 }
 
-// UpdateParticipantName handles POST /events/{id}/participants/{userId}/name
 func (h *Handler) UpdateParticipantName(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")

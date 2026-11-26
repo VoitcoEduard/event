@@ -9,7 +9,6 @@
       </select>
     </div>
 
-    <!-- Nickname entry -->
     <div v-if="!identity" class="state-container name-entry-container">
       <h1 class="logo">{{ $t('simple_quiz.player.logo') }}</h1>
       <div class="card">
@@ -27,7 +26,6 @@
       </div>
     </div>
 
-    <!-- Lobby -->
     <div v-else-if="status === 'lobby'" class="state-container lobby-container">
       <div class="lobby-content">
         <h2 class="waiting-text">{{ $t('simple_quiz.player.you_are_in') }}</h2>
@@ -37,7 +35,6 @@
       </div>
     </div>
 
-    <!-- Question open -->
     <div v-else-if="status === 'question_open'" class="state-container sq-question-container">
       <div class="sq-q-header">
         <div class="q-number">{{ currentIndex + 1 }} / {{ total }}</div>
@@ -69,7 +66,6 @@
       </div>
     </div>
 
-    <!-- Locked / between -->
     <div v-else-if="status === 'answers_locked' || status === 'between_questions'" class="state-container answered-container">
       <div class="answered-content">
         <div v-if="question?.revealed && question?.correctAnswer" class="sq-reveal">
@@ -82,7 +78,6 @@
       </div>
     </div>
 
-    <!-- Waiting grading -->
     <div v-else-if="status === 'waiting_grading' || status === 'answering_finished'" class="state-container lobby-container">
       <div class="lobby-content">
         <h2 class="waiting-text">{{ $t('simple_quiz.player.waiting_grading') }}</h2>
@@ -90,7 +85,6 @@
       </div>
     </div>
 
-    <!-- Published -->
     <div v-else-if="status === 'results_published' || status === 'completed'" class="state-container sq-results">
       <div class="sq-results-card">
         <h2>{{ $t('simple_quiz.player.published') }}</h2>
@@ -150,14 +144,14 @@ const eventId = route.params.eventId
 const moduleId = route.params.moduleId
 
 const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
+  try { localStorage.setItem('userLanguage', locale.value) } catch {  }
 }
 
 const nickname = ref('')
 const joining = ref(false)
 const submitting = ref(false)
 const error = ref('')
-const identity = ref(null) // {playerId, secret, nickname}
+const identity = ref(null)
 const status = ref('lobby')
 const currentIndex = ref(0)
 const total = ref(0)
@@ -191,7 +185,7 @@ const clearIdentity = () => {
   me.value = null
   leaderboard.value = []
   revealedAnswers.value = []
-  try { localStorage.removeItem(storageKey.value) } catch { /* ignore */ }
+  try { localStorage.removeItem(storageKey.value) } catch {  }
   quizWS.disconnect()
 }
 
@@ -225,7 +219,7 @@ const join = async () => {
     if (stopped) return
     hasLoadedState = false
     identity.value = { playerId: res.playerId, secret: res.secret, nickname: res.nickname }
-    try { localStorage.setItem(storageKey.value, JSON.stringify(identity.value)) } catch { /* ignore */ }
+    try { localStorage.setItem(storageKey.value, JSON.stringify(identity.value)) } catch {  }
     await refresh()
     if (stopped || !identity.value) return
     quizWS.connect(moduleId, nick, false, false, eventId, { type: 'simple:player_join', payload: { moduleId, playerId: res.playerId, secret: res.secret } })
@@ -248,7 +242,7 @@ const tryReconnect = async () => {
     return true
   } catch (e) {
     if (e.status === 403 || e.status === 404) {
-      try { localStorage.removeItem(storageKey.value) } catch { /* ignore */ }
+      try { localStorage.removeItem(storageKey.value) } catch {  }
     } else {
       error.value = e.message
     }

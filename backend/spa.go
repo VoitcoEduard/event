@@ -17,8 +17,6 @@ func newSPAHandler(distDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		utils.DebugLog("Static request: %s %s", r.Method, r.URL.Path)
 		enableCors(w, r)
-		// Resolve the existence check inside the same filesystem used to serve
-		// assets. Never concatenate an untrusted URL onto a filesystem path.
 		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 		if name == "" {
 			name = "."

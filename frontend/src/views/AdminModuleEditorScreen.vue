@@ -179,7 +179,6 @@
             </div>
           </div>
 
-          <!-- Quiz Editor -->
           <template v-if="moduleType === 'quiz'">
             <QuizEditor
               ref="quizEditorRef"
@@ -245,7 +244,6 @@
             </section>
           </template>
 
-          <!-- Simple Quiz Editor -->
           <template v-else-if="moduleType === 'simple_quiz'">
             <QuizEditor
               ref="quizEditorRef"
@@ -281,7 +279,6 @@
             </section>
           </template>
 
-          <!-- Wrong Pictures Editor -->
           <template v-else-if="moduleType === 'wrong_pictures'">
             <WrongPicturesEditor
               ref="wrongPicturesEditorRef"
@@ -343,7 +340,6 @@
             </section>
           </template>
 
-          <!-- Form Editor -->
           <template v-else-if="moduleType === 'form'">
             <FormEditor
               :timeline="timeline"
@@ -373,7 +369,6 @@
             </section>
           </template>
 
-          <!-- Teams Editor -->
           <template v-else-if="moduleType === 'teams'">
             <section class="editor-settings-card teams-settings-card">
               <h2 class="settings-card-heading">{{ $t('teams_module.configure') }}</h2>
@@ -397,7 +392,6 @@
         </div>
       </template>
 
-      <!-- Load from Library Modal -->
       <Teleport to="body">
         <div
           v-if="showLibraryModal"
@@ -534,7 +528,6 @@ const moduleType = ref('')
 const moduleData = ref({})
 const nameError = ref('')
 
-// Quiz / Simple Quiz / Wrong Pictures state
 const questions = ref([])
 const activeIndex = ref(-1)
 const tracks = ref([])
@@ -544,22 +537,18 @@ const audioSettingsOpen = ref(false)
 const allowReveal = ref(true)
 const judgeToken = ref('')
 
-// Form state
 const timeline = ref([])
 const mandatoryOnEntry = ref(false)
 const hideAfterCompletion = ref(false)
 
-// Teams state
 const teamsConfig = ref(defaultTeamsConfig())
 const teamsSources = ref([])
 const teamsInitialized = ref(false)
 
-// Validation state
 const hasValidated = ref(false)
 const validationErrors = ref([])
 const errorsByIndex = ref({})
 
-// Library / Overflow state
 const overflowOpen = ref(false)
 const showLibraryModal = ref(false)
 const templates = ref([])
@@ -567,7 +556,6 @@ const loadingTemplates = ref(false)
 const templateError = ref(false)
 const librarySearchQuery = ref('')
 
-// Dirty tracking
 const savedSnapshot = ref('')
 const stickyTopPx = ref(107)
 
@@ -677,8 +665,6 @@ function normalizeQuizQuestion(raw, { regenerateId = false, clearImages = false 
     if (!q.scoringConfig) q.scoringConfig = { mode: 'symmetric', maxPoints: 100, tolerance: 10, partialPercent: 0 }
   }
   if (q.type === 'true_false') {
-    // Only fill missing/blank True/False options; never overwrite existing
-    // (already localized) answers.
     if (
       !Array.isArray(q.answers) ||
       q.answers.length < 2 ||
@@ -715,7 +701,6 @@ function normalizeSimpleQuizQuestion(raw, { regenerateId = false } = {}) {
 
 function normalizeWrongPicturesRound(raw, { regenerateId = false, clearImages = false } = {}) {
   const r = JSON.parse(JSON.stringify(raw || {}))
-  // Guard against corrupted persisted rounds that carry timeLimit as ""/null.
   const parsedTimeLimit = r.timeLimit === '' || r.timeLimit === null || r.timeLimit === undefined
     ? 60
     : Number(r.timeLimit)
@@ -821,7 +806,6 @@ const isDirty = computed(() => {
   return serializeState() !== savedSnapshot.value
 })
 
-// L1: param-only navigation (mod-1 -> mod-2) must respect the dirty guard too.
 const { confirmLeave } = useUnsavedChanges(isDirty)
 onBeforeRouteUpdate(async () => confirmLeave())
 
@@ -842,8 +826,6 @@ async function loadEditorContext() {
   const currentEventId = eventId.value
   const currentModuleId = moduleId.value
 
-  // A previous module's in-flight save must never keep this module's Save
-  // button stuck disabled.
   saving.value = false
   loading.value = true
   loadError.value = ''
@@ -934,7 +916,6 @@ async function loadEditorContext() {
           teamsConfig.value = { ...defaultTeamsConfig(), ...(teamsAdmin.activity.config || {}) }
         }
       } catch {
-        // Activity not initialized yet or unavailable; keep module config defaults.
       }
     }
 
@@ -1051,9 +1032,6 @@ const updateTimeline = (nextTimeline) => {
   timeline.value = Array.isArray(nextTimeline) ? nextTimeline : []
 }
 
-// The resolved audio URL of the currently selected track. When /tracks fails
-// (or did not include the selected track yet), fall back to the URL previously
-// persisted on the module so saving does not silently wipe the music choice.
 function getSelectedMusicUrl() {
   if (!selectedMusicId.value) return ''
   const found = tracks.value.find(tr => tr.id === selectedMusicId.value)
@@ -1067,8 +1045,6 @@ function getSelectedMusicUrl() {
   return ''
 }
 
-// Show the persisted selection even when it is missing from the loaded track
-// list, so the <select> never silently displays "None".
 const selectedTrackMissingFromList = computed(() => (
   Boolean(selectedMusicId.value) &&
   !tracks.value.some(tr => tr.id === selectedMusicId.value)
@@ -1099,9 +1075,6 @@ async function handleSave() {
     return
   }
 
-  // Snapshot everything that participates in this save BEFORE awaiting so that
-  // neither in-flight edits nor navigation to another module (which bumps
-  // loadSeq) can corrupt what is persisted or what the dirty baseline becomes.
   const activeLoadSeq = loadSeq
   const activeSaveSeq = ++saveSeq
   const snapshotBeingSaved = serializeState(trimmedName)
@@ -1140,8 +1113,6 @@ async function handleSave() {
       })
       if (!modRes.ok) throw new Error('Failed to save module config')
       if (activeLoadSeq !== loadSeq) return
-      // Retain the resolved URL so subsequent saves keep it even if /tracks
-      // fails later on.
       moduleData.value = {
         ...moduleData.value,
         backgroundMusicId: musicId,
@@ -1202,8 +1173,6 @@ async function handleSave() {
     }
 
     if (activeLoadSeq !== loadSeq) return
-    // Never serializeState() here: edits made while the save was in flight
-    // must keep the screen dirty.
     if (moduleName.value.trim() === trimmedName) {
       moduleName.value = trimmedName
     }
@@ -1241,7 +1210,6 @@ async function copyJudgeLink() {
     await navigator.clipboard?.writeText(judgeUrl.value)
     success(t('simple_quiz.config.copied'))
   } catch {
-    // Clipboard blocked or unavailable
   }
 }
 
@@ -1937,7 +1905,6 @@ onUnmounted(() => {
   justify-content: flex-start;
 }
 
-/* Library Modal */
 .library-modal-overlay {
   position: fixed;
   inset: 0;
@@ -2093,7 +2060,6 @@ onUnmounted(() => {
   line-height: 1.4;
 }
 
-/* Theme embedded modular editors cleanly inside .module-editor-screen */
 :global(html[data-admin-appearance="true"] .module-editor-screen :is(.step-card, .question-editor, .round-card)) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border) !important;

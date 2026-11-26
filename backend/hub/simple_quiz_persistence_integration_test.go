@@ -46,7 +46,6 @@ func TestSimpleQuizRestoreAndConcurrentTransitions(t *testing.T) {
 			t.Fatal("concurrent readers repeated the recovery transition")
 		}
 	}
-	// Two actions based on the same restored snapshot must commit only once.
 	start := make(chan struct{})
 	errs := make(chan error, 2)
 	for range 2 {

@@ -26,7 +26,6 @@ class SignalQueue {
     }
 
     flushSingle(signal) {
-        // The server's question window decides whether a delayed answer counts.
         if (this.sender) {
             this.sender(signal)
         } else {

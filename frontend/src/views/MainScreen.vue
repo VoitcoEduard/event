@@ -76,7 +76,6 @@ onMounted(() => {
   const pinParam = params.get('pin')
   if (pinParam) {
     pin.value = pinParam
-    // Auto-connect if PIN is valid length
     if (pin.value.length === 6) {
         handleConnect()
     }
@@ -89,7 +88,7 @@ const handlePinInput = (e) => {
 }
 
 const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
+  try { localStorage.setItem('userLanguage', locale.value) } catch {  }
 }
 
 const handleConnect = async () => {
@@ -109,7 +108,7 @@ const handleConnect = async () => {
 
     if (response.ok) {
       const event = await response.json()
-      try { sessionStorage.setItem('currentEvent', JSON.stringify(event)) } catch { /* storage unavailable */ }
+      try { sessionStorage.setItem('currentEvent', JSON.stringify(event)) } catch {  }
       router.push('/event')
     } else {
       if (response.status === 404) {
@@ -149,7 +148,6 @@ const goToAdmin = () => {
   overflow: hidden;
 }
 
-/* Subtle ambient glow — not overdone */
 .bg-glow {
   position: absolute;
   top: -200px;
@@ -196,7 +194,6 @@ const goToAdmin = () => {
   align-items: center;
 }
 
-/* Brand */
 .brand {
   display: flex;
   flex-direction: column;
@@ -233,7 +230,6 @@ const goToAdmin = () => {
   text-align: center;
 }
 
-/* Card */
 .card {
   background: #161619;
   padding: 32px 28px;
@@ -263,7 +259,6 @@ const goToAdmin = () => {
   line-height: 1.6;
 }
 
-/* Input */
 .input-wrapper {
   position: relative;
   width: 100%;
@@ -306,7 +301,6 @@ const goToAdmin = () => {
   font-weight: 600;
 }
 
-/* Error */
 .error-text {
   color: #f87171;
   font-size: 13px;
@@ -323,7 +317,6 @@ const goToAdmin = () => {
   font-style: normal;
 }
 
-/* Connect Button */
 .connect-button {
   background: linear-gradient(135deg, #2d8cff 0%, #0a6cf5 100%);
   padding: 17px;
@@ -360,7 +353,6 @@ const goToAdmin = () => {
   letter-spacing: 0.3px;
 }
 
-/* Admin link */
 .admin-link {
   display: inline-flex;
   align-items: center;
@@ -388,7 +380,6 @@ const goToAdmin = () => {
   outline-offset: 2px;
 }
 
-/* Spinner */
 .loading-spinner {
   width: 22px;
   height: 22px;

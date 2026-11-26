@@ -8,9 +8,6 @@ import (
 	"testing"
 )
 
-// Opt in separately from the core suite: this invokes the actual cwebp process
-// and temporary-file path used on the NAS. Synthetic noise avoids an unrealistically
-// cheap solid-color image. The profiler in Go cannot attribute child-process CPU.
 func BenchmarkImageConversion(b *testing.B) {
 	if _, err := exec.LookPath("cwebp"); err != nil {
 		b.Skip("install cwebp (libwebp-tools) to benchmark NAS image conversion")

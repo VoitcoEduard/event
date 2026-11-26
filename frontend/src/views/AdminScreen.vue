@@ -160,7 +160,6 @@ const nameError = ref('')
 const formCardRef = ref(null)
 const nameInputRef = ref(null)
 
-// Dirty tracking for the create/edit event form (L1).
 const formInitialSnapshot = ref('')
 const serializeEventForm = () => JSON.stringify({
   name: name.value,
@@ -307,7 +306,7 @@ const cancelEdit = () => {
 }
 
 const viewDetails = (event) => {
-  try { sessionStorage.setItem('currentEvent', JSON.stringify(event)) } catch { /* storage unavailable */ }
+  try { sessionStorage.setItem('currentEvent', JSON.stringify(event)) } catch {  }
   router.push(`/admin/events/${encodeURIComponent(event.id)}`)
 }
 </script>

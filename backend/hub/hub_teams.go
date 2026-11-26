@@ -106,8 +106,6 @@ func (h *QuizHub) processParticipantJoin(client *Client, msg ClientMessage) {
 			Type:    "teams:available",
 			Payload: map[string]interface{}{"eventId": eventID, "teams": teamsAvailable},
 		})
-		// The admin broadcast below skips evicted clients, so the join is
-		// still announced even when this client is too stalled to inform.
 		h.sendToClientLocked(client, jsonMsg)
 	}
 

@@ -34,13 +34,11 @@ func doGetSimpleQuizState(t *testing.T, h *hub.QuizHub, query string, secret str
 	handler.GetSimpleQuizState(w, r)
 	var body map[string]any
 	if w.Body.Len() > 0 {
-		_ = json.Unmarshal(w.Body.Bytes(), &body) // plain-text error bodies stay nil
+		_ = json.Unmarshal(w.Body.Bytes(), &body)
 	}
 	return w, body
 }
 
-// M3: a bare ?playerId=X request defaults to the player view BEFORE
-// authorization, so it cannot bypass the player-secret check.
 func TestSimpleQuizStatePlayerIDRequiresSecretWhenViewOmitted(t *testing.T) {
 	h := simpleQuizStateHub(t)
 
@@ -67,20 +65,16 @@ func TestSimpleQuizStatePlayerIDRequiresSecretWhenViewOmitted(t *testing.T) {
 	}
 }
 
-// M3 regression guard: explicitly non-player views must not leak player data to
-// a playerId-carrying request without the secret.
 func TestSimpleQuizStateExplicitHostViewStillRequiresAdmin(t *testing.T) {
 	h := simpleQuizStateHub(t)
 	if w, _ := doGetSimpleQuizState(t, h, "?view=host&playerId=p", "private"); w.Code == 200 && strings.Contains(w.Body.String(), "submitted") {
 		t.Fatal("explicit host view with playerId unexpectedly returned player data")
 	}
-	// Explicit player view keeps requiring the secret.
 	if w, _ := doGetSimpleQuizState(t, h, "?view=player&playerId=p", ""); w.Code != 403 {
 		t.Fatalf("explicit player view without secret = %d, want 403", w.Code)
 	}
 }
 
-// H1: blank module names must 400 on both update and publish.
 func TestModuleRenameBlankNameRejected(t *testing.T) {
 	h := New(Dependencies{})
 	for _, tc := range []struct {

@@ -1,10 +1,3 @@
-// Time-decayed scoring for single-answer choice questions
-// (classic, true_false, multi_select, correct_picture).
-//
-// The admin-configured maxPoints is the score for an instant correct answer.
-// It decays linearly to 25% of maxPoints when the timer runs out, mirroring
-// the historical 1000 -> 250 curve. The streak bonus scales the same way:
-// +10% of maxPoints per streak step, capped at +50%.
 export const DEFAULT_CHOICE_MAX_POINTS = 50
 
 export function normalizeChoiceMaxPoints(value) {

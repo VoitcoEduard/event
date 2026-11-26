@@ -35,8 +35,6 @@ export const teamsActivity = {
   join: (e, m, name) => request(e, m, 'join', { name }),
   choose: (e, m, teamId) => request(e, m, 'choose', { teamId }),
   action: async (e, m, body) => {
-    // Keep the same request ID through ambiguous network failures. Caller may
-    // retain this payload for a later retry, without issuing the award twice.
     if (['award', 'undo'].includes(body.action) && !body.requestId) body.requestId = newUUID()
     try { return await request(e, m, 'actions', body, true) }
     catch (error) {

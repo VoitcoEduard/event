@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import { quizWS } from '../services/websocket'
 
-// Define possible states
 const States = {
     LOBBY: 'lobby',
     GET_READY: 'get-ready',
@@ -15,7 +14,6 @@ const States = {
     BUFFERING: 'buffering',
 }
 
-// Define valid transitions
 const transitions = {
     [States.LOBBY]: [States.GET_READY, States.QUESTION_PRESENTING, States.LOBBY],
     [States.GET_READY]: [States.QUESTION_PRESENTING, States.QUESTION_ACTIVE, States.BUFFERING],
@@ -45,16 +43,13 @@ export function useQuizStateMachine({ requestBatch = null } = {}) {
             return
         }
 
-        // Exit current state
         onExitState(state.value)
 
-        // Enter new state
         state.value = to
         onEnterState(to, data)
     }
 
     function onExitState(oldState) {
-        // Clean up any state specific resources
     }
 
     function onEnterState(newState, data) {
@@ -72,11 +67,9 @@ export function useQuizStateMachine({ requestBatch = null } = {}) {
     }
 
     function startLocalTimer(timeLimit) {
-        // Timer logic to be implemented
     }
 
     function validateAndScore(data) {
-        // Answer validation is handled by the view component
     }
 
     function requestNextBatch() {

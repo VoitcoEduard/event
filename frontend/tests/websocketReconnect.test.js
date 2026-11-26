@@ -50,7 +50,7 @@ test('disconnect cancels pending retries and discards queued answers', () => {
   quizWS.disconnect()
   assert.equal(timers.size, 0)
   assert.equal(signalQueue.queue.length, 0)
-  retry() // Also guard against a callback that was already dispatched.
+  retry()
   assert.equal(sockets.length, 1)
 })
 

@@ -6,7 +6,7 @@ import (
 )
 
 func TestMediaCacheGetSet(t *testing.T) {
-	c := NewMediaCache(1024 * 1024) // 1MB
+	c := NewMediaCache(1024 * 1024)
 
 	item := MediaItem{
 		ID:        "media-1",
@@ -35,7 +35,6 @@ func TestMediaCacheGetSet(t *testing.T) {
 }
 
 func TestMediaCacheLRUEviction(t *testing.T) {
-	// Cache capacity: 100 bytes
 	c := NewMediaCache(100)
 
 	item1 := MediaItem{ID: "1", Data: make([]byte, 30), Size: 30}
@@ -50,10 +49,8 @@ func TestMediaCacheLRUEviction(t *testing.T) {
 		t.Fatalf("expected 3 items, got %d", c.Len())
 	}
 
-	// Access item1 to make it most recently used (order now: 1, 3, 2)
 	c.Get("1")
 
-	// Add item4 (30 bytes). Total would be 120 bytes > 100 bytes -> evict oldest (item 2)
 	item4 := MediaItem{ID: "4", Data: make([]byte, 30), Size: 30}
 	c.Set("4", item4)
 

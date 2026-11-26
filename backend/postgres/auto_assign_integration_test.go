@@ -36,7 +36,6 @@ func TestAutoAssignParticipantsBalancesIncrementalLatecomers(t *testing.T) {
 		}
 	}
 
-	// Register and auto-assign 6 latecomers one at a time.
 	for i := 0; i < 6; i++ {
 		_, err := db.EnsureParticipant(ctx, &models.Participant{
 			ID:             fmt.Sprintf("p-%d", i),

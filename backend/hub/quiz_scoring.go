@@ -8,8 +8,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// scoreQuizAnswer uses only the stored question and the server's question
-// window. The payload supplies an answer, never a point value or a clock.
 func scoreQuizAnswer(q models.QuizQuestion, data map[string]interface{}, window models.QuestionWindow, now time.Time, streak int, aspect float64) (int, []int, float64, []models.PlayerGuess, bool) {
 	limit := float64(EffectiveTimeLimit(q))
 	spent := math.Max(0, now.Sub(time.Unix(window.StartTime, 0)).Seconds())

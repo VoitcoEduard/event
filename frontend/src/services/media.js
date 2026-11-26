@@ -1,14 +1,5 @@
 import { API_BASE_URL, getAuthHeaders } from '../utils/index'
 
-/**
- * Convert an image File to WebP format using the Canvas API.
- * Proportionally downscales to maxWidth if the image is wider.
- * Falls back to the original file if WebP encoding is unsupported.
- * @param {File} file - The source image file
- * @param {number} maxWidth - Maximum output width in pixels (default: 1200)
- * @param {number} quality - WebP quality 0–1 (default: 0.85)
- * @returns {Promise<File>} - A new File in WebP format (or original if fallback)
- */
 export async function convertToWebP(file, maxWidth = 1200, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image()
@@ -17,7 +8,6 @@ export async function convertToWebP(file, maxWidth = 1200, quality = 0.85) {
     img.onload = () => {
       URL.revokeObjectURL(objectUrl)
 
-      // Calculate output dimensions
       let { width, height } = img
       if (width > maxWidth) {
         height = Math.round((height * maxWidth) / width)
@@ -34,7 +24,6 @@ export async function convertToWebP(file, maxWidth = 1200, quality = 0.85) {
       canvas.toBlob(
         (blob) => {
           if (!blob) {
-            // WebP not supported — return original
             resolve(file)
             return
           }
@@ -52,7 +41,6 @@ export async function convertToWebP(file, maxWidth = 1200, quality = 0.85) {
 
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl)
-      // If image fails to load, return original
       resolve(file)
     }
 
@@ -60,15 +48,7 @@ export async function convertToWebP(file, maxWidth = 1200, quality = 0.85) {
   })
 }
 
-/**
- * Upload an image file to the server
- * @param {File} file - The image file to upload
- * @param {string} eventId - The event ID
- * @param {string} moduleId - The module ID
- * @returns {Promise<Object>} - The media response with id, url, etc.
- */
 export async function uploadImage(file, eventId, moduleId) {
-  // Convert to WebP before uploading for smaller file sizes
   const processedFile = await convertToWebP(file)
 
   const formData = new FormData()
@@ -90,21 +70,11 @@ export async function uploadImage(file, eventId, moduleId) {
   return response.json()
 }
 
-/**
- * Get the URL for serving a media file
- * @param {string} imageId - The media ID
- * @returns {string} - The full URL to the image
- */
 export function getImageUrl(imageId) {
   if (!imageId) return null
   return `${API_BASE_URL}/media/${imageId}/file`
 }
 
-/**
- * Delete a media file
- * @param {string} imageId - The media ID
- * @returns {Promise<Object>} - The response
- */
 export async function deleteImage(imageId) {
   const response = await fetch(`${API_BASE_URL}/media/${imageId}`, {
     method: 'DELETE',
@@ -119,11 +89,6 @@ export async function deleteImage(imageId) {
   return response.json()
 }
 
-/**
- * Get media metadata
- * @param {string} imageId - The media ID
- * @returns {Promise<Object>} - The media metadata
- */
 export async function getMediaInfo(imageId) {
   const response = await fetch(`${API_BASE_URL}/media/${imageId}`, {
     headers: { ...getAuthHeaders() }
@@ -136,10 +101,6 @@ export async function getMediaInfo(imageId) {
   return response.json()
 }
 
-/**
- * Get all screensavers from the library
- * @returns {Promise<Array>} - Array of screensaver objects
- */
 export async function getScreensavers() {
   const response = await fetch(`${API_BASE_URL}/screensavers`)
 
@@ -151,14 +112,7 @@ export async function getScreensavers() {
   return response.json()
 }
 
-/**
- * Upload a new screensaver to the library
- * @param {File} file - The image file to upload
- * @param {string} name - The name for the screensaver
- * @returns {Promise<Object>} - The created screensaver object
- */
 export async function uploadScreensaver(file, name) {
-  // Convert to WebP before uploading for smaller file sizes (screensavers up to 1920px)
   const processedFile = await convertToWebP(file, 1920, 0.85)
 
   const formData = new FormData()
@@ -179,11 +133,6 @@ export async function uploadScreensaver(file, name) {
   return response.json()
 }
 
-/**
- * Delete a screensaver from the library
- * @param {string} screensaverId - The screensaver ID
- * @returns {Promise<Object>} - The response
- */
 export async function deleteScreensaver(screensaverId) {
   const response = await fetch(`${API_BASE_URL}/screensavers/${screensaverId}`, {
     method: 'DELETE',
@@ -198,10 +147,6 @@ export async function deleteScreensaver(screensaverId) {
   return response.json()
 }
 
-/**
- * Get all audio tracks from the library
- * @returns {Promise<Array>} - Array of track objects
- */
 export async function getTracks() {
   const response = await fetch(`${API_BASE_URL}/tracks`)
 
@@ -213,12 +158,6 @@ export async function getTracks() {
   return response.json()
 }
 
-/**
- * Upload a new audio track to the library
- * @param {File} file - The audio file to upload
- * @param {string} name - The name for the track
- * @returns {Promise<Object>} - The created track object
- */
 export async function uploadTrack(file, name) {
   const formData = new FormData()
   formData.append('file', file)
@@ -238,11 +177,6 @@ export async function uploadTrack(file, name) {
   return response.json()
 }
 
-/**
- * Delete a track from the library
- * @param {string} trackId - The track ID
- * @returns {Promise<Object>} - The response
- */
 export async function deleteTrack(trackId) {
   const response = await fetch(`${API_BASE_URL}/tracks/${trackId}`, {
     method: 'DELETE',

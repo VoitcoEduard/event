@@ -30,7 +30,6 @@ func TestResponseResolveOtherAnswersFromJSON(t *testing.T) {
 	}
 
 	resp.ResolveOtherAnswers()
-	// Verify idempotency.
 	resp.ResolveOtherAnswers()
 
 	if got := resp.Data["q_radio"]; got != "Custom Radio" {

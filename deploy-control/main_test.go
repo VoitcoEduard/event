@@ -79,7 +79,6 @@ func TestRollbackSkipsRedundantTopEntriesAndUnsticks(t *testing.T) {
 		}
 	}
 
-	// Top of Previous matches running image (twice); rollback must pop them and roll back to olderImage.
 	c := newTestController(t, portainer, []string{olderImage, currentImage, currentImage})
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/environments/dev/rollback", nil)
@@ -97,7 +96,6 @@ func TestRollbackSkipsRedundantTopEntriesAndUnsticks(t *testing.T) {
 		t.Fatalf("remaining Previous = %v, want empty", prev)
 	}
 
-	// If Previous only contains entries matching currentImage, rollback cleans them and returns 409 Conflict.
 	c2 := newTestController(t, portainer, []string{currentImage})
 	req2 := httptest.NewRequest(http.MethodPost, "/v1/environments/dev/rollback", nil)
 	req2.SetPathValue("environment", "dev")

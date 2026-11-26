@@ -1,8 +1,3 @@
-// Command loadtest exercises the same WebSocket protocol used by quiz players.
-//
-// Run this from a machine other than the NAS. It intentionally requires an
-// explicit confirmation flag because it creates real players and answers in the
-// selected quiz session.
 package main
 
 import (
@@ -76,7 +71,7 @@ func newClient(wsURL, origin string, timeout time.Duration) (*client, error) {
 					select {
 					case c.messages <- msg:
 					default:
-						c.dropped.Add(1) // A saturated generator must fail, not produce a false pass.
+						c.dropped.Add(1)
 					}
 				}
 			}

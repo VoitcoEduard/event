@@ -83,7 +83,6 @@
       </div>
     </div>
     
-    <!-- QUESTION TEXT -->
     <div class="input-group text-group">
       <label>{{ $t('quiz_config.question_editor.text_label') }}</label>
       <input 
@@ -98,9 +97,6 @@
       <p v-if="fieldError('text')" class="field-error" role="alert">{{ fieldError('text') }}</p>
     </div>
 
-
-    <!-- STANDARD ANSWERS (MC/TF/MS) -->
-    <!-- Multi-select warning -->
     <div v-if="localQuestion.type === 'multi_select' && multiSelectWarning && !choiceSectionError" class="multi-select-warning">
       <AppIcon name="alert" :size="16" aria-hidden="true" /> {{ $t('quiz_config.question_editor.multi_select_warning', { count: 2 }) }}
     </div>
@@ -146,7 +142,6 @@
       </div>
     </div>
 
-    <!-- RANGE CONFIGURATION -->
     <div v-if="localQuestion.type === 'range'" class="range-config-panel">
       
       <div class="config-section">
@@ -240,7 +235,6 @@
         </div>
       </div>
 
-      <!-- Preview -->
       <div class="range-preview-container">
          <label>{{ $t('quiz_config.question_editor.range.preview') }}</label>
          <div class="preview-box">
@@ -261,7 +255,6 @@
 
     </div>
     
-    <!-- NUMBER CONFIGURATION -->
     <div v-if="localQuestion.type === 'number'" class="number-config-panel">
       <div class="config-section">
         <h4 class="section-title">{{ $t('quiz_config.question_editor.number.configuration') }}</h4>
@@ -289,7 +282,6 @@
       </div>
     </div>
 
-    <!-- CORRECT PICTURE EDITOR -->
     <div
       v-if="localQuestion.type === 'correct_picture'"
       class="image-options-section"
@@ -309,7 +301,6 @@
       />
     </div>
 
-    <!-- WRONG PICTURES CONFIGURATION -->
     <div v-if="localQuestion.type === 'wrong_pictures'" class="wrong-pictures-config">
       <div class="config-compact-row">
         <div class="input-group mini">
@@ -366,7 +357,6 @@
       </div>
     </div>
 
-    <!-- SIMPLE TEXT (Simple Quiz) CONFIGURATION -->
     <div v-if="localQuestion.type === 'simple_text'" class="simple-text-config">
       <div class="input-group">
         <label>{{ $t('quiz_config.question_editor.simple_text.judge_notes') }}</label>
@@ -466,7 +456,6 @@ const choiceSectionError = computed(() => (
   fieldError('answers') || fieldError('correctIndex') || fieldError('correctIndices')
 ))
 
-// Initialize local state from props
 const localQuestion = reactive({
   ...props.question,
   type: props.question.type || 'classic',
@@ -476,7 +465,6 @@ const localQuestion = reactive({
   explainTime: props.question.explainTime !== undefined ? props.question.explainTime : 5,
   timeLimit: props.question.timeLimit !== undefined ? props.question.timeLimit : 20,
   correctIndices: props.question.correctIndices || [],
-  // Initialize range config if missing
   rangeConfig: props.question.rangeConfig || {
       minValue: 0,
       maxValue: 100,
@@ -484,8 +472,6 @@ const localQuestion = reactive({
       unit: '',
       decimalPlaces: 0
   },
-  // A7: default maxPoints is 100 for range, 50 for every other
-  // scoringConfig-based type, so the Points field matches game scoring.
   scoringConfig: props.question.scoringConfig || {
       mode: 'symmetric',
       maxPoints: props.question.type === 'range' ? 100 : 50,
@@ -509,7 +495,6 @@ const localQuestion = reactive({
   correctAnswerText: props.question.correctAnswerText || ''
 })
 
-// Unified Points Accessor
 const localMaxPoints = computed({
   get() {
     if (localQuestion.type === 'wrong_pictures') {
@@ -537,7 +522,6 @@ const timeLimitOptions = computed(() => {
   return options
 })
 
-// Watch for image changes and emit update
 watch(() => localQuestion.imageId, () => {
   emitUpdate()
 })
@@ -547,11 +531,6 @@ watch(() => localQuestion.imageAlt, () => {
 })
 
 watch(() => props.question, (newVal) => {
-  // Deep tracking can be tricky, but we want to update if parent logic changes something 
-  // without overwriting local typing immediately if we are the ones who triggered it.
-  // For simplicity, we sync back basic fields if ID changes or strict updates needed.
-  // Ideally, valid Vue form pattern is :modelValue + @update:modelValue.
-  // Here we just ensure we don't lose the range/scoring config objects structure.
   
   if (newVal.id !== localQuestion.id || newVal.type !== localQuestion.type) {
        const sameQuestion = newVal.id === localQuestion.id
@@ -588,27 +567,23 @@ const handleTypeChange = (previousType = null) => {
     if (localQuestion.type === 'true_false') {
         localQuestion.answers = [t('quiz.player.true'), t('quiz.player.false'), '', '']
         if (localQuestion.correctIndex > 1) localQuestion.correctIndex = 0
-        // A7: choice scoring reads scoringConfig.maxPoints.
         if (!localQuestion.scoringConfig) {
             localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
         } else if (!localQuestion.scoringConfig.maxPoints) {
             localQuestion.scoringConfig.maxPoints = 50
         }
     } else if (localQuestion.type === 'range') {
-        // Ensure defaults are set
         if (!localQuestion.rangeConfig.maxValue) localQuestion.rangeConfig.maxValue = 100
         if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 100
     } else if (localQuestion.type === 'number') {
         if (!localQuestion.scoringConfig.maxPoints) localQuestion.scoringConfig.maxPoints = 50
     } else if (localQuestion.type === 'correct_picture') {
-        // Ensure image options exist
         if (!localQuestion.imageOptions || localQuestion.imageOptions.length === 0) {
             localQuestion.imageOptions = [
                 { id: Date.now().toString(), imageId: '', label: '' },
                 { id: (Date.now() + 1).toString(), imageId: '', label: '' }
             ]
         }
-        // A7: choice scoring reads scoringConfig.maxPoints, so it must exist.
         if (!localQuestion.scoringConfig) {
             localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
         } else if (!localQuestion.scoringConfig.maxPoints) {
@@ -628,12 +603,9 @@ const handleTypeChange = (previousType = null) => {
         if (localQuestion.correctAnswerText === undefined) localQuestion.correctAnswerText = ''
         if (localQuestion.timeLimit === undefined) localQuestion.timeLimit = 0
     } else {
-        // Reset localized T/F options when switching away from true_false
         if (previousType === 'true_false') {
              localQuestion.answers = ['', '', '', '']
         }
-        // A7: classic / true_false / multi_select score from
-        // scoringConfig.maxPoints, so backfill it when missing.
         if (['classic', 'true_false', 'multi_select'].includes(localQuestion.type)) {
             if (!localQuestion.scoringConfig) {
                 localQuestion.scoringConfig = { mode: 'symmetric', maxPoints: 50, tolerance: 0, partialPercent: 0 }
@@ -656,7 +628,6 @@ const updateTargets = (newTargets) => {
     emitUpdate()
 }
 
-// Warning shown when multi_select has fewer than 2 correct answers selected
 const multiSelectWarning = computed(() => {
   if (localQuestion.type !== 'multi_select') return false
   return (localQuestion.correctIndices || []).length < 2
@@ -1079,7 +1050,6 @@ const isAnswerReadOnly = (idx) => {
   transform: rotate(45deg);
 }
 
-/* RANGE CONFIG STYLES */
 .range-config-panel {
     background: #232325;
     padding: 16px;
@@ -1245,7 +1215,6 @@ const isAnswerReadOnly = (idx) => {
   font-weight: 500;
 }
 
-/* Small Switch Styles */
 .switch-small {
   position: relative;
   display: inline-block;

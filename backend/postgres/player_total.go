@@ -2,9 +2,6 @@ package postgres
 
 import "context"
 
-// PlayerTotal reads only one participant's contributions. The four terms mirror
-// LoadEventScores: latest quiz run per module, current published Simple Quiz,
-// manual entries, and recipient awards from team activities.
 func (s *Store) PlayerTotal(ctx context.Context, eventID, playerID string) (float64, error) {
 	const query = `
 WITH latest AS (

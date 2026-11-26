@@ -95,7 +95,6 @@ func TestScreenStreamRemovesMapEntryWhenLastSubscriberDisconnects(t *testing.T) 
 		h.ScreenStream(rec1, req1)
 	}()
 
-	// Wait for first subscriber to register.
 	deadline := time.Now().Add(2 * time.Second)
 	for !screenSubscriberKeyExists(eventID) && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)
@@ -105,10 +104,8 @@ func TestScreenStreamRemovesMapEntryWhenLastSubscriberDisconnects(t *testing.T) 
 		t.Fatal("first subscriber did not register")
 	}
 
-	// Register a second subscriber for the same event.
 	ch2 := addScreenSubscriber(eventID)
 
-	// Push an update and disconnect the first subscriber.
 	notifyScreenSubscribers(eventID, models.ScreenState{CurrentView: "quiz"})
 	select {
 	case got := <-ch2:
@@ -129,12 +126,10 @@ func TestScreenStreamRemovesMapEntryWhenLastSubscriberDisconnects(t *testing.T) 
 	if !strings.Contains(rec1.Body.String(), `"currentView":"slides"`) {
 		t.Fatalf("first subscriber did not receive initial state: %q", rec1.Body.String())
 	}
-	// Second subscriber is still active, so the key should remain.
 	if !screenSubscriberKeyExists(eventID) {
 		t.Fatal("event key deleted while second subscriber was still connected")
 	}
 
-	// Removing the last subscriber must delete the map entry.
 	removeScreenSubscriber(eventID, ch2)
 	if screenSubscriberKeyExists(eventID) {
 		t.Fatalf("event key %q leaked after last subscriber disconnected (map size=%d)", eventID, screenSubscriberMapSize())

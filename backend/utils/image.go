@@ -120,8 +120,6 @@ func buildWebPArgs(tool string, srcW, srcH, maxDim int, inPath, outPath string) 
 	}
 }
 
-// ConvertToWebP converts image data to WebP format using available system tools (cwebp, sips, ffmpeg).
-// If maxWidth > 0, the image is proportionally resized to fit within a maxWidth x maxWidth box without upscaling.
 func ConvertToWebP(data []byte, maxWidth ...int) ([]byte, error) {
 	targetMaxDim := 0
 	if len(maxWidth) > 0 && maxWidth[0] > 0 {
@@ -130,7 +128,6 @@ func ConvertToWebP(data []byte, maxWidth ...int) ([]byte, error) {
 
 	srcW, srcH, _ := GetImageDimensions(data)
 
-	// Create temporary input file
 	tmpIn, err := os.CreateTemp("", "img-*.in")
 	if err != nil {
 		return nil, err
@@ -141,11 +138,9 @@ func ConvertToWebP(data []byte, maxWidth ...int) ([]byte, error) {
 	}
 	tmpIn.Close()
 
-	// Create temporary output file path
 	tmpOut := tmpIn.Name() + ".webp"
 	defer os.Remove(tmpOut)
 
-	// Try standard tools based on OS / installed binaries
 	var cmd *exec.Cmd
 	for _, tool := range []string{"cwebp", "sips", "ffmpeg"} {
 		if _, err := exec.LookPath(tool); err == nil {
@@ -162,7 +157,6 @@ func ConvertToWebP(data []byte, maxWidth ...int) ([]byte, error) {
 		return nil, fmt.Errorf("conversion failed: %v: %s", err, string(output))
 	}
 
-	// Read converted data
 	return os.ReadFile(tmpOut)
 }
 
@@ -181,7 +175,6 @@ func ProcessImage(data []byte) ([]byte, int, int, string, error) {
 		return nil, 0, 0, "", err
 	}
 
-	// Determine if conversion or resizing is needed
 	needsResize := width > MaxImageDimension || height > MaxImageDimension
 	needsConversion := contentType != "image/webp"
 
@@ -202,7 +195,6 @@ func ProcessImage(data []byte) ([]byte, int, int, string, error) {
 				height = newHeight
 			}
 		} else {
-			// Log conversion error and fallback to original
 			log.Printf("WebP conversion failed, using original: %v", err)
 		}
 	}

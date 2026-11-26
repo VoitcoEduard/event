@@ -17,8 +17,6 @@ type Response struct {
 	CreatedAt    time.Time         `json:"createdAt"`
 }
 
-// ResolveOtherAnswers replaces "__other__" sentinel values in Data with the
-// corresponding trimmed custom text from OtherAnswers.
 func (r *Response) ResolveOtherAnswers() {
 	if r == nil || len(r.Data) == 0 || len(r.OtherAnswers) == 0 {
 		return

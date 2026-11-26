@@ -13,7 +13,6 @@
       <AdminThemeToggle variant="inline" />
     </div>
     
-    <!-- LOBBY STATE -->
     <div v-if="gameState === 'lobby'" class="state-container lobby-container">
       <div class="lobby-header">
         <h1 class="game-title">{{ $t('quiz.host.join_title') }}</h1>
@@ -59,7 +58,6 @@
       </div>
     </div>
 
-    <!-- GET READY STATE -->
     <div v-else-if="gameState === 'get-ready'" class="state-container get-ready-container">
       <div class="loading-content">
         <h1>{{ $t('quiz.player.get_ready') }}</h1>
@@ -67,7 +65,6 @@
       </div>
     </div>
 
-    <!-- QUESTION STATE (Active & Presenting) -->
     <div v-else-if="gameState === 'question-active' || gameState === 'question-presenting'" class="state-container question-container">
       <div class="question-header">
         <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }" v-if="gameState === 'question-active'">
@@ -85,7 +82,6 @@
         </div>
       </div>
 
-      <!-- New Two-Column Layout -->
       <div v-if="isCorrectPicture" class="correct-picture-host-layout">
           <div class="cp-host-grid">
                <div 
@@ -102,7 +98,6 @@
           </div>
       </div>
 
-      <!-- WRONG PICTURES HOST LAYOUT -->
       <div v-else-if="isWrongPictures" class="wrong-picture-host-layout">
           <div class="wp-host-header">
               <h1 class="wp-host-title">{{ $t('quiz.host.wrong_picture_title') }}</h1>
@@ -114,17 +109,14 @@
       </div>
 
       <div v-else class="question-main-content">
-        <!-- LEFT COLUMN: Question Card with Optional Image -->
         <div class="question-column">
           <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
             
-            <!-- Image Background (if exists) -->
             <div v-if="questionImageUrl" class="question-image-container">
                <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image" decoding="async" loading="eager" />
                <div class="image-overlay-gradient"></div>
             </div>
 
-            <!-- Question Text Overlay -->
             <div class="question-text-overlay">
                <h2 class="question-text" :style="{ fontSize: questionFontSize }">{{ currentQuestion?.text }}</h2>
             </div>
@@ -132,7 +124,6 @@
           </div>
         </div>
 
-        <!-- RIGHT COLUMN: Stacked Answer Cards -->
         <div class="answers-column">
           <div v-if="isRange" class="range-projector-view">
             <div class="sbs-label sbs-label-max">
@@ -176,17 +167,13 @@
       </div>
     </div>
 
-    <!-- RESULTS STATE (no leaderboard) -->
     <div v-else-if="gameState === 'results'" class="state-container results-container-new">
        <div class="results-content-wrapper">
          <div class="question-header" style="margin-bottom: 1rem;">
              <div class="results-mode-title">{{ $t('quiz.host.results_title', { num: currentQuestionIndex + 1 }) }}</div>
-             <!-- <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div> -->
          </div>
 
-         <!-- CORRECT PICTURE RESULTS -->
          <div v-if="isCorrectPicture" class="correct-picture-results-host">
-           <!-- Correct image hero -->
            <div class="cp-host-correct-hero">
              <div v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
                <div v-if="isAnswerCorrect(idx)" class="cp-host-hero-frame">
@@ -197,7 +184,6 @@
                </div>
              </div>
            </div>
-           <!-- Wrong images as small thumbnails -->
            <div class="cp-host-wrong-thumbs">
              <template v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
                <div v-if="!isAnswerCorrect(idx)" class="cp-host-thumb-card">
@@ -208,10 +194,8 @@
            </div>
          </div>
 
-          <!-- WRONG PICTURES RESULTS HOST (Magnified) -->
           <div v-else-if="isWrongPictures" class="wrong-picture-results-magnified">
              <div class="wp-magnified-results-grid">
-                <!-- Left Column: Magnified Crops (70% space) -->
                 <div class="wp-magnified-column">
                     <div 
                       v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
@@ -226,7 +210,6 @@
                     </div>
                 </div>
 
-                <!-- Right Column: Answer Labels (30% space) -->
                 <div class="wp-labels-column">
                     <div 
                       v-for="(target, idx) in currentQuestion.wrongPictureConfig?.targets" 
@@ -240,7 +223,6 @@
              </div>
           </div>
 
-         <!-- SLIDER RESULTS -->
           <div v-else-if="isRange" class="range-results-new">
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
@@ -272,7 +254,6 @@
             </div>
           </div>
 
-          <!-- NUMBER RESULTS -->
           <div v-else-if="isNumber" class="number-results-host">
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
@@ -294,9 +275,7 @@
             </div>
           </div>
 
-          <!-- STANDARD QUESTION RESULTS (REDESIGNED) -->
           <div v-else class="question-main-content">
-            <!-- Left Column: Image + Distribution Overlay -->
             <div class="question-column">
               <div class="question-card has-distribution" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
@@ -304,7 +283,6 @@
                   <div class="image-overlay-gradient"></div>
                 </div>
 
-                <!-- DISTRIBUTION OVERLAY -->
                 <div class="distribution-overlay-container">
                     <div class="dist-chart">
                         <div 
@@ -331,7 +309,6 @@
               </div>
             </div>
 
-            <!-- Right Column: Results Answer Cards -->
             <div class="answers-column">
                <div 
                   v-for="(answer, idx) in currentQuestion?.answers" 
@@ -358,7 +335,6 @@
        </div>
     </div>
 
-    <!-- LEADERBOARD STATE (beautiful animated) -->
     <div v-else-if="gameState === 'leaderboard'" class="state-container leaderboard-container" :key="leaderboardAnimKey">
       <div class="lb-bg-glow"></div>
       <div class="lb-header">
@@ -401,9 +377,7 @@
       </div>
     </div>
     
-    <!-- FINISHED STATE (final leaderboard with confetti) -->
     <div v-else-if="gameState === 'finished'" class="state-container final-container" :key="finalAnimKey">
-       <!-- Confetti particles -->
        <div class="confetti-wrap">
          <div v-for="i in 20" :key="i" class="confetti-particle" :style="getConfettiStyle(i)"></div>
        </div>
@@ -414,7 +388,6 @@
          <p class="final-subtitle">{{ $t('quiz.host.final_standings') }}</p>
        </div>
 
-       <!-- Top 3 Podium -->
        <div class="final-podium">
           <div class="final-podium-place fp-second" v-if="topPlayers[1]">
             <AppIcon class="fp-avatar" name="medal" :size="32" aria-hidden="true" />
@@ -437,7 +410,6 @@
           </div>
        </div>
 
-       <!-- Ranks 4-6 -->
        <div class="final-rest" v-if="topPlayers.length > 3">
          <div 
            v-for="(player, idx) in topPlayers.slice(3)" 
@@ -454,7 +426,6 @@
        <button type="button" class="control-btn" @click="exitQuiz" style="margin-top: 20px; z-index: 1;">{{ $t('quiz.host.end_quiz') }}</button>
     </div>
 
-    <!-- Audio Player -->
     <audio ref="bgMusicPlayer" :src="fullMusicUrl" loop id="bg-music-player"></audio>
     
     <div v-if="showUnmuteButton" class="unmute-overlay">
@@ -497,7 +468,6 @@ const goBackToEvent = (event) => {
   router.push(backToEventUrl)
 }
 
-// State
 const gameState = ref('lobby') 
 const pinCode = ref(eventId)
 const qrCodeUrl = computed(() => {
@@ -510,7 +480,7 @@ const currentQuestionIndex = ref(0)
 const timeRemaining = ref(20)
 const explainTimeRemaining = ref(0)
 const answerCounts = ref({ 0: 0, 1: 0, 2: 0, 3: 0 }) 
-const playerSignals = ref([]) // Store signals for slider histogram
+const playerSignals = ref([])
 const realTimeAnsweredCount = ref(0)
 const totalAnswered = computed(() => {
     return realTimeAnsweredCount.value
@@ -536,21 +506,18 @@ const stopLeaderboardFrames = () => {
     leaderboardFrames.clear()
 }
 
-// Preload questions whenever loaded
 watch(questions, (newQuestions) => {
     if (Array.isArray(newQuestions) && newQuestions.length > 0) {
         preloader.preloadQuestions(newQuestions)
     }
 }, { immediate: true })
 
-// Lookahead: Preload next question immediately upon index change
 watch(currentQuestionIndex, (newIdx) => {
     if (questions.value && questions.value[newIdx + 1]) {
         preloader.preloadQuestion(questions.value[newIdx + 1])
     }
 })
 
-// Watch gameState to trigger animation
 watch(gameState, (newVal) => {
     clearTimeout(revealTimer)
     revealTimer = null
@@ -611,13 +578,11 @@ const questionImageUrl = computed(() => {
     return imageId ? getImageUrl(imageId) : null
 })
 
-// Adaptive font size calculation for question text - use all available space
 const questionFontSize = computed(() => {
     const text = currentQuestion.value?.text || ''
     const hasImage = !!questionImageUrl.value
 
     if (!hasImage) {
-        // No image - massive text centered
         if (text.length < 30) {
             return 'clamp(1.5rem, 0.9rem + 4.5vw, 3.5rem)'
         } else if (text.length < 60) {
@@ -628,7 +593,6 @@ const questionFontSize = computed(() => {
             return 'clamp(1rem, 0.65rem + 2.0vw, 2.1rem)'
         }
     } else {
-        // With image - text at bottom
         if (text.length < 30) {
             return 'clamp(1.25rem, 0.75rem + 3.5vw, 2.8rem)'
         } else if (text.length < 60) {
@@ -641,7 +605,6 @@ const questionFontSize = computed(() => {
     }
 })
 
-// Calculate individual font size for each answer card
 const getAnswerFontSize = (answerText) => {
     const text = answerText || ''
     const length = text.length
@@ -722,7 +685,6 @@ const histogramBuckets = computed(() => {
 
     playerSignals.value.forEach(sig => {
         if (sig.questionIndex !== currentQuestionIndex.value) return
-        // assuming sig has answerValue
         const val = sig.answerValue !== undefined ? sig.answerValue : (sig.payload?.answerValue || 0)
         let bucketIdx = Math.floor(((val - min) / range) * bucketCount)
         if (bucketIdx < 0) bucketIdx = 0
@@ -748,9 +710,6 @@ const correctMarkerPercentage = computed(() => {
 })
 
 const isBucketCorrect = (bucketIdx) => {
-    // Highlight bucket containing correct answer?
-    // Determine which bucket correctValue falls into
-    // Re-use logic or duplicate lightly simple math
     const q = currentQuestion.value
     const min = q.rangeConfig.minValue
     const max = q.rangeConfig.maxValue
@@ -788,7 +747,6 @@ const isAnswerCorrect = (idx) => {
   return q.correctIndex === idx
 }
 
-// Timer logic
 let timerInterval
 let explainTimerInterval
 
@@ -796,14 +754,12 @@ const startLocalTimer = (duration) => {
     clearInterval(timerInterval)
     timeRemaining.value = duration
     const deadline = Date.now() + duration * 1000
-    // Only start countdown if state is active
     if (gameState.value !== 'question-active') return
     
     timerInterval = setInterval(() => {
         timeRemaining.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
         if (timeRemaining.value === 0) {
             clearInterval(timerInterval)
-            // Auto-transition to Results when timer hits 0
             if (gameState.value === 'question-active') {
                 goToResults()
             }
@@ -824,14 +780,11 @@ const startExplainTimer = (duration) => {
     }, 1000)
 }
 
-// Actions
 const startQuiz = () => {
     quizWS.send('host:start_quiz', { moduleId })
 }
 
 const endQuestionEarly = () => {
-    // This is a host-side visual skip, ideally backend handles text_question
-    // But for now, we can just jump to results if we want
     quizWS.send('host:show_results', { moduleId })
 }
 
@@ -841,11 +794,9 @@ const goToResults = () => {
 
 const nextState = () => {
     if (gameState.value === 'results') {
-        // Transition to Leaderboard
         quizWS.send('host:show_leaderboard', { moduleId })
     } else if (gameState.value === 'leaderboard') {
         if (isLastQuestion.value) {
-            // End quiz
             quizWS.send('host:end_quiz', { moduleId })
         } else {
             quizWS.send('host:next_question', { moduleId })
@@ -854,16 +805,12 @@ const nextState = () => {
 }
 
 const exitQuiz = async () => {
-    // Reset the quiz session before exiting
     quizWS.send('host:reset_quiz', { moduleId })
     
-    // Wait a bit to ensure message is sent before disconnecting
     await new Promise(resolve => setTimeout(resolve, 300))
     router.push(backToEventUrl)
-    // Note: disconnect is handled by onUnmounted, don't call it here to avoid double-disconnect
 }
 
-// Audio State
 const bgMusicPlayer = ref(null)
 const backgroundMusicUrl = ref('')
 const audioOutput = ref('projector')
@@ -875,9 +822,7 @@ const fullMusicUrl = computed(() => {
     return `${API_BASE_URL}${backgroundMusicUrl.value}`
 })
 
-// Manage Audio
 const manageAudioPlayback = async () => {
-    // Only play if output includes 'admin'
     const shouldPlay = 
         backgroundMusicUrl.value && 
         (audioOutput.value === 'admin' || audioOutput.value === 'both') &&
@@ -932,10 +877,8 @@ watch(gameState, () => {
     manageAudioPlayback()
 })
 
-// WebSocket & Data Loading
 let stopped = false
 onMounted(async () => {
-    // 1. Fetch Questions & Module Config
     try {
         const res = await fetch(`${API_BASE_URL}/events/${eventId}`)
         if (stopped) return
@@ -947,7 +890,6 @@ onMounted(async () => {
             if (mod.data.questions) {
                 questions.value = mod.data.questions
             }
-            // Music Config
             backgroundMusicUrl.value = mod.data.backgroundMusicUrl || ''
             audioOutput.value = mod.data.audioOutput || 'projector'
             manageAudioPlayback()
@@ -956,11 +898,8 @@ onMounted(async () => {
         console.error('Failed to load questions', e)
     }
 
-    // Navigation during the fetch already ran onUnmounted. Registering or
-    // connecting now would undo that disconnect on the shared socket.
     if (stopped) return
 
-    // 2. Register handlers BEFORE connecting (server sends messages immediately)
     quizWS.on('cmd:error', (payload) => {
         if (['save_failed', 'invalid_image_metadata', 'quiz_finishing', 'start_failed'].includes(payload?.code) && payload?.message) {
             showError(payload.message)
@@ -968,7 +907,6 @@ onMounted(async () => {
     })
 
     quizWS.on('cmd:state', (payload) => {
-        // Handle state transitions from server
         const prevState = gameState.value
         const prevIndex = currentQuestionIndex.value
         gameState.value = payload.state
@@ -977,9 +915,7 @@ onMounted(async () => {
             currentQuestionIndex.value = payload.currentIndex
         }
         
-        // Handle transitions
         if (payload.state === 'question-active') {
-            // Restart timer when entering question state or advancing to a new question
             if (prevState !== 'question-active' || (payload.currentIndex !== undefined && payload.currentIndex !== prevIndex)) {
                 startLocalTimer(currentQuestion.value?.timeLimit || 20)
             }
@@ -988,12 +924,11 @@ onMounted(async () => {
             if (currentQuestionIndex.value === 0) {
                 displayedScores.value = {}
             }
-            // Set time remaining to question time without starting timer
             timeRemaining.value = currentQuestion.value?.timeLimit || 20
-            startExplainTimer(payload.timeLimit || 5) // note: payload.timeLimit in cmd:state is the ExplainTime
-            realTimeAnsweredCount.value = 0 // Reset for new question
-            answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 } // Reset counts to zero
-            playerSignals.value = [] // Reset slider player signals
+            startExplainTimer(payload.timeLimit || 5)
+            realTimeAnsweredCount.value = 0
+            answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 }
+            playerSignals.value = []
         } else {
             clearInterval(timerInterval)
             clearInterval(explainTimerInterval)
@@ -1010,14 +945,10 @@ onMounted(async () => {
         manageAudioPlayback()
     })
 
-    // Listen for minimal sync updates (answer counts, player info)
     quizWS.on('sync:minimal', (payload) => {
-        // Ignore stats for an old question arriving during a new question's explain delay
         if (payload.questionIndex !== undefined && payload.questionIndex !== currentQuestionIndex.value) return;
         
-        // Update answer counts if provided
         if (payload.answerCounts) {
-            // Convert string keys from JSON to numeric keys for proper reactivity
             answerCounts.value = {
                 0: payload.answerCounts["0"] || 0,
                 1: payload.answerCounts["1"] || 0,
@@ -1030,9 +961,7 @@ onMounted(async () => {
         }
     })
 
-    // Listen for full state updates (legacy support - includes players)
     quizWS.on('state:update', (session) => {
-        // Update players
         if (session.Players || session.players) {
             const playersMap = session.Players || session.players
             players.value = Object.values(playersMap)
@@ -1044,14 +973,12 @@ onMounted(async () => {
             })
         }
         
-        // Update Player Signals (for histogram)
         if (session.PlayerSignals || session.playerSignals) {
              const signals = session.PlayerSignals || session.playerSignals
              playerSignals.value = signals.filter(s => s.questionIndex === currentQuestionIndex.value)
              realTimeAnsweredCount.value = playerSignals.value.length
         }
 
-        // Update Answer Counts
         if (session.AnswerCounts || session.answerCounts) {
              const counts = session.AnswerCounts || session.answerCounts
              answerCounts.value = {
@@ -1063,7 +990,6 @@ onMounted(async () => {
         }
     })
 
-    // 3. Connect WS (after handlers are registered)
     quizWS.connect(moduleId, '', true)
  })
 
@@ -1073,8 +999,6 @@ onUnmounted(() => {
     stopped = true
     clearInterval(timerInterval)
     clearInterval(explainTimerInterval)
-    // Release preloaded image references so they don't accumulate across
-    // quizzes for the lifetime of the SPA session (mirrors ProjectorView).
     preloader.clear()
     quizWS.disconnect()
     quizWS.clearHandlers()

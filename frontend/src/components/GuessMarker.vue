@@ -26,9 +26,9 @@ import AppIcon from './AppIcon.vue'
 const props = defineProps({
   markerNumber: { type: Number, required: true },
   xPercent: { type: Number, default: 50 },
-  yPercent: { type: Number, default: 90 }, // default at bottom
+  yPercent: { type: Number, default: 90 },
   isPlaced: { type: Boolean, default: false },
-  isCorrect: { type: Boolean, default: null }, // true/false/null
+  isCorrect: { type: Boolean, default: null },
   isActive: { type: Boolean, default: false },
   containerRect: { type: Object, default: () => null }
 })
@@ -42,14 +42,13 @@ const markerStyle = computed(() => {
   }
 })
 
-// Dragging logic handling directly using window listeners to escape boundaries
 const isDragging = ref(false)
 
 const startDrag = (e) => {
-  if (props.isCorrect !== null) return // Finalized
+  if (props.isCorrect !== null) return
 	endDrag()
   e.preventDefault()
-  e.stopPropagation() // Don't trigger pan
+  e.stopPropagation()
   isDragging.value = true
   emit('interaction-start', props.markerNumber)
   
@@ -66,7 +65,7 @@ const startDrag = (e) => {
 
 const handleDrag = (e) => {
 	if (!isDragging.value || !props.containerRect?.width || !props.containerRect?.height) return
-  e.preventDefault() // prevent scroll on touch
+  e.preventDefault()
   
 	const pointer = e.touches ? e.touches[0] : e
 	if (!pointer) return
@@ -75,11 +74,9 @@ const handleDrag = (e) => {
   
   const rect = props.containerRect
   
-  // Calculate raw position
   let x = clientX - rect.left
   let y = clientY - rect.top
   
-  // Clamp to container
   x = Math.max(0, Math.min(x, rect.width))
   y = Math.max(0, Math.min(y, rect.height))
   
@@ -108,7 +105,6 @@ onUnmounted(endDrag)
   z-index: 100;
   touch-action: none;
   cursor: grab;
-  /* subtle drop shadow for unplaced state */
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
   transition: transform 0.1s;
 }
@@ -120,7 +116,7 @@ onUnmounted(endDrag)
 .marker-circle {
   width: 32px;
   height: 32px;
-  background: #007AFF; /* standard blue for player guess */
+  background: #007AFF;
   border: 3px solid white;
   border-radius: 50%;
   display: flex;
@@ -142,7 +138,6 @@ onUnmounted(endDrag)
   font-size: 16px;
 }
 
-/* Modifiers */
 .guess-marker.active {
    transform: translate(-50%, -50%) scale(1.2);
    z-index: 101;

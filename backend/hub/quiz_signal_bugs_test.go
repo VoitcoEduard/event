@@ -1,8 +1,3 @@
-// Package hub — bug reproduction tests for quiz mode.
-//
-// Every test here asserts the CURRENT (buggy) behaviour on purpose, so the
-// suite stays green. When the corresponding bug is fixed, the assertion is
-// marked "// BUG:" must be flipped to the correct expectation.
 package hub
 
 import (
@@ -39,10 +34,8 @@ func send(h *QuizHub, c *Client, payload string) {
 	h.ProcessMessage(c, []byte(`{"type":"player:signal","payload":`+payload+`}`))
 }
 
-// A wrong answer cannot create points by claiming a browser-calculated score.
 func TestClientSuppliedScoreIsIgnored(t *testing.T) {
 	h, c := newSignalHub(t)
-	// Wrong answer (correctIndex is 1), but claims 999999 points.
 	send(h, c, `{"questionIndex":0,"answerIndex":0,"scoreEarned":999999,"timeSpent":1000}`)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -51,8 +44,6 @@ func TestClientSuppliedScoreIsIgnored(t *testing.T) {
 	}
 }
 
-// Bug 2 (FIXED A2): repeated signals for the same question are ignored —
-// only the first answer counts.
 func TestReproDuplicateSignalsAccumulateScore(t *testing.T) {
 	h, c := newSignalHub(t)
 	for i := 0; i < 3; i++ {
@@ -68,8 +59,6 @@ func TestReproDuplicateSignalsAccumulateScore(t *testing.T) {
 	}
 }
 
-// Bug 3 (FIXED A3): grace-period answers count for statistics but earn no
-// points — AcceptanceResult.Scored is honoured.
 func TestReproGracePeriodStillScores(t *testing.T) {
 	h, c := newSignalHub(t)
 	h.mu.Lock()
@@ -94,8 +83,6 @@ func TestReproGracePeriodStillScores(t *testing.T) {
 	}
 }
 
-// Bug 4 (FIXED A4): a signal for a question with no window (e.g. a future
-// question) is rejected — it scores nothing and is not recorded.
 func TestReproFutureQuestionSignalScores(t *testing.T) {
 	h, c := newSignalHub(t)
 	send(h, c, `{"questionIndex":42,"answerIndex":1,"scoreEarned":1000,"timeSpent":1000}`)
@@ -109,8 +96,6 @@ func TestReproFutureQuestionSignalScores(t *testing.T) {
 	}
 }
 
-// A4 also covers stale answers: once the host advances, the previous
-// question no longer accepts signals.
 func TestStaleQuestionSignalRejected(t *testing.T) {
 	h, c := newSignalHub(t)
 	h.mu.Lock()
@@ -134,8 +119,6 @@ func TestStaleQuestionSignalRejected(t *testing.T) {
 	}
 }
 
-// A8: a missing TimeLimit must yield the same 20s window every client shows,
-// not a 0-second window that rejects every answer.
 func TestEffectiveTimeLimitDefault(t *testing.T) {
 	if got := EffectiveTimeLimit(models.QuizQuestion{TimeLimit: 0}); got != DefaultQuestionTimeLimit {
 		t.Fatalf("TimeLimit 0 -> %d, want %d", got, DefaultQuestionTimeLimit)
@@ -167,7 +150,6 @@ func TestStartQuizMissingTimeLimitGetsDefaultWindow(t *testing.T) {
 		t.Fatalf("window length = %d, want default %d", got, DefaultQuestionTimeLimit)
 	}
 
-	// And an answer inside that window is accepted and scored.
 	h.mu.Lock()
 	h.sessions["m-time"].Players["p1"] = &models.Player{ID: "p1", Nickname: "P"}
 	h.sessions["m-time"].State = "question-active"
@@ -182,8 +164,6 @@ func TestStartQuizMissingTimeLimitGetsDefaultWindow(t *testing.T) {
 	}
 }
 
-// Bug 5 (FIXED as a side effect of A4): a negative questionIndex is rejected
-// instead of panicking the whole server on out-of-range indexing.
 func TestReproNegativeQuestionIndexPanics(t *testing.T) {
 	h, c := newSignalHub(t)
 	send(h, c, `{"questionIndex":-1,"answerIndex":1,"scoreEarned":1000,"timeSpent":1000}`)
@@ -197,15 +177,10 @@ func TestReproNegativeQuestionIndexPanics(t *testing.T) {
 	}
 }
 
-// Bug 6 (FIXED): host:next_question past the last question used to panic on
-// session.Questions[session.CurrentIndex]. The advance is now ignored so a
-// double-click or racing client can never index out of range.
 func TestReproNextQuestionPastEndPanics(t *testing.T) {
-	// Two ways to reach the end: "next" clicked on the last question
-	// (double-click / race) and "next" arriving when already past the end.
 	for _, tc := range []struct {
 		name          string
-		offsetFromEnd int // 0: on the last question, 1: already past the end
+		offsetFromEnd int
 	}{
 		{name: "on last question", offsetFromEnd: 0},
 		{name: "already past end", offsetFromEnd: 1},
@@ -228,8 +203,6 @@ func TestReproNextQuestionPastEndPanics(t *testing.T) {
 		})
 	}
 
-	// Session auto-created by host:join: Questions is nil, so even the first
-	// "next" must be ignored instead of indexing a nil slice.
 	t.Run("unstarted session", func(t *testing.T) {
 		h := NewQuizHub(Dependencies{})
 		h.CreateSession("m1", "e1")

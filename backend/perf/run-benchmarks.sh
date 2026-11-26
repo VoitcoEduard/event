@@ -19,7 +19,6 @@ for package in hub models database cache; do
     -test.cpu="${BENCH_CPU:-1,4}" > "$result_dir/$package.txt" 2>&1
   cat "$result_dir/$package.txt"
 done
-# Profiles are separate from the baseline because sampling changes performance.
 case "${PROFILE:-none}" in
   none) ;;
   cpu)

@@ -40,8 +40,6 @@ type TeamAward struct {
 	ReversesID string    `json:"reversesId,omitempty"`
 }
 
-// Roster and award history share one atomic persistence boundary. SourceMembers
-// are invitations from a reused roster, not recipients until they enter.
 type TeamsActivity struct {
 	ID            string         `json:"id"`
 	EventID       string         `json:"eventId"`
@@ -71,8 +69,6 @@ func (a *TeamsActivity) Scores() (map[string]int, map[string]int) {
 	return teams, people
 }
 
-// Entries are derived, never dual-written to event_scores. Team entries contain
-// only TeamID; recipient entries contain only ParticipantID to avoid double count.
 func (a *TeamsActivity) ScoreEntries() []ScoreEntry {
 	entries := []ScoreEntry{}
 	for _, award := range a.Awards {

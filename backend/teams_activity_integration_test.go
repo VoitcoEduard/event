@@ -122,7 +122,6 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 		must(request("POST", base("relay")+"/join", fmt.Sprintf(`{"name":%q}`, strings.Title(id)), id, false))
 		must(request("POST", base("relay")+"/choose", `{"teamId":"blue"}`, id, false))
 	}
-	// Public choices cannot operate on an arbitrary body participant ID.
 	w := request("POST", base("relay")+"/choose", `{"teamId":"red","participantId":"bob"}`, "unknown", false)
 	if w.Code == 200 {
 		t.Fatal("changed another person's assignment")
@@ -151,7 +150,6 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	action("relay", `{"action":"complete"}`)
 	action("relay", `{"action":"complete"}`)
 	assertModuleActive("relay", false)
-	// Reusing a roster copies neither entrants nor points until people enter.
 	action("reuse", `{"action":"initialize","config":{"sourceModuleId":"relay","method":"manual"}}`)
 	must(request("POST", base("reuse")+"/join", `{"name":"Anna"}`, "anna", false))
 	reused, err := repo.Get(ctx, eventID, ids["reuse"])
@@ -195,7 +193,6 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	if !strings.Contains(results, `"points":15`) || !strings.Contains(results, `"score":15`) {
 		t.Fatalf("results missing scores: %s", results)
 	}
-	// Reopening and reversing uses the old recipients even after a member moves.
 	action("relay", `{"action":"reopen"}`)
 	assertModuleActive("relay", true)
 	action("relay", `{"action":"assign","participantId":"anna","teamId":"red"}`)
@@ -205,7 +202,6 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	if err != nil || scores.PlayerTotal("anna") != 22 || scores.PlayerTotal("bob") != 0 {
 		t.Fatal("reversal used current membership")
 	}
-	// Legacy manual team points remain team-only after importing the roster.
 	if err = database.NewTeamRepository(db).Create(ctx, &models.Team{ID: oldTeamID, EventID: eventID, Name: "Old", Color: "#22C55E"}); err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +222,6 @@ func TestTeamsActivityHTTPAndPersistence(t *testing.T) {
 	if err != nil || scores.PlayerTotal("anna") != 22 {
 		t.Fatal("legacy team points distributed retrospectively")
 	}
-	// A new service/repository instance reads the same durable state.
 	reloaded, err := (&services.TeamsActivityService{Store: database.NewTeamsActivityRepository(db)}).Store.Get(ctx, eventID, ids["build"])
 	if err != nil || len(reloaded.Awards) != 1 || reloaded.Status != "completed" {
 		t.Fatal("runtime did not survive reload")

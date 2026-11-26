@@ -8,9 +8,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// simpleQuizCurrentPublicQuestion returns only the active question when it is
-// open or locked for answering. It never exposes upcoming questions or any
-// question while in lobby, between_questions, paused, or post-answering states.
 func simpleQuizCurrentPublicQuestion(s *models.SimpleQuizSession) map[string]any {
 	if s.Status != models.SimpleQuizStateQuestionOpen && s.Status != models.SimpleQuizStateAnswersLocked {
 		return nil
@@ -30,11 +27,6 @@ func simpleQuizCurrentPublicQuestion(s *models.SimpleQuizSession) map[string]any
 	return cq
 }
 
-// publicSimpleQuizState filters the session per role.
-// host: full except player secrets/answer texts; host sees counts + progress + all questions without notes.
-// player: active question only when open/locked (no notes; correct answer only if revealed+allowed), own submitted flag, published leaderboard.
-// judge: never called here (queue endpoint is separate); state gives progress only.
-// projector: active question only when open/locked + counts/revealed/published leaderboard (never future questions).
 func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) map[string]any {
 	if s == nil {
 		return map[string]any{"status": "inactive"}
@@ -103,7 +95,6 @@ func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) m
 		base["working"] = s.ComputeWorkingResults()
 		return base
 	case "player":
-		// Active question only when open/locked (no notes; correct answer only if revealed).
 		if cur := simpleQuizCurrentPublicQuestion(s); cur != nil {
 			base["question"] = cur
 		} else {
@@ -119,10 +110,8 @@ func publicSimpleQuizState(s *models.SimpleQuizSession, view, playerID string) m
 			}
 			base["submitted"] = submitted
 		}
-		// Published personal + leaderboard is delivered via results endpoint;
-		// include leaderboard here for convenience once published.
 		return base
-	default: // projector, judge-state, anonymous
+	default:
 		if cur := simpleQuizCurrentPublicQuestion(s); cur != nil {
 			base["question"] = cur
 		} else {

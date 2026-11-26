@@ -47,10 +47,7 @@ func (h *Handler) GetTemplates(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(templates)
 }
 
-// PublishModule finalizes configuration and makes it ready (conceptually "creates table")
-
 func (h *Handler) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL: /templates/{id}
 	path := r.URL.Path
 	prefix := "/templates/"
 	if len(path) <= len(prefix) {
@@ -70,7 +67,6 @@ func (h *Handler) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL: /templates/{id}
 	path := r.URL.Path
 	prefix := "/templates/"
 	if len(path) <= len(prefix) {

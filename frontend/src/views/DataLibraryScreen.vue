@@ -200,7 +200,7 @@ async function saveRow(row) {
       ? t(`data_library.errors.${code}`)
       : err.message
     error.value = t('data_library.errors.save_failed', { message })
-    try { await refreshScores() } catch { /* Keep the original save error visible. */ }
+    try { await refreshScores() } catch {  }
   } finally { busy.value = false }
 }
 async function saveTarget(value) {
@@ -226,7 +226,7 @@ async function saveResponse(response, key, value) {
     }
     await request(modulePath() + `/responses/${encodeURIComponent(response.id)}`, 'PUT', { data })
     response.data = data; notice.value = t('data_library.notices.response_saved')
-  } catch (err) { error.value = t('data_library.errors.response_save_failed', { message: err.message }); try { await loadResponses() } catch { /* Preserve save error. */ } }
+  } catch (err) { error.value = t('data_library.errors.response_save_failed', { message: err.message }); try { await loadResponses() } catch {  } }
   finally { busy.value = false }
 }
 const { confirmLeave } = useUnsavedChanges(computed(() => busy.value || dirty.value), {

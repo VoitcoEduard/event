@@ -113,17 +113,14 @@ describe('ProjectorView answer counter (Bug #4)', () => {
 
     expect(wrapper.find('.answer-counter-widget .counter-value').text()).toBe('0')
 
-    // Range question has no answerCounts, only answeredCount
     mockQuizWS.emit('sync:minimal', { questionIndex: 0, answeredCount: 3, answerCounts: {} })
     await flushPromises()
     expect(wrapper.find('.answer-counter-widget .counter-value').text()).toBe('3')
 
-    // Stale sync:minimal for another question is ignored
     mockQuizWS.emit('sync:minimal', { questionIndex: 99, answeredCount: 1, answerCounts: {} })
     await flushPromises()
     expect(wrapper.find('.answer-counter-widget .counter-value').text()).toBe('3')
 
-    // Moving to next question resets counter to 0 even if multi_select has higher option sums
     mockQuizWS.emit('data:batch', {
       startIndex: 1,
       totalQuestions: 2,
@@ -165,7 +162,6 @@ describe('ProjectorView reconnect stability (Bug #5)', () => {
     mockQuizWS.disconnect.mockClear()
     mockQuizWS.clearHandlers.mockClear()
 
-    // Brief disconnect: quizWS handles its own reconnect; 3s poll must not wipe state
     mockQuizWS.isConnected = false
     mockQuizWS.emit('disconnect')
     await flushPromises()
@@ -177,7 +173,6 @@ describe('ProjectorView reconnect stability (Bug #5)', () => {
     expect(mockQuizWS.clearHandlers).not.toHaveBeenCalled()
     expect(mockQuizWS.connect).not.toHaveBeenCalled()
 
-    // Once quizWS reconnects and emits cmd:state, question state is still intact
     mockQuizWS.isConnected = true
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, totalQuestions: 2 })
     await flushPromises()
@@ -224,7 +219,6 @@ describe('ProjectorView question count and Wrong Pictures target sequence (Bug #
         wrongPictureConfig: { showTargetCount: true, targetCount: 2, maxPoints: 100 },
       }],
     })
-    // Projector joins during results: cmd:state arrives before data:reveal
     mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0, totalQuestions: 2 })
     await flushPromises()
 
@@ -241,7 +235,6 @@ describe('ProjectorView question count and Wrong Pictures target sequence (Bug #
     })
     await flushPromises()
 
-    // Initial delay 300ms reveals Target #1
     await vi.advanceTimersByTimeAsync(350)
     await flushPromises()
     let dots = wrapper.findAll('.wp-result-progress span')
@@ -249,14 +242,12 @@ describe('ProjectorView question count and Wrong Pictures target sequence (Bug #
     expect(dots[0].classes()).toContain('is-active')
     expect(dots[1].classes()).not.toContain('is-active')
 
-    // After focusDuration (2800ms), advances to Target #2 (not stuck on Target #1)
     await vi.advanceTimersByTimeAsync(2800)
     await flushPromises()
     dots = wrapper.findAll('.wp-result-progress span')
     expect(dots[0].classes()).toContain('is-complete')
     expect(dots[1].classes()).toContain('is-active')
 
-    // After second focusDuration (2800ms), transitions to overview
     await vi.advanceTimersByTimeAsync(2800)
     await flushPromises()
     expect(wrapper.find('.wp-result-overview').exists()).toBe(true)

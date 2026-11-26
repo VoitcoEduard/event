@@ -66,7 +66,6 @@ func TestGetSlidesIsReadOnlyAndPreservesExplicitEmptySlides(t *testing.T) {
 	}
 	svc := &EventService{store: store}
 
-	// Uninitialized event returns default slides in memory WITHOUT writing to DB
 	slides, err := svc.GetSlides(ctx, "legacy")
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +77,6 @@ func TestGetSlidesIsReadOnlyAndPreservesExplicitEmptySlides(t *testing.T) {
 		t.Fatalf("GetSlides mutated DB via SetSlides (%d calls)", len(store.setSlidesLog))
 	}
 
-	// Explicitly saved empty slice [] is returned as [] (not overwritten with defaults)
 	emptySlides, err := svc.GetSlides(ctx, "empty")
 	if err != nil {
 		t.Fatal(err)
@@ -90,13 +88,11 @@ func TestGetSlidesIsReadOnlyAndPreservesExplicitEmptySlides(t *testing.T) {
 		t.Fatalf("GetSlides mutated DB on empty slides")
 	}
 
-	// Admin-saved slides are returned untouched
 	customSlides, err := svc.GetSlides(ctx, "custom")
 	if err != nil || len(customSlides) != 1 || customSlides[0].Name != "Admin Slide" {
 		t.Fatalf("unexpected custom slides: %+v %v", customSlides, err)
 	}
 
-	// EventService.Create initializes default slides once at creation
 	created := &models.Event{Name: "Fresh Event"}
 	if err := svc.Create(ctx, created); err != nil {
 		t.Fatal(err)

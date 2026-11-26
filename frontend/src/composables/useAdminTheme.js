@@ -43,7 +43,6 @@ const persistTheme = value => {
   try {
     window.localStorage.setItem(ADMIN_THEME_KEY, value)
   } catch {
-    // The theme still works for this tab when storage is unavailable.
   }
 }
 

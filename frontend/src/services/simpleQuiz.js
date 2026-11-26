@@ -128,18 +128,17 @@ export function saveDraft(eventId, moduleId, questionIndex, text) {
   try {
     if (!text) localStorage.removeItem(draftKey(eventId, moduleId, questionIndex))
     else localStorage.setItem(draftKey(eventId, moduleId, questionIndex), text)
-  } catch { /* ignore */ }
+  } catch {  }
 }
 
 export function clearDraft(eventId, moduleId, questionIndex) {
   try {
     localStorage.removeItem(draftKey(eventId, moduleId, questionIndex))
-  } catch { /* ignore */ }
+  } catch {  }
 }
 
 export function newAnswerId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
-  // randomUUID is unavailable on insecure origins; still send a valid UUID.
   const bytes = new Uint8Array(16)
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) crypto.getRandomValues(bytes)
   else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)

@@ -267,7 +267,6 @@ function resetState() {
   templateSelectionError.value = ''
   submitError.value = ''
   submitting.value = false
-  // Re-fetch the template list on every open so added/deleted templates show up.
   templatesLoaded.value = false
   templatesLoadError.value = false
   loadingTemplates.value = false
@@ -386,8 +385,6 @@ function cloneAndNormalizeTemplateData(type, rawData) {
         }
       }
       if (next.type === 'true_false') {
-        // Only fill missing/blank True/False options; never overwrite existing
-        // (already localized) answers.
         if (
           !Array.isArray(next.answers) ||
           next.answers.length < 2 ||

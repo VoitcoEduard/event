@@ -19,7 +19,6 @@ import { loadSession, session } from '../session.js'
 const returnKey = 'adminReturnPath'
 
 export const routes = [
-  // Public participant, display, auth & secret judge routes
   { path: '/', name: 'main', component: MainScreen },
   { path: '/event', name: 'event', component: EventScreen },
   { path: '/login', name: 'login', component: LoginScreen, meta: { adminAppearance: true } },
@@ -33,7 +32,6 @@ export const routes = [
   { path: '/event/team-selection', name: 'team-selection', component: TeamsActivityPicker },
   { path: '/event/my-team', name: 'my-team', component: TeamsActivityPicker },
 
-  // Canonical admin routes
   { path: '/admin/events', name: 'admin-events', component: AdminScreen, meta: { requiresAuth: true, adminAppearance: true } },
   { path: '/admin/events/:eventId', name: 'admin-event-details', component: AdminEventDetailsScreen, meta: { requiresAuth: true, adminAppearance: true } },
   { path: '/admin/events/:eventId/modules/:moduleId/edit', name: 'admin-module-editor', component: () => import('../views/AdminModuleEditorScreen.vue'), meta: { requiresAuth: true, adminAppearance: true } },
@@ -46,7 +44,6 @@ export const routes = [
   { path: '/admin/library/:tab/:templateId/edit', name: 'admin-template-edit', component: () => import('../views/AdminTemplateEditorScreen.vue'), meta: { requiresAuth: true, adminAppearance: true } },
   { path: '/admin/users', name: 'admin-users', component: () => import('../views/AdminUsersScreen.vue'), meta: { requiresOwner: true, adminAppearance: true } },
 
-  // Legacy admin redirects
   { path: '/admin', redirect: to => ({ name: 'admin-events', query: to.query, hash: to.hash }) },
   { path: '/admin/event/:id', redirect: to => ({ name: 'admin-event-details', params: { eventId: to.params.id }, query: to.query, hash: to.hash }) },
   { path: '/admin/event/:id/screen-manager', redirect: to => ({ name: 'admin-screen-manager', params: { eventId: to.params.id }, query: to.query, hash: to.hash }) },
@@ -116,7 +113,7 @@ export function sanitizeAdminReturnTo(raw, targetRouter = router) {
 
 const rememberReturnPath = (to) => {
   if (to.name !== 'pending' && to.name !== 'login') {
-    try { sessionStorage.setItem(returnKey, to.fullPath) } catch { /* storage unavailable */ }
+    try { sessionStorage.setItem(returnKey, to.fullPath) } catch {  }
   }
 }
 

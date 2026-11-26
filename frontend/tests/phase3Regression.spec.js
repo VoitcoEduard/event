@@ -98,8 +98,6 @@ describe('AddModuleModal template refresh (M5)', () => {
     }))
     await flushPromises()
 
-    // Step 1: pick a template-capable type (quiz), then step 2 offers the
-    // template source toggle.
     await wrapper.find('.module-type-card').trigger('click')
     await flushPromises()
 
@@ -110,18 +108,15 @@ describe('AddModuleModal template refresh (M5)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(wrapper.findAll('.template-choice-name').map(el => el.text())).toEqual(['Geography Quiz'])
 
-    // Add a new template on the server, close and reopen the modal.
     templateList.push({ id: 'tpl-2', name: 'History Quiz', moduleType: 'quiz', data: { questions: [] } })
     await wrapper.setProps({ visible: false })
     await flushPromises()
     await wrapper.setProps({ visible: true })
     await flushPromises()
 
-    // Reopen returns to step 1; pick the type again.
     await wrapper.find('.module-type-card').trigger('click')
     await flushPromises()
 
-    // resetState must clear the cache so the picker refetches.
     await templateOption().trigger('click')
     await flushPromises()
 
@@ -159,7 +154,6 @@ describe('AdminEventDetailsScreen race handling (L2, L7c)', () => {
       if (url === '/events/evt-1') return Promise.resolve({ ok: true, json: async () => eventWithActiveQuiz })
       if (url === '/events/evt-1/screensaver') return Promise.resolve({ ok: true, json: async () => ({}) })
       if (url === '/events/evt-1/modules/mod-q/quiz/reset' && opts.method === 'POST') {
-        // 409 while results are being saved.
         return Promise.resolve({ ok: false, status: 409, text: async () => '' })
       }
       return Promise.resolve({ ok: true, json: async () => ({}) })
@@ -201,24 +195,19 @@ describe('AdminEventDetailsScreen race handling (L2, L7c)', () => {
     const wrapper = mountDetails(fetchMock)
     await flushPromises()
 
-    // Click "Start Event" on evt-1; the PUT hangs.
     const startButton = wrapper.find('.start-button')
     expect(startButton.exists()).toBe(true)
     await startButton.trigger('click')
     await flushPromises()
     expect(resolveStatus).toBeDefined()
 
-    // The user switches to another event while the first request is in flight.
-    // Changing route params reloads evt-2 (and bumps eventFetchSeq).
     mockRoute.params = { id: 'evt-2' }
     await flushPromises()
     await flushPromises()
 
-    // The stale evt-1 response arrives now.
     resolveStatus({ ok: true, json: async () => ({ message: 'ok' }) })
     await flushPromises()
 
-    // evt-2 must remain untouched: stopped, and no "started" toast.
     expect(mockToast.success).not.toHaveBeenCalledWith(
       expect.anything(),
       'event_details.toast_event_started'
@@ -250,21 +239,17 @@ describe('AdminScreen dirty form guard (L1)', () => {
     track(mount(AppDialogHost, { attachTo: document.body, global: { plugins: [i18n] } }))
     await flushPromises()
 
-    // A blank, untouched form is not dirty.
     await wrapper.find('.create-toggle-btn').trigger('click')
     await flushPromises()
     await expect(confirmActiveUnsavedChanges()).resolves.toBe(true)
 
-    // Typing in the form makes it dirty.
     await wrapper.find('#admin-event-name').setValue('Draft Event')
     const guard = confirmActiveUnsavedChanges()
     await flushPromises()
     expect(document.body.querySelector('.app-dialog')).not.toBeNull()
-    // Stay: keep the user (and guard) in place.
     document.body.querySelector('.app-dialog-btn--secondary').click()
     await expect(guard).resolves.toBe(false)
 
-    // Cancelling the form clears the guard again.
     await wrapper.find('.form-close-btn').trigger('click')
     await flushPromises()
     await expect(confirmActiveUnsavedChanges()).resolves.toBe(true)
@@ -335,15 +320,11 @@ describe('DataLibraryScreen localized points errors (L3c)', () => {
     }))
     await flushPromises()
 
-    // The default tab is the aggregate view; select the quiz module tab.
-    // (All buttons use the raw module name as the label.)
     await wrapper.findAll('nav button').find(b => b.text().trim().includes('Classic Quiz')).trigger('click')
     await flushPromises()
 
-    // The aria-label is localized, so identify the game input by step="1".
     const gameInput = wrapper.find('input[type="number"][step="1"]')
     expect(gameInput.exists()).toBe(true)
-    // A fractional game score is invalid for step="1" game inputs.
     await gameInput.setValue('2.5')
     const saveBtn = wrapper.find('.actions-cell button')
     await saveBtn.trigger('click')

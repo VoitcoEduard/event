@@ -11,14 +11,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// =============================================================================
-// Test data (testCtx already declared in participant_service_test.go)
-// =============================================================================
-
-// =============================================================================
-// Mock repository for testing
-// =============================================================================
-
 type MockEventSessionRepository struct {
 	mu                  sync.Mutex
 	CreateFunc          func(ctx context.Context, session *models.EventSession) error
@@ -61,7 +53,6 @@ func (m *MockEventSessionRepository) GetByID(ctx context.Context, id string) (*m
 		copy := *session
 		return &copy, nil
 	}
-	// Also check CreatedSessions to find recently created sessions
 	for _, s := range m.CreatedSessions {
 		if s.ID == id {
 			copy := *s
@@ -89,15 +80,10 @@ func (m *MockEventSessionRepository) Update(ctx context.Context, session *models
 	if session == nil {
 		return errors.New("session is nil")
 	}
-	// Store an independent document, as PostgreSQL does.
 	copy := *session
 	m.GetByIDResults[session.ID] = &copy
 	return nil
 }
-
-// =============================================================================
-// CreateSession tests
-// =============================================================================
 
 func TestCreateSession(t *testing.T) {
 	tests := []struct {
@@ -220,10 +206,6 @@ func TestCreateSession(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// GetSession tests
-// =============================================================================
-
 func TestGetSession(t *testing.T) {
 	existingSession := &models.EventSession{
 		ID:      "ses-001",
@@ -259,7 +241,6 @@ func TestGetSession(t *testing.T) {
 			name:      "session not found",
 			sessionID: "non-existent",
 			setupMock: func(m *MockEventSessionRepository) {
-				// No session added to results
 			},
 			checkResult: func(t *testing.T, s *models.EventSession, err error) {
 				if err == nil {
@@ -302,10 +283,6 @@ func TestGetSession(t *testing.T) {
 		})
 	}
 }
-
-// =============================================================================
-// UpdateSessionStatus tests
-// =============================================================================
 
 func TestUpdateSessionStatus(t *testing.T) {
 	now := time.Now()
@@ -362,7 +339,6 @@ func TestUpdateSessionStatus(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				// StartedAt should remain unchanged
 			},
 		},
 		{
@@ -412,7 +388,6 @@ func TestUpdateSessionStatus(t *testing.T) {
 			sessionID: "ses-error",
 			status:    models.EventSessionStatusLive,
 			setupMock: func(m *MockEventSessionRepository) {
-				// Pre-populate session so GetByID succeeds
 				m.GetByIDResults["ses-error"] = &models.EventSession{
 					ID:      "ses-error",
 					EventID: "event-123",
@@ -437,7 +412,6 @@ func TestUpdateSessionStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := NewMockEventSessionRepo()
 
-			// Pre-populate session if needed
 			if tt.sessionID != "non-existent" && tt.sessionID != "ses-error" {
 				if _, ok := mock.GetByIDResults[tt.sessionID]; !ok {
 					mock.GetByIDResults[tt.sessionID] = &models.EventSession{
@@ -454,7 +428,6 @@ func TestUpdateSessionStatus(t *testing.T) {
 
 			err := svc.UpdateSessionStatus(testCtx, tt.sessionID, tt.status)
 
-			// Get the updated session to check result
 			var session *models.EventSession
 			if err == nil {
 				session = mock.GetByIDResults[tt.sessionID]
@@ -464,10 +437,6 @@ func TestUpdateSessionStatus(t *testing.T) {
 		})
 	}
 }
-
-// =============================================================================
-// AdvanceSessionModule tests
-// =============================================================================
 
 func TestAdvanceSessionModule(t *testing.T) {
 	tests := []struct {
@@ -507,7 +476,6 @@ func TestAdvanceSessionModule(t *testing.T) {
 			sessionID:      "ses-error",
 			activeModuleID: "module-y",
 			setupMock: func(m *MockEventSessionRepository) {
-				// Pre-populate session so GetByID succeeds
 				m.GetByIDResults["ses-error"] = &models.EventSession{
 					ID:             "ses-error",
 					ActiveModuleID: "module-a",
@@ -531,7 +499,6 @@ func TestAdvanceSessionModule(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := NewMockEventSessionRepo()
 
-			// Pre-populate session if needed
 			if tt.sessionID != "non-existent" && tt.sessionID != "ses-error" {
 				if _, ok := mock.GetByIDResults[tt.sessionID]; !ok {
 					mock.GetByIDResults[tt.sessionID] = &models.EventSession{
@@ -557,10 +524,6 @@ func TestAdvanceSessionModule(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// EventSessionStatus constants tests
-// =============================================================================
-
 func TestEventSessionStatusConstants(t *testing.T) {
 	if models.EventSessionStatusDraft != "draft" {
 		t.Errorf("EventSessionStatusDraft = %q, want %q", models.EventSessionStatusDraft, "draft")
@@ -578,10 +541,6 @@ func TestEventSessionStatusConstants(t *testing.T) {
 		t.Errorf("EventSessionStatusCompleted = %q, want %q", models.EventSessionStatusCompleted, "completed")
 	}
 }
-
-// =============================================================================
-// Status Transition Tests
-// =============================================================================
 
 func TestSessionStatusTransitions(t *testing.T) {
 	tests := []struct {
@@ -612,7 +571,6 @@ func TestSessionStatusTransitions(t *testing.T) {
 			newStatus:     models.EventSessionStatusPaused,
 			wantErr:       false,
 			setupMock: func(m *MockEventSessionRepository) {
-				// Pre-populate with StartedAt already set (session is already live)
 				now := time.Now()
 				m.GetByIDResults["ses-transition-test"] = &models.EventSession{
 					ID:        "ses-transition-test",
@@ -624,7 +582,6 @@ func TestSessionStatusTransitions(t *testing.T) {
 				}
 			},
 			checkFields: func(t *testing.T, s *models.EventSession) {
-				// StartedAt should remain, EndedAt should not be set
 				if s.StartedAt == nil {
 					t.Error("StartedAt should still be set")
 				}
@@ -639,7 +596,6 @@ func TestSessionStatusTransitions(t *testing.T) {
 			newStatus:     models.EventSessionStatusLive,
 			wantErr:       false,
 			checkFields: func(t *testing.T, s *models.EventSession) {
-				// Should not reset StartedAt
 				if s.StartedAt == nil {
 					t.Error("StartedAt should still be set")
 				}
@@ -671,9 +627,8 @@ func TestSessionStatusTransitions(t *testing.T) {
 			name:          "completed to live (should fail - terminal state)",
 			initialStatus: models.EventSessionStatusCompleted,
 			newStatus:     models.EventSessionStatusLive,
-			wantErr:       false, // Current implementation doesn't validate this
+			wantErr:       false,
 			checkFields: func(t *testing.T, s *models.EventSession) {
-				// Once completed, can theoretically go back to live
 			},
 		},
 		{
@@ -682,7 +637,6 @@ func TestSessionStatusTransitions(t *testing.T) {
 			newStatus:     models.EventSessionStatusPaused,
 			wantErr:       false,
 			checkFields: func(t *testing.T, s *models.EventSession) {
-				// StartedAt should NOT be set (never went live)
 				if s.StartedAt != nil {
 					t.Error("StartedAt should NOT be set when transitioning from Waiting")
 				}
@@ -730,14 +684,12 @@ func TestSessionStatusLifecycle(t *testing.T) {
 	mock := NewMockEventSessionRepo()
 	svc := &EventSessionService{SessionRepo: mock}
 
-	// Step 1: Create session (starts in Waiting)
 	session, err := svc.CreateSession(testCtx, "event-lifecycle", []string{"intro", "main", "final"})
 	if err != nil {
 		t.Fatalf("CreateSession failed: %v", err)
 	}
 	sessionID := session.ID
 
-	// Verify initial state
 	if session.Status != models.EventSessionStatusWaiting {
 		t.Errorf("Initial status = %q, want %q", session.Status, models.EventSessionStatusWaiting)
 	}
@@ -748,7 +700,6 @@ func TestSessionStatusLifecycle(t *testing.T) {
 		t.Error("EndedAt should be nil initially")
 	}
 
-	// Step 2: Start the session (Waiting → Live)
 	err = svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusLive)
 	if err != nil {
 		t.Fatalf("UpdateSessionStatus to Live failed: %v", err)
@@ -762,7 +713,6 @@ func TestSessionStatusLifecycle(t *testing.T) {
 		t.Error("StartedAt should be set")
 	}
 
-	// Step 3: Pause (Live → Paused)
 	err = svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusPaused)
 	if err != nil {
 		t.Fatalf("UpdateSessionStatus to Paused failed: %v", err)
@@ -773,7 +723,6 @@ func TestSessionStatusLifecycle(t *testing.T) {
 		t.Errorf("Status = %q, want %q", session.Status, models.EventSessionStatusPaused)
 	}
 
-	// Step 4: Resume (Paused → Live)
 	err = svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusLive)
 	if err != nil {
 		t.Fatalf("UpdateSessionStatus back to Live failed: %v", err)
@@ -783,9 +732,8 @@ func TestSessionStatusLifecycle(t *testing.T) {
 	if session.Status != models.EventSessionStatusLive {
 		t.Errorf("Status = %q, want %q", session.Status, models.EventSessionStatusLive)
 	}
-	originalStartTime := session.StartedAt // Should not change
+	originalStartTime := session.StartedAt
 
-	// Step 5: Advance module
 	err = svc.AdvanceSessionModule(testCtx, sessionID, "main")
 	if err != nil {
 		t.Fatalf("AdvanceSessionModule failed: %v", err)
@@ -799,7 +747,6 @@ func TestSessionStatusLifecycle(t *testing.T) {
 		t.Error("StartedAt should not change when advancing modules")
 	}
 
-	// Step 6: Complete the session (Live → Completed)
 	err = svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusCompleted)
 	if err != nil {
 		t.Fatalf("UpdateSessionStatus to Completed failed: %v", err)
@@ -927,7 +874,6 @@ func TestConcurrentStatusUpdates(t *testing.T) {
 	session, _ := svc.CreateSession(testCtx, "event-concurrent", []string{"module-1"})
 	sessionID := session.ID
 
-	// Simulate concurrent updates
 	errChan := make(chan error, 3)
 
 	go func() {
@@ -940,14 +886,12 @@ func TestConcurrentStatusUpdates(t *testing.T) {
 		errChan <- svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusCompleted)
 	}()
 
-	// Collect results (we don't guarantee order, just that no panic occurs)
 	for i := 0; i < 3; i++ {
 		if err := <-errChan; err != nil {
 			t.Fatalf("concurrent status update: %v", err)
 		}
 	}
 
-	// Verify session still exists and has a valid status
 	session = mock.GetByIDResults[sessionID]
 	if session == nil {
 		t.Fatal("Session should still exist after concurrent updates")
@@ -956,15 +900,10 @@ func TestConcurrentStatusUpdates(t *testing.T) {
 	t.Logf("Final status after concurrent updates: %s", session.Status)
 }
 
-// =============================================================================
-// Integration-style test
-// =============================================================================
-
 func TestCreateAndUpdateSession(t *testing.T) {
 	mock := NewMockEventSessionRepo()
 	svc := &EventSessionService{SessionRepo: mock}
 
-	// Create session
 	session, err := svc.CreateSession(testCtx, "event-integration", []string{"intro", "main", "outro"})
 	if err != nil {
 		t.Fatalf("CreateSession failed: %v", err)
@@ -975,7 +914,6 @@ func TestCreateAndUpdateSession(t *testing.T) {
 		t.Errorf("CreatedSessions has %d items, want 1", len(mock.CreatedSessions))
 	}
 
-	// Update to live
 	err = svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusLive)
 	if err != nil {
 		t.Fatalf("UpdateSessionStatus to Live failed: %v", err)
@@ -989,7 +927,6 @@ func TestCreateAndUpdateSession(t *testing.T) {
 		t.Error("StartedAt should be set")
 	}
 
-	// Advance module
 	err = svc.AdvanceSessionModule(testCtx, sessionID, "main")
 	if err != nil {
 		t.Fatalf("AdvanceSessionModule failed: %v", err)
@@ -1000,7 +937,6 @@ func TestCreateAndUpdateSession(t *testing.T) {
 		t.Errorf("ActiveModuleID = %q, want %q", updated.ActiveModuleID, "main")
 	}
 
-	// Complete session
 	err = svc.UpdateSessionStatus(testCtx, sessionID, models.EventSessionStatusCompleted)
 	if err != nil {
 		t.Fatalf("UpdateSessionStatus to Completed failed: %v", err)

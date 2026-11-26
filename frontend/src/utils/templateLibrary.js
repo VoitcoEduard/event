@@ -9,7 +9,6 @@ const trueFalseAnswers = () => [
   ''
 ]
 
-/** Canonical library tabs in display order. */
 export const LIBRARY_TABS = [
   { id: 'quizzes', moduleType: 'quiz', labelKey: 'library.tabs.quizzes', icon: 'quiz', kind: 'template' },
   { id: 'forms', moduleType: 'form', labelKey: 'library.tabs.forms', icon: 'form', kind: 'template' },
@@ -30,39 +29,17 @@ const TAB_ALIASES = {
   music: 'music'
 }
 
-/**
- * Resolve a route param or moduleType string into a canonical library tab id.
- *
- * @param {string | string[] | undefined} rawTab
- * @param {string} [fallback='quizzes']
- * @returns {string}
- */
 export function resolveLibraryTab(rawTab, fallback = 'quizzes') {
   const value = Array.isArray(rawTab) ? rawTab[0] : rawTab
   const key = String(value || '').trim().toLowerCase()
   return TAB_ALIASES[key] || fallback
 }
 
-/**
- * Return the tab configuration object for a route tab or moduleType.
- *
- * @param {string | string[] | undefined} rawTab
- * @returns {typeof LIBRARY_TABS[number]}
- */
 export function getLibraryTabConfig(rawTab) {
   const id = resolveLibraryTab(rawTab)
   return LIBRARY_TABS.find(tab => tab.id === id) || LIBRARY_TABS[0]
 }
 
-/**
- * Validate a `?returnTo=` query value as an internal `/admin/...` path.
- * Uses `sanitizeAdminReturnTo` when auth route metadata is present, and
- * falls back to safe path validation for minimal unit-test routers.
- *
- * @param {string | string[] | undefined} rawReturnTo
- * @param {import('vue-router').Router | null | undefined} targetRouter
- * @returns {string | null}
- */
 export function resolveSafeReturnTo(rawReturnTo, targetRouter) {
   const raw = Array.isArray(rawReturnTo) ? rawReturnTo[0] : rawReturnTo
   if (typeof raw !== 'string' || !targetRouter) return null
@@ -96,19 +73,12 @@ export function resolveSafeReturnTo(rawReturnTo, targetRouter) {
   }
 }
 
-/**
- * Sanitize and normalize a single wrong_pictures round object.
- *
- * @param {object} [rawRound]
- * @returns {object}
- */
 export function normalizeWrongPictureRound(rawRound = {}) {
   const cfg = rawRound?.wrongPictureConfig || {}
   const maxPoints = cfg.maxPoints !== undefined
     ? cfg.maxPoints
     : (rawRound?.scoringConfig?.maxPoints !== undefined ? rawRound.scoringConfig.maxPoints : 50)
 
-  // Guard against corrupted legacy templates that persisted timeLimit as "".
   const rawTimeLimit = rawRound?.timeLimit
   const parsedTimeLimit = rawTimeLimit === '' || rawTimeLimit === null || rawTimeLimit === undefined
     ? 60
@@ -132,14 +102,6 @@ export function normalizeWrongPictureRound(rawRound = {}) {
   }
 }
 
-/**
- * Sanitize an array of quiz questions or wrong_pictures rounds when loading
- * or importing templates.
- *
- * @param {string} moduleType
- * @param {Array<object>} [rawQuestions]
- * @returns {Array<object>}
- */
 export function sanitizeTemplateQuestions(moduleType, rawQuestions = []) {
   const list = Array.isArray(rawQuestions) ? JSON.parse(JSON.stringify(rawQuestions)) : []
 

@@ -14,7 +14,6 @@ import (
 	"github.com/user/go-expo-sample/backend/services"
 )
 
-// UpdateQuizQuestions - PUT /events/{id}/modules/{moduleId}/quiz/questions
 func (h *Handler) UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
@@ -39,7 +38,6 @@ func (h *Handler) UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Debug: log questions with images
 	for i, q := range questions {
 		if q.ImageID != nil && *q.ImageID != "" {
 			fmt.Printf("[UpdateQuizQuestions] Question %d has imageId: %s\n", i, *q.ImageID)
@@ -57,7 +55,6 @@ func (h *Handler) UpdateQuizQuestions(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Questions updated"})
 }
 
-// GetQuizState - GET /events/{id}/modules/{moduleId}/quiz/state
 func (h *Handler) GetQuizState(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-store")
 	if h.deps.QuizHub == nil {
@@ -82,8 +79,6 @@ func (h *Handler) GetQuizState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.isAdmin(r) {
-		// Public clients need progress and timing, not other players' identities
-		// or submitted answers. Administrators retain the full state response.
 		writeJSON(w, map[string]any{
 			"eventId": session.EventID, "moduleId": session.ModuleID,
 			"state": session.State, "currentIndex": session.CurrentIndex,
@@ -97,7 +92,6 @@ func (h *Handler) GetQuizState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(session)
 }
 
-// StartQuiz - POST /events/{id}/modules/{moduleId}/quiz/start
 func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
@@ -124,7 +118,6 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 		lookupEvent = h.deps.DB.GetEvent
 	}
 
-	// Load questions from DB
 	event, err := lookupEvent(r.Context(), eventID)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
@@ -190,7 +183,6 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(started)
 }
 
-// NextQuestion - POST /events/{id}/modules/{moduleId}/quiz/next
 func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
 	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
@@ -231,7 +223,6 @@ func (h *Handler) NextQuestion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(updated)
 }
 
-// GetQuizResults - GET /events/{id}/modules/{moduleId}/quiz/results
 func (h *Handler) GetQuizResults(w http.ResponseWriter, r *http.Request) {
 	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
@@ -293,7 +284,6 @@ func (h *Handler) GetQuizResults(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// ResetQuiz - POST /events/{id}/modules/{moduleId}/quiz/reset
 func (h *Handler) ResetQuiz(w http.ResponseWriter, r *http.Request) {
 	if h.deps.QuizHub == nil {
 		http.Error(w, "Quiz hub not initialized", http.StatusInternalServerError)
@@ -307,7 +297,6 @@ func (h *Handler) ResetQuiz(w http.ResponseWriter, r *http.Request) {
 	}
 	moduleID := parts[4]
 
-	// Reset the session
 	if !h.deps.QuizHub.ResetSession(moduleID) {
 		http.Error(w, "Quiz results are being saved", http.StatusConflict)
 		return

@@ -6,7 +6,6 @@ import (
 
 func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 	client.IsHost, client.IsTeamsAdmin, client.IsProjector, client.PlayerID = false, false, false, ""
-	// Payload: { "moduleId": "...", "eventId": "..." }
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		return
@@ -23,9 +22,6 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 	if moduleID != "" {
 		s, exists := h.sessions[moduleID]
 		if !exists || s == nil {
-			// Do not allocate phantom sessions for unauthenticated projector joins.
-			// Send an initial lobby cmd:state so the projector renders lobby while
-			// remaining subscribed for updates once a host creates/starts a session.
 			jsonMsg, _ := json.Marshal(ServerMessage{
 				Type: "cmd:state",
 				Payload: map[string]interface{}{
@@ -39,7 +35,6 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 			return
 		}
 
-		// Send current state to projector via cmd:state (same as host)
 		jsonMsg, _ := json.Marshal(ServerMessage{
 			Type: "cmd:state",
 			Payload: map[string]interface{}{
@@ -53,7 +48,6 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 			return
 		}
 
-		// Also send full session data via state:update (for player list)
 		jsonMsg2, _ := json.Marshal(ServerMessage{
 			Type: "state:update",
 			Payload: map[string]any{
@@ -69,7 +63,6 @@ func (h *QuizHub) processProjectorJoin(client *Client, msg ClientMessage) {
 			return
 		}
 
-		// Send data:batch with questions to projector
 		if len(s.Batches) > 0 && s.CurrentIndex/MaxQuestionsPerBatch < len(s.Batches) {
 			jsonMsg3 := publicBatchMessage(s.Batches[s.CurrentIndex/MaxQuestionsPerBatch], s.CurrentIndex, len(s.Questions), s.RunID)
 			if !h.sendToClientLocked(client, jsonMsg3) {

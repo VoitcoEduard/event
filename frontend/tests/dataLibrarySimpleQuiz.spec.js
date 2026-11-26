@@ -78,17 +78,14 @@ describe('DataLibraryScreen simple_quiz score handling (Bug #14)', () => {
     wrapper = mount(DataLibraryScreen, mountOpts)
     await flushPromises()
 
-    // Select the Simple Quiz module tab
     const navButtons = wrapper.findAll('nav button')
     const simpleQuizTab = navButtons.find(b => b.text() === 'Simple Round')
     await simpleQuizTab.trigger('click')
     await flushPromises()
 
-    // Published score is shown, but NOT as an editable game points input
     expect(wrapper.find('input[aria-label="Alice game points"]').exists()).toBe(false)
     expect(wrapper.find('tbody').text()).toContain('30')
 
-    // Manual points column remains editable and saves cleanly without hitting quiz-scores
     const manualInput = wrapper.find('input[aria-label="Alice manual points"]')
     expect(manualInput.exists()).toBe(true)
     await manualInput.setValue('5')
@@ -99,7 +96,6 @@ describe('DataLibraryScreen simple_quiz score handling (Bug #14)', () => {
     expect(fetchCalls.some(c => c.url.includes('/quiz-scores/'))).toBe(false)
     expect(fetchCalls.some(c => c.method === 'PUT' && c.url === '/api/events/evt-1/modules/mod-sq/manual-scores/players/p1')).toBe(true)
 
-    // Classic Quiz tab still allows editing the latest game score
     const classicQuizTab = navButtons.find(b => b.text() === 'Classic Quiz')
     await classicQuizTab.trigger('click')
     await flushPromises()

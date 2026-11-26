@@ -13,7 +13,6 @@ import (
 	"github.com/user/go-expo-sample/backend/postgres"
 )
 
-// Resolve the event and participant before taking the shared hub lock.
 func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMessage) {
 	var binding *quizPlayerBinding
 	if h.playerIdentity != nil {
@@ -97,8 +96,6 @@ func (h *QuizHub) processPlayerJoinWithPersistence(client *Client, msg ClientMes
 	}
 }
 
-// Call with h.mu held. Reconnects may read finished results, but must not
-// change the roster while results are being saved or after they are final.
 func (h *QuizHub) canJoinQuizLocked(moduleID, playerID string) bool {
 	session := h.sessions[moduleID]
 	if session == nil || (session.State != "finishing" && session.State != "finished") {
@@ -109,7 +106,6 @@ func (h *QuizHub) canJoinQuizLocked(moduleID, playerID string) bool {
 
 func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 	client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
-	// Payload: { "moduleId": "...", "nickname": "..." }
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		return
@@ -124,28 +120,21 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 		return
 	}
 
-	// Determine persistent player ID
 	playerID := nickname
 	if userID != "" {
-		playerID = userID // Use persistent UUID if available
+		playerID = userID
 	}
-	// Recheck after persistence in case the host ended the quiz during DB I/O.
 	if !h.canJoinQuizLocked(moduleID, playerID) {
 		h.sendToClientLocked(client, mustMarshal(ServerMessage{Type: "cmd:error", Payload: map[string]interface{}{"code": "join_closed", "message": "This quiz is not accepting new players."}}))
 		return
 	}
 
-	// Associate client
 	client.ModuleID = moduleID
 	client.IsHost = false
 	client.PlayerID = playerID
 
-	// Get or Create Session (though REST API should have created it, WS might need to get it)
 	session, exists := h.sessions[moduleID]
 	if !exists {
-		// Implicitly create session or error?
-		// Better to error if session not started by host?
-		// For simplicity, let's create a lobby state
 		session = &models.QuizSession{
 			ModuleID:      moduleID,
 			State:         "lobby",
@@ -156,7 +145,6 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 		h.sessions[moduleID] = session
 	}
 
-	// Add a new player, or retain the score and history of a reconnecting one.
 	if player, exists := session.Players[playerID]; exists {
 		if session.State != "finishing" && session.State != "finished" {
 			player.Nickname = nickname
@@ -174,7 +162,6 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 		}
 	}
 
-	// Send state directly to the newly joined player
 	statePayload := map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID}
 	if session.State == "question-active" && session.CurrentIndex >= 0 && session.CurrentIndex < len(session.QuestionWindows) && session.CurrentIndex < len(session.Questions) {
 		statePayload["timeLimit"] = EffectiveTimeLimit(session.Questions[session.CurrentIndex])
@@ -205,7 +192,6 @@ func (h *QuizHub) processPlayerJoin(client *Client, msg ClientMessage) {
 		h.sendToClientLocked(client, public)
 	}
 
-	// Notify session update (state:update) to refresh player list for host & projector only
 	h.broadcastToHostsAndProjectorsLocked(moduleID, ServerMessage{
 		Type:    "state:update",
 		Payload: session,
@@ -217,7 +203,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		DebugLog("player:signal rejected - client is host")
 		return
 	}
-	// Payload: { "questionIndex": 0, "answerIndex": 0, "submissionId": "..." }
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		DebugLog("player:signal rejected - invalid payload type")
@@ -270,17 +255,12 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			return
 		}
 		if session.State == "finishing" {
-			// Results are being persisted: explicitly NACK so the player UI
-			// does not stay stuck on "Waiting for confirmation…".
 			ack(false, "quiz_finishing", 0)
 			return
 		}
 		DebugLog("player:signal - Session found, state: %s, currentIndex: %d, questionWindows: %d",
 			session.State, session.CurrentIndex, len(session.QuestionWindows))
 
-		// A2: one answer per player per question. Without this, re-sent
-		// (or replayed) signals for the same question keep adding to the
-		// score and inflate the answer histogram.
 		if client.PlayerID == "" || session.Players[client.PlayerID] == nil {
 			log.Printf("Answer rejected (no player) for module %s: Question %d",
 				client.ModuleID, questionIndex)
@@ -296,10 +276,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			}
 		}
 
-		// A4: only the active question accepts answers. Anything else —
-		// future, past, negative, or with no window yet — is dropped before
-		// it can score or pollute statistics. This also closes the
-		// out-of-range indexing panic on crafted questionIndex values.
 		if questionIndex < 0 || questionIndex != session.CurrentIndex ||
 			questionIndex >= len(session.QuestionWindows) {
 			log.Printf("Answer rejected (invalid question) for module %s: Question %d (current %d, windows %d)",
@@ -308,9 +284,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			return
 		}
 
-		// Check if signal is within acceptance window.
-		// A3: honour AcceptanceResult.Scored — grace-period answers count
-		// for statistics (Valid) but earn no points (Scored == false).
 		qWindow := session.QuestionWindows[questionIndex]
 		acceptance := CanAcceptSignal(qWindow, time.Now().Unix())
 		status := acceptance.Reason
@@ -342,7 +315,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			awarded = 0
 		}
 		timeSpent := int(time.Since(time.Unix(qWindow.StartTime, 0)).Milliseconds())
-		// Create and store signal
 		signal := models.PlayerSignal{
 			PlayerID:      client.PlayerID,
 			QuestionIndex: questionIndex,
@@ -354,24 +326,19 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			Timestamp:     time.Now().Unix(),
 			Status:        status,
 		}
-		// Maintain backward compatibility for single choice in DB if needed,
-		// though AnswerIndex is less useful for multi-select.
 		if len(answerIndices) == 1 {
 			signal.AnswerIndex = answerIndices[0]
 		} else {
-			signal.AnswerIndex = -1 // mixed/multi
+			signal.AnswerIndex = -1
 		}
 
 		session.PlayerSignals = append(session.PlayerSignals, signal)
 
-		// Update answer counts for statistics (Valid) and score (Scored)
-		// as two separate gates.
 		if acceptance.Valid {
 			for _, ansIdx := range answerIndices {
 				session.AnswerCounts[ansIdx]++
 			}
 
-			// UPDATE PLAYER SCORE — only when inside the scoring window.
 			if acceptance.Scored {
 				if player, exists := session.Players[client.PlayerID]; exists {
 					player.Score += awarded
@@ -391,8 +358,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		}
 		ack(true, status, awarded)
 
-		// Track unique players for the active question instead of scanning the
-		// complete answer history on every submission.
 		if acceptance.Valid && questionIndex == session.CurrentIndex {
 			if session.AnsweredPlayerIDs == nil {
 				session.AnsweredPlayerIDs = make(map[string]struct{})
@@ -401,7 +366,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 		}
 		answeredCount := len(session.AnsweredPlayerIDs)
 
-		// Send minimal sync message (answer counts for host histogram and projector)
 		h.broadcastToHostsAndProjectorsLocked(session.ModuleID, ServerMessage{
 			Type: "sync:minimal",
 			Payload: map[string]interface{}{
@@ -412,7 +376,6 @@ func (h *QuizHub) processPlayerSignal(client *Client, msg ClientMessage) {
 			},
 		})
 
-		// Debug log for answered count at end of question
 		log.Printf("Question %d ended - answeredCount: %d / %d", questionIndex, answeredCount, len(session.Players))
 	}
 }
@@ -421,8 +384,6 @@ func (h *QuizHub) processPlayerBatchRequest(client *Client, msg ClientMessage) {
 	if client.IsHost {
 		return
 	}
-	// Payload: { "currentBatchIndex": 0 }. The index identifies the exact
-	// batch the client needs, rather than the batch after it.
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		return
@@ -435,7 +396,6 @@ func (h *QuizHub) processPlayerBatchRequest(client *Client, msg ClientMessage) {
 
 	session := h.sessions[client.ModuleID]
 	if session != nil && currentBatchIndex >= 0 && currentBatchIndex < len(session.Batches) {
-		// Send the requested batch.
 		h.sendToClientLocked(client, publicBatchMessage(session.Batches[currentBatchIndex], session.CurrentIndex, len(session.Questions), session.RunID))
 	}
 }
@@ -444,7 +404,6 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 	if client.quizBinding == nil || client.quizBinding.moduleID != client.ModuleID || client.quizBinding.playerID != client.PlayerID {
 		return
 	}
-	// Payload: { "moduleId": "...", "nickname": "...", "lastKnownQuestionIndex": 0, "lastKnownState": "question" }
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		return
@@ -477,7 +436,6 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 		return
 	}
 
-	// Calculate what user missed since joining / since their last answered question
 	currentIndex := session.CurrentIndex
 	lastAnsweredIndex := -1
 	for _, previous := range session.PlayerSignals {
@@ -496,7 +454,6 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 	missedQuestions := []int{}
 
 	for i := startIdx; i < currentIndex; i++ {
-		// Do not duplicate an answer or an earlier missed marker.
 		seen := false
 		for _, previous := range session.PlayerSignals {
 			if previous.PlayerID == player.ID && previous.QuestionIndex == i {
@@ -513,7 +470,7 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 			session.PlayerSignals = append(session.PlayerSignals, models.PlayerSignal{
 				PlayerID:      player.ID,
 				QuestionIndex: i,
-				AnswerIndex:   -1, // -1 = no answer / skipped
+				AnswerIndex:   -1,
 				ScoreEarned:   0,
 				TimeSpent:     0,
 				Timestamp:     time.Now().Unix(),
@@ -522,7 +479,6 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 		}
 	}
 
-	// Determine which batches user needs
 	batchesNeeded := []int{}
 	for batchIdx, batch := range session.Batches {
 		batchStart := batch.StartIndex
@@ -534,10 +490,8 @@ func (h *QuizHub) processPlayerReconnect(client *Client, msg ClientMessage) {
 		}
 	}
 
-	// Check if user is still active (allow up to 5 missed questions)
 	isActive := len(missedQuestions) <= 5
 
-	// Send catch-up response
 	h.sendToClientLocked(client, mustMarshal(ServerMessage{
 		Type: "sync:catchup",
 		Payload: map[string]interface{}{

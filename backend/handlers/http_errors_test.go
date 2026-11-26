@@ -55,7 +55,6 @@ func TestCreateEventRejectsTrailingJSON(t *testing.T) {
 	}
 }
 
-// L7a: 4xx client mistakes must not be logged at error level; only 5xx are.
 func TestWriteRequestErrorLogLevels(t *testing.T) {
 	var mu sync.Mutex
 	var sawError bool
@@ -92,7 +91,6 @@ func TestWriteRequestErrorLogLevels(t *testing.T) {
 	}
 	mu.Unlock()
 
-	// Only genuine server failures log at error level.
 	w = httptest.NewRecorder()
 	writeRequestError(w, errors.New("boom"), http.StatusInternalServerError)
 	if w.Code != http.StatusInternalServerError {

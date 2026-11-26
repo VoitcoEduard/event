@@ -8,7 +8,6 @@
       <img v-if="imageUrl" :src="imageUrl" @load="onImageLoad" crossorigin="anonymous" decoding="async" />
       <div v-else class="loading-placeholder">{{ $t('common.loading') }}</div>
       
-      <!-- Existing targets shown as markers -->
       <div 
         v-for="(target, index) in targets" 
         :key="target.id"
@@ -22,7 +21,6 @@
         </div>
       </div>
 
-      <!-- Hit areas as separate layer for correct percentage sizing -->
       <div
         v-for="target in targets"
         :key="'hit-' + target.id"
@@ -32,7 +30,6 @@
       ></div>
     </div>
     
-    <!-- Target list -->
     <div class="targets-list-container">
       <div class="targets-header">
          <h4>{{ $t('quiz_config.question_editor.coordinate_picker.targets_title') }} ({{ targets.length }})</h4>
@@ -124,7 +121,7 @@ const handleImageClick = (e) => {
     label: '',
     xPercent,
     yPercent,
-    radius: 5 // Default 5% radius hit area
+    radius: 5
   }
   
   localTargets.value.push(newTarget)
@@ -157,9 +154,6 @@ const getTargetStyle = (target) => {
 }
 
 const getHitAreaStyle = (target) => {
-  // Radius is in width-percentage points: size from the container (image)
-  // width and keep a 1:1 aspect so the zone is a screen-space circle.
-  // Scoring (wrongPicturesScoring.js) uses the same convention.
   return {
     width: `${target.radius * 2}%`,
     aspectRatio: '1',
@@ -168,7 +162,6 @@ const getHitAreaStyle = (target) => {
 }
 
 const onImageLoad = () => {
-    // optional image load handler
 }
 </script>
 

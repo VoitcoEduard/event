@@ -140,7 +140,7 @@ const refresh = async () => {
     } else {
       leaderboard.value = []
     }
-  } catch { /* ignore polling errors */ }
+  } catch {  }
 }
 
 const onStateUpdate = () => refresh()

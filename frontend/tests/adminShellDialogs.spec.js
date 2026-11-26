@@ -164,7 +164,6 @@ describe('AdminLayout', () => {
     await toggle.trigger('click')
     expect(wrapper.find('#admin-shell-nav-panel').classes()).toContain('is-open')
 
-    // Same-route navigation must still close the drawer via the click handler.
     await wrapper.find('.admin-brand').trigger('click')
     expect(wrapper.find('#admin-shell-nav-panel').classes()).not.toContain('is-open')
 

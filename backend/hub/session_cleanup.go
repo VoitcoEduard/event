@@ -1,8 +1,5 @@
 package hub
 
-// ForgetModuleSessions evicts runtime data after the module has been deleted
-// from storage. Wait for in-flight simple-quiz operations before eviction so
-// they cannot publish a stale snapshot after cleanup.
 func (h *QuizHub) ForgetModuleSessions(moduleID string) {
 	lock := h.simpleLock(moduleID)
 	lock.Lock()
@@ -22,8 +19,6 @@ func (h *QuizHub) ForgetModuleSessions(moduleID string) {
 	h.broadcastToSessionLocked(moduleID, ServerMessage{Type: "simple:state", Payload: map[string]any{"status": "inactive"}})
 }
 
-// Include the event's stored module IDs as well as cached sessions: an operation
-// may be loading a session for the first time when the event is deleted.
 func (h *QuizHub) ForgetEventSessions(eventID string, moduleIDs []string) {
 	modules := make(map[string]struct{}, len(moduleIDs))
 	for _, moduleID := range moduleIDs {

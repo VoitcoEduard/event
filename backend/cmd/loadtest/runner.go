@@ -169,8 +169,6 @@ type quizSnapshot struct {
 	} `json:"questionWindows"`
 }
 
-// The projector is a public observer, so this tests the real authorization
-// rules without requiring administrator cookies or changing game state.
 func observerSnapshot(c *client, module string, timeout time.Duration) (*quizSnapshot, error) {
 	if err := c.send("projector:join", map[string]any{"moduleId": module}); err != nil {
 		return nil, err
@@ -354,8 +352,6 @@ func runLoad(o options) (r report) {
 			r.Problems = append(r.Problems, "answer burst exceeded latency limit")
 		}
 	}
-	// Drain observer updates during the hold period so longer runs also exercise
-	// keepalives and cache expiry without filling the generator's queue.
 	timer := time.NewTimer(o.hold)
 	defer timer.Stop()
 hold:
@@ -449,13 +445,12 @@ func requestSample(ctx context.Context, client *http.Client, endpoint string, sa
 	samples.add(time.Since(started))
 }
 
-// SPA fallbacks and login redirects must not count as successful API/media tests.
 func validResponse(headers http.Header) bool {
 	contentType := headers.Get("Content-Type")
 	if strings.Contains(contentType, "text/html") {
 		return false
 	}
-	return contentType != "" // includes JSON, image, audio and binary media types
+	return contentType != ""
 }
 
 func registerParticipant(client *http.Client, endpoint, name string) (string, string, error) {

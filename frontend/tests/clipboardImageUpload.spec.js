@@ -102,28 +102,24 @@ describe('clipboard image utilities', () => {
   })
 
   it('hasActiveBlockingModal detects every blocking overlay flavor (L4)', () => {
-    // Nothing open: no blocking modal.
     expect(hasActiveBlockingModal(null)).toBe(false)
 
     const target = document.createElement('div')
     target.className = 'editor-input'
     document.body.appendChild(target)
 
-    // AppDialogHost overlay (app dialogs replacing window.confirm).
     const appOverlay = document.createElement('div')
     appOverlay.className = 'app-dialog-overlay'
     document.body.appendChild(appOverlay)
     expect(hasActiveBlockingModal(target)).toBe(true)
     appOverlay.remove()
 
-    // Generic modal overlay (QuestionTypeSelector / AddModuleModal).
     const modalOverlay = document.createElement('div')
     modalOverlay.className = 'modal-overlay'
     document.body.appendChild(modalOverlay)
     expect(hasActiveBlockingModal(target)).toBe(true)
     modalOverlay.remove()
 
-    // ARIA dialog semantics alone must also block.
     const ariaDialog = document.createElement('div')
     ariaDialog.setAttribute('role', 'dialog')
     ariaDialog.setAttribute('aria-modal', 'true')

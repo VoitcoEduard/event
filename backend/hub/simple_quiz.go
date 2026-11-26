@@ -28,7 +28,6 @@ type simpleQuizUndoEntry struct {
 	By             string    `json:"by"`
 }
 
-// GenerateJudgeToken creates an unguessable token for secret judge links.
 func GenerateJudgeToken() string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
@@ -54,7 +53,6 @@ func copySimple(s *models.SimpleQuizSession) (*models.SimpleQuizSession, error) 
 	return &out, nil
 }
 
-// Call only with the per-module lock held. Stored snapshots are immutable.
 func (h *QuizHub) readSimpleLocked(ctx context.Context, moduleID string) (*models.SimpleQuizSession, error) {
 	h.mu.RLock()
 	s := h.simpleQuizSessions[moduleID]
@@ -95,12 +93,10 @@ func (h *QuizHub) GetSimpleQuiz(moduleID string) *models.SimpleQuizSession {
 	return out
 }
 
-// TrySetSimpleQuiz commits the initial snapshot before making it visible.
 func (h *QuizHub) TrySetSimpleQuiz(s *models.SimpleQuizSession) error {
 	return h.trySetSimpleQuiz(s, false)
 }
 
-// TryCreateSimpleQuiz starts a new session only if none currently exists.
 func (h *QuizHub) TryCreateSimpleQuiz(s *models.SimpleQuizSession) error {
 	return h.trySetSimpleQuiz(s, true)
 }
@@ -162,7 +158,6 @@ func (h *QuizHub) tryUpdateSimpleLocked(ctx context.Context, moduleID string, fn
 	return copySimple(next)
 }
 
-// TryUpdateSimpleQuizExpected rejects a transition based on an obsolete snapshot.
 func (h *QuizHub) TryUpdateSimpleQuizExpected(moduleID string, expected *models.SimpleQuizSession, fn func(*models.SimpleQuizSession)) (*models.SimpleQuizSession, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -199,7 +194,6 @@ func (h *QuizHub) UpdateSimpleQuiz(moduleID string, fn func(*models.SimpleQuizSe
 	return s
 }
 
-// BroadcastSimpleQuiz sends counts-only state to all clients of the module.
 func (h *QuizHub) BroadcastSimpleQuiz(moduleID string) {
 	s := h.GetSimpleQuiz(moduleID)
 	if s == nil {
@@ -275,7 +269,6 @@ func (h *QuizHub) autoLockSimpleQuiz(moduleID string, generation uint64, created
 	}
 }
 
-// SimpleQuizTemplate loads snapshot questions + reveal/token settings.
 func (h *QuizHub) SimpleQuizTemplate(ctx context.Context, moduleID string) ([]models.SimpleQuizQuestionSnapshot, bool, string, string, error) {
 	if h.eventByModule == nil {
 		return nil, false, "", "", errSimpleNoLookup()
@@ -301,7 +294,6 @@ func (h *QuizHub) SimpleQuizTemplate(ctx context.Context, moduleID string) ([]mo
 			if q.Type != "" && q.Type != models.QuestionTypeSimpleText {
 				continue
 			}
-			// Require text or image; skip empty placeholders.
 			if q.Text == "" && (q.ImageID == nil || *q.ImageID == "") {
 				continue
 			}
@@ -319,7 +311,6 @@ func (e simpleErr) Error() string { return string(e) }
 func errSimpleNoLookup() error { return simpleErr("event lookup unavailable") }
 func errSimpleNotFound() error { return simpleErr("module not found in event") }
 
-// ValidateSimpleJudgeToken checks the secret judge link token.
 func (h *QuizHub) ValidateSimpleJudgeToken(ctx context.Context, moduleID, token string) bool {
 	if token == "" || h.eventByModule == nil {
 		return false
@@ -343,7 +334,6 @@ func (h *QuizHub) ValidateSimpleJudgeToken(ctx context.Context, moduleID, token 
 	return false
 }
 
-// EnsureSimpleJudgeToken generates and persists a token if missing.
 func (h *QuizHub) EnsureSimpleJudgeToken(ctx context.Context, eventID, moduleID string) string {
 	if h.eventByModule == nil || h.db == nil {
 		return ""
@@ -375,9 +365,6 @@ func (h *QuizHub) EnsureSimpleJudgeToken(ctx context.Context, eventID, moduleID 
 	return ""
 }
 
-// --- WebSocket joins for Simple Quiz (counts + live updates, no secrets leaked) ---
-
-// simpleJoinModule verifies module type before assigning a WebSocket role.
 func (h *QuizHub) simpleJoinModule(moduleID string) bool {
 	if h.db == nil {
 		return true

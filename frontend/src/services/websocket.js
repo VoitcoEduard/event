@@ -31,7 +31,6 @@ class QuizWebSocket {
         clearTimeout(this.reconnectTimer)
         this.reconnectTimer = null
         signalQueue.onDisconnect()
-        // Store connection params for reconnection
         this.moduleId = moduleId
         this.nickname = nickname
         this.isHost = isHost
@@ -39,9 +38,8 @@ class QuizWebSocket {
         this.eventId = eventId
         this.joinDescriptor = joinDescriptor
         this.intentionalDisconnect = false
-        this.userId = getUserId() // Get or generate userId
+        this.userId = getUserId()
 
-        // Determine WS URL.
         let protocol, host
         if (API_BASE_URL) {
             const apiUrl = new URL(API_BASE_URL)
@@ -64,12 +62,10 @@ class QuizWebSocket {
             if (this.socket !== socket) return
             this.isConnected = true
             this.reconnectAttempts = 0
-            // Configure signal queue sender
             signalQueue.setSender((signal) => {
                 this.send('player:signal', signal)
             })
 
-            // Send join message based on client type
             let type
             if (this.isProjector) {
                 type = 'projector:join'
@@ -90,12 +86,7 @@ class QuizWebSocket {
             }
 
             this.send(this.joinDescriptor?.type || type, this.joinDescriptor?.payload || payload)
-            // WebSocket messages are ordered, so the server associates this
-            // connection with the player before receiving queued answers.
             if (!this.joinDescriptor && !this.isHost && !this.isProjector) signalQueue.onReconnect()
-            // Consumers can now safely send follow-up messages (such as
-            // player:reconnect) because the server has associated this socket
-            // with its player/session.
             this.dispatch('open')
         }
 
@@ -196,5 +187,4 @@ class QuizWebSocket {
     }
 }
 
-// Singleton instance export
 export const quizWS = new QuizWebSocket()

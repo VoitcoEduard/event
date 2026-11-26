@@ -72,7 +72,6 @@
                 </button>
               </div>
 
-              <!-- Predefined Answers Section for Selection Types -->
               <template v-if="['radio', 'checkbox', 'dropdown'].includes(step.data.fieldType)">
                 <div class="predefined-answers-section">
                   <p class="label">{{ $t('form_editor.predefined_answers') }}</p>
@@ -112,7 +111,6 @@
                     {{ $t('form_editor.add_answer') }}
                   </button>
 
-                  <!-- Allow Multiple Selections (Checkbox only) -->
                   <div v-if="step.data.fieldType === 'checkbox'" class="option-toggle">
                     <label class="toggle-label">
                       <input
@@ -124,7 +122,6 @@
                     </label>
                   </div>
 
-                  <!-- Allow 'Other' Option -->
                   <div class="option-toggle">
                     <label class="toggle-label">
                       <input
@@ -136,7 +133,6 @@
                     </label>
                   </div>
 
-                  <!-- Other Option Placeholder -->
                   <div v-if="step.data.allowOther" class="other-option-section">
                     <p class="label">{{ $t('form_editor.other_placeholder_label') }}</p>
                     <input
@@ -198,21 +194,16 @@ const emit = defineEmits(['update:timeline'])
 
 const localTimeline = ref([])
 
-// Only sync from props when the array reference itself changes (e.g. loading a
-// template or opening the modal). Deep-watching props and also emitting deep
-// changes back would create an infinite reactive loop.
 watch(() => props.timeline, (newVal) => {
   if (newVal === localTimeline.value) return
   localTimeline.value = JSON.parse(JSON.stringify(newVal || []))
 }, { immediate: true })
 
-// Helper: emit the current localTimeline to the parent after each mutation.
 const emitTimeline = () => {
   emit('update:timeline', localTimeline.value)
 }
 
 const addStep = (type) => {
-  // For fields, generate a default label based on type
   const defaultLabels = {
     text: t('form_module.type_answer'),
     number: t('form_module.type_number'),
@@ -231,7 +222,6 @@ const addStep = (type) => {
       : { content: t('form_editor.welcome_msg') }
   }
   
-  // Auto-generate compact label for the field
   if (type === 'field') {
     newStep.data.compactLabel = extractLabel(defaultQuestion)
   }
@@ -245,7 +235,6 @@ const updateStep = (id, key, value) => {
     if (step.id === id) {
       const updates = { [key]: value }
       
-      // Auto-generate compact label when question/label changes
       if (key === 'label' && value) {
         updates.compactLabel = extractLabel(value)
       }

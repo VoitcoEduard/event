@@ -20,17 +20,12 @@ import (
 
 const (
 	GracePeriodSeconds   = 2
-	TargetBatchSize      = 50 * 1024 // 50KB
-	MaxQuestionsPerBatch = 50        // Conservative limit
+	TargetBatchSize      = 50 * 1024
+	MaxQuestionsPerBatch = 50
 
-	// A8: defaults matching every client (`question.timeLimit || 20`).
-	// A missing TimeLimit (zero value in old templates/JSON) must not
-	// produce a 0-second acceptance window on the server.
 	DefaultQuestionTimeLimit = 20
 )
 
-// EffectiveTimeLimit returns the question's time limit in seconds,
-// falling back to DefaultQuestionTimeLimit when unset or invalid.
 func EffectiveTimeLimit(q models.QuizQuestion) int64 {
 	if q.TimeLimit > 0 {
 		return int64(q.TimeLimit)
@@ -38,14 +33,12 @@ func EffectiveTimeLimit(q models.QuizQuestion) int64 {
 	return DefaultQuestionTimeLimit
 }
 
-// AcceptanceResult represents the result of signal acceptance check
 type AcceptanceResult struct {
-	Valid  bool   // Whether to include in statistics
-	Scored bool   // Whether to award points
-	Reason string // "on_time", "grace_period", "too_late"
+	Valid  bool
+	Scored bool
+	Reason string
 }
 
-// CanAcceptSignal checks if a signal is within the acceptance window
 func CanAcceptSignal(qw models.QuestionWindow, signalTime int64) AcceptanceResult {
 	if signalTime <= qw.EndTime {
 		return AcceptanceResult{Valid: true, Scored: true, Reason: "on_time"}
@@ -56,13 +49,11 @@ func CanAcceptSignal(qw models.QuestionWindow, signalTime int64) AcceptanceResul
 	return AcceptanceResult{Valid: false, Scored: false, Reason: "too_late"}
 }
 
-// CalculateBatches splits questions into batches
 func CalculateBatches(questions []models.QuizQuestion) []models.QuestionBatch {
 	if len(questions) == 0 {
 		return []models.QuestionBatch{}
 	}
 
-	// For simplicity, we'll use a fixed number of questions per batch (max 50)
 	var batches []models.QuestionBatch
 	batchSize := min(MaxQuestionsPerBatch, len(questions))
 	totalBatches := (len(questions) + batchSize - 1) / batchSize
@@ -75,7 +66,7 @@ func CalculateBatches(questions []models.QuizQuestion) []models.QuestionBatch {
 			BatchIndex:   i,
 			TotalBatches: totalBatches,
 			Questions:    questions[start:end],
-			NextBatchAt:  end - 2, // Request next batch when 2 questions remain
+			NextBatchAt:  end - 2,
 			StartIndex:   start,
 			EndIndex:     end - 1,
 		}
@@ -85,8 +76,6 @@ func CalculateBatches(questions []models.QuizQuestion) []models.QuestionBatch {
 	return batches
 }
 
-// QuizHub maintains the set of active clients and broadcasts messages to the
-// clients.
 type QuizHub struct {
 	db              *postgres.Store
 	playerIdentity  PlayerIdentityStore
@@ -96,24 +85,17 @@ type QuizHub struct {
 	eventByModule   func(context.Context, string) (*models.Event, error)
 	teamsByEvent    func(context.Context, string) ([]models.Team, error)
 	saveTeams       func(string, string, string) (*models.TeamResult, error)
-	// Registered clients.
 	clients map[*Client]bool
 	closed  bool
 
-	// Active quiz sessions
 	sessions map[string]*models.QuizSession
-	// Presentation transitions are cancelled when a question/run is abandoned.
 	quizTimers map[string]*quizTransition
 
-	// Active Simple Quiz sessions (moduleID -> session)
 	simpleQuizSessions map[string]*models.SimpleQuizSession
-	// Per-judge undo stacks (moduleID -> judgeKey -> stack of undo entries)
 	simpleQuizUndo map[string]map[string][]simpleQuizUndoEntry
-	// Active auto-lock timers (moduleID -> timer)
 	simpleQuizTimers          map[string]*time.Timer
 	simpleQuizTimerGeneration map[string]uint64
 
-	// Mutex for thread-safe access
 	mu sync.RWMutex
 }
 
@@ -171,11 +153,8 @@ func NewQuizHub(deps Dependencies) *QuizHub {
 }
 
 func (h *QuizHub) Run() {
-	// No-op for now, or use for cleanup tasks
-	// We switched to Mutex based approach for easier state management
 }
 
-// Shutdown closes upgraded connections, which http.Server.Shutdown does not own.
 func (h *QuizHub) Shutdown() {
 	h.mu.Lock()
 	h.closed = true
@@ -223,17 +202,12 @@ func (h *QuizHub) Unregister(client *Client) {
 		close(client.send)
 		log.Println("Client unregistered")
 
-		// Handle player disconnect from session logic here if needed
 		if client.ModuleID != "" && !client.IsHost {
-			// potentially remove player from session or mark as disconnected
 		}
 	}
 }
 
-// BroadcastToSession accepts caller-owned or immutable payloads. Mutable hub
-// state must be snapshotted under h.mu before calling this method.
 func (h *QuizHub) BroadcastToSession(moduleID string, message interface{}) {
-	// Serialize message
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
 		log.Println("Error marshalling broadcast message:", err)
@@ -254,11 +228,8 @@ func (h *QuizHub) BroadcastToSession(moduleID string, message interface{}) {
 	}
 }
 
-// ProcessMessage handles incoming WebSocket messages
 func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 	var msg ClientMessage
-	// readPump runs this in a bare goroutine, so an unrecovered panic here would
-	// terminate the whole server process. Contain handler bugs to a single message.
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("recovered panic in hub handler %q: %v\n%s", msg.Type, r, debug.Stack())
@@ -268,22 +239,17 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		log.Println("Error unmarshalling message:", err)
 		return
 	}
-	// A new role or subscription must never inherit a previous player claim.
 	if strings.HasSuffix(msg.Type, ":join") || strings.HasSuffix(msg.Type, "_join") {
 		h.mu.Lock()
 		client.quizBinding = nil
 		h.mu.Unlock()
 	}
-	// Resolve against PostgreSQL before taking the hub lock. A client-provided role
-	// or an earlier host join never authorizes a later privileged message.
 	if strings.HasPrefix(msg.Type, "host:") || msg.Type == "teams:admin_join" || msg.Type == "simple:host_join" {
 		if !h.AdminActive(client.AdminToken) {
 			client.Reject()
 			return
 		}
 	}
-	// These handlers perform database I/O and acquire the hub lock only when
-	// reading or changing in-memory state.
 	switch msg.Type {
 	case "host:start_quiz":
 		h.processHostStartQuiz(client, msg)
@@ -314,7 +280,6 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 		return
 	}
 
-	// Lock for state updates
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if session := h.sessions[client.ModuleID]; session != nil && session.State == "finishing" && strings.HasPrefix(msg.Type, "host:") {
@@ -345,11 +310,6 @@ func (h *QuizHub) ProcessMessage(client *Client, message []byte) {
 	}
 }
 
-// sendToClientLocked delivers msg to one client without blocking.
-// Callers must hold h.mu. A client whose buffer is full is evicted, exactly
-// like the broadcast helpers, and false is returned so the caller stops
-// touching the evicted client. A blocking send here would stall every session
-// because ProcessMessage holds the hub-wide lock.
 func (h *QuizHub) sendToClientLocked(client *Client, msg []byte) bool {
 	if client == nil || client.send == nil {
 		return false
@@ -367,10 +327,6 @@ func (h *QuizHub) sendToClientLocked(client *Client, msg []byte) bool {
 	}
 }
 
-// sendToClient delivers msg to a registered client without blocking. It is safe
-// to call from goroutines that do not already hold h.mu. If the client has
-// already been unregistered or its send buffer is full, it is evicted and false
-// is returned.
 func (h *QuizHub) sendToClient(client *Client, msg []byte) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -380,7 +336,6 @@ func (h *QuizHub) sendToClient(client *Client, msg []byte) bool {
 	return h.sendToClientLocked(client, msg)
 }
 
-// Internal helper that assumes Lock is held
 func (h *QuizHub) broadcastToSessionLocked(moduleID string, message interface{}) {
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
@@ -403,7 +358,6 @@ func (h *QuizHub) broadcastToSessionLocked(moduleID string, message interface{})
 	}
 }
 
-// Internal helper that broadcasts only to Host and Projector clients (assumes Lock is held)
 func (h *QuizHub) broadcastToHostsAndProjectorsLocked(moduleID string, message interface{}) {
 	jsonMsg, err := json.Marshal(message)
 	if err != nil {
@@ -500,8 +454,6 @@ func revealQuestionPayload(q models.QuizQuestion, index int) map[string]any {
 	}
 }
 
-// Exposed methods for REST handlers to interact with Hub
-
 func (h *QuizHub) GetSession(moduleID string) *models.QuizSession {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -569,7 +521,6 @@ func (h *QuizHub) UpdateSession(moduleID string, updater func(*models.QuizSessio
 			(session.State != "question-presenting" || timer.runID != session.RunID || timer.index != session.CurrentIndex) {
 			h.cancelQuizTransitionLocked(moduleID)
 		}
-		// Broadcast update
 		h.broadcastToSessionLocked(moduleID, ServerMessage{
 			Type:    "state:update",
 			Payload: session,
@@ -590,13 +541,10 @@ func (h *QuizHub) CreateSession(moduleID string, eventID string) {
 			Players:       make(map[string]*models.Player),
 			PlayerSignals: []models.PlayerSignal{},
 			AnswerCounts:  make(map[int]int),
-			// Questions should be loaded here ideally
 		}
 	}
 }
 
-// ResetSession clears the players and resets the session state for a new quiz
-// This is the public method that acquires the lock - use for REST API calls
 func (h *QuizHub) ResetSession(moduleID string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -607,8 +555,6 @@ func (h *QuizHub) ResetSession(moduleID string) bool {
 	return true
 }
 
-// resetSessionLocked is the internal method that assumes the lock is already held
-// Use this when calling from within ProcessMessage (which already holds the lock)
 func (h *QuizHub) resetSessionLocked(moduleID string) {
 	h.cancelQuizTransitionLocked(moduleID)
 	DebugLog("resetSessionLocked: Starting reset for module: %s", moduleID)
@@ -621,7 +567,6 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 
 	DebugLog("resetSessionLocked: Session found, current state: %s, players: %d", session.State, len(session.Players))
 
-	// Reset session state
 	session.RunID = ""
 	session.State = "lobby"
 	session.CurrentIndex = 0
@@ -636,8 +581,6 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 	session.QuestionWindows = nil
 	session.StartTime = 0
 
-	// Broadcast reset to all clients in session, then unbind player sockets
-	// so stale connections cannot submit signals against future runs without re-joining.
 	h.broadcastToSessionLocked(moduleID, ServerMessage{
 		Type:    "cmd:state",
 		Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "runId": session.RunID, "reset": true},
@@ -658,7 +601,6 @@ func (h *QuizHub) resetSessionLocked(moduleID string) {
 	DebugLog("resetSessionLocked: Reset complete for module: %s, broadcast sent", moduleID)
 }
 
-// saveQuizResults persists the current session state through the quiz service.
 func (h *QuizHub) saveQuizResults(session *models.QuizSession) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -680,7 +622,6 @@ func mustMarshal(v interface{}) []byte {
 	return b
 }
 
-// BroadcastScreenState broadcasts the screen state update to Big Screens connected to a specific event
 func (h *QuizHub) BroadcastScreenState(eventID string, state interface{}) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -706,7 +647,6 @@ func (h *QuizHub) BroadcastScreenState(eventID string, state interface{}) {
 	}
 }
 
-// BroadcastToEvent broadcasts a message to all clients connected to a specific event
 func (h *QuizHub) BroadcastToEvent(eventID string, message interface{}) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -729,7 +669,6 @@ func (h *QuizHub) BroadcastToEvent(eventID string, message interface{}) {
 	}
 }
 
-// BroadcastToTeamsAdmins broadcasts to all admin clients for a specific event
 func (h *QuizHub) BroadcastToTeamsAdmins(eventID string, message interface{}) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

@@ -9,7 +9,6 @@ const componentPath = path.join(
     '../src/components/HorizontalCarousel.vue'
 )
 
-// Extract top-level rule selectors from the component's scoped style block.
 const extractSelectors = () => {
     const source = readFileSync(componentPath, 'utf8')
     const styleMatch = source.match(/<style[^>]*>([\s\S]*?)<\/style>/)

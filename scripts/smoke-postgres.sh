@@ -1,5 +1,4 @@
 #!/bin/sh
-# Isolated disposable deployment, recreation and database-plus-media recovery.
 set -eu
 image=${1:-quiz-postgres-migration:local}
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)

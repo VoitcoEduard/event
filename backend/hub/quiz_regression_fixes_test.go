@@ -35,8 +35,6 @@ func payloadOf(t *testing.T, msg map[string]any) map[string]any {
 	return payload
 }
 
-// H3: a signal that arrives while results are being saved must be rejected with
-// an explicit answer:ack instead of leaving the player stuck waiting.
 func TestPlayerSignalDuringFinishingIsAcked(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	t.Cleanup(h.Shutdown)
@@ -73,8 +71,6 @@ func TestPlayerSignalDuringFinishingIsAcked(t *testing.T) {
 	}
 }
 
-// M1: while results are being saved, a host:start_quiz attempt must surface a
-// cmd:error instead of silently doing nothing.
 func TestHostStartQuizDuringFinishingSurfacesError(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	t.Cleanup(h.Shutdown)
@@ -105,7 +101,6 @@ func TestHostStartQuizDuringFinishingSurfacesError(t *testing.T) {
 	}
 }
 
-// M1: lookup failures must reach the host as cmd:error start_failed.
 func TestHostStartQuizLookupFailureSurfacesError(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	t.Cleanup(h.Shutdown)
@@ -155,7 +150,6 @@ func activeEvent(moduleType models.ModuleType) *models.Event {
 	}}}
 }
 
-// M2: transient DB errors during player:join must surface as join_failed.
 func TestPlayerJoinSendErrorOnLookupFailure(t *testing.T) {
 	h := NewQuizHub(Dependencies{PlayerIdentity: &stubPlayerIdentity{eventErr: errors.New("db down")}})
 	t.Cleanup(h.Shutdown)
@@ -172,7 +166,6 @@ func TestPlayerJoinSendErrorOnLookupFailure(t *testing.T) {
 	}
 }
 
-// M2: a missing module must not be reported as a transient failure.
 func TestPlayerJoinSendJoinClosedOnMissingModule(t *testing.T) {
 	h := NewQuizHub(Dependencies{PlayerIdentity: &stubPlayerIdentity{eventErr: postgres.ErrNotFound}})
 	t.Cleanup(h.Shutdown)
@@ -189,7 +182,6 @@ func TestPlayerJoinSendJoinClosedOnMissingModule(t *testing.T) {
 	}
 }
 
-// M2: identity-verification DB errors must surface as join_failed.
 func TestPlayerJoinSendErrorOnProofFailure(t *testing.T) {
 	h := NewQuizHub(Dependencies{PlayerIdentity: &stubPlayerIdentity{
 		event: activeEvent(models.ModuleTypeQuiz), proofErr: errors.New("db down"),
@@ -208,7 +200,6 @@ func TestPlayerJoinSendErrorOnProofFailure(t *testing.T) {
 	}
 }
 
-// M2 bonus: wrong_pictures modules join through the same live-quiz path.
 func TestPlayerJoinAcceptsWrongPicturesModule(t *testing.T) {
 	h := NewQuizHub(Dependencies{PlayerIdentity: &stubPlayerIdentity{
 		event: activeEvent(models.ModuleTypeWrongPictures), proofHas: true, proofValid: true,
@@ -222,7 +213,6 @@ func TestPlayerJoinAcceptsWrongPicturesModule(t *testing.T) {
 	}
 }
 
-// M2 bonus: non-quiz modules must still be rejected with an explicit error.
 func TestPlayerJoinRejectsNonQuizModule(t *testing.T) {
 	h := NewQuizHub(Dependencies{PlayerIdentity: &stubPlayerIdentity{
 		event: activeEvent(models.ModuleTypeForm), proofHas: true, proofValid: true,

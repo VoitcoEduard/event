@@ -122,25 +122,20 @@ describe('AdminModuleEditorScreen', () => {
     })
     await flushPromises()
 
-    // Breadcrumbs: Events / Spring Trivia / Main Quiz
     const crumbs = wrapper.findAll('.admin-breadcrumb-item').map(el => el.text().trim())
     expect(crumbs).toEqual(['Events', 'Spring Trivia', 'Main Quiz'])
 
-    // Type badge and labeled Load from Library button with book icon
     expect(wrapper.find('.module-type-badge').text().trim()).toBe('Quiz')
     const libraryBtn = wrapper.find('.load-library-btn')
     expect(libraryBtn.exists()).toBe(true)
     expect(libraryBtn.text()).toContain('Load from Library')
     expect(libraryBtn.find('.app-icon--book').exists()).toBe(true)
 
-    // QuizEditor renders in pageFlow with outline
     expect(wrapper.find('.quiz-editor').classes()).toContain('quiz-editor--page-flow')
     expect(wrapper.find('.quiz-outline-sidebar').exists()).toBe(true)
 
-    // Clean initially (no dirty dot)
     expect(wrapper.find('.dirty-dot').exists()).toBe(false)
 
-    // Trigger validation failure by clearing question text
     await wrapper.find('.main-input').setValue('')
     await flushPromises()
     expect(wrapper.find('.dirty-dot').exists()).toBe(true)
@@ -153,7 +148,6 @@ describe('AdminModuleEditorScreen', () => {
     expect(scrollSpy).toHaveBeenCalled()
     expect(fetchMock.mock.calls.some(([, o]) => o?.method === 'PUT')).toBe(false)
 
-    // Fix validation error, change module name and audio output, and save
     await wrapper.find('.main-input').setValue('Capital of France?')
     await wrapper.find('#module-editor-name').setValue('Round 1 Quiz')
     await wrapper.find('.settings-collapse-trigger').trigger('click')
@@ -210,18 +204,15 @@ describe('AdminModuleEditorScreen', () => {
     const wrapper = mountEditor(router, { ImageUploader: true })
     await flushPromises()
 
-    // Locked badge is a non-clickable span, and "+ Other Type" is absent
     const badge = wrapper.find('.question-type-tag')
     expect(badge.element.tagName).toBe('SPAN')
     expect(badge.classes()).toContain('question-type-tag--locked')
     expect(wrapper.find('.add-other-btn').exists()).toBe(false)
 
-    // Adding a question adds a simple_text question directly
     await wrapper.find('.add-classic-btn').trigger('click')
     await flushPromises()
     expect(wrapper.findAll('.question-editor')).toHaveLength(2)
 
-    // Fill second question text, toggle allowReveal off, copy judge link, and save
     const textInputs = wrapper.findAll('.text-group .main-input')
     await textInputs[1].setValue('Explain gravity')
     await wrapper.find('.simple-quiz-settings input[type="checkbox"]').setValue(false)
@@ -333,7 +324,6 @@ describe('AdminModuleEditorScreen', () => {
 
     expect(wrapper.find('.form-editor').classes()).toContain('form-editor--page-flow')
 
-    // Load from Library filters to form templates and uses useDialog().confirm when replacing
     await wrapper.find('.load-library-btn').trigger('click')
     await flushPromises()
     const templateBtns = document.body.querySelectorAll('.library-modal .template-item')
@@ -347,7 +337,6 @@ describe('AdminModuleEditorScreen', () => {
     document.body.querySelector('.app-dialog-btn--danger').click()
     await flushPromises()
 
-    // Save as Template uses useDialog().prompt with "Save Template" button
     await wrapper.find('.save-template-btn').trigger('click')
     await flushPromises()
     expect(promptSpy).not.toHaveBeenCalled()
@@ -363,7 +352,6 @@ describe('AdminModuleEditorScreen', () => {
     expect(tplPost).toBeTruthy()
     expect(JSON.parse(tplPost[1].body)).toMatchObject({ name: 'My Form Template', moduleType: 'form' })
 
-    // Toggle settings and publish form preserving manualScoreTarget
     const checkboxes = wrapper.findAll('.editor-settings-card input[type="checkbox"]')
     await checkboxes[0].setValue(true)
     await checkboxes[1].setValue(true)
@@ -418,26 +406,21 @@ describe('AdminModuleEditorScreen', () => {
     const wrapper = mountEditor(router)
     await flushPromises()
 
-    // Prior teams module appears in source options
     const sourceOptions = wrapper.findAll('.teams-config-fields select')[0].findAll('option').map(o => o.text())
     expect(sourceOptions).toContain('Morning Teams')
 
-    // Make editor dirty
     await wrapper.find('#module-editor-name').setValue('Updated Teams')
     await flushPromises()
     expect(wrapper.find('.dirty-dot').exists()).toBe(true)
 
-    // Attempt to click Manage Teams -> triggers unsaved changes dialog
     await wrapper.find('.manage-teams-btn').trigger('click')
     await flushPromises()
     expect(document.body.querySelector('.app-dialog-title')?.textContent).toContain('Unsaved changes')
 
-    // Stay cancels navigation
     document.body.querySelector('.app-dialog-btn--secondary').click()
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/events/evt-5/modules/mod-t2/edit')
 
-    // Click Host shortcut -> confirm Leave -> navigates to teams admin
     await wrapper.find('.host-shortcut-btn').trigger('click')
     await flushPromises()
     document.body.querySelector('.app-dialog-btn--danger').click()

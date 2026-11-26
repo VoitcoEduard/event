@@ -34,7 +34,6 @@
       </div>
     </div>
 
-    <!-- Connecting State -->
     <div v-else-if="displayMode === 'connecting'" class="connecting-container">
       <div class="loading-content">
         <h1>{{ $t('projector.connecting') }}</h1>
@@ -42,14 +41,12 @@
       </div>
     </div>
 
-    <!-- Error State -->
     <div v-else-if="displayMode === 'error'" class="error-container">
       <h1>{{ $t('projector.conn_error') }}</h1>
       <p>{{ errorMessage }}</p>
       <button @click="retryConnection" class="retry-btn">{{ $t('projector.retry') }}</button>
     </div>
 
-    <!-- Quiz Display States -->
     <template v-else>
       <TeamsProjector v-if="isTeams" :key="activeModuleId" :event-id="eventId" :module-id="activeModuleId" />
       <SimpleQuizProjector
@@ -59,7 +56,6 @@
         :pin="String(pinCode)"
         :visible="displayMode === 'module' || displayMode === 'idle'"
       />
-      <!-- LOBBY STATE -->
       <div v-else-if="gameState === 'lobby'" class="state-container lobby-container">
         <div class="lobby-header">
           <h1 class="game-title">{{ $t('quiz.host.join_title') }}</h1>
@@ -84,7 +80,6 @@
         </div>
       </div>
 
-      <!-- GET READY STATE -->
       <div v-else-if="gameState === 'get-ready'" class="state-container get-ready-container">
         <div class="loading-content">
           <h1>{{ $t('quiz.player.get_ready') }}</h1>
@@ -92,7 +87,6 @@
         </div>
       </div>
 
-      <!-- QUESTION STATE (Active & Presenting) -->
       <div v-else-if="gameState === 'question-active' || gameState === 'question-presenting'" class="state-container question-container">
         <div class="question-header">
           <div class="timer" :class="{ 'timer-low': timeRemaining <= 5 }" v-if="gameState === 'question-active'">
@@ -104,7 +98,6 @@
           <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
 
-        <!-- CORRECT PICTURE LAYOUT -->
         <div v-if="isCorrectPicture" class="correct-picture-layout">
            <div class="cp-images-grid">
               <div 
@@ -121,7 +114,6 @@
            </div>
         </div>
 
-        <!-- WRONG PICTURES LAYOUT -->
         <div v-else-if="isWrongPictures" class="wrong-picture-layout">
           <div class="question-text-overlay-wp">
              <h2>{{ currentQuestion.text }}</h2>
@@ -146,15 +138,12 @@
 
           <div class="answers-column">
             <div v-if="isRange" class="range-projector-view">
-              <!-- Min / Max labels -->
               <div class="sbs-label sbs-label-max">
                 {{ formatWithUnit(currentQuestion?.rangeConfig?.maxValue, currentQuestion?.rangeConfig?.unit) }}
               </div>
 
-              <!-- The track -->
               <div class="sbs-track">
                 <div class="sbs-track-fill sbs-fill-anim"></div>
-                <!-- Animated pulsing thumb -->
                 <div class="sbs-thumb sbs-thumb-pulse">
                   <div class="sbs-thumb-lines"><span></span><span></span><span></span></div>
                 </div>
@@ -193,17 +182,13 @@
         </div>
       </div>
 
-      <!-- RESULTS STATE (no leaderboard here) -->
       <div v-else-if="gameState === 'results'" class="state-container results-container-new">
         <div class="question-header">
-           <!-- Reuse header but with Results title -->
            <div class="results-mode-title">{{ $t('quiz.host.results_title', { num: currentQuestionIndex + 1 }) }}</div>
            <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
         </div>
 
-        <!-- CORRECT PICTURE RESULTS -->
         <div v-if="isCorrectPicture" class="correct-picture-results">
-          <!-- Correct image hero -->
           <div class="cp-correct-hero">
             <div v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
               <div v-if="isAnswerCorrect(idx)" class="cp-hero-frame">
@@ -214,7 +199,6 @@
               </div>
             </div>
           </div>
-          <!-- Wrong images shown as small thumbnails -->
           <div class="cp-wrong-thumbnails">
             <template v-for="(option, idx) in currentQuestion.imageOptions" :key="idx">
               <div v-if="!isAnswerCorrect(idx)" class="cp-thumb-card">
@@ -225,7 +209,6 @@
           </div>
         </div>
 
-        <!-- WRONG PICTURES RESULTS -->
         <div v-else-if="isWrongPictures" class="wrong-picture-results">
           <div class="question-text-overlay-wp">
             <h2>{{ currentQuestion.text }}</h2>
@@ -283,9 +266,7 @@
           </div>
         </div>
 
-        <!-- SLIDER RESULTS -->
         <div v-else-if="isRange" class="range-results-new">
-          <!-- Left: question card as usual -->
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
@@ -298,10 +279,8 @@
             </div>
           </div>
 
-          <!-- Right: vertical slider timeline showing correct answer -->
           <div class="answers-column">
             <div class="range-result-timeline">
-              <!-- Big correct value badge -->
               <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
                 <AppIcon class="srt-check" name="check" :size="18" />
                 <span class="srt-value">{{ formatWithUnit(currentQuestion?.correctValue, currentQuestion?.rangeConfig?.unit) }}</span>
@@ -311,14 +290,11 @@
                 {{ formatWithUnit(currentQuestion?.rangeConfig?.maxValue, currentQuestion?.rangeConfig?.unit) }}
               </div>
 
-              <!-- Track with animated marker -->
               <div class="srt-track">
-                <!-- Fill up to correct value -->
                 <div 
                   class="srt-fill"
                   :style="{ height: revealCorrect ? correctMarkerPercentage + '%' : '0%' }"
                 ></div>
-                <!-- Correct answer thumb marker -->
                 <div 
                   class="srt-marker"
                   :class="{ 'srt-marker-reveal': revealCorrect }"
@@ -338,7 +314,6 @@
           </div>
         </div>
 
-        <!-- NUMBER RESULTS -->
         <div v-else-if="isNumber" class="number-results-host">
           <div class="question-column">
             <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
@@ -360,9 +335,7 @@
           </div>
         </div>
 
-        <!-- STANDARD QUESTION RESULTS (The main redesign target) -->
         <div v-else class="question-main-content">
-          <!-- Image Column with Overlay -->
           <div class="question-column">
             <div class="question-card has-distribution" :class="{ 'has-image': !!questionImageUrl }">
               <div v-if="questionImageUrl" class="question-image-container">
@@ -370,7 +343,6 @@
                 <div class="image-overlay-gradient"></div>
               </div>
 
-              <!-- DISTRIBUTION OVERLAY -->
               <div class="distribution-overlay-container">
                   <div class="dist-chart">
                       <div 
@@ -397,7 +369,6 @@
             </div>
           </div>
 
-          <!-- Answers Column -->
           <div class="answers-column">
              <div 
                 v-for="(answer, idx) in currentQuestion?.answers" 
@@ -417,7 +388,6 @@
         </div>
       </div>
 
-      <!-- LEADERBOARD STATE (beautiful animated) -->
       <div v-else-if="gameState === 'leaderboard'" class="state-container leaderboard-container" :key="leaderboardAnimKey">
         <div class="lb-bg-glow"></div>
         <div class="lb-header">
@@ -455,9 +425,7 @@
         </div>
       </div>
       
-      <!-- FINISHED STATE (final leaderboard with confetti) -->
       <div v-else-if="gameState === 'finished'" class="state-container final-container" :key="finalAnimKey">
-        <!-- Confetti particles -->
         <div class="confetti-wrap">
           <div v-for="i in 30" :key="i" class="confetti-particle" :style="getConfettiStyle(i)"></div>
         </div>
@@ -468,7 +436,6 @@
           <p class="final-subtitle">{{ $t('quiz.host.final_standings') }}</p>
         </div>
 
-        <!-- Top 3 Podium -->
         <div class="final-podium">
           <div class="final-podium-place fp-second" v-if="topPlayers[1]">
             <AppIcon class="fp-avatar" name="medal" :size="32" />
@@ -491,7 +458,6 @@
           </div>
         </div>
 
-        <!-- Ranks 4-6 -->
         <div class="final-rest" v-if="topPlayers.length > 3">
           <div 
             v-for="(player, idx) in topPlayers.slice(3)" 
@@ -506,7 +472,6 @@
         </div>
       </div>
     </template>
-    <!-- Audio Player -->
     <audio ref="bgMusicPlayer" :src="fullMusicUrl" loop id="bg-music-player"></audio>
     
     <div v-if="showUnmuteButton" class="unmute-overlay">
@@ -550,16 +515,14 @@ let pollingInterval = null
 let stopped = false
 
 const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
+  try { localStorage.setItem('userLanguage', locale.value) } catch {  }
 }
 
 const joinUrl = computed(() => `${window.location.origin}/?pin=${currentEvent.value?.pin || eventId}`)
 
-// Display mode: 'idle', 'connecting', 'module', 'error'
 const displayMode = ref('idle')
 const errorMessage = ref('')
 
-// Audio State
 const bgMusicPlayer = ref(null)
 const backgroundMusicUrl = ref('')
 const audioOutput = ref('projector')
@@ -571,7 +534,6 @@ const fullMusicUrl = computed(() => {
   return `${API_BASE_URL}${backgroundMusicUrl.value}`
 })
 
-// Quiz state
 const gameState = ref('lobby')
 const pinCode = computed(() => currentEvent.value?.pin || eventId)
 const players = ref([])
@@ -653,7 +615,6 @@ const startWrongPicturesResultSequence = () => {
   }, 300))
 }
 
-// Watch gameState to trigger animation
 watch(gameState, (newVal) => {
     clearTimeout(revealTimer)
     revealTimer = null
@@ -673,7 +634,6 @@ watch(gameState, (newVal) => {
         revealCorrect.value = false
     }
 
-    // Re-trigger leaderboard animation each time we enter leaderboard state
     if (newVal === 'leaderboard') {
         leaderboardAnimKey.value++
         
@@ -715,18 +675,15 @@ watch(gameState, (newVal) => {
         finalAnimKey.value++
     }
     
-    // Manage Audio Playback based on state
     manageAudioPlayback()
 })
 
-// Preload questions whenever they are loaded or updated
 watch(questions, (newQuestions) => {
   if (Array.isArray(newQuestions) && newQuestions.length > 0) {
     preloader.preloadQuestions(newQuestions)
   }
 }, { immediate: true })
 
-// Lookahead: Preload upcoming question immediately with high priority when index changes
 watch(currentQuestionIndex, (newIdx) => {
   if (questions.value && questions.value[newIdx + 1]) {
     preloader.preloadQuestion(questions.value[newIdx + 1])
@@ -896,7 +853,6 @@ const isAnswerCorrect = (idx) => {
   return q.correctIndex === idx
 }
 
-// Timer
 let timerInterval
 let explainTimerInterval
 
@@ -904,7 +860,6 @@ const startLocalTimer = (duration) => {
   clearInterval(timerInterval)
   timeRemaining.value = duration
   const deadline = Date.now() + duration * 1000
-  // Only start countdown if state is active
   if (gameState.value !== 'question-active') return
   
   timerInterval = setInterval(() => {
@@ -1018,7 +973,6 @@ const connectToModule = (module) => {
     return
   }
 
-  // Preload wrong pictures metadata if applicable
   if (module.type === 'wrong_pictures') {
     fetch(`${API_BASE_URL}/events/${eventId}/modules/${module.id}/wrongpictures/preload`)
       .then(res => (res.ok ? res.json() : null))
@@ -1212,8 +1166,6 @@ const fetchEventState = async () => {
     }
 
     const eventData = await res.json()
-    // In-flight poll must not call connectToModule after leave. That reopens
-    // the shared socket and clears intentionalDisconnect.
     if (stopped) return
     currentEvent.value = eventData
 

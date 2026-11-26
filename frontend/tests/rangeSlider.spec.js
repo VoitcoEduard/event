@@ -17,7 +17,6 @@ describe('RangeComponent value clamping (Bug #8)', () => {
       },
     })
 
-    // Wheel up from 8 by step 4 would snap to 12 without post-snap clamping
     await wrapper.find('.scroll-zone').trigger('wheel', { deltaY: -100 })
 
     const emitted = wrapper.emitted('update:modelValue')
@@ -25,7 +24,6 @@ describe('RangeComponent value clamping (Bug #8)', () => {
     expect(emitted[0][0]).toBe(10)
     expect(emitted[0][0]).toBeLessThanOrEqual(10)
 
-    // Wheel down past min should clamp to min
     await wrapper.setProps({ modelValue: 1 })
     await wrapper.find('.scroll-zone').trigger('wheel', { deltaY: 100 })
     const emittedMin = wrapper.emitted('update:modelValue')

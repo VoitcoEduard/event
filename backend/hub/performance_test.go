@@ -11,9 +11,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// These fixtures exercise the existing production handlers, not an imitation
-// of scoring. Logging is discarded so results isolate handler CPU/allocations;
-// the remote load test includes the deployment's actual logging overhead.
 func quietBenchmark(b *testing.B) {
 	previous := log.Writer()
 	log.SetOutput(io.Discard)
@@ -63,7 +60,6 @@ func resetBurst(s *models.QuizSession, history int) {
 	}
 }
 
-// One operation is an entire question's answer burst, not one answer.
 func BenchmarkQuizAnswerBurst(b *testing.B) {
 	quietBenchmark(b)
 	for _, players := range []int{50, 150, 300} {
@@ -113,7 +109,6 @@ func BenchmarkQuizFullStateJSON(b *testing.B) {
 	}
 }
 
-// Shows unrelated connections scanned for a tiny host/projector update.
 func BenchmarkQuizObserverBroadcast(b *testing.B) {
 	for _, connections := range []int{150, 600, 1500} {
 		b.Run(fmt.Sprintf("connections=%d", connections), func(b *testing.B) {
@@ -131,8 +126,6 @@ func BenchmarkQuizObserverBroadcast(b *testing.B) {
 	}
 }
 
-// Parallel handlers in separate games still contend on the same hub mutex.
-// Each worker owns one session. State reset is included in measured time.
 func BenchmarkQuizConcurrentGames(b *testing.B) {
 	quietBenchmark(b)
 	for _, games := range []int{1, 4} {

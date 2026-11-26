@@ -1,7 +1,6 @@
 <template>
   <div class="event-screen" :class="'theme-' + theme">
     <div class="responsive-wrapper">
-      <!-- Theme & Language -->
       <div class="top-controls">
         <button @click="toggleTheme" class="theme-toggle" :title="$t('event.toggle_theme')">
           <AppIcon :name="theme === 'bold' ? 'palette' : 'settings'" :size="20" />
@@ -15,13 +14,11 @@
         </div>
       </div>
 
-      <!-- Error State -->
       <div v-if="!currentEvent" class="error-container">
         <p class="error-text">{{ $t('event.no_data') }}</p>
         <button class="back-button" @click="goToMain">{{ $t('event.go_back') }}</button>
       </div>
 
-      <!-- Module View -->
       <div v-else-if="selectedModule" class="module-view">
         <div class="module-header">
           <button class="back-link" @click="closeSelectedModule">
@@ -39,9 +36,7 @@
         />
       </div>
 
-      <!-- Home Screen Content -->
       <div v-else class="content">
-        <!-- User Profile Header -->
         <div class="user-profile">
           <div class="user-main">
             <div class="avatar">
@@ -57,7 +52,6 @@
           </div>
         </div>
 
-        <!-- Event Name -->
         <div class="event-header">
           <p class="connected-label">{{ $t('event.connected_to') }}</p>
           <h1 class="event-title">{{ currentEvent.name }}</h1>
@@ -66,7 +60,6 @@
         <p v-if="registrationNotice" class="registration-notice">{{ registrationNotice }}</p>
 
         <div class="list-container">
-          <!-- Dynamic Cards (Polling Content) -->
           <div v-if="dynamicCards.length > 0" class="dynamic-section">
             <div
               v-for="card in dynamicCards"
@@ -83,7 +76,6 @@
             </div>
           </div>
 
-          <!-- Active Modules -->
           <template v-if="activeModules.length > 0">
             <p class="section-title">{{ $t('event.active_activities') }}</p>
             <div
@@ -136,10 +128,9 @@ const userName = ref(getUserName())
 const registrationNotice = ref('')
 
 const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* Storage may be disabled. */ }
+  try { localStorage.setItem('userLanguage', locale.value) } catch {  }
 }
 
-// Check for eventId in query params first (for teams/quiz direct routes)
 const params = new URLSearchParams(window.location.search)
 const queryEventId = params.get('id') || params.get('eventId')
 const readStoredEvent = () => {
@@ -148,7 +139,7 @@ const readStoredEvent = () => {
     const value = JSON.parse(sessionStorage.getItem('currentEvent') || 'null')
     if (value && typeof value.id === 'string' && value.id) return value
     sessionStorage.removeItem('currentEvent')
-  } catch { try { sessionStorage.removeItem('currentEvent') } catch { /* unavailable */ } }
+  } catch { try { sessionStorage.removeItem('currentEvent') } catch {  } }
   return null
 }
 const currentEvent = ref(readStoredEvent())
@@ -156,7 +147,7 @@ const theme = ref((() => { try { return localStorage.getItem('userTheme') || 'bo
 
 const toggleTheme = () => {
   theme.value = theme.value === 'bold' ? 'material' : 'bold'
-  try { localStorage.setItem('userTheme', theme.value) } catch { /* Storage may be disabled. */ }
+  try { localStorage.setItem('userTheme', theme.value) } catch {  }
 }
 
 const moduleIcon = (type) => ({
@@ -200,11 +191,9 @@ const fetchEvent = async () => {
       if (stopped || generation !== fetchGeneration || currentEvent.value?.id !== eventId) return
       currentEvent.value = data
 
-      // Update status and cards
       participantStatus.value = data.participantStatus || null
       dynamicCards.value = data.dynamicCards || []
 
-      // Update name if changed on backend
       if (participantStatus.value?.displayName && participantStatus.value.displayName !== userName.value) {
         setUserName(participantStatus.value.displayName)
         userName.value = participantStatus.value.displayName
@@ -213,7 +202,6 @@ const fetchEvent = async () => {
       if (data.modules) {
         const active = data.modules.filter(m => m.isActive)
 
-        // Filter out completed modules that should be hidden
         activeModules.value = active.filter(m => {
           if (m.data?.hideAfterCompletion) {
             try { return sessionStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
@@ -221,7 +209,6 @@ const fetchEvent = async () => {
           return true
         })
 
-        // Check if we need to auto-select a module from route params (e.g., /teams/:eventId/:moduleId/player)
         const routeModuleId = route.params.moduleId
         if (routeModuleId && !selectedModule.value) {
           const moduleToSelect = data.modules.find(m => m.id === routeModuleId)
@@ -230,7 +217,6 @@ const fetchEvent = async () => {
           }
         }
 
-        // Auto-redirect to mandatory uncompleted module if not already in a module and no route module
         if (!selectedModule.value && !routeModuleId) {
             const mandatoryModule = active.find(m => {
               if (!m.data?.mandatoryOnEntry) return false
@@ -349,7 +335,7 @@ const handleModuleComplete = async (data) => {
     }
   }
 	if (selectedModule.value) {
-    try { sessionStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true') } catch { /* Storage may be disabled. */ }
+    try { sessionStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true') } catch {  }
   }
 	const isWelcomeOnboarding = Boolean(selectedModule.value?.data?.mandatoryOnEntry && selectedModule.value?.name === 'Welcome')
 	clearCompletionTimer()
@@ -357,7 +343,7 @@ const handleModuleComplete = async (data) => {
     completionTimer = null
 	if (stopped) return
     selectedModule.value = null
-    fetchEvent() // Refresh immediately
+    fetchEvent()
   }, isWelcomeOnboarding ? 600 : 2000)
 }
 
@@ -395,7 +381,6 @@ const goToMain = () => {
 </style>
 
 <style scoped>
-/* foundation variables moved to global style block above */
 
 * {
   font-family: var(--ops-font);
@@ -503,7 +488,6 @@ const goToMain = () => {
   overflow: hidden;
 }
 
-/* ── User Profile ── */
 .user-profile {
   background: var(--bg-secondary);
   border: 1px solid var(--border-solid);
@@ -577,7 +561,6 @@ const goToMain = () => {
   letter-spacing: 1px;
 }
 
-/* ── Event Header ── */
 .event-header {
   margin-bottom: 32px;
 }
@@ -610,7 +593,6 @@ const goToMain = () => {
   line-height: 1.4;
 }
 
-/* ── List Container ── */
 .list-container {
   flex: 1;
   overflow-y: auto;
@@ -631,7 +613,6 @@ const goToMain = () => {
   margin: 0;
 }
 
-/* ── Dynamic Cards ── */
 .dynamic-section {
   display: flex;
   flex-direction: column;
@@ -667,7 +648,6 @@ const goToMain = () => {
   line-height: 1.4;
 }
 
-/* ── Module Cards ── */
 .module-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-solid);
@@ -727,7 +707,6 @@ const goToMain = () => {
   transform: translateX(4px);
 }
 
-/* ── Waiting State ── */
 .waiting-state {
   display: flex;
   flex-direction: column;
@@ -762,7 +741,6 @@ const goToMain = () => {
   text-align: center;
 }
 
-/* ── Buttons ── */
 .exit-button {
   position: absolute;
   bottom: 24px;
@@ -783,7 +761,6 @@ const goToMain = () => {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* ── Transitions ── */
 .module-view {
   width: 100%;
   flex: 1;

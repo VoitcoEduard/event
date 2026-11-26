@@ -189,14 +189,11 @@ async function handleSignOut() {
   if (signingOut.value) return
   signingOut.value = true
   try {
-    // Confirm unsaved changes BEFORE signing out: choosing "Stay" must leave
-    // the session (and CSRF token) intact.
     const allowed = await confirmActiveUnsavedChanges()
     if (!allowed) return
     await signOut()
     await runBypassingUnsavedGuard(() => router.push('/login'))
   } catch {
-    // Preserve current screen if signOut fails.
   } finally {
     signingOut.value = false
   }

@@ -29,8 +29,6 @@ const (
 	ModuleRuntimeStatusSkipped   ModuleRuntimeStatus = "skipped"
 )
 
-// ModuleRuntimeState tracks the runtime execution of a specific module within a session.
-// It is typically embedded inside EventSession.ModuleStates.
 type ModuleRuntimeState struct {
 	ModuleID            string                            `json:"moduleId"`
 	Status              ModuleRuntimeStatus               `json:"status"`

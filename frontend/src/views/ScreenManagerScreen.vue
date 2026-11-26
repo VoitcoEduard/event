@@ -21,7 +21,6 @@
 
     <div ref="screenManagerRef" class="screen-manager">
       <main class="editor-layout">
-      <!-- Center Canvas -->
       <div class="canvas-area">
         <div
           class="canvas-container"
@@ -95,7 +94,6 @@
         <div class="sr-only" aria-live="polite">{{ liveAnnouncement }}</div>
       </div>
 
-      <!-- Mobile Panel Switcher (visible <= 900px) -->
       <div class="mobile-panel-tabs" role="tablist" :aria-label="$t('screen_manager.editor.title')">
         <button
           id="tab-slides"
@@ -129,7 +127,6 @@
         </button>
       </div>
 
-      <!-- Left Sidebar -->
       <div
         id="panel-slides"
         class="sidebar left-sidebar"
@@ -168,7 +165,6 @@
         <button type="button" class="add-slide-btn" @click="addCustomSlide">{{ $t('screen_manager.editor.add_custom_slide') }}</button>
       </div>
 
-      <!-- Right Sidebar -->
       <div
         id="panel-properties"
         class="sidebar right-sidebar"
@@ -249,7 +245,6 @@
       </div>
     </main>
 
-    <!-- Templates Selector Modal -->
     <div v-if="isTemplateSelectorOpen" class="modal-overlay" @click.self="closeTemplateSelector">
       <div
         ref="templateModalRef"
@@ -285,7 +280,6 @@
       </div>
     </div>
 
-    <!-- Library Selector Modal -->
     <div v-if="isImageSelectorOpen" class="modal-overlay" @click.self="closeImageSelector">
       <div
         ref="imageModalRef"
@@ -396,7 +390,7 @@ let suppressCanvasClick = false
 
 const isImageSelectorOpen = ref(false)
 const imageLibrary = ref([])
-const imageSelectorTarget = ref('') // 'bg' or 'element'
+const imageSelectorTarget = ref('')
 const imageModalRef = ref(null)
 
 const isTemplateSelectorOpen = ref(false)
@@ -512,7 +506,6 @@ const applyTemplate = async (tpl) => {
     activeSlide.value.backgroundColor = tpl.data.backgroundColor || '#1E1E1E'
     activeSlide.value.backgroundImage = tpl.data.backgroundImage || ''
 
-    // Copy elements to generate new IDs so they don't crash
     const newElements = (tpl.data.elements || []).map(el => ({
       ...el,
       id: generateId()
@@ -722,7 +715,6 @@ const saveSlides = async () => {
 const pushToScreen = async () => {
   if (!activeSlide.value || !eventId.value) return
 
-  // First save to make sure changes are synced
   const saved = await saveSlides()
   if (!saved) return
 
@@ -840,7 +832,6 @@ const deleteSelectedElement = () => {
   }
 }
 
-// Pointer Events Drag/Resize logic processing percentage coordinates
 const getCanvasRect = () => {
   if (!canvasRef.value) return null
   return canvasRef.value.getBoundingClientRect()
@@ -854,7 +845,6 @@ const startDrag = (item, e) => {
   try {
     e.currentTarget?.setPointerCapture?.(e.pointerId)
   } catch {
-    // Ignore if synthetic event has no active pointer
   }
 
   activePointerId.value = e.pointerId ?? null
@@ -881,7 +871,6 @@ const startResize = (item, e) => {
   try {
     e.currentTarget?.setPointerCapture?.(e.pointerId)
   } catch {
-    // Ignore if synthetic event has no active pointer
   }
 
   activePointerId.value = e.pointerId ?? null
@@ -942,7 +931,6 @@ const onPointerUp = (e) => {
       e.currentTarget.releasePointerCapture(e.pointerId)
     }
   } catch {
-    // Ignore if capture was already released
   }
 
   isDragging.value = false
@@ -994,7 +982,6 @@ const onElementKeydown = (element, e) => {
 const getScaledFontSize = (size) => {
   const cw = canvasWidth.value || canvasRef.value?.clientWidth
   if (!cw) return size
-  // Base standard resolution 1920
   const ratio = cw / 1920
   return size * ratio
 }
@@ -1330,7 +1317,6 @@ const closeProjector = () => {
   padding: 20px;
 }
 
-/* 16:9 Canvas */
 .canvas-container {
   width: 90%;
   aspect-ratio: 16 / 9;
@@ -1412,7 +1398,6 @@ const closeProjector = () => {
   inset: -14px;
 }
 
-/* Props Panel */
 .props-panel h4 {
   margin: 0 0 8px;
 }
@@ -1440,7 +1425,6 @@ const closeProjector = () => {
 .input-group { display: flex; flex-direction: column; margin-bottom: 10px; }
 .pos-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-/* Modals */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1531,7 +1515,6 @@ const closeProjector = () => {
   padding: 0;
 }
 
-/* Templates */
 .template-box {
   background: #333;
   aspect-ratio: 16 / 9;
@@ -1553,7 +1536,6 @@ const closeProjector = () => {
   padding: 10px;
 }
 
-/* Mobile Compact Layout */
 @container screen-manager (inline-size <= 900px) {
   .header {
     flex-direction: column;

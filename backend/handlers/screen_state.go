@@ -56,7 +56,6 @@ func removeScreenSubscriber(eventID string, ch chan models.ScreenState) {
 	}
 }
 
-// GetScreenState handles GET /events/{eventId}/screen-state
 func (h *Handler) GetScreenState(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	prefix := "/events/"
@@ -75,7 +74,6 @@ func (h *Handler) GetScreenState(w http.ResponseWriter, r *http.Request) {
 
 	state := event.ScreenState
 	if state == nil {
-		// Default state
 		state = &models.ScreenState{
 			CurrentView: "screensaver",
 		}
@@ -85,7 +83,6 @@ func (h *Handler) GetScreenState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(state)
 }
 
-// UpdateScreenState handles PUT /events/{eventId}/screen-state
 func (h *Handler) UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	prefix := "/events/"
@@ -109,10 +106,8 @@ func (h *Handler) UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	}
 	invalidateEventCache(id)
 
-	// Notify SSE subscribers
 	notifyScreenSubscribers(id, input)
 
-	// Notify WS subscribers (Big Screen)
 	if h.deps.QuizHub != nil {
 		h.deps.QuizHub.BroadcastScreenState(id, input)
 	}
@@ -121,9 +116,7 @@ func (h *Handler) UpdateScreenState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(input)
 }
 
-// ScreenStream handles GET /events/{eventId}/screen-stream for SSE
 func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
-	// Parse eventID from PathValue or URL path
 	eventID := r.PathValue("eventID")
 	if eventID == "" {
 		parts := strings.Split(r.URL.Path, "/")
@@ -138,7 +131,6 @@ func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the event exists before allocating a subscriber channel or opening SSE.
 	lookupEvent := h.getEvent
 	if lookupEvent == nil {
 		if h.deps.DB == nil {
@@ -157,23 +149,19 @@ func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure the connection supports SSE
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 
-	// Set headers for SSE
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	// Create and register channel
 	ch := addScreenSubscriber(eventID)
 	defer removeScreenSubscriber(eventID, ch)
 
-	// Send initial state
 	state := event.ScreenState
 	if state == nil {
 		state = &models.ScreenState{CurrentView: "screensaver"}
@@ -182,12 +170,10 @@ func (h *Handler) ScreenStream(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "data: %s\n\n", data)
 	flusher.Flush()
 
-	// Listen for updates or client disconnect
 	ctx := r.Context()
 	for {
 		select {
 		case <-ctx.Done():
-			// Client disconnected
 			return
 		case state := <-ch:
 			data, _ := json.Marshal(state)

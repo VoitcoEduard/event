@@ -1,5 +1,3 @@
-// Package diagnostics provides an opt-in, loopback-only profiling listener.
-// It deliberately uses a separate mux: no diagnostic handlers reach the public API.
 package diagnostics
 
 import (
@@ -20,8 +18,6 @@ type Server struct {
 	Addr string
 }
 
-// StartFromEnv returns nil when PERF_ADDR is unset. Profiling sampling also
-// stays disabled unless explicitly requested for a diagnostic run.
 func StartFromEnv(poolStats ...func() any) (*Server, error) {
 	addr := os.Getenv("PERF_ADDR")
 	if addr == "" {
@@ -55,7 +51,6 @@ func start(addr string, mutex, block int, poolStats ...func() any) (*Server, err
 	if err != nil {
 		return nil, fmt.Errorf("PERF_ADDR: %w", err)
 	}
-	// Require a literal address to avoid DNS resolution changing the interface.
 	ip := net.ParseIP(host)
 	if ip == nil || !ip.IsLoopback() {
 		return nil, fmt.Errorf("PERF_ADDR must bind a loopback IP, e.g. 127.0.0.1:6060")

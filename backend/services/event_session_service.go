@@ -11,16 +11,12 @@ import (
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
-// EventSessionStore is the persistence boundary used by EventSessionService.
-// Tests inject a fake; production uses database.EventSessionRepository.
 type EventSessionStore interface {
 	Create(context.Context, *models.EventSession) error
 	GetByID(context.Context, string) (*models.EventSession, error)
 	Update(context.Context, *models.EventSession) error
 }
 
-// EventSessionAtomicUpdater performs targeted column updates without
-// reading and overwriting unrelated session fields under concurrency.
 type EventSessionAtomicUpdater interface {
 	UpdateStatus(context.Context, string, models.EventSessionStatus, time.Time) error
 	UpdateActiveModule(context.Context, string, string, time.Time) error

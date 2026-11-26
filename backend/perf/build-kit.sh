@@ -1,5 +1,4 @@
 #!/bin/sh
-# Build on a workstation; execute the resulting static test binaries on the NAS.
 set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 backend_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
@@ -13,7 +12,6 @@ for package in hub models database cache utils; do
   CGO_ENABLED=0 GOOS=linux GOARCH="$kit_arch" go test -c -o "$kit_out/$package.test" "./$package"
 done
 CGO_ENABLED=0 GOOS=linux GOARCH="$kit_arch" go build -trimpath -o "$kit_out/loadtest" ./cmd/loadtest
-# Keep the matching server binary for profiler symbolization and optional deployment.
 CGO_ENABLED=0 GOOS=linux GOARCH="$kit_arch" go build -trimpath -o "$kit_out/server" .
 cp "$script_dir/run-benchmarks.sh" "$script_dir/capture-nas.sh" "$script_dir/README.md" "$script_dir/FINDINGS.md" "$kit_out/"
 {

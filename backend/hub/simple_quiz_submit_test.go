@@ -36,7 +36,6 @@ func answerCount(h *QuizHub, moduleID string) int {
 	return len(h.simpleQuizSessions[moduleID].Answers)
 }
 
-// Same answerId submitted concurrently: exactly one stored, rest duplicates.
 func TestSubmitSimpleQuizAnswer_ConcurrentSameAnswerID(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	seedSimpleQuizSession(h, "m1", models.SimpleQuizStateQuestionOpen, 0)
@@ -80,7 +79,6 @@ func TestSubmitSimpleQuizAnswer_ConcurrentSameAnswerID(t *testing.T) {
 	}
 }
 
-// Same player+question with distinct answerIds: exactly one stored.
 func TestSubmitSimpleQuizAnswer_ConcurrentSamePlayerQuestion(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	seedSimpleQuizSession(h, "m2", models.SimpleQuizStateQuestionOpen, 0)

@@ -143,7 +143,6 @@ func TestRESTStartAndNextAlignWithHub(t *testing.T) {
 	mux.HandleFunc("POST /events/{eventID}/modules/{moduleID}/quiz/start", h.StartQuiz)
 	mux.HandleFunc("POST /events/{eventID}/modules/{moduleID}/quiz/next", h.NextQuestion)
 
-	// StartQuiz keeps lobby players, resets scores/streaks, enters question-presenting
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/e1/modules/m1/quiz/start", nil))
 	if w.Code != http.StatusOK {
@@ -154,21 +153,18 @@ func TestRESTStartAndNextAlignWithHub(t *testing.T) {
 		t.Fatalf("unexpected started session: %+v", sess)
 	}
 
-	// Simulate p1 answered Q0, p2 did not
 	qh.UpdateSession("m1", func(s *models.QuizSession) {
 		s.Streaks["p1"] = 1
 		s.Streaks["p2"] = 3
 		s.AnsweredPlayerIDs = map[string]struct{}{"p1": {}}
 	})
 
-	// Cross-event NextQuestion is rejected
 	w = httptest.NewRecorder()
 	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/other/modules/m1/quiz/next", nil))
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("cross-event NextQuestion status = %d, want 404", w.Code)
 	}
 
-	// Valid NextQuestion advances to Q1, resets unanswered player streak, clears AnsweredPlayerIDs
 	w = httptest.NewRecorder()
 	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/e1/modules/m1/quiz/next", nil))
 	if w.Code != http.StatusOK {
@@ -182,7 +178,6 @@ func TestRESTStartAndNextAlignWithHub(t *testing.T) {
 		t.Fatalf("unexpected streaks after NextQuestion: %+v", sess.Streaks)
 	}
 
-	// NextQuestion past end returns 400 without incrementing CurrentIndex
 	w = httptest.NewRecorder()
 	mux.ServeHTTP(w, httptest.NewRequest("POST", "/events/e1/modules/m1/quiz/next", nil))
 	if w.Code != http.StatusBadRequest {
@@ -192,7 +187,6 @@ func TestRESTStartAndNextAlignWithHub(t *testing.T) {
 		t.Fatalf("CurrentIndex mutated past end")
 	}
 
-	// NextQuestion on finished session returns 409
 	qh.UpdateSession("m1", func(s *models.QuizSession) {
 		s.State = "finished"
 	})

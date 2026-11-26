@@ -64,7 +64,6 @@ func (h *Handler) setTeamsModuleActive(ctx context.Context, eventID, moduleID st
 	return nil
 }
 
-// Participants share the same event-scoped identity across all workflows.
 func (h *Handler) teamsParticipants(ctx context.Context, eventID string) ([]models.TeamsEntrant, error) {
 	people, err := h.deps.DB.Participants(ctx, eventID)
 	if err != nil {
@@ -223,7 +222,6 @@ func (h *Handler) JoinTeamsActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	e, m := teamsIDs(r)
-	// Validate the activity before creating a live participant.
 	existing, err := database.NewTeamsActivityRepository(h.deps.DB).Get(r.Context(), e, m)
 	if err != nil {
 		teamsFailure(w, err)

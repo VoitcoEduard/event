@@ -94,27 +94,22 @@ describe('QuizLibraryScreen redesign (Phase 5 Part 2)', () => {
     expect(wrapper.find('#library-tab-wrong-pictures').attributes('aria-selected')).toBe('true')
     expect(wrapper.find('.header-heading').text()).toBe('Templates')
 
-    // Distinct icons for Screensavers vs Wrong Pictures
     expect(wrapper.find('#library-tab-wrong-pictures svg').classes()).toContain('app-icon--search')
     expect(wrapper.find('#library-tab-screensavers svg').classes()).toContain('app-icon--image')
 
-    // Pluralization on Wrong Pictures cards
     const wpCounts = wrapper.findAll('.question-count').map(n => n.text())
     expect(wpCounts).toEqual(['1 Round', '2 Rounds'])
 
-    // Switch to Quizzes and verify pluralization
     await wrapper.find('#library-tab-quizzes').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/library/quizzes')
     expect(wrapper.findAll('.question-count').map(n => n.text())).toEqual(['1 Question', '2 Questions'])
 
-    // Switch to Forms and verify pluralization
     await wrapper.find('#library-tab-forms').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/library/forms')
     expect(wrapper.findAll('.question-count').map(n => n.text())).toEqual(['1 Step', '2 Steps'])
 
-    // Switch to Screensavers -> Media Assets heading + empty CTA
     await wrapper.find('#library-tab-screensavers').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/library/screensavers')
@@ -122,7 +117,6 @@ describe('QuizLibraryScreen redesign (Phase 5 Part 2)', () => {
     expect(wrapper.find('.empty-hint').exists()).toBe(true)
     expect(wrapper.find('.empty-cta-btn').text()).toContain('Upload Screensaver')
 
-    // Switch to Music -> Media Assets heading + empty CTA
     await wrapper.find('#library-tab-music').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/library/music')
@@ -142,7 +136,6 @@ describe('QuizLibraryScreen redesign (Phase 5 Part 2)', () => {
       return { ok: true, json: async () => ({}) }
     }))
 
-    // Valid internal returnTo
     const router = await makeRouter('/admin/library/quizzes?returnTo=%2Fadmin%2Fevents%2Fevt-7')
     const wrapper = mountWithShell(QuizLibraryScreen, router)
     await flushPromises()
@@ -151,19 +144,16 @@ describe('QuizLibraryScreen redesign (Phase 5 Part 2)', () => {
     expect(backLink.exists()).toBe(true)
     expect(backLink.attributes('href')).toBe('/admin/events/evt-7')
 
-    // Clicking Edit Template navigates to edit page preserving returnTo
     await wrapper.find('.edit-btn').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/library/quizzes/tpl-42/edit')
     expect(router.currentRoute.value.query.returnTo).toBe('/admin/events/evt-7')
 
-    // Invalid external returnTo is rejected
     const badRouter = await makeRouter('/admin/library/quizzes?returnTo=https%3A%2F%2Fevil.example%2Fphish')
     const badWrapper = mountWithShell(QuizLibraryScreen, badRouter)
     await flushPromises()
     expect(badWrapper.find('.back-link').exists()).toBe(false)
 
-    // Clicking New Template navigates to /new
     await badWrapper.find('.create-btn').trigger('click')
     await flushPromises()
     expect(badRouter.currentRoute.value.path).toBe('/admin/library/quizzes/new')
@@ -209,18 +199,15 @@ describe('QuizLibraryScreen redesign (Phase 5 Part 2)', () => {
     const wrapper = mountWithShell(QuizLibraryScreen, router)
     await flushPromises()
 
-    // Empty state on wrong-pictures has hint + CTA
     expect(wrapper.find('.empty-hint').text()).toBeTruthy()
     expect(wrapper.find('.empty-cta-btn').exists()).toBe(true)
 
-    // Export toast feedback on Quizzes tab
     await wrapper.find('#library-tab-quizzes').trigger('click')
     await flushPromises()
     await wrapper.find('.export-btn').trigger('click')
     await flushPromises()
     expect(document.body.textContent).toContain('Exported "Exportable Quiz"')
 
-    // Import wrong_pictures JSON -> confirms via AppDialogHost & sanitizes rounds
     const jsonPayload = JSON.stringify({
       name: 'Spot Mistake Pack',
       description: 'Visual rounds',
@@ -247,7 +234,6 @@ describe('QuizLibraryScreen redesign (Phase 5 Part 2)', () => {
     expect(imported.data.questions[0].wrongPictureConfig.maxPoints).toBe(50)
     expect(imported.data.questions[0].wrongPictureConfig.tolerancePercent).toBe(5)
 
-    // Music upload uses useDialog().prompt with media label
     await wrapper.find('#library-tab-music').trigger('click')
     await flushPromises()
     const audioFile = new File(['audio'], 'lobby-jazz.mp3', { type: 'audio/mpeg' })
@@ -295,7 +281,6 @@ describe('AdminTemplateEditorScreen (Phase 5 Part 2)', () => {
       ]
     })))
 
-    // 1. Quiz new
     const quizRouter = await makeRouter('/admin/library/quizzes/new')
     const quizWrapper = mountWithShell(AdminTemplateEditorScreen, quizRouter)
     await flushPromises()
@@ -308,14 +293,12 @@ describe('AdminTemplateEditorScreen (Phase 5 Part 2)', () => {
     expect(quizWrapper.find('.admin-breadcrumb-list').text()).toContain('Quizzes')
     expect(quizWrapper.find('.admin-breadcrumb-list').text()).toContain('New Template')
 
-    // 2. Form new
     const formRouter = await makeRouter('/admin/library/forms/new')
     const formWrapper = mountWithShell(AdminTemplateEditorScreen, formRouter)
     await flushPromises()
     expect(formWrapper.findComponent(FormEditor).exists()).toBe(true)
     expect(formWrapper.findComponent(FormEditor).props('pageFlow')).toBe(true)
 
-    // 3. Wrong Pictures edit -> mounts WrongPicturesEditor, NOT QuizEditor
     const wpRouter = await makeRouter('/admin/library/wrong-pictures/wp-10/edit')
     const wpWrapper = mountWithShell(AdminTemplateEditorScreen, wpRouter)
     await flushPromises()
@@ -350,13 +333,11 @@ describe('AdminTemplateEditorScreen (Phase 5 Part 2)', () => {
     const wrapper = mountWithShell(AppShell, router)
     await flushPromises()
 
-    // Navigate away without editing -> no unsaved-changes dialog
     await router.push('/admin/library/wrong-pictures')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/library/wrong-pictures')
     expect(document.body.querySelector('.app-dialog')).toBeNull()
 
-    // Navigate back into edit, edit name, then try leaving -> prompts unsaved-changes confirm
     await router.push('/admin/library/wrong-pictures/wp-11/edit')
     await flushPromises()
     await wrapper.find('#template-name-input').setValue('Edited Name')
@@ -366,13 +347,11 @@ describe('AdminTemplateEditorScreen (Phase 5 Part 2)', () => {
     await flushPromises()
     expect(document.body.querySelector('.app-dialog-title')?.textContent).toBe('Unsaved changes')
 
-    // Cancel stay
     document.body.querySelector('.app-dialog-btn--secondary').click()
     await navPromise
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/admin/library/wrong-pictures/wp-11/edit')
 
-    // Confirm leave
     const navLeavePromise = router.push('/admin/library/wrong-pictures')
     await flushPromises()
     document.body.querySelector('.app-dialog-btn--danger').click()
@@ -413,7 +392,6 @@ describe('AdminTemplateEditorScreen (Phase 5 Part 2)', () => {
       return { ok: true, json: async () => ({}) }
     }))
 
-    // 1. Empty draft confirmation on /new
     const newRouter = await makeRouter('/admin/library/quizzes/new')
     const newWrapper = mountWithShell(AdminTemplateEditorScreen, newRouter)
     await flushPromises()
@@ -429,7 +407,6 @@ describe('AdminTemplateEditorScreen (Phase 5 Part 2)', () => {
     expect(requests.some(r => r.method === 'POST' && r.body.name === 'Empty Draft')).toBe(true)
     expect(newRouter.currentRoute.value.path).toBe('/admin/library/quizzes')
 
-    // 2. Inline validation on incomplete wrong_pictures round blocks save
     const editRouter = await makeRouter('/admin/library/wrong-pictures/wp-20/edit')
     const editWrapper = mountWithShell(AdminTemplateEditorScreen, editRouter)
     await flushPromises()

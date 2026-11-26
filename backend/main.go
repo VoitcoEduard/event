@@ -83,7 +83,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	// Build the HTTP and websocket dependencies once, after PostgreSQL is ready.
 	events := services.NewEventService(db)
 	teams := database.NewTeamRepository(db)
 	quizResults := &services.QuizResultService{
@@ -128,15 +127,11 @@ func run() error {
 	authService.Register(mux)
 	registerRoutes(mux, handler)
 
-	// Serve the Vue SPA from the ./dist directory (built by `npm run build`).
-	// Any path not matched by an API handler above falls through here.
-	// Unknown paths get index.html so Vue Router handles client-side routing.
 	distDir := "./dist"
 	var spaHandler http.HandlerFunc
 	if _, err := os.Stat(distDir); err == nil {
 		spaHandler = newSPAHandler(distDir)
 	} else {
-		// No dist/ folder — local dev mode, return a simple JSON health check.
 		spaHandler = func(w http.ResponseWriter, r *http.Request) {
 			utils.DebugLog("Received request: %s %s", r.Method, r.URL.Path)
 			enableCors(w, r)
@@ -243,5 +238,4 @@ func appHandler(api, spa http.Handler) http.Handler {
 }
 
 func enableCors(w http.ResponseWriter, r *http.Request) {
-	// The application uses same-origin requests, including in local development.
 }

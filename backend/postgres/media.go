@@ -37,7 +37,6 @@ func scanMedia(row scanner) (MediaRecord, error) {
 	return m, translate(err)
 }
 
-// CreateMedia inserts metadata and an optional library entry in one transaction.
 func (s *Store) CreateMedia(ctx context.Context, m MediaRecord, screen *ScreensaverRecord, track *TrackRecord) error {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
@@ -169,8 +168,6 @@ func (s *Store) DeleteLibraryMedia(ctx context.Context, library, id string) (str
 	if err = tx.QueryRow(ctx, query, id).Scan(&mediaID); err != nil {
 		return "", translate(err)
 	}
-	// Library files are owned by the entry. Remove any other library references
-	// before marking the underlying file for asynchronous deletion.
 	if _, err = tx.Exec(ctx, `DELETE FROM tracks WHERE media_id=$1`, mediaID); err != nil {
 		return "", translate(err)
 	}
@@ -193,8 +190,6 @@ func (s *Store) DeleteLibraryMedia(ctx context.Context, library, id string) (str
 	return mediaID, nil
 }
 
-// Detach ownership before deleting the parent. Clearing both columns together
-// avoids the event foreign key's SET NULL violating the module ownership check.
 func detachOwnedMedia(ctx context.Context, tx pgx.Tx, eventID, moduleID string) ([]string, error) {
 	rows, err := tx.Query(ctx, `UPDATE media SET
  event_id=CASE WHEN $2='' THEN NULL ELSE event_id END,module_id=NULL
@@ -215,10 +210,6 @@ func detachOwnedMedia(ctx context.Context, tx pgx.Tx, eventID, moduleID string) 
 	return ids, rows.Err()
 }
 
-// Templates and copied modules share media IDs. Retire detached files only
-// after deleting the parent, so only surviving references keep them alive.
-// Search nested JSON for IDs and media URLs to cover question images, picture
-// options, slides and other configurable content without relying on its shape.
 func retireUnreferencedMedia(ctx context.Context, tx pgx.Tx, ids []string) error {
 	if len(ids) == 0 {
 		return nil

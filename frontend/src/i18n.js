@@ -10,13 +10,12 @@ const messages = {
   ro
 }
 
-// Get language from localStorage or browser settings
 const browserLang = typeof navigator !== 'undefined' && navigator.language ? navigator.language.split('-')[0] : 'en'
 const userLang = safeLocalGet('userLanguage') || browserLang
 const locale = messages[userLang] ? userLang : 'en'
 
 const i18n = createI18n({
-  legacy: false, // Use Composition API
+  legacy: false,
   locale: locale,
   fallbackLocale: 'en',
   messages

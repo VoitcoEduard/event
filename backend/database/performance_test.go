@@ -7,8 +7,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// Isolates the in-memory total scan used after LoadEventScores. Database
-// aggregation and cache misses must be measured with the deployment load test.
 func BenchmarkEventPlayerTotal(b *testing.B) {
 	for _, modules := range []int{5, 25, 100} {
 		b.Run(fmt.Sprintf("modules=%d/players=150", modules), func(b *testing.B) {

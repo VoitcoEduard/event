@@ -8,7 +8,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// CreateSession POST /events/{id}/sessions
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
@@ -39,7 +38,6 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(session)
 }
 
-// GetSession GET /sessions/{id}
 func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
@@ -60,7 +58,6 @@ func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(session)
 }
 
-// UpdateSessionStatus PUT /sessions/{id}/status
 func (h *Handler) UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
@@ -89,7 +86,6 @@ func (h *Handler) UpdateSessionStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Session status updated"})
 }
 
-// AdvanceSessionModule PUT /sessions/{id}/active_module
 func (h *Handler) AdvanceSessionModule(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")

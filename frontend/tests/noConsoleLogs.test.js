@@ -6,10 +6,6 @@ import path from 'node:path'
 
 const srcRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src')
 
-// Debug console.log statements must not ship in production code. Several of
-// these ran on every WebSocket message (with JSON.stringify of the payload),
-// adding per-message work and log spam. console.error and console.warn stay
-// allowed: they mark error paths that are worth keeping.
 const listSourceFiles = (dir) => {
     const entries = readdirSync(dir)
     const files = []
@@ -28,7 +24,6 @@ const offenders = []
 for (const file of listSourceFiles(srcRoot)) {
     const lines = readFileSync(file, 'utf8').split('\n')
     lines.forEach((line, i) => {
-        // Ignore commented-out code so stale log lines don't fail the build.
         const code = line.replace(/\/\/.*$/, '')
         if (/console\.log\s*\(/.test(code)) {
             offenders.push(`${path.relative(srcRoot, file)}:${i + 1}`)

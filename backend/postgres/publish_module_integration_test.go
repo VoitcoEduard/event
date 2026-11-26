@@ -58,8 +58,6 @@ func TestPublishModulePreservesMetadataKeys(t *testing.T) {
 	}
 }
 
-// H1: renames via UpdateModule and PublishModuleWithName must persist
-// modules.name while preserving manualScoreTarget and judgeToken.
 func TestUpdateAndPublishModuleRenamePersist(t *testing.T) {
 	ctx, db := startDB(t)
 	if err := db.Migrate(ctx); err != nil {

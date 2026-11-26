@@ -11,25 +11,13 @@ import (
 	"testing"
 )
 
-// =============================================================================
-// Test data - minimal valid image headers
-// =============================================================================
-
-// Minimal JPEG header (just magic bytes)
 var jpegMagic = []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00}
 
-// Minimal PNG header
 var pngMagic = []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
 
-// Minimal GIF header
 var gifMagic = []byte{0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00}
 
-// Minimal WebP header (RIFF....WEBP)
 var webpMagic = []byte{0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50}
-
-// =============================================================================
-// imageTypeFromBytes tests
-// =============================================================================
 
 func TestImageTypeFromBytes(t *testing.T) {
 	tests := []struct {
@@ -61,10 +49,6 @@ func TestImageTypeFromBytes(t *testing.T) {
 		})
 	}
 }
-
-// =============================================================================
-// ValidateImage tests
-// =============================================================================
 
 func TestValidateImage(t *testing.T) {
 	tests := []struct {
@@ -151,10 +135,6 @@ func TestValidateImage(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// GetImageDimensions tests
-// =============================================================================
-
 func TestGetImageDimensions_EmptyData(t *testing.T) {
 	_, _, err := GetImageDimensions([]byte{})
 	if err == nil {
@@ -166,16 +146,11 @@ func TestGetImageDimensions_EmptyData(t *testing.T) {
 }
 
 func TestGetImageDimensions_UnknownType(t *testing.T) {
-	// Data that doesn't match any known type
 	_, _, err := GetImageDimensions([]byte{0x00, 0x11, 0x22, 0x33})
 	if err == nil {
 		t.Error("expected error for unknown image type, got nil")
 	}
 }
-
-// =============================================================================
-// ProcessImage tests
-// =============================================================================
 
 func TestProcessImage_EmptyData(t *testing.T) {
 	data, width, height, mimeType, err := ProcessImage([]byte{})
@@ -198,7 +173,6 @@ func TestProcessImage_EmptyData(t *testing.T) {
 }
 
 func TestProcessImage_UnsupportedFormat(t *testing.T) {
-	// Corrupted data
 	data := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}
 
 	_, _, _, _, err := ProcessImage(data)
@@ -211,7 +185,6 @@ func TestProcessImage_UnsupportedFormat(t *testing.T) {
 }
 
 func TestProcessImage_InvalidImageData(t *testing.T) {
-	// Valid header but likely corrupted body (too short for real image)
 	data := jpegMagic
 
 	_, _, _, _, err := ProcessImage(data)
@@ -219,10 +192,6 @@ func TestProcessImage_InvalidImageData(t *testing.T) {
 		t.Error("expected error for invalid image data, got nil")
 	}
 }
-
-// =============================================================================
-// SupportedImageTypes map tests
-// =============================================================================
 
 func TestSupportedImageTypes_HasExpectedFormats(t *testing.T) {
 	expected := map[string]string{
@@ -246,7 +215,6 @@ func TestSupportedImageTypes_HasExpectedFormats(t *testing.T) {
 }
 
 func TestProcessImage_ValidPNG(t *testing.T) {
-	// Create a simple 200x100 PNG
 	img := image.NewRGBA(image.Rect(0, 0, 200, 100))
 	for y := 0; y < 100; y++ {
 		for x := 0; x < 200; x++ {
@@ -272,14 +240,12 @@ func TestProcessImage_ValidPNG(t *testing.T) {
 		t.Errorf("expected 200x100, got %dx%d", width, height)
 	}
 
-	// If conversion tool is available on machine, mimeType should be image/webp, otherwise fallback image/png
 	if mimeType != "image/webp" && mimeType != "image/png" {
 		t.Errorf("expected image/webp or image/png, got %s", mimeType)
 	}
 }
 
 func TestConvertToWebP_Resizing(t *testing.T) {
-	// Create a 2400x1200 PNG
 	img := image.NewRGBA(image.Rect(0, 0, 2400, 1200))
 	for y := 0; y < 1200; y++ {
 		for x := 0; x < 2400; x++ {
@@ -311,12 +277,10 @@ func TestConvertToWebP_Resizing(t *testing.T) {
 }
 
 func TestBuildWebPArgsPortraitAndNoUpscale(t *testing.T) {
-	// Portrait 800x2400 with max 1920 scales height to 1920 for cwebp, never width to 1920
 	cwebpPortrait := buildWebPArgs("cwebp", 800, 2400, 1920, "in.png", "out.webp")
 	if !slices.Contains(cwebpPortrait, "-resize") || !strings.Contains(strings.Join(cwebpPortrait, " "), "-resize 0 1920") {
 		t.Fatalf("cwebp portrait args = %v, want -resize 0 1920", cwebpPortrait)
 	}
-	// Smaller 400x600 with max 1920 does not pass resize flags to any tool
 	for _, tool := range []string{"cwebp", "sips", "ffmpeg"} {
 		args := buildWebPArgs(tool, 400, 600, 1920, "in.png", "out.webp")
 		joined := strings.Join(args, " ")
@@ -324,7 +288,6 @@ func TestBuildWebPArgsPortraitAndNoUpscale(t *testing.T) {
 			t.Fatalf("%s unexpectedly resized small image: %v", tool, args)
 		}
 	}
-	// ffmpeg scales within maxDim x maxDim box without upscaling
 	ffmpegPortrait := buildWebPArgs("ffmpeg", 800, 2400, 1920, "in.png", "out.webp")
 	if !strings.Contains(strings.Join(ffmpegPortrait, " "), "force_original_aspect_ratio=decrease") {
 		t.Fatalf("ffmpeg portrait args = %v, want force_original_aspect_ratio=decrease", ffmpegPortrait)

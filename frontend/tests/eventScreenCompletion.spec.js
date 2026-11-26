@@ -79,7 +79,6 @@ describe('EventScreen module completion timer (Bug #10)', () => {
     const cards = wrapper.findAll('.module-card')
     expect(cards).toHaveLength(2)
 
-    // Open Form 1 and complete it (schedules 2s completionTimer)
     await cards[0].trigger('click')
     await flushPromises()
     expect(wrapper.find('.form-module-stub').attributes('data-id')).toBe('f1')
@@ -87,14 +86,12 @@ describe('EventScreen module completion timer (Bug #10)', () => {
     await wrapper.find('.complete-btn').trigger('click')
     await flushPromises()
 
-    // Quickly go back and open Form 2 before 2s elapses
     await wrapper.find('.back-link').trigger('click')
     await flushPromises()
     await wrapper.findAll('.module-card')[1].trigger('click')
     await flushPromises()
     expect(wrapper.find('.form-module-stub').attributes('data-id')).toBe('f2')
 
-    // Advance past 2s: Form 2 must NOT be closed by Form 1's stale timer
     await vi.advanceTimersByTimeAsync(2500)
     await flushPromises()
     expect(wrapper.find('.form-module-stub').exists()).toBe(true)

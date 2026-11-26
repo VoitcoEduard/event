@@ -79,13 +79,11 @@ func TestHostEndTeamsSavesAndBroadcastsWithoutDeadlock(t *testing.T) {
 	}})
 	assertMessageType(t, admin.send, "teams:ended")
 
-	// Teams admin for the matching event can also end teams.
 	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
 		"eventId": "event-1", "moduleId": "module-1", "moduleName": "Teams",
 	}})
 	assertMessageType(t, admin.send, "teams:ended")
 
-	// Teams admin for another event is rejected.
 	h.processHostEndTeams(admin, ClientMessage{Payload: map[string]any{
 		"eventId": "event-other", "moduleId": "module-1", "moduleName": "Teams",
 	}})
@@ -93,7 +91,6 @@ func TestHostEndTeamsSavesAndBroadcastsWithoutDeadlock(t *testing.T) {
 		t.Fatalf("cross-event teams admin end should be ignored")
 	}
 
-	// Save error sends cmd:error to requester and does NOT broadcast teams:ended.
 	h.saveTeams = func(_, _, _ string) (*models.TeamResult, error) {
 		return nil, errors.New("db write failed")
 	}
@@ -121,13 +118,9 @@ func TestParticipantJoinLoadsTeamsAndBroadcastsWithoutDeadlock(t *testing.T) {
 	assertMessageType(t, admin.send, "participant:joined")
 }
 
-// A panic inside a message handler must not crash the server (readPump runs
-// ProcessMessage in a bare goroutine) and must not leave the hub lock held.
 func TestProcessMessageRecoversFromHandlerPanic(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	h.mu.Lock()
-	// Partially-initialized session: Players is nil, so player:join panics on
-	// map assignment — the class of runtime bug recovery must contain.
 	h.sessions["module-1"] = &models.QuizSession{ModuleID: "module-1", State: "lobby"}
 	h.mu.Unlock()
 
@@ -137,8 +130,6 @@ func TestProcessMessageRecoversFromHandlerPanic(t *testing.T) {
 	assertHubUnlocked(t, h)
 }
 
-// A join greeting to a client whose send buffer is full must not block while
-// holding the hub lock: the stalled client is evicted and the hub stays usable.
 func TestJoinToStalledClientDoesNotHoldHubLock(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	victim := &Client{send: make(chan []byte, 1)}
@@ -149,7 +140,6 @@ func TestJoinToStalledClientDoesNotHoldHubLock(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		// Mirrors ProcessMessage, which holds h.mu across the join handlers.
 		h.mu.Lock()
 		defer h.mu.Unlock()
 		defer close(done)
@@ -177,8 +167,6 @@ func TestJoinToStalledClientDoesNotHoldHubLock(t *testing.T) {
 	assertMessageType(t, healthy.send, "ping")
 }
 
-// A simple-quiz join greeting to a stalled client must not block readPump.
-// The stalled client is evicted and the hub stays usable.
 func TestSimpleJoinToStalledClientDoesNotBlock(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	h.simpleQuizSessions["module-1"] = &models.SimpleQuizSession{
@@ -195,7 +183,6 @@ func TestSimpleJoinToStalledClientDoesNotBlock(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		// Called from readPump without holding h.mu.
 		h.processSimpleHostJoin(victim, ClientMessage{Payload: map[string]any{"moduleId": "module-1"}})
 	}()
 	select {
@@ -217,8 +204,6 @@ func TestSimpleJoinToStalledClientDoesNotBlock(t *testing.T) {
 	}
 }
 
-// A simple-quiz join greeting must not panic when cleanup concurrently closes
-// the client's send channel.
 func TestSimpleJoinDoesNotRaceWithConcurrentUnregister(t *testing.T) {
 	h := NewQuizHub(Dependencies{})
 	h.simpleQuizSessions["module-1"] = &models.SimpleQuizSession{
@@ -234,8 +219,6 @@ func TestSimpleJoinDoesNotRaceWithConcurrentUnregister(t *testing.T) {
 		h.Unregister(client)
 	}()
 
-	// This used to panic with "send on closed channel" when the blocking send
-	// in the simple join handler raced with Unregister or broadcast eviction.
 	h.processSimpleHostJoin(client, ClientMessage{Payload: map[string]any{"moduleId": "module-1"}})
 }
 
@@ -285,7 +268,6 @@ func TestSendToUnregisteredAndStalledPlayerJoinDoesNotPanic(t *testing.T) {
 		s.Batches = CalculateBatches(s.Questions)
 	})
 
-	// Unregistered client whose send channel was already closed must not panic.
 	disconnected := &Client{send: make(chan []byte, 1)}
 	h.Register(disconnected)
 	h.Unregister(disconnected)
@@ -301,7 +283,6 @@ func TestSendToUnregisteredAndStalledPlayerJoinDoesNotPanic(t *testing.T) {
 	})
 	h.mu.Unlock()
 
-	// Stalled client with full send buffer must be evicted cleanly without panicking on subsequent sends.
 	stalled := &Client{send: make(chan []byte, 1)}
 	stalled.send <- []byte(`full`)
 	h.Register(stalled)

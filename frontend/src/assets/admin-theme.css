@@ -1,4 +1,3 @@
-/* Shared, route-scoped appearance for administrative workflows. */
 @property --fade-start {
   syntax: "<length>";
   inherits: false;
@@ -197,8 +196,6 @@ html[data-admin-appearance="true"] :is(
   color: var(--admin-text-muted);
 }
 
-/* Titles are often rendered as paragraphs in the existing screens. Keep them
-   at full contrast after the general paragraph treatment above. */
 html[data-admin-appearance="true"] :is(
   .admin-screen, .admin-details-screen, .access-page, .login-page,
   .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
@@ -300,8 +297,6 @@ html[data-admin-appearance="true"] :is(.status-inactive, .error) {
   color: var(--admin-danger) !important;
 }
 
-/* Event details contains several action variants whose original colors were
-   neutralized by the shared button reset. Restore clear, semantic controls. */
 html[data-admin-appearance="true"] .admin-details-screen :is(.card-description, .label, .section-label, .module-type, .control-hint) {
   color: var(--admin-text-muted) !important;
   opacity: 1 !important;
@@ -374,7 +369,6 @@ html[data-admin-appearance="true"] .admin-details-screen .control-group {
   border-color: var(--admin-border) !important;
 }
 
-/* Reference layout: event administration landing page. */
 html[data-admin-appearance="true"] .admin-screen > .header {
   min-height: 112px;
   padding: 24px clamp(16px, 4vw, 64px) !important;
@@ -490,7 +484,6 @@ html[data-admin-appearance="true"] .admin-screen .back-button {
   html[data-admin-appearance="true"] .admin-screen .form-card { padding: 20px; }
 }
 
-/* Library screen appearance */
 html[data-admin-appearance="true"] .library-screen {
   min-height: 100vh;
   min-height: 100dvh;
@@ -639,8 +632,6 @@ html[data-admin-appearance="true"] :is(
   color: var(--admin-text) !important;
 }
 
-/* Embedded editor cards, panels, buttons, and accessible Light/Dark typography
-   inside admin screens and Teleport-to-body modals. */
 html[data-admin-appearance="true"] :is(
   .admin-screen, .admin-details-screen, .access-page, .login-page,
   .library-screen, .data-page, .teams-admin-wrapper, .screen-manager,
@@ -782,7 +773,6 @@ html[data-admin-appearance="true"] :is(
   color: var(--admin-primary) !important;
 }
 
-/* Range preview readability inside Light/Dark .preview-box */
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
 ) .preview-box .value-num {
@@ -842,7 +832,6 @@ html[data-admin-appearance="true"] :is(
   background: var(--admin-text-muted) !important;
 }
 
-/* Primary & muted typography inside editors & modals (WCAG AA contrast) */
 html[data-admin-appearance="true"] :is(
   .admin-screen, .admin-details-screen, .library-screen, .screen-manager,
   .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
@@ -934,7 +923,6 @@ html[data-admin-appearance="true"] :is(
   background-color: var(--admin-success-solid) !important;
 }
 
-/* Editor interactive controls, tags, and semantic warnings */
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
 ) .type-selector {
@@ -1160,7 +1148,6 @@ html[data-admin-appearance="true"] .judge-screen .grade-later {
   color: var(--admin-warning) !important;
 }
 
-/* Host screens keep their presentation layout while adopting the admin palette. */
 html[data-admin-appearance="true"] .quiz-host-screen .bg-layer {
   background: var(--admin-bg) !important;
   opacity: 1 !important;
@@ -1363,7 +1350,6 @@ html[data-admin-appearance="true"] .quiz-host-screen :is(.final-rest-rank, .fina
   color: #CBD5E1 !important;
 }
 
-/* Preserve authored slide/media content in the editor. */
 html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content, .slide-preview, .element-preview, .screensaver-preview) {
   color: unset;
 }

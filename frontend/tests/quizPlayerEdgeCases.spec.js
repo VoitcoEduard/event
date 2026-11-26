@@ -94,12 +94,10 @@ describe('QuizPlayerScreen edge cases (Bug #9)', () => {
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, runId: 'run-1', timeLimit: 10 })
     await flushPromises()
 
-    // Host moves to results early
     mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0, runId: 'run-1' })
     await flushPromises()
     expect(wrapper.find('.result-container').exists()).toBe(true)
 
-    // Advance past original 10s deadline — must stay in results, not switch to question-ended
     await vi.advanceTimersByTimeAsync(12000)
     await flushPromises()
     expect(wrapper.find('.result-container').exists()).toBe(true)
@@ -146,12 +144,10 @@ describe('QuizPlayerScreen edge cases (Bug #9)', () => {
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, runId: 'run-1', timeLimit: 20 })
     await flushPromises()
 
-    // Submit empty or placed guess via button click -> sends enqueue with submissionId 'sub-uuid-1'
     await wrapper.find('.wrong-pictures-container .submit-selection-btn').trigger('click')
     await flushPromises()
     expect(mockSignalQueue.enqueue).toHaveBeenCalledTimes(1)
 
-    // Results and reveal arrive before answer:ack
     mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0, runId: 'run-1' })
     mockQuizWS.emit('data:reveal', {
       questionIndex: 0,
@@ -163,7 +159,6 @@ describe('QuizPlayerScreen edge cases (Bug #9)', () => {
     await flushPromises()
     expect(wrapper.find('.wp-review-stub').text()).toBe('0')
 
-    // Late answer:ack confirms 85 points
     mockQuizWS.emit('answer:ack', {
       submissionId: 'sub-uuid-1',
       questionIndex: 0,
@@ -181,24 +176,20 @@ describe('QuizPlayerScreen edge cases (Bug #9)', () => {
     wrapper = mount(QuizPlayerScreen, mountOpts)
     await flushPromises()
 
-    // Socket opened in lobby, then reconnects before Q0 batch was ever received
     mockQuizWS.emit('open')
     mockQuizWS.emit('open')
     expect(mockQuizWS.send).toHaveBeenCalledWith('player:reconnect', expect.objectContaining({
       lastKnownQuestionIndex: -1,
     }))
 
-    // Activate Q0 before data:batch arrives
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, runId: 'run-1', timeLimit: 20 })
     await flushPromises()
 
-    // Premature tap while questionCache has no Q0 must NOT lock out player
     await wrapper.find('.answer-btn').trigger('click')
     await flushPromises()
     expect(wrapper.find('.answered-container').exists()).toBe(false)
     expect(mockSignalQueue.enqueue).not.toHaveBeenCalled()
 
-    // Now Q0 batch arrives -> tapping submits normally
     mockQuizWS.emit('data:batch', {
       batchIndex: 0,
       totalBatches: 1,
@@ -213,7 +204,6 @@ describe('QuizPlayerScreen edge cases (Bug #9)', () => {
     expect(wrapper.find('.answered-container').exists()).toBe(true)
     expect(mockSignalQueue.enqueue).toHaveBeenCalledTimes(1)
 
-    // New run clears stale cache even if batch arrives at non-zero index
     mockQuizWS.emit('cmd:state', { state: 'question-presenting', currentIndex: 1, runId: 'run-2', timeLimit: 5 })
     await flushPromises()
     expect(questionCache.has(0)).toBe(false)
@@ -225,7 +215,6 @@ describe('QuizPlayerScreen UX audit regressions (H1, L10, L11)', () => {
     wrapper = mount(QuizPlayerScreen, mountOpts)
     await flushPromises()
 
-    // L10: Lobby shows waiting-for-host explanation
     expect(wrapper.find('.lobby-wait-msg').exists()).toBe(true)
     expect(wrapper.find('.lobby-wait-msg').text()).toBe('quiz.player.waiting_for_host')
 
@@ -241,17 +230,14 @@ describe('QuizPlayerScreen UX audit regressions (H1, L10, L11)', () => {
       ],
     })
 
-    // H1: classic
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, runId: 'run-1', timeLimit: 20 })
     await flushPromises()
     expect(wrapper.find('.player-question-text').text()).toBe('What is the capital of France?')
 
-    // H1: range
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 1, runId: 'run-1', timeLimit: 20 })
     await flushPromises()
     expect(wrapper.find('.range-container .player-question-text').text()).toBe('When was the moon landing?')
 
-    // H1: number
     mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 2, runId: 'run-1', timeLimit: 20 })
     await flushPromises()
     expect(wrapper.find('.number-container .player-question-text').text()).toBe('How many continents?')

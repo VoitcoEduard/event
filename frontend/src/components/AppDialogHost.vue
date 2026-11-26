@@ -104,7 +104,6 @@ import { clearDialogQueue, useDialog } from '../composables/useDialog'
 const t = (...args) => i18n.global.t(...args)
 const { activeDialog, resolveDialog, cancelDialog } = useDialog()
 
-// Never leave pending dialog promises dangling when the host unmounts.
 onUnmounted(() => { clearDialogQueue() })
 
 const dialogRef = ref(null)

@@ -2,8 +2,6 @@ import { session, signOut } from '../session'
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
-// Some API responses can be empty or wrapped, so normalize list payloads before
-// components call array methods on them.
 export const normalizeTemplates = (payload) => {
   if (Array.isArray(payload)) return payload
   if (payload == null) return []
@@ -16,12 +14,12 @@ let temporaryUserId = ''
 
 export const setUserId = (id) => {
   temporaryUserId = id
-  try { sessionStorage.setItem('userId', id) } catch { /* Keep this page usable without storage. */ }
+  try { sessionStorage.setItem('userId', id) } catch {  }
 }
 
 export const getUserId = () => {
   let userId = ''
-  try { userId = sessionStorage.getItem('userId') || '' } catch { /* Storage may be disabled. */ }
+  try { userId = sessionStorage.getItem('userId') || '' } catch {  }
   if (userId) return userId
   if (!temporaryUserId) setUserId(newUUID())
   return temporaryUserId
@@ -41,7 +39,7 @@ const temporaryParticipantSecrets = new Map()
 
 export const setParticipantSecret = (eventId, secret) => {
   temporaryParticipantSecrets.set(eventId, secret)
-  try { sessionStorage.setItem(`participantSecret:${eventId}`, secret) } catch { /* Keep it for this page. */ }
+  try { sessionStorage.setItem(`participantSecret:${eventId}`, secret) } catch {  }
 }
 
 export const getParticipantSecret = (eventId) => {
@@ -57,10 +55,8 @@ export const getUserName = () => {
 
 export const setUserName = (name) => {
   temporaryUserName = name
-  try { sessionStorage.setItem('userName', name) } catch { /* Storage may be disabled. */ }
+  try { sessionStorage.setItem('userName', name) } catch {  }
 }
-
-// --- Auth helpers ---
 
 export const getAuthHeaders = () => {
 	return session.csrfToken ? { 'X-CSRF-Token': session.csrfToken } : {}

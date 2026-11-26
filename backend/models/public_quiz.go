@@ -1,7 +1,5 @@
 package models
 
-// PublicQuizQuestion is the pre-reveal question shape. Build it by allowlist so
-// new private question fields cannot accidentally enter public responses.
 func PublicQuizQuestion(q QuizQuestion) map[string]any {
 	out := map[string]any{
 		"id": q.ID, "type": q.Type, "text": q.Text,

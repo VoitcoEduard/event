@@ -98,7 +98,6 @@ func (h *QuizHub) ApplySimpleGrade(moduleID, judgeToken, by, answerID, verdict s
 	return s
 }
 
-// UndoSimpleGrade persists the reverted grade before removing the undo entry.
 func (h *QuizHub) UndoSimpleGrade(moduleID, judgeToken, by string) (string, string, *models.SimpleQuizSession, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

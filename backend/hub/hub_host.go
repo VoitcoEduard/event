@@ -23,7 +23,6 @@ var (
 
 func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 	client.IsHost, client.IsTeamsAdmin, client.IsProjector = false, false, false
-	// Payload: { "moduleId": "..." }
 	data, ok := msg.Payload.(map[string]interface{})
 	if !ok {
 		return
@@ -35,7 +34,6 @@ func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 	client.ModuleID = moduleID
 	client.IsHost = true
 
-	// Ensure session exists
 	if _, exists := h.sessions[moduleID]; !exists {
 		DebugLog("host:join: Creating new session for module: %s", moduleID)
 		h.sessions[moduleID] = &models.QuizSession{
@@ -49,7 +47,6 @@ func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 		DebugLog("host:join: Session exists for module: %s, state: %s, players: %d", moduleID, h.sessions[moduleID].State, len(h.sessions[moduleID].Players))
 	}
 
-	// Send current state to host via cmd:state (new protocol)
 	jsonMsg, _ := json.Marshal(ServerMessage{
 		Type: "cmd:state",
 		Payload: map[string]interface{}{
@@ -62,7 +59,6 @@ func (h *QuizHub) processHostJoin(client *Client, msg ClientMessage) {
 		return
 	}
 
-	// Also send full session data via state:update (for player list)
 	jsonMsg2, _ := json.Marshal(ServerMessage{
 		Type:    "state:update",
 		Payload: h.sessions[moduleID],
@@ -80,7 +76,7 @@ func (h *QuizHub) WrongPictureAspects(ctx context.Context, questions []models.Qu
 			continue
 		}
 		if h.db == nil {
-			aspects[i] = 1 // In-memory test hubs have no media store.
+			aspects[i] = 1
 			continue
 		}
 		if question.ImageID == nil || *question.ImageID == "" {
@@ -221,8 +217,6 @@ func (h *QuizHub) nextQuizQuestionLocked(session *models.QuizSession, eventID st
 	return nil
 }
 
-// StartQuizSession starts a quiz session via REST with identical state transitions,
-// broadcasts, and transition timers as the host WebSocket flow.
 func (h *QuizHub) StartQuizSession(moduleID, eventID string, questions []models.QuizQuestion, aspects map[int]float64) (*models.QuizSession, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -247,8 +241,6 @@ func (h *QuizHub) StartQuizSession(moduleID, eventID string, questions []models.
 	return snapshotSession(session), nil
 }
 
-// NextQuizQuestion advances a quiz session to the next question via REST with
-// identical guards, streak updates, broadcasts, and timers as WebSockets.
 func (h *QuizHub) NextQuizQuestion(moduleID, eventID string) (*models.QuizSession, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -358,7 +350,6 @@ func (h *QuizHub) processHostShowResults(client *Client, msg ClientMessage) {
 			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "runId": session.RunID},
 		})
 
-		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES/ANSWERS
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "state:update",
 			Payload: session,
@@ -382,7 +373,6 @@ func (h *QuizHub) processHostShowLeaderboard(client *Client, msg ClientMessage) 
 			Payload: map[string]interface{}{"state": session.State, "currentIndex": session.CurrentIndex, "totalQuestions": len(session.Questions), "runId": session.RunID},
 		})
 
-		// BROADCAST FULL STATE SO HOST GETS UPDATED SCORES
 		h.broadcastToSessionLocked(session.ModuleID, ServerMessage{
 			Type:    "state:update",
 			Payload: session,

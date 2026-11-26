@@ -11,7 +11,6 @@ import (
 	"github.com/user/go-expo-sample/backend/utils"
 )
 
-// ParticipantStore is the persistence boundary used by ParticipantService.
 type ParticipantStore interface {
 	Create(context.Context, *models.Participant) error
 	GetByEventID(context.Context, string) ([]models.Participant, error)

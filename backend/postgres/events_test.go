@@ -27,7 +27,6 @@ func TestMergePreservedModuleData(t *testing.T) {
 		t.Fatalf("expected mandatoryOnEntry=true, got %v", merged["mandatoryOnEntry"])
 	}
 
-	// Explicit override in next takes precedence over existing preserved value
 	override := mergePreservedModuleData(existing, map[string]any{
 		"manualScoreTarget": "players",
 	})

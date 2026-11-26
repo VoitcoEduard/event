@@ -13,8 +13,6 @@ import (
 
 var errEmptyModuleName = errors.New("Module name cannot be empty")
 
-// trimModuleName normalizes an optional module rename, returning nil when the
-// request did not include one. Blank names are rejected.
 func trimModuleName(name *string) (*string, error) {
 	if name == nil {
 		return nil, nil

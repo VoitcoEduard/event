@@ -13,7 +13,6 @@ import (
 	"github.com/user/go-expo-sample/backend/services"
 )
 
-// Dependencies are created at startup and shared by all HTTP handlers.
 type Dependencies struct {
 	DB           *postgres.Store
 	Files        *filestore.Store

@@ -2,11 +2,6 @@ package models
 
 import "time"
 
-// Simple Quiz: live, manually graded text-answer quiz.
-// The template lives in Module.Data (Questions + AllowAnswerReveal + JudgeToken).
-// On launch the server snapshots questions into SimpleQuizSession so later
-// template edits do not affect the running session.
-
 const (
 	SimpleQuizStateLobby             = "lobby"
 	SimpleQuizStateQuestionOpen      = "question_open"
@@ -28,19 +23,17 @@ const (
 
 const SimpleQuizMaxAnswerChars = 2000
 
-// SimpleQuizQuestionSnapshot is a copy of the template question at launch time.
 type SimpleQuizQuestionSnapshot struct {
 	ID                string  `json:"id"`
 	Text              string  `json:"text"`
 	ImageID           *string `json:"imageId,omitempty"`
 	ImageAlt          string  `json:"imageAlt,omitempty"`
 	Points            int     `json:"points"`
-	TimeLimit         int     `json:"timeLimit"` // 0 = no limit
+	TimeLimit         int     `json:"timeLimit"`
 	JudgeNotes        string  `json:"judgeNotes,omitempty"`
 	CorrectAnswerText string  `json:"correctAnswerText,omitempty"`
 }
 
-// SimpleQuizPlayer joined with a nickname. Secret is the private reconnect identity.
 type SimpleQuizPlayer struct {
 	ID            string    `json:"id"`
 	ParticipantID string    `json:"participantId,omitempty"`
@@ -51,9 +44,8 @@ type SimpleQuizPlayer struct {
 	Connected     bool      `json:"connected"`
 }
 
-// SimpleQuizAnswer is one locked text answer per player per question.
 type SimpleQuizAnswer struct {
-	ID            string    `json:"id"` // client-generated UUID for idempotency
+	ID            string    `json:"id"`
 	PlayerID      string    `json:"playerId"`
 	QuestionIndex int       `json:"questionIndex"`
 	QuestionID    string    `json:"questionId"`
@@ -61,31 +53,27 @@ type SimpleQuizAnswer struct {
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
-// SimpleQuizGradeHistoryEntry tracks every grading change for undo/audit.
 type SimpleQuizGradeHistoryEntry struct {
 	Verdict string    `json:"verdict"`
-	By      string    `json:"by"` // judge session label, e.g. "judge"
+	By      string    `json:"by"`
 	At      time.Time `json:"at"`
 }
 
-// SimpleQuizGrade is the current verdict for one answer.
 type SimpleQuizGrade struct {
 	AnswerID   string                        `json:"answerId"`
-	Verdict    string                        `json:"verdict"` // right | wrong | review_later
+	Verdict    string                        `json:"verdict"`
 	MutationID string                        `json:"mutationId,omitempty"`
 	UpdatedAt  time.Time                     `json:"updatedAt"`
 	UpdatedBy  string                        `json:"updatedBy"`
 	History    []SimpleQuizGradeHistoryEntry `json:"history"`
 }
 
-// SimpleQuizPerQuestionResult is one cell of working/published results.
 type SimpleQuizPerQuestionResult struct {
 	QuestionIndex int    `json:"questionIndex"`
-	Verdict       string `json:"verdict"` // right | wrong | missing
+	Verdict       string `json:"verdict"`
 	PointsEarned  int    `json:"pointsEarned"`
 }
 
-// SimpleQuizPlayerResult is a leaderboard row.
 type SimpleQuizPlayerResult struct {
 	PlayerID      string                        `json:"playerId"`
 	ParticipantID string                        `json:"-"`
@@ -94,15 +82,12 @@ type SimpleQuizPlayerResult struct {
 	PerQuestion   []SimpleQuizPerQuestionResult `json:"perQuestion"`
 }
 
-// SimpleQuizPublishedSnapshot is the stable version visible to players/projector.
 type SimpleQuizPublishedSnapshot struct {
 	Version     int                      `json:"version"`
 	PublishedAt time.Time                `json:"publishedAt"`
 	Players     []SimpleQuizPlayerResult `json:"players"`
 }
 
-// SimpleQuizSession is the live session. Persisted in simple_quiz_sessions,
-// cached in-memory in the hub. Questions is the launch-time snapshot.
 type SimpleQuizSession struct {
 	EventID          string                       `json:"eventId"`
 	ModuleID         string                       `json:"moduleId"`
@@ -113,19 +98,17 @@ type SimpleQuizSession struct {
 	Players          map[string]*SimpleQuizPlayer `json:"players"`
 	Answers          []SimpleQuizAnswer           `json:"answers"`
 	Grades           map[string]*SimpleQuizGrade  `json:"grades"`
-	Revealed         map[int]bool                 `json:"revealed"` // questionIndex -> revealed
+	Revealed         map[int]bool                 `json:"revealed"`
 	Published        *SimpleQuizPublishedSnapshot `json:"published,omitempty"`
 	PublishedVer     int                          `json:"publishedVersion"`
 	AllowReveal      bool                         `json:"allowReveal"`
-	DeadlineUnix     int64                        `json:"deadlineUnix,omitempty"` // 0 = no limit
+	DeadlineUnix     int64                        `json:"deadlineUnix,omitempty"`
 	QuestionOpenedAt time.Time                    `json:"questionOpenedAt,omitempty"`
 	PausedFrom       string                       `json:"pausedFrom,omitempty"`
 	CreatedAt        time.Time                    `json:"createdAt"`
 	UpdatedAt        time.Time                    `json:"updatedAt"`
 }
 
-// SnapshotSimpleQuizQuestion copies template fields into a snapshot.
-// Points reuse ScoringConfig.MaxPoints for consistency with other types.
 func SnapshotSimpleQuizQuestion(q QuizQuestion) SimpleQuizQuestionSnapshot {
 	points := q.ScoringConfig.MaxPoints
 	return SimpleQuizQuestionSnapshot{
@@ -140,12 +123,10 @@ func SnapshotSimpleQuizQuestion(q QuizQuestion) SimpleQuizQuestionSnapshot {
 	}
 }
 
-// EffectiveSimpleQuizPoints returns the point value for a snapshot question.
 func EffectiveSimpleQuizPoints(q SimpleQuizQuestionSnapshot) int {
 	return q.Points
 }
 
-// GradingProgress counts received/graded/ungraded/review-later per question.
 type SimpleQuizGradingProgress struct {
 	QuestionIndex int `json:"questionIndex"`
 	Received      int `json:"received"`
@@ -154,7 +135,6 @@ type SimpleQuizGradingProgress struct {
 	ReviewLater   int `json:"reviewLater"`
 }
 
-// ComputeWorkingResults builds working results from current answers+grades.
 func (s *SimpleQuizSession) ComputeWorkingResults() []SimpleQuizPlayerResult {
 	byPlayer := make(map[string]*SimpleQuizPlayerResult)
 	for _, p := range s.Players {
@@ -203,7 +183,6 @@ func (s *SimpleQuizSession) ComputeWorkingResults() []SimpleQuizPlayerResult {
 	for _, r := range byPlayer {
 		out = append(out, *r)
 	}
-	// Sort by total desc, nickname asc for stable leaderboard.
 	for i := 0; i < len(out); i++ {
 		for j := i + 1; j < len(out); j++ {
 			if out[j].TotalScore > out[i].TotalScore ||
@@ -215,7 +194,6 @@ func (s *SimpleQuizSession) ComputeWorkingResults() []SimpleQuizPlayerResult {
 	return out
 }
 
-// GradingComplete reports whether every submitted answer is finalized right/wrong.
 func (s *SimpleQuizSession) GradingComplete() bool {
 	for _, a := range s.Answers {
 		g, ok := s.Grades[a.ID]
@@ -229,7 +207,6 @@ func (s *SimpleQuizSession) GradingComplete() bool {
 	return true
 }
 
-// ProgressFor returns counts for one question.
 func (s *SimpleQuizSession) ProgressFor(questionIndex int) SimpleQuizGradingProgress {
 	p := SimpleQuizGradingProgress{QuestionIndex: questionIndex}
 	for _, a := range s.Answers {

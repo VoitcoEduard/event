@@ -18,7 +18,6 @@
       </div>
     </div>
 
-    <!-- NICKNAME ENTRY (Pre-Lobby) -->
     <div v-else-if="state === States.LOBBY && !joined" class="state-container name-entry-container">
       <h1 class="logo">{{ $t('quiz.player.logo') }}</h1>
       <div class="card">
@@ -34,7 +33,6 @@
       </div>
     </div>
 
-    <!-- LOBBY STATE -->
     <div v-else-if="state === States.LOBBY && joined" class="state-container lobby-container">
       <div class="lobby-content">
         <h2 class="waiting-text">{{ $t('quiz.player.you_are_in') }}</h2>
@@ -45,7 +43,6 @@
       </div>
     </div>
 
-    <!-- GET READY / PRESENTING STATE -->
     <div v-else-if="state === States.GET_READY || state === States.QUESTION_PRESENTING" class="state-container get-ready-container">
       <div class="ready-content">
         <h1>{{ $t('quiz.player.get_ready') }}</h1>
@@ -54,7 +51,6 @@
       </div>
     </div>
 
-    <!-- CORRECT PICTURE STATE -->
     <div
       v-else-if="state === States.QUESTION_ACTIVE && isCorrectPicture"
       class="state-container correct-picture-container"
@@ -67,7 +63,6 @@
         </div>
       </div>
 
-      <!-- Interactive Zone: Horizontal Carousel (Middle 60%) -->
       <div class="carousel-zone">
         <HorizontalCarousel
           :images="imageOptionUrls"
@@ -76,7 +71,6 @@
         />
       </div>
 
-      <!-- Action Area: Submit Button (Bottom 20%) -->
       <div class="action-area">
         <button
           class="submit-selection-btn"
@@ -94,7 +88,6 @@
       </div>
     </div>
 
-    <!-- WRONG PICTURES STATE -->
     <div
       v-else-if="state === States.QUESTION_ACTIVE && isWrongPictures"
       class="state-container wrong-pictures-container"
@@ -135,7 +128,6 @@
       </div>
     </div>
 
-    <!-- SLIDER QUESTION STATE -->
     <div
       v-else-if="state === States.QUESTION_ACTIVE && isRange"
       class="state-container range-container"
@@ -170,7 +162,6 @@
       </div>
     </div>
 
-    <!-- NUMBER QUESTION STATE -->
     <div
       v-else-if="state === States.QUESTION_ACTIVE && isNumber"
       class="state-container number-container"
@@ -208,7 +199,6 @@
       </div>
     </div>
 
-    <!-- QUESTION/ANSWER STATE (Generic/Multiple Choice) -->
     <div v-else-if="state === States.QUESTION_ACTIVE" class="state-container question-container">
       <div class="question-prompt-bar">
         <div class="question-info">
@@ -217,7 +207,6 @@
         <h2 v-if="currentQuestion?.text" class="player-question-text">{{ currentQuestion.text }}</h2>
       </div>
 
-      <!-- Multi-select mode hint -->
       <div v-if="isMultiSelect" class="multi-hint-pill">
         <AppIcon class="multi-hint-icon" name="listCheck" :size="18" />
         <span>{{ $t('quiz.player.select_multiple', 'Select all that apply') }}</span>
@@ -236,7 +225,6 @@
             @click="handleAnswerClick(idx)"
             :disabled="hasSubmitted"
          >
-            <!-- Multi-select checkbox corner indicator -->
             <div v-if="isMultiSelect" class="ms-checkbox" :class="{ 'ms-checked': isSelected(idx) }">
               <AppIcon v-if="isSelected(idx)" name="check" :size="18" />
             </div>
@@ -255,7 +243,6 @@
       </div>
     </div>
 
-    <!-- ANSWER SUBMITTED (Waiting) -->
     <div v-else-if="state === States.ANSWERED" class="state-container answered-container">
        <div class="answered-content">
           <div class="spinner"></div>
@@ -264,7 +251,6 @@
        </div>
     </div>
 
-    <!-- QUESTION ENDED (Time's up / Waiting for results) -->
     <div v-else-if="state === States.QUESTION_ENDED" class="state-container answered-container">
        <div class="answered-content">
           <div class="spinner"></div>
@@ -273,7 +259,6 @@
        </div>
     </div>
 
-    <!-- WRONG PICTURES RESULT REVIEW -->
     <div
       v-else-if="state === States.RESULTS && isWrongPictures && wrongPictureReview"
       class="state-container wrong-picture-review-container"
@@ -281,7 +266,6 @@
       <WrongPictureAnswerReview :review="wrongPictureReview" />
     </div>
 
-    <!-- RESULT STATE -->
     <div v-else-if="state === States.RESULTS" class="state-container result-container" :class="isCorrect ? 'bg-correct' : 'bg-wrong'">
        <div class="result-content">
           <div class="result-icon" :class="isCorrect ? 'icon-correct' : 'icon-wrong'"><AppIcon :name="isCorrect ? 'check' : 'close'" :size="52" /></div>
@@ -303,7 +287,6 @@
        </div>
     </div>
 
-    <!-- LEADERBOARD STATE -->
     <div v-else-if="state === States.LEADERBOARD" class="state-container player-leaderboard-container">
        <div class="player-leaderboard-content">
           <AppIcon class="leaderboard-icon" name="trophy" :size="72" />
@@ -318,7 +301,6 @@
        </div>
     </div>
 
-    <!-- FINISHED STATE -->
     <div v-else-if="state === States.FINISHED" class="state-container finished-container">
        <div class="finished-content">
           <h1>{{ $t('quiz.player.quiz_over') }}</h1>
@@ -364,10 +346,9 @@ const answerStatus = ref('')
 const submittedGuesses = ref([])
 
 const changeLanguage = () => {
-  try { localStorage.setItem('userLanguage', locale.value) } catch { /* storage unavailable */ }
+  try { localStorage.setItem('userLanguage', locale.value) } catch {  }
 }
 
-// State machine
 const requestedBatchIndexes = new Set()
 const questionCacheVersion = ref(0)
 let cacheRunId = ''
@@ -381,13 +362,12 @@ const requestBatch = (batchIndex) => {
 
 const { state, transition, canTransition, currentQuestionIndex, score, streak, States } = useQuizStateMachine({ requestBatch })
 
-// Local state
 const nickname = ref(getUserName())
 const joined = ref(false)
 const connectionReady = ref(false)
-const selectedAnswer = ref(null) // For single choice
-const selectedIndices = ref([])  // For multi select
-const rangeValue = ref(50)      // For slider
+const selectedAnswer = ref(null)
+const selectedIndices = ref([])
+const rangeValue = ref(50)
 const hasSubmitted = ref(false)
 const isCorrect = ref(false)
 const currentPoints = ref(0)
@@ -408,20 +388,16 @@ const timeRemaining = ref(5)
 const explainTimeRemaining = ref(0)
 const numberValue = ref(null)
 
-// Correct Picture specific state
 const preselectedIndex = ref(0)
 const isSubmitting = ref(false)
-const hasPreselection = ref(true) // Default to first item selected effectively
+const hasPreselection = ref(true)
 
-// Wrong Pictures specific state
 const wpGuesses = ref([])
 const wrongPictureReview = ref(null)
 const activeMarkerIndex = ref(null)
 const wpOuterContainer = ref(null)
 const wpImageContainer = ref(null)
 const wpContainerRect = ref(null)
-// Image aspect ratio (W/H) used for aspect-corrected scoring. Radius and
-// tolerance are width-percentage points, so Y deltas are scaled by this.
 const wpAspectRatio = ref(1)
 
 let aspectLoadGeneration = 0
@@ -463,11 +439,9 @@ const refreshWrongPictureReview = (question) => {
 }
 
 const updateWpContainerRect = () => {
-    // Legacy - kept for safety if needed by other components, but MapCoordinatePicker handles its own rect
 }
 
 const updateGuessPosition = (index, pos) => {
-    // Legacy - MapCoordinatePicker emits whole array
 }
 
 const submitWrongPictures = () => {
@@ -485,10 +459,8 @@ const confirmSelection = () => {
     if (hasSubmitted.value || isSubmitting.value || !currentQuestion.value?.imageOptions?.length || !Number.isInteger(preselectedIndex.value) || preselectedIndex.value < 0 || preselectedIndex.value >= currentQuestion.value.imageOptions.length) return
     isSubmitting.value = true
 
-    // Simulate short delay for "working" feel or network
     confirmSelectionTimeout = setTimeout(() => {
         confirmSelectionTimeout = null
-        // Re-check: the flag may have flipped while the timeout was pending
         if (hasSubmitted.value) {
             isSubmitting.value = false
             return
@@ -499,8 +471,6 @@ const confirmSelection = () => {
 }
 
 const currentQuestion = computed(() => {
-    // QuestionCache is a plain class, so make cache mutations an explicit
-    // dependency for Vue's computed value.
     questionCacheVersion.value
     return questionCache.get(currentQuestionIndex.value)
 })
@@ -542,14 +512,13 @@ const imageOptionUrls = computed(() => {
     }))
 })
 
-// Preload images for correct_picture questions during presenting phase
 const preloadImages = (question) => {
     if (question?.type !== 'correct_picture') return
     const imageUrls = question.imageOptions?.map(opt => getImageUrl(opt.imageId)) || []
     imageUrls.forEach(url => {
         if (url) {
             const img = new Image()
-            img.src = url  // Browser will cache this
+            img.src = url
         }
     })
 }
@@ -582,7 +551,6 @@ watch(currentQuestion, (question) => {
     preloadImages(question)
 })
 
-// Actions
 const joinLobby = () => {
     if (!nickname.value.trim()) return
     quizWS.connect(moduleId, nickname.value, false, false, eventId)
@@ -593,7 +561,6 @@ const handleAnswerClick = (idx) => {
     if (hasSubmitted.value) return
 
     if (isMultiSelect.value) {
-        // Toggle selection
         const i = selectedIndices.value.indexOf(idx)
         if (i > -1) {
             selectedIndices.value.splice(i, 1)
@@ -601,7 +568,6 @@ const handleAnswerClick = (idx) => {
             selectedIndices.value.push(idx)
         }
     } else {
-        // Submit immediately for single choice
         submitAnswer(idx)
     }
 }
@@ -623,15 +589,12 @@ const submitNumberAnswer = () => {
 }
 
 const submitAnswer = (answerData) => {
-    // Guard against double submission (e.g. pending confirmSelection timeout)
     if (hasSubmitted.value) return
-    // Guard against premature taps before the current question batch has arrived.
     if (!questionCache.get(currentQuestionIndex.value)) return
     hasSubmitted.value = true
-    clearInterval(timerInterval) // Stop the timer
+    clearInterval(timerInterval)
     transition(States.ANSWERED)
 
-    // Validate and score answer locally
     validateAndScore(answerData)
 }
 
@@ -644,7 +607,6 @@ let timerInterval
 let explainTimerInterval
 let confirmSelectionTimeout = null
 
-// Answer validation and scoring
 const validateAndScore = (answerData) => {
     const question = questionCache.get(currentQuestionIndex.value)
     if (!question) return
@@ -672,9 +634,6 @@ const validateAndScore = (answerData) => {
     })
 }
 
-// Timer logic from countdown - REMOVED as server handles transition now
-
-// Timer logic for question phase
 const startLocalTimer = (timeLimit, serverDeadline = 0, serverNow = 0) => {
     clearInterval(timerInterval)
     timeRemaining.value = timeLimit
@@ -689,10 +648,6 @@ const startLocalTimer = (timeLimit, serverDeadline = 0, serverNow = 0) => {
     }, 1000)
 }
 
-// On timeout, submit placed wrong-pictures pins instead of silently
-// discarding them. This scores locally, queues the signal for the host,
-// and moves to ANSWERED; with no placed pins (or other question types)
-// the previous end-of-question path is kept.
 const autoSubmitOnTimeout = () => {
     const question = questionCache.get(currentQuestionIndex.value)
     if (
@@ -703,8 +658,6 @@ const autoSubmitOnTimeout = () => {
         submitWrongPictures()
         return
     }
-    // A9: timing out without answering breaks the streak, otherwise the
-    // next correct answer would earn a bonus from a stale streak.
     streak.value = streakAfterTimeout({ hasSubmitted: hasSubmitted.value, streak: streak.value })
     transition(States.QUESTION_ENDED)
 }
@@ -721,16 +674,13 @@ const startExplainTimer = (timeLimit) => {
     }, 1000)
 }
 
-// WS & Logic
 onMounted(async () => {
     let hasOpenedOnce = false
 
-    // Auto-join if nickname exists
     if (nickname.value) {
         joinLobby()
     }
 
-    // Listen for WS updates
     quizWS.on('cmd:error', (payload) => {
         if (!['join_closed', 'join_failed', 'invalid_identity', 'upgrade_required'].includes(payload?.code)) return
         joinError.value = payload.message
@@ -793,15 +743,11 @@ onMounted(async () => {
 		currentQuestionIndex.value = nextIndex
 
         if (questionChanged && (newState === States.GET_READY || newState === States.QUESTION_PRESENTING || newState === States.QUESTION_ACTIVE)) {
-            // "Get Ready" / "Presenting" phase - Server drives transition now
 
-            // Update question index if provided
             if (payload.currentIndex !== undefined) {
                 currentQuestionIndex.value = payload.currentIndex
             }
 
-
-            // Reset for new question
             selectedAnswer.value = null
             selectedIndices.value = []
             const cachedQuestion = questionCache.get(currentQuestionIndex.value)
@@ -815,14 +761,12 @@ onMounted(async () => {
             isCorrect.value = false
             currentPoints.value = 0
 
-            // Correct Picture reset
             preselectedIndex.value = 0
             isSubmitting.value = false
             clearTimeout(confirmSelectionTimeout)
             confirmSelectionTimeout = null
             hasPreselection.value = true
 
-            // Wrong Pictures reset
             wpGuesses.value = []
             wrongPictureReview.value = null
             activeMarkerIndex.value = null
@@ -831,7 +775,6 @@ onMounted(async () => {
             const question = questionCache.get(currentQuestionIndex.value)
 
             if (question && question.type === 'wrong_pictures' && question.wrongPictureConfig) {
-                 // Start with empty guesses for new map-style picker
                  wpGuesses.value = []
                  setTimeout(updateWpContainerRect, 500)
             }
@@ -866,7 +809,6 @@ onMounted(async () => {
 
     quizWS.on('data:batch', (batch) => {
         const batchRunId = typeof batch.runId === 'string' ? batch.runId : ''
-        // Clear cache when a new quiz run begins (or batch 0 arrives without runId)
         if ((batchRunId && batchRunId !== cacheRunId) || (!batchRunId && batch.startIndex === 0)) {
             questionCache.clear()
             requestedBatchIndexes.clear()
@@ -906,7 +848,6 @@ onMounted(async () => {
 	})
 
     quizWS.on('sync:catchup', (payload) => {
-        // Handle reconnection catchup
         if (Number.isInteger(payload.currentQuestionIndex)) {
             currentQuestionIndex.value = payload.currentQuestionIndex
         }
@@ -916,7 +857,6 @@ onMounted(async () => {
         const missedQuestions = payload.missedQuestions || []
         if (missedQuestions.length > 0) {
             console.warn(`You missed ${missedQuestions.length} questions`)
-            // A9: missed questions are skipped questions — break the streak.
             streak.value = streakAfterCatchup({ missedCount: missedQuestions.length, streak: streak.value })
         } else if (typeof payload.streak === 'number') {
             streak.value = payload.streak
@@ -949,11 +889,9 @@ onMounted(async () => {
         const players = Object.values(playersMap)
         const myId = quizWS.userId
 
-        // Find current player in the session data
         const me = players.find(p => p.id === myId || p.nickname === nickname.value)
 
         if (me) {
-            // Update authoritative score and rank from server
             score.value = me.score
 
             const sorted = players.sort((a, b) => b.score - a.score)
@@ -988,8 +926,8 @@ onUnmounted(() => {
 .quiz-player-screen {
     width: 100vw;
     height: 100vh;
-    height: 100dvh; /* dynamic viewport height - accounts for mobile browser bars */
-    background-color: #46178F; /* Standard Kahoot-like purple */
+    height: 100dvh;
+    background-color: #46178F;
     color: white;
     display: flex;
     flex-direction: column;
@@ -1039,11 +977,10 @@ onUnmounted(() => {
     width: 100%;
     overflow: hidden;
     box-sizing: border-box;
-    min-height: 0; /* allows flex children to shrink below their content size */
-    padding-top: 56px; /* clear the language switcher (top: 10px + ~30px height + buffer) */
+    min-height: 0;
+    padding-top: 56px;
 }
 
-/* NAME ENTRY */
 .name-entry-container {
     justify-content: center;
     padding: 20px;
@@ -1089,7 +1026,6 @@ onUnmounted(() => {
 }
 .join-btn:disabled { opacity: 0.5; }
 
-/* LOBBY */
 .lobby-container {
     justify-content: center;
     text-align: center;
@@ -1130,17 +1066,15 @@ onUnmounted(() => {
     margin: 30px auto;
 }
 
-/* GET READY */
 .get-ready-container {
     justify-content: center;
-    background-color: #FF3B30; /* Red alert for ready */
+    background-color: #FF3B30;
 }
 .ready-content h1 { font-size: 2rem; margin-bottom: 20px; }
 .countdown { font-size: 5rem; font-weight: 900; }
 
-/* QUESTION */
 .question-container {
-    justify-content: flex-end; /* Buttons at bottom usually */
+    justify-content: flex-end;
     padding: 56px 16px max(env(safe-area-inset-bottom, 0px), 16px);
 }
 
@@ -1187,7 +1121,6 @@ onUnmounted(() => {
     overflow-y: auto;
 }
 
-/* ── Multi-select hint pill ─────────────────────────────────── */
 .multi-hint-pill {
     display: flex;
     align-items: center;
@@ -1213,7 +1146,6 @@ onUnmounted(() => {
     50%       { box-shadow: 0 0 10px 3px rgba(255, 214, 10, 0.25); }
 }
 
-/* ── Answer grid ────────────────────────────────────────────── */
 .answer-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1242,8 +1174,6 @@ onUnmounted(() => {
     position: relative;
 }
 
-/* ── Multi-select button style ──────────────────────────────── */
-/* Rounded + outlined feel — distinctly different from flat single-choice */
 .answer-btn.multi-btn {
     border-radius: 14px;
     border: 3px solid rgba(255, 255, 255, 0.35);
@@ -1258,7 +1188,6 @@ onUnmounted(() => {
     transform: translateY(-2px);
 }
 
-/* ── Checkbox corner indicator ──────────────────────────────── */
 .ms-checkbox {
     position: absolute;
     top: 10px;
@@ -1345,14 +1274,12 @@ onUnmounted(() => {
     font-weight: 900;
 }
 
-/* ANSWERED */
 .answered-container {
     justify-content: center;
     text-align: center;
     background-color: #0A84FF;
 }
 
-/* WRONG PICTURES RESULT REVIEW */
 .wrong-picture-review-container {
     align-items: stretch;
     padding-right: 0;
@@ -1360,7 +1287,6 @@ onUnmounted(() => {
     background: linear-gradient(160deg, #1d123f 0%, #27125a 52%, #140c2c 100%);
 }
 
-/* RESULT */
 .result-container {
     justify-content: center;
     align-items: center;
@@ -1487,14 +1413,13 @@ onUnmounted(() => {
     }
 }
 
-/* FINISHED */
 .finished-container {
     justify-content: center;
     text-align: center;
 }
 
 .final-rank-badge {
-    background: #FFD700; /* Gold */
+    background: #FFD700;
     color: black;
     width: 150px;
     height: 150px;
@@ -1528,7 +1453,6 @@ onUnmounted(() => {
     font-weight: bold;
 }
 
-/* PLAYER LEADERBOARD STATE */
 .player-leaderboard-container {
     justify-content: center;
     background: linear-gradient(135deg, #46178F, #2A0D5D);
@@ -1662,7 +1586,6 @@ onUnmounted(() => {
   padding: 56px 16px max(env(safe-area-inset-bottom, 0px), 16px);
 }
 
-/* CORRECT PICTURE STYLES */
 .correct-picture-container {
   display: flex;
   flex-direction: column;
@@ -1678,7 +1601,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: absolute; /* Float over the top */
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -1742,7 +1665,7 @@ onUnmounted(() => {
 }
 
 .submit-selection-btn {
-  background: rgba(58, 58, 60, 0.8); /* Semi-transparent base */
+  background: rgba(58, 58, 60, 0.8);
   backdrop-filter: blur(10px);
   color: #8E8E93;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1751,7 +1674,7 @@ onUnmounted(() => {
   font-size: 1.1rem;
   font-weight: 800;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  width: auto; /* Don't take full width */
+  width: auto;
   min-width: 200px;
   max-width: 300px;
   display: flex;
@@ -1835,11 +1758,10 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
-/* WRONG PICTURES STYLES */
 .wrong-pictures-container {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Full viewport height */
+  height: 100vh;
   width: 100%;
   justify-content: flex-start;
   background: #000;
@@ -1855,7 +1777,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Remove padding to maximize space */
   padding: 0;
 }
 
@@ -1869,13 +1790,12 @@ onUnmounted(() => {
 
 .wp-main-img {
   max-width: 100vw;
-  max-height: 65vh; /* leave room for header and footer */
+  max-height: 65vh;
   display: block;
   user-select: none;
   -webkit-user-drag: none;
 }
 
-/* NUMBER QUESTION STYLES */
 .number-container {
   display: flex;
   flex-direction: column;
@@ -1926,7 +1846,6 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-/* Hide number input spinners */
 .number-answer-input::-webkit-outer-spin-button,
 .number-answer-input::-webkit-inner-spin-button {
   -webkit-appearance: none;

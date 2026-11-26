@@ -17,7 +17,6 @@ var (
 	ErrHasAwards        = errors.New("activity has awards and cannot be deleted")
 )
 
-// translate keeps PostgreSQL-specific errors inside persistence code.
 func translate(err error) error {
 	if err == nil {
 		return nil

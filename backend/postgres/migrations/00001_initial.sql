@@ -1,4 +1,3 @@
--- +goose Up
 CREATE TABLE events (
     id uuid PRIMARY KEY,
     pin text NOT NULL UNIQUE,
@@ -290,6 +289,4 @@ CREATE TABLE auth_audit (
     at timestamptz NOT NULL
 );
 
--- +goose Down
--- Forward-only migrations: restore a matching backup instead of downgrading.
 SELECT 1 / 0;

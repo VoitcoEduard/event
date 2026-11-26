@@ -1,4 +1,3 @@
-// Package filestore persists uploaded media in a dedicated filesystem volume.
 package filestore
 
 import (
@@ -38,7 +37,6 @@ type Upload struct {
 	Width        int
 	Height       int
 	Data         []byte
-	// Kind is empty for event media, or "track"/"screensaver" for a library item.
 	Kind string
 	Name string
 }
@@ -134,8 +132,6 @@ func (s *Store) Save(ctx context.Context, in Upload) (Result, error) {
 		out.Screen = &postgres.ScreensaverRecord{ID: uuid.NewString(), Name: in.Name, MediaID: id, ThumbnailURL: "/media/" + id + "/file", CreatedAt: now, UpdatedAt: now}
 	}
 	if err = s.db.CreateMedia(ctx, out.Media, out.Screen, out.Track); err != nil {
-		// A failed commit can be ambiguous. Remove only when the database can
-		// confirm no metadata exists; otherwise reconciliation handles orphans.
 		checkCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		exists, checkErr := s.db.MediaStorageKeyExists(checkCtx, id)
 		cancel()
@@ -166,8 +162,6 @@ func (s *Store) DeleteLibrary(ctx context.Context, kind, id string) (string, err
 	return s.db.DeleteLibraryMedia(ctx, kind, id)
 }
 
-// Reconcile retries committed deletions and removes unreferenced files after a
-// grace period, allowing interrupted writes and uncertain commits to settle.
 func (s *Store) Reconcile(ctx context.Context, now time.Time) error {
 	pending, err := s.db.PendingMediaDeletion(ctx)
 	if err != nil {
@@ -243,5 +237,4 @@ func (s *Store) OpenFile(ctx context.Context, id string) (postgres.MediaRecord, 
 	return m, f, err
 }
 
-// DrainAndClose is useful when a client disconnects while receiving media.
 func DrainAndClose(r io.ReadCloser) { _, _ = io.Copy(io.Discard, r); _ = r.Close() }

@@ -12,7 +12,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// SaveQuizResult uses a caller-supplied stable run ID to make retries idempotent.
 func (s *Store) SaveQuizResult(ctx context.Context, runID string, result *models.QuizResult) error {
 	if _, err := uuid.Parse(runID); err != nil {
 		return errors.New("valid run ID required")
@@ -149,8 +148,6 @@ func (s *Store) LatestQuizResults(ctx context.Context, eventID string) ([]models
 	return s.queryRuns(ctx, `SELECT DISTINCT ON (r.module_id) r.id::text,r.event_id::text,r.module_id::text,r.finished_at,r.player_signals FROM quiz_runs r JOIN modules m ON m.event_id=r.event_id AND m.id=r.module_id WHERE r.event_id=$1 AND m.type IN ('quiz','wrong_pictures') ORDER BY r.module_id,r.finished_at DESC,r.sequence DESC`, eventID)
 }
 
-// PublishedSimpleQuizResults returns only the current published snapshot of each
-// Simple Quiz. Working grades are deliberately excluded from event totals.
 func (s *Store) PublishedSimpleQuizResults(ctx context.Context, eventID string) ([]models.QuizResult, error) {
 	linked := map[string]map[string]string{}
 	playerRows, err := s.Pool.Query(ctx, `SELECT p.module_id::text,p.id,p.data->>'participantId' FROM simple_quiz_players p JOIN simple_quiz_sessions q ON q.module_id=p.module_id WHERE q.event_id=$1`, eventID)

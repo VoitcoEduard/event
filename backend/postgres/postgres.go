@@ -1,4 +1,3 @@
-// Package postgres owns PostgreSQL connection and schema management.
 package postgres
 
 import (
@@ -24,7 +23,6 @@ var migrationFiles embed.FS
 const schemaVersion int64 = 2
 const migrationLockID int64 = 0x70676d6967726174
 
-// Store owns the connection pool. Construct one per application and close it at shutdown.
 type Store struct {
 	Pool *pgxpool.Pool
 	url  string
@@ -100,8 +98,6 @@ func (s *Store) provider() (*goose.Provider, error) {
 	return provider, nil
 }
 
-// Migrate serializes version-table initialization as well as Goose's own locked
-// migration execution. The outer lock uses a separate key from Goose's lock.
 func (s *Store) Migrate(ctx context.Context) error {
 	conn, err := s.Pool.Acquire(ctx)
 	if err != nil {
@@ -144,7 +140,6 @@ func (s *Store) Migrate(ctx context.Context) error {
 	return nil
 }
 
-// Ready checks the live connection and the exact schema version, without modifying it.
 func (s *Store) Ready(ctx context.Context) error {
 	if err := s.Pool.Ping(ctx); err != nil {
 		return fmt.Errorf("database unavailable: %w", err)

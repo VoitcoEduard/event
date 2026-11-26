@@ -76,20 +76,17 @@ describe('FormModule "Other" answers, validation, and checkbox selection mode', 
     await flushPromises()
 
     const options = wrapper.findAll('.radio-option')
-    await options[1].trigger('click') // "Other"
+    await options[1].trigger('click')
 
-    // Empty custom text should fail validation
     await wrapper.find('.next-button').trigger('click')
     expect(toastMock.info).toHaveBeenCalledWith('form_module.validation.specify_other')
     expect(fetchMock).not.toHaveBeenCalled()
 
-    // Whitespace-only custom text should also fail validation
     await wrapper.find('.other-input').setValue('   ')
     await wrapper.find('.next-button').trigger('click')
     expect(toastMock.info).toHaveBeenCalledTimes(2)
     expect(fetchMock).not.toHaveBeenCalled()
 
-    // Typing custom text allows submission and resolves __other__
     await wrapper.find('.other-input').setValue('  Teal  ')
     await wrapper.find('.next-button').trigger('click')
     await flushPromises()
@@ -153,15 +150,15 @@ describe('FormModule "Other" answers, validation, and checkbox selection mode', 
     await flushPromises()
 
     const options = wrapper.findAll('.checkbox-option')
-    await options[0].trigger('click') // Alpha
+    await options[0].trigger('click')
     expect(wrapper.findAll('.selection-indicator.selected')).toHaveLength(1)
 
-    await options[1].trigger('click') // Beta replaces Alpha
+    await options[1].trigger('click')
     expect(wrapper.findAll('.selection-indicator.selected')).toHaveLength(1)
     expect(options[0].find('.selection-indicator').classes()).not.toContain('selected')
     expect(options[1].find('.selection-indicator').classes()).toContain('selected')
 
-    await options[2].trigger('click') // Other replaces Beta
+    await options[2].trigger('click')
     expect(wrapper.findAll('.selection-indicator.selected')).toHaveLength(1)
     expect(options[1].find('.selection-indicator').classes()).not.toContain('selected')
     expect(options[2].find('.selection-indicator').classes()).toContain('selected')
@@ -195,9 +192,9 @@ describe('FormModule "Other" answers, validation, and checkbox selection mode', 
     await flushPromises()
 
     const options = wrapper.findAll('.checkbox-option')
-    await options[0].trigger('click') // Alpha
-    await options[1].trigger('click') // Beta
-    await options[2].trigger('click') // Other
+    await options[0].trigger('click')
+    await options[1].trigger('click')
+    await options[2].trigger('click')
     expect(wrapper.findAll('.selection-indicator.selected')).toHaveLength(3)
 
     await wrapper.find('.other-input').setValue('Delta')

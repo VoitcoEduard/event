@@ -29,8 +29,6 @@ type TeamsActivityStore interface {
 }
 type TeamsActivityService struct{ Store TeamsActivityStore }
 
-// Every operation rereads and revalidates against the roster which it commits.
-// Retrying never uses an old recipient snapshot or stale capacity check.
 func (s *TeamsActivityService) Mutate(ctx context.Context, eventID, moduleID string, fn func(*models.TeamsActivity) error) (*models.TeamsActivity, error) {
 	for attempt := 0; attempt < 24; attempt++ {
 		a, err := s.Store.Get(ctx, eventID, moduleID)
@@ -391,8 +389,6 @@ func WholeTeamsPoints(points *float64) (int, error) {
 	return int(*points), nil
 }
 
-// A deletion tombstone uses the same CAS boundary as awards, so a first award
-// and deletion cannot both succeed. Uninitialized modules also get a tombstone.
 func GuardTeamsModuleDeletion(ctx context.Context, store TeamsActivityStore, eventID, moduleID string) error {
 	for i := 0; i < 24; i++ {
 		a, err := store.Get(ctx, eventID, moduleID)

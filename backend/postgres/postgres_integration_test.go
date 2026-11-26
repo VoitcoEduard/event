@@ -48,7 +48,6 @@ func startDB(t *testing.T) (context.Context, *postgres.Store) {
 
 func TestMigrationsAndConstraints(t *testing.T) {
 	ctx, store := startDB(t)
-	// Independent calls exercise initialization of the version table and migration locking.
 	var wg sync.WaitGroup
 	errs := make(chan error, 4)
 	for i := 0; i < cap(errs); i++ {
@@ -306,7 +305,6 @@ func TestMigrationsAndConstraints(t *testing.T) {
 		t.Fatalf("failed upload left files: %v %v", filesLeft, err)
 	}
 
-	// Unsupported future versions must not be accepted as ready or migrated over.
 	if _, err := store.Pool.Exec(ctx, `INSERT INTO goose_db_version(version_id,is_applied) VALUES (99,true)`); err != nil {
 		t.Fatal(err)
 	}

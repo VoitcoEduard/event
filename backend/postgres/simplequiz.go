@@ -10,8 +10,6 @@ import (
 	"github.com/user/go-expo-sample/backend/models"
 )
 
-// simpleQuizMetadata excludes frequently changing collections so submissions
-// update one answer row rather than rewriting the full session history.
 func simpleQuizMetadata(s *models.SimpleQuizSession) ([]byte, error) {
 	v := *s
 	v.Players = nil
@@ -20,9 +18,6 @@ func simpleQuizMetadata(s *models.SimpleQuizSession) ([]byte, error) {
 	return json.Marshal(&v)
 }
 
-// SaveSimpleQuiz saves a single in-memory transition transactionally. Callers
-// must serialize transitions per module and publish the new snapshot only after
-// this function succeeds. A nil previous snapshot starts a fresh session.
 func (s *Store) SaveSimpleQuiz(ctx context.Context, previous, next *models.SimpleQuizSession) error {
 	metadata, err := simpleQuizMetadata(next)
 	if err != nil {
@@ -216,7 +211,6 @@ func (s *Store) DeleteSimpleQuiz(ctx context.Context, moduleID string) error {
 	return translate(err)
 }
 
-// PauseRestoredSimpleQuiz persists the pause before allowing clients to resume.
 func (s *Store) PauseRestoredSimpleQuiz(ctx context.Context, old *models.SimpleQuizSession) (*models.SimpleQuizSession, error) {
 	if old.Status != models.SimpleQuizStateQuestionOpen {
 		return old, nil

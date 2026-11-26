@@ -32,11 +32,9 @@ const ZOOM_STEPS = [1, 5]
 const translateX = ref(0)
 const translateY = ref(0)
 
-// Touch state
 const initialDistance = ref(0)
 const initialScale = ref(1)
 
-// Pan state
 const isDragging = ref(false)
 const lastClientX = ref(0)
 const lastClientY = ref(0)
@@ -61,8 +59,6 @@ const clampTranslation = (tx, ty) => {
   const V = w * scale.value
   const Vh = h * scale.value
   
-  // Math.max ensures that if the scaled dimension is smaller than the container,
-  // it doesn't allow panning in that direction (keeps it centered).
   const boundX = Math.max(0, (V - C) / 2)
   const boundY = Math.max(0, (Vh - H) / 2)
   
@@ -92,7 +88,6 @@ const handleTouchStart = (e) => {
     initialScale.value = scale.value
     isDragging.value = false
   } else if (e.touches.length === 1 && scale.value > 1) {
-    // Start panning if zoomed in
     isDragging.value = true
     lastClientX.value = e.touches[0].clientX
     lastClientY.value = e.touches[0].clientY
@@ -101,17 +96,16 @@ const handleTouchStart = (e) => {
 
 const handleTouchMove = (e) => {
   if (e.touches.length === 2) {
-    e.preventDefault() // prevent standard pinch zoom
+    e.preventDefault()
     const newDistance = getDistance(e.touches)
     const ratio = newDistance / initialDistance.value
-    // Pinch out to 5x, pinch in to 1x
     if (ratio > 1.5 && scale.value === 1) {
       setZoomStep(5)
     } else if (ratio < 0.7 && scale.value === 5) {
       setZoomStep(1)
     }
   } else if (e.touches.length === 1 && isDragging.value && scale.value > 1) {
-    e.preventDefault() // prevent scrolling
+    e.preventDefault()
     const deltaX = e.touches[0].clientX - lastClientX.value
     const deltaY = e.touches[0].clientY - lastClientY.value
     
@@ -129,10 +123,8 @@ const handleTouchEnd = (e) => {
   isDragging.value = false
 }
 
-// Mouse wheel zoom - toggles between 1x and 5x
 const handleWheel = (e) => {
   e.preventDefault()
-  // Toggle between 1x and 5x
   if (scale.value === 1) {
     setZoomStep(5)
   } else {
@@ -140,7 +132,6 @@ const handleWheel = (e) => {
   }
 }
 
-// Mouse panning
 const handleMouseDown = (e) => {
   if (scale.value > 1) {
     e.preventDefault()
@@ -177,7 +168,7 @@ const handleMouseUp = () => {
   height: 100%;
   overflow: hidden;
   position: relative;
-  touch-action: none; /* disables browser panning/zooming */
+  touch-action: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,6 +177,6 @@ const handleMouseUp = () => {
 .transform-wrapper {
   transition: transform 0.1s cubic-bezier(0.2, 0, 0.2, 1);
   will-change: transform;
-  display: inline-block; /* tight wrap around content */
+  display: inline-block;
 }
 </style>

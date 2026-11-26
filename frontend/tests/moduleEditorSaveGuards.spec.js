@@ -123,7 +123,6 @@ describe('AdminModuleEditorScreen save guards (H2, M4)', () => {
     })
     await flushPromises()
 
-    // Make the editor dirty, then start a save that hangs.
     await wrapper.find('#module-editor-name').setValue('Renamed Quiz')
     expect(wrapper.find('.dirty-dot').exists()).toBe(true)
 
@@ -131,18 +130,14 @@ describe('AdminModuleEditorScreen save guards (H2, M4)', () => {
     await flushPromises()
     expect(wrapper.find('.save-primary-btn').attributes('disabled')).toBeDefined()
 
-    // Edit another question while the save request is still in flight.
     await wrapper.find('.main-input').setValue('Capital of Romania?')
 
     resolveModPut()
     await flushPromises()
 
-    // The in-flight edit must survive: the editor stays dirty and the save
-    // button is re-enabled.
     expect(wrapper.find('.dirty-dot').exists()).toBe(true)
     expect(wrapper.find('.save-primary-btn').attributes('disabled')).toBeUndefined()
 
-    // What was sent matches the state at save time, not the later edit.
     const modPutCall = fetchMock.mock.calls.find(([u, o]) => u === '/events/evt-1/modules/mod-1' && o?.method === 'PUT')
     const body = JSON.parse(modPutCall[1].body)
     expect(body.name).toBe('Renamed Quiz')
@@ -189,8 +184,6 @@ describe('AdminModuleEditorScreen save guards (H2, M4)', () => {
     await wrapper.find('.save-primary-btn').trigger('click')
     await flushPromises()
 
-    // Navigate to another module while the first module's save is in flight.
-    // Confirm the dirty guard prompt (Leave), then resolve the pending save.
     track(mount(AppDialogHost, { attachTo: document.body, global: { plugins: [i18n] } }))
     const nav = router.push('/admin/events/evt-1/modules/mod-2/edit')
     await flushPromises()
@@ -202,7 +195,6 @@ describe('AdminModuleEditorScreen save guards (H2, M4)', () => {
     resolveModPut()
     await flushPromises()
 
-    // The second module's name must not be overwritten by the first save.
     expect(wrapper.find('#module-editor-name').element.value).toBe('Second Module')
   })
 
@@ -236,7 +228,6 @@ describe('AdminModuleEditorScreen save guards (H2, M4)', () => {
     })
     await flushPromises()
 
-    // The select must not silently show "None" for the persisted selection.
     await wrapper.find('.settings-collapse-trigger').trigger('click')
     const select = wrapper.find('#quiz-bg-music')
     expect(select.exists()).toBe(true)
@@ -302,11 +293,9 @@ describe('Unsaved-changes-aware sign-out (M6)', () => {
     await wrapper.find('.admin-signout-btn').trigger('click')
     await flushPromises()
 
-    // The confirm dialog is shown; /auth/logout has NOT been called yet.
     expect(document.body.querySelector('.app-dialog')).not.toBeNull()
     expect(fetchMock.mock.calls.some(([u]) => u === '/auth/logout')).toBe(false)
 
-    // Stay: the session stays intact and the user stays on the page.
     document.body.querySelector('.app-dialog-btn--secondary').click()
     await flushPromises()
     expect(fetchMock.mock.calls.some(([u]) => u === '/auth/logout')).toBe(false)
@@ -328,7 +317,6 @@ describe('Unsaved-changes-aware sign-out (M6)', () => {
 
     expect(fetchMock.mock.calls.some(([u]) => u === '/auth/logout')).toBe(true)
     expect(router.currentRoute.value.path).toBe('/login')
-    // No second dialog from the route leave guard.
     expect(document.body.querySelector('.app-dialog')).toBeNull()
   })
 
@@ -338,8 +326,6 @@ describe('Unsaved-changes-aware sign-out (M6)', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const wrapper = mountShell(router)
-    // Note: the shell's embedded DirtyComponent is a guard, but it is swapped
-    // for a clean one in this test via the CleanShell variant.
     const cleanShell = track(mount(defineComponent({
       components: { AdminLayout, AppDialogHost },
       template: '<AdminLayout><div /></AdminLayout><AppDialogHost />'
@@ -354,7 +340,6 @@ describe('Unsaved-changes-aware sign-out (M6)', () => {
     expect(fetchMock.mock.calls.some(([u]) => u === '/auth/logout')).toBe(true)
     expect(document.body.querySelector('.app-dialog')).toBeNull()
 
-    // Bypassed navigation must not re-prompt a dirty routed editor.
     const DirtyRoute = defineComponent({
       setup() {
         useUnsavedChanges(ref(true))

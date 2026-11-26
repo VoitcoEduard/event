@@ -612,7 +612,6 @@ defineExpose({
   background: #4A4A4C;
 }
 
-/* Switch Styles */
 .switch.small {
   position: relative;
   display: inline-block;
