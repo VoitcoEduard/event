@@ -2,6 +2,17 @@
   <div class="quiz-host-screen simple-quiz-host-screen">
     <div class="bg-layer"></div>
 
+    <div class="host-topbar">
+      <div class="host-topbar-left">
+        <a :href="backToEventUrl" class="host-back-link" @click="goBackToEvent">
+          <AppIcon name="arrowLeft" :size="16" aria-hidden="true" />
+          <span>{{ $t('host.back_to_event') }}</span>
+        </a>
+        <span v-if="hostContextLabel" class="host-topbar-context">{{ hostContextLabel }}</span>
+      </div>
+      <AdminThemeToggle variant="inline" />
+    </div>
+
     <div v-if="stateStatus === 'inactive' || !launched || stateStatus === 'lobby'" class="state-container lobby-container">
       <div class="lobby-header">
         <h1 class="game-title">{{ $t('simple_quiz.host.join_title') }}</h1>
@@ -59,7 +70,7 @@
               <span>Q{{ p.questionIndex + 1 }}</span>
               <span>{{ p.received }} / {{ p.graded }} <AppIcon name="check" :size="14" aria-hidden="true" /> / {{ p.reviewLater }}…</span>
             </div>
-            <p v-if="gradingComplete"><AppIcon name="check" :size="16" aria-hidden="true" /> {{ $t('simple_quiz.host.waiting_grading') }} ready</p>
+            <p v-if="gradingComplete"><AppIcon name="check" :size="16" aria-hidden="true" /> {{ $t('simple_quiz.host.grading_ready') }}</p>
             <p v-else>{{ $t('simple_quiz.host.waiting_grading') }}</p>
           </div>
           <div v-if="leaderboard.length" class="grading-card">
@@ -69,11 +80,11 @@
             </div>
           </div>
 		  <div v-if="playerList.length && participantOptions.length" class="grading-card">
-			<h4>Event identities</h4>
+			<h4>{{ $t('simple_quiz.host.event_identities') }}</h4>
 			<div v-for="p in playerList" :key="p.playerId" class="prog-row">
 				<span>{{ p.nickname }}</span>
-				<select :value="p.participantId || ''" :aria-label="`Link ${p.nickname} to an event participant`" @change="linkPlayer(p.playerId, $event)">
-					<option value="">Separate score row</option>
+				<select :value="p.participantId || ''" :aria-label="$t('simple_quiz.host.link_participant_aria', { name: p.nickname })" @change="linkPlayer(p.playerId, $event)">
+					<option value="">{{ $t('simple_quiz.host.separate_score_row') }}</option>
 					<option v-for="person in participantOptions" :key="person.id" :value="person.id">{{ person.displayName }} ({{ person.id }})</option>
 				</select>
 			</div>
@@ -101,20 +112,42 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import * as vueRouter from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppIcon from '../components/AppIcon.vue'
+import AdminThemeToggle from '../components/AdminThemeToggle.vue'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { simpleQuizApi } from '../services/simpleQuiz'
 import { getImageUrl } from '../services/media'
 import { useToast } from '../composables/useToast'
+import { useDialog } from '../composables/useDialog'
 
-const route = useRoute()
+const props = defineProps({
+  eventName: { type: String, default: '' },
+  moduleName: { type: String, default: '' }
+})
+
+const route = vueRouter.useRoute()
+let router = null
+try {
+  router = typeof vueRouter.useRouter === 'function' ? vueRouter.useRouter() : null
+} catch {
+  router = null
+}
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
+const backToEventUrl = `/admin/events/${eventId}`
+const hostContextLabel = computed(() => [props.eventName, props.moduleName].filter(Boolean).join(' / '))
+const goBackToEvent = (event) => {
+  if (router) {
+    event?.preventDefault?.()
+    router.push(backToEventUrl)
+  }
+}
 const { t } = useI18n()
 const { success } = useToast()
+const { confirm: confirmDialog } = useDialog()
 
 const launched = ref(false)
 const stateStatus = ref('inactive')
@@ -191,9 +224,19 @@ const refresh = async () => {
   }
 }
 
-const wrap = (fn, confirmMsg = '') => async () => {
+const wrap = (fn, confirmOpts = null) => async () => {
   if (actionBusy.value) return
-  if (confirmMsg && !confirm(confirmMsg)) return
+  if (confirmOpts) {
+    const opts = typeof confirmOpts === 'string' ? { message: confirmOpts } : confirmOpts
+    const confirmed = await confirmDialog({
+      title: opts.title || t('dialog.confirm_title'),
+      message: opts.message,
+      confirmLabel: opts.confirmLabel || t('dialog.confirm'),
+      cancelLabel: t('dialog.cancel'),
+      destructive: opts.destructive ?? true
+    })
+    if (!confirmed) return
+  }
   actionBusy.value = true
   try {
     error.value = ''
@@ -216,8 +259,18 @@ const doOpen = wrap(() => simpleQuizApi.open(eventId, moduleId))
 const doLock = wrap(() => simpleQuizApi.lock(eventId, moduleId))
 const doNext = wrap(() => simpleQuizApi.next(eventId, moduleId))
 const doReveal = wrap(() => simpleQuizApi.reveal(eventId, moduleId))
-const doEnd = wrap(() => simpleQuizApi.endAnswering(eventId, moduleId), t('simple_quiz.host.confirm_end'))
-const doPublish = wrap(() => simpleQuizApi.publish(eventId, moduleId), t('simple_quiz.host.confirm_publish'))
+const doEnd = wrap(() => simpleQuizApi.endAnswering(eventId, moduleId), {
+  title: t('simple_quiz.host.end_answering'),
+  message: t('simple_quiz.host.confirm_end'),
+  confirmLabel: t('simple_quiz.host.end_answering'),
+  destructive: true
+})
+const doPublish = wrap(() => simpleQuizApi.publish(eventId, moduleId), {
+  title: t('simple_quiz.host.publish'),
+  message: t('simple_quiz.host.confirm_publish'),
+  confirmLabel: t('simple_quiz.host.publish'),
+  destructive: false
+})
 const doUpdate = wrap(() => simpleQuizApi.updatePublished(eventId, moduleId))
 const doComplete = wrap(() => simpleQuizApi.complete(eventId, moduleId))
 const doResume = wrap(() => simpleQuizApi.resume(eventId, moduleId))

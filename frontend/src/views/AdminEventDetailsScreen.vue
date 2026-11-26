@@ -1,351 +1,277 @@
 <template>
-  <div ref="screenRef" class="admin-details-screen">
-    <header class="header">
-      <div class="header-content">
-        <div class="header-top">
-          <button type="button" class="nav-button back-btn" @click="goBack">
-            {{ $t('admin.details.back_btn') }}
-          </button>
-          <div class="language-switcher">
-            <select
-              v-model="$i18n.locale"
-              :aria-label="$t('library.language_label')"
-              @change="changeLanguage"
-            >
-              <option value="en">English</option>
-              <option value="ru">Русский</option>
-              <option value="ro">Română</option>
-            </select>
-          </div>
-        </div>
-        <div class="header-main">
-          <div class="event-info">
-            <h1 class="event-title">{{ currentEvent?.name }}</h1>
-            <span class="event-status" :class="currentEvent?.isActive ? 'active' : 'inactive'">
-              {{ currentEvent?.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
-            </span>
-          </div>
-          <div class="header-right">
-            <button type="button" class="nav-button screen-manager-btn" :disabled="!currentEvent" @click="goToScreenManager">
-              {{ $t('admin.details.screen_manager') }}
-            </button>
-            <button
-              type="button"
-              class="nav-button copy-link-btn"
-              :disabled="!currentEvent"
-              @click="copyProjectorLink"
-              :title="$t('quiz.host.copy_link')"
-              :aria-label="$t('quiz.host.copy_link')"
-            >
-              <AppIcon name="link" :size="18" aria-hidden="true" />
-              <span class="copy-link-label">{{ copyProjectorLabel }}</span>
-            </button>
-            <button type="button" class="nav-button library-btn" @click="goToLibrary">
-              {{ $t('admin.details.library_btn') }}
-            </button>
-            <button type="button" class="nav-button data-btn" :disabled="!currentEvent" @click="goToDataView">
-              {{ $t('common.data_btn') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main class="scroll-content">
-      <div v-if="!currentEvent && isLoadingEvent" class="card event-state-card">
-        <p class="card-title">{{ $t('admin.loading_events') }}</p>
-      </div>
-      <div v-else-if="!currentEvent && eventLoadError" class="card event-state-card">
-        <p class="card-title">{{ eventLoadError }}</p>
-        <div class="state-actions">
-          <button type="button" class="nav-button library-btn" @click="fetchEventDetails()">
-            Retry
-          </button>
-          <button type="button" class="nav-button back-btn" @click="goBack">
-            {{ $t('admin.details.back_btn') }}
-          </button>
-        </div>
-      </div>
-      <template v-else>
-      <div class="card event-sidebar">
-        <div class="card-header">
-          <div class="card-header-text">
-            <p class="card-title">{{ $t('admin.details.overview') }}</p>
-            <p class="card-description">{{ $t('admin.details.overview_desc') }}</p>
-          </div>
-          <span class="status-badge" :class="currentEvent?.isActive ? 'active' : 'inactive'">
-            {{ currentEvent?.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
-          </span>
-        </div>
-
-        <div class="sidebar-content">
-          <div class="info-group">
-            <p class="label">{{ $t('admin.details.description') }}</p>
-            <p class="value">{{ currentEvent?.description }}</p>
-          </div>
-
-          <div class="info-group">
-            <p class="label">{{ $t('admin.details.pin_code') }}</p>
-            <div class="pin-display">
-              <span class="pin-text">{{ currentEvent?.pin || currentEvent?.id }}</span>
-            </div>
-          </div>
-
-          <div class="info-group">
-            <p class="label">{{ $t('admin.details.share_access') }}</p>
-            <div class="qr-wrapper">
-              <QRCodeVue :value="qrCodeValue" :size="120" level="H" />
-            </div>
-            <button type="button" class="copy-btn" @click="copyLink">
-              {{ $t('admin.details.copy_link') }}
-            </button>
-          </div>
-
-          <div class="control-group">
-            <p class="section-label">{{ $t('admin.details.controls') }}</p>
-            <button
-              type="button"
-              class="action-button"
-              :class="currentEvent?.isActive ? 'stop-button' : 'start-button'"
-              @click="toggleStatus"
-            >
-              {{ currentEvent?.isActive ? $t('admin.details.stop_event') : $t('admin.details.start_event') }}
-            </button>
-            <p class="control-hint">
-              {{ currentEvent?.isActive 
-                ? $t('admin.details.live_hint') 
-                : $t('admin.details.stopped_hint') }}
-            </p>
-          </div>
-
-          </div>
-        </div>
-
-      <div class="card modules-card">
-        <div class="card-header">
-          <p class="card-title">{{ $t('admin.details.modules') }}</p>
-          <button type="button" class="add-button" @click="openModuleModal($event)">
-            {{ $t('admin.details.add_module') }}
-          </button>
-        </div>
-        <p class="card-description">{{ $t('admin.details.modules_desc') }}</p>
-
-        <div v-if="currentEvent?.modules && currentEvent.modules.length > 0" class="modules-list">
-          <div v-for="(module, index) in currentEvent.modules" :key="module.id ?? index" class="module-item">
-            <div class="module-info">
-              <p class="module-name">{{ module.name }}</p>
-              <p class="module-type">{{ module.type.toUpperCase() }}</p>
-              <span 
-                class="module-status-badge"
-                :class="{
-                  'status-active': module.isActive,
-                  'status-inactive': !module.isActive
-                }"
+  <AdminLayout :breadcrumbs="breadcrumbs">
+    <div ref="screenRef" class="admin-details-screen">
+      <header class="event-header">
+        <div class="header-content">
+          <div class="header-main">
+            <div class="event-info">
+              <h1 class="event-title">{{ currentEvent?.name }}</h1>
+              <span
+                v-if="currentEvent"
+                class="event-status"
+                :class="currentEvent.isActive ? 'active' : 'inactive'"
               >
-                {{ module.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
+                {{ currentEvent.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
               </span>
             </div>
-                        <div class="module-actions">
-                          <button
-                            type="button"
-                            class="module-btn config-btn"
-                            :data-config-module-id="module.id"
-                            @click="configureModule(module, $event)"
-                          >
-                            {{ $t('admin.details.configure') }}
-                          </button>
-                          <button
-                            v-if="module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz' || module.type === 'teams'"
-                            type="button"
-                            class="module-btn host-btn"
-                            @click="hostQuiz(module)"
-                          >
-                            {{ $t('admin.details.admin') }}
-                          </button>
-                          
-                          <button
-                            type="button"
-                            class="module-btn"
-                            :class="module.isActive ? 'stop-button' : 'start-button'"
-                            @click="toggleModuleStatus(module)"
-                          >
-                            {{ module.isActive ? $t('admin.details.stop') : $t('admin.details.start') }}
-                          </button>
-                          <button
-                            type="button"
-                            class="module-btn delete-btn"
-                            @click="deleteModule(module)"
-                          >
-                            {{ $t('admin.details.delete') }}
-                          </button>
-                        </div>
-                      </div>
+
+            <nav class="event-subnav" :aria-label="$t('event_details.nav_label')">
+              <span class="nav-button subnav-tab is-current" aria-current="page">
+                {{ $t('event_details.tab_modules') }}
+              </span>
+              <button
+                type="button"
+                class="nav-button screen-manager-btn"
+                :disabled="!currentEvent"
+                @click="goToScreenManager"
+              >
+                {{ $t('event_details.tab_slides') }}
+              </button>
+              <button
+                type="button"
+                class="nav-button data-btn"
+                :disabled="!currentEvent"
+                @click="goToDataView"
+              >
+                {{ $t('event_details.tab_data') }}
+              </button>
+              <button
+                type="button"
+                class="nav-button copy-link-btn"
+                :disabled="!currentEvent"
+                :title="$t('event_details.copy_projector_link')"
+                :aria-label="$t('event_details.copy_projector_link')"
+                @click="copyProjectorLink"
+              >
+                <AppIcon name="link" :size="16" aria-hidden="true" />
+                <span class="copy-link-label">{{ $t('event_details.copy_projector_link') }}</span>
+              </button>
+              <button
+                type="button"
+                class="nav-button library-btn"
+                @click="goToLibrary"
+              >
+                {{ $t('event_details.tab_library') }}
+              </button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      <main class="scroll-content">
+        <div v-if="!currentEvent && isLoadingEvent" class="card event-state-card">
+          <p class="card-title">{{ $t('admin.loading_events') }}</p>
+        </div>
+        <div v-else-if="!currentEvent && eventLoadError" class="card event-state-card">
+          <p class="card-title">{{ eventLoadError }}</p>
+          <div class="state-actions">
+            <button type="button" class="nav-button library-btn" @click="fetchEventDetails()">
+              {{ $t('event_details.retry') }}
+            </button>
+            <button type="button" class="nav-button back-btn" @click="goBack">
+              {{ $t('admin_shell.events') }}
+            </button>
+          </div>
         </div>
 
-        <div v-else class="empty-modules">
-          <p class="empty-modules-text">{{ $t('admin.details.no_modules') }}</p>
-        </div>
-      </div>
-      </template>
-    </main>
+        <template v-else>
+          <aside class="card event-sidebar">
+            <div class="card-header overview-desktop-header">
+              <div class="card-header-text">
+                <p class="card-title">{{ $t('admin.details.overview') }}</p>
+                <p class="card-description">{{ $t('admin.details.overview_desc') }}</p>
+              </div>
+              <span class="status-badge" :class="currentEvent?.isActive ? 'active' : 'inactive'">
+                {{ currentEvent?.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
+              </span>
+            </div>
 
-    <FormModuleConfig
-      v-if="showConfigModal && selectedModule?.type === 'form'"
-      :visible="showConfigModal && selectedModule?.type === 'form'"
-      :module="selectedModule"
-      :event-id="currentEvent?.id"
-      @close="closeConfigModal"
-      @update="fetchEventDetails"
-    />
+            <div class="sidebar-content">
+              <div class="overview-primary-strip">
+                <div class="info-group pin-group">
+                  <p class="label">{{ $t('admin.details.pin_code') }}</p>
+                  <div class="pin-display">
+                    <span class="pin-text">{{ currentEvent?.pin || currentEvent?.id }}</span>
+                  </div>
+                </div>
 
-    <QuizModuleConfig
-      v-if="showConfigModal && selectedModule?.type === 'quiz'"
-      :visible="showConfigModal && selectedModule?.type === 'quiz'"
-      :module="selectedModule"
-      :event-id="currentEvent?.id"
-      @close="closeConfigModal"
-      @update="fetchEventDetails"
-    />
+                <div class="control-group">
+                  <p class="section-label">{{ $t('admin.details.controls') }}</p>
+                  <button
+                    type="button"
+                    class="action-button"
+                    :class="currentEvent?.isActive ? 'stop-button' : 'start-button'"
+                    :disabled="isTogglingStatus"
+                    @click="toggleStatus"
+                  >
+                    {{ currentEvent?.isActive ? $t('admin.details.stop_event') : $t('admin.details.start_event') }}
+                  </button>
+                  <p class="control-hint">
+                    {{ currentEvent?.isActive
+                      ? $t('admin.details.live_hint')
+                      : $t('admin.details.stopped_hint') }}
+                  </p>
+                </div>
 
-    <WrongPicturesModuleConfig
-      v-if="showConfigModal && selectedModule?.type === 'wrong_pictures'"
-      :visible="showConfigModal && selectedModule?.type === 'wrong_pictures'"
-      :module="selectedModule"
-      :event-id="currentEvent?.id"
-      @close="closeConfigModal"
-      @update="fetchEventDetails"
-    />
+                <button
+                  type="button"
+                  class="share-drawer-toggle"
+                  :aria-expanded="shareDrawerOpen ? 'true' : 'false'"
+                  @click="shareDrawerOpen = !shareDrawerOpen"
+                >
+                  <span>{{ $t('event_details.share_qr_toggle') }}</span>
+                  <AppIcon :name="shareDrawerOpen ? 'chevronUp' : 'chevronDown'" :size="16" aria-hidden="true" />
+                </button>
+              </div>
 
-    <TeamsModuleConfig
-      v-if="showConfigModal && selectedModule?.type === 'teams'"
-      :module="selectedModule" :event-id="currentEvent?.id" :modules="currentEvent?.modules || []"
-      @close="closeConfigModal" @update="fetchEventDetails"
-    />
+              <div class="overview-collapsible" :class="{ 'is-open': shareDrawerOpen }">
+                <div v-if="currentEvent?.description" class="info-group">
+                  <p class="label">{{ $t('admin.details.description') }}</p>
+                  <p class="value">{{ currentEvent.description }}</p>
+                </div>
 
-    <SimpleQuizModuleConfig
-      v-if="showConfigModal && selectedModule?.type === 'simple_quiz'"
-      :visible="showConfigModal && selectedModule?.type === 'simple_quiz'"
-      :module="selectedModule"
-      :event-id="currentEvent?.id"
-      @close="closeConfigModal"
-      @update="fetchEventDetails"
-    />
+                <div class="info-group">
+                  <p class="label">{{ $t('admin.details.share_access') }}</p>
+                  <div class="qr-wrapper">
+                    <QRCodeVue :value="qrCodeValue" :size="120" level="H" />
+                  </div>
+                  <button type="button" class="copy-btn" @click="copyLink">
+                    {{ $t('admin.details.copy_link') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
 
-    <div v-if="showModuleModal" class="modal-overlay" @click.self="closeModuleModal">
-      <div
-        ref="addModuleDialogRef"
-        class="add-module-container"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="$t('admin.details.add_modal_title')"
-        tabindex="-1"
-        @keydown.escape.stop.prevent="closeModuleModal"
-      >
-        <div class="add-module-header">
-          <p class="form-title">{{ $t('admin.details.add_modal_title') }}</p>
-          <button
-            type="button"
-            @click="closeModuleModal"
-            class="close-btn"
-            :aria-label="$t('common.close')"
-          >
-            <AppIcon name="close" :size="18" aria-hidden="true" />
-          </button>
-        </div>
+          <section class="card modules-card">
+            <div class="card-header">
+              <div>
+                <p class="card-title">{{ $t('admin.details.modules') }}</p>
+                <p class="card-description">{{ $t('admin.details.modules_desc') }}</p>
+              </div>
+              <button type="button" class="add-button" @click="openModuleModal">
+                {{ $t('admin.details.add_module') }}
+              </button>
+            </div>
 
-        <label for="new-module-name" class="input-label">{{ $t('admin.details.module_name_label') }}</label>
-        <input
-          id="new-module-name"
-          v-model="newModuleName"
-          type="text"
-          :placeholder="$t('admin.details.module_name_placeholder')"
-          class="module-input"
-        />
+            <div v-if="currentEvent?.modules && currentEvent.modules.length > 0" class="modules-list">
+              <div v-for="(module, index) in currentEvent.modules" :key="module.id ?? index" class="module-item">
+                <div class="module-info">
+                  <p class="module-name">{{ module.name }}</p>
+                  <div class="module-badges">
+                    <span class="module-type-badge">
+                      <AppIcon :name="moduleTypeIcon(module.type)" :size="14" aria-hidden="true" />
+                      <span>{{ moduleTypeLabel(module.type) }}</span>
+                    </span>
+                    <span
+                      class="module-status-badge"
+                      :class="{
+                        'status-active': module.isActive,
+                        'status-inactive': !module.isActive
+                      }"
+                    >
+                      {{ module.isActive ? $t('admin.status_active') : $t('admin.status_inactive') }}
+                    </span>
+                  </div>
+                </div>
 
-        <label for="new-module-type" class="input-label">{{ $t('admin.details.module_type_label') }}</label>
-        <select
-          id="new-module-type"
-          v-model="selectedModuleType"
-          class="dropdown-select"
-          :aria-label="$t('admin.details.module_type_label')"
-        >
-          <option value="form">{{ $t('admin.details.form_option') }}</option>
-          <option value="quiz">{{ $t('admin.details.quiz_option') }}</option>
-          <option value="wrong_pictures">{{ $t('quiz_config.question_editor.types.wrong_pictures') }}</option>
-          <option value="simple_quiz">{{ $t('admin.details.simple_quiz_option') }}</option>
-          <option value="teams">{{ $t('admin.details.teams_option') }}</option>
-        </select>
+                <div class="module-actions">
+                  <button
+                    type="button"
+                    class="module-btn config-btn"
+                    @click="editModule(module)"
+                  >
+                    {{ $t('event_details.edit_module') }}
+                  </button>
+                  <button
+                    v-if="isHostableModule(module.type)"
+                    type="button"
+                    class="module-btn host-btn"
+                    @click="hostModule(module)"
+                  >
+                    {{ $t('event_details.host_module') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="module-btn"
+                    :class="module.isActive ? 'stop-button' : 'start-button'"
+                    @click="toggleModuleStatus(module)"
+                  >
+                    {{ module.isActive ? $t('admin.details.stop') : $t('admin.details.start') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="module-btn delete-btn"
+                    @click="deleteModule(module)"
+                  >
+                    {{ $t('admin.details.delete') }}
+                  </button>
+                </div>
+              </div>
+            </div>
 
-        <button type="button" class="add-module-button" @click="addModule">
-          {{ $t('admin.details.add_modal_title') }}
-        </button>
-      </div>
+            <div v-else class="empty-modules">
+              <p class="empty-modules-text">{{ $t('admin.details.no_modules') }}</p>
+            </div>
+          </section>
+        </template>
+      </main>
+
+      <AddModuleModal
+        :visible="showModuleModal"
+        :event-id="currentEvent?.id || routeEventId"
+        @close="closeModuleModal"
+        @created="handleModuleCreated"
+      />
     </div>
-
-
-  </div>
+  </AdminLayout>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import FormModuleConfig from '../components/FormModuleConfig.vue'
-import QuizModuleConfig from '../components/QuizModuleConfig.vue'
-import WrongPicturesModuleConfig from '../components/WrongPicturesModuleConfig.vue'
-import SimpleQuizModuleConfig from '../components/SimpleQuizModuleConfig.vue'
-import TeamsModuleConfig from '../components/TeamsModuleConfig.vue'
-
 import QRCodeVue from 'qrcode.vue'
+import AdminLayout from '../components/AdminLayout.vue'
+import AddModuleModal from '../components/AddModuleModal.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
 import { useToast } from '../composables/useToast'
-import { getImageUrl } from '../services/media'
-import { getScreensavers } from '../services/media'
-import AppIcon from '../components/AppIcon.vue'
+import { useDialog } from '../composables/useDialog'
 
-const { t, locale } = useI18n()
+const MODULE_ICONS = {
+  quiz: 'quiz',
+  simple_quiz: 'message',
+  wrong_pictures: 'image',
+  form: 'form',
+  teams: 'teams'
+}
+
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
+const { success, error } = useToast()
+const { confirm } = useDialog()
 
 const screenRef = ref(null)
-const addModuleDialogRef = ref(null)
 const currentEvent = ref(null)
 const isLoadingEvent = ref(false)
 const eventLoadError = ref('')
 const showModuleModal = ref(false)
-const newModuleName = ref('')
-const selectedModuleType = ref('form')
-const showConfigModal = ref(false)
-const selectedModule = ref(null)
+const shareDrawerOpen = ref(false)
 
-let moduleModalTriggerEl = null
-let configModalTriggerEl = null
-let configModalTriggerModuleId = null
 let eventFetchSeq = 0
 
-// Screensaver state
-const screensaverPreview = ref('')
-const screensaverLoading = ref(false)
-const screensavers = ref([])
-const showLibrarySelector = ref(false)
-
-const { success, error, info } = useToast()
-
 const routeEventId = computed(() => {
-  const id = route.params?.id
-  if (Array.isArray(id)) return id[0] ? String(id[0]) : ''
-  return id ? String(id) : ''
+  const raw = route.params?.eventId ?? route.params?.id ?? route.query?.eventId
+  if (Array.isArray(raw)) return raw[0] ? String(raw[0]) : ''
+  return raw ? String(raw) : ''
 })
 
-const copyProjectorLabel = computed(() => t('quiz.host.copy_link').replace(/^🔗\s*/, ''))
-
-const changeLanguage = () => {
-  try {
-    localStorage.setItem('userLanguage', locale.value)
-  } catch {
-    // ignore storage errors
-  }
-}
+const breadcrumbs = computed(() => [
+  { label: t('admin_shell.events'), to: '/admin/events' },
+  { label: currentEvent.value?.name || t('event_details.event_fallback') }
+])
 
 const readStoredEventForId = (targetId) => {
   if (!targetId) return null
@@ -376,18 +302,31 @@ const writeStoredEvent = (eventData) => {
 
 currentEvent.value = readStoredEventForId(routeEventId.value)
 
-const qrCodeValue = computed(() => {
-  return currentEvent.value 
+const qrCodeValue = computed(() => (
+  currentEvent.value
     ? `${window.location.origin}/?pin=${currentEvent.value.pin || currentEvent.value.id}`
     : ''
-})
+))
+
+const moduleTypeIcon = (type) => MODULE_ICONS[type] || 'sliders'
+
+const moduleTypeLabel = (type) => {
+  if (type && Object.prototype.hasOwnProperty.call(MODULE_ICONS, type)) {
+    return t(`event_details.module_types.${type}`)
+  }
+  return type || ''
+}
+
+const isHostableModule = (type) => (
+  type === 'quiz' || type === 'wrong_pictures' || type === 'simple_quiz' || type === 'teams'
+)
 
 const fetchEventDetails = async (targetId = routeEventId.value) => {
   const seq = ++eventFetchSeq
   const eventId = targetId ? String(targetId) : ''
   if (!eventId) {
     currentEvent.value = null
-    eventLoadError.value = 'Event not found'
+    eventLoadError.value = t('event_details.not_found')
     isLoadingEvent.value = false
     return
   }
@@ -407,15 +346,15 @@ const fetchEventDetails = async (targetId = routeEventId.value) => {
     } else if (response.status === 404) {
       currentEvent.value = null
       writeStoredEvent(null)
-      eventLoadError.value = 'Event not found'
+      eventLoadError.value = t('event_details.not_found')
     } else {
-      eventLoadError.value = 'Failed to load event details'
+      eventLoadError.value = t('event_details.load_failed')
       error(eventLoadError.value)
     }
   } catch (err) {
     if (seq !== eventFetchSeq) return
     console.error('Error fetching event details:', err)
-    eventLoadError.value = 'Failed to load event details'
+    eventLoadError.value = t('event_details.load_failed')
     error(eventLoadError.value)
   } finally {
     if (seq === eventFetchSeq) {
@@ -424,10 +363,20 @@ const fetchEventDetails = async (targetId = routeEventId.value) => {
   }
 }
 
-const openModuleModal = (event) => {
-  if (typeof document !== 'undefined') {
-    moduleModalTriggerEl = event?.currentTarget || document.activeElement
-  }
+watch(routeEventId, (newId, oldId) => {
+  if (newId === oldId) return
+  showModuleModal.value = false
+  shareDrawerOpen.value = false
+  eventLoadError.value = ''
+  currentEvent.value = readStoredEventForId(newId)
+  fetchEventDetails(newId)
+})
+
+onMounted(() => {
+  fetchEventDetails(routeEventId.value)
+})
+
+const openModuleModal = () => {
   showModuleModal.value = true
 }
 
@@ -435,345 +384,166 @@ const closeModuleModal = () => {
   showModuleModal.value = false
 }
 
-const restoreConfigFocus = () => {
-  if (typeof document === 'undefined') return
-  const target = configModalTriggerEl
-  const modId = configModalTriggerModuleId
-  configModalTriggerEl = null
-  configModalTriggerModuleId = null
-  if (target && typeof target.focus === 'function' && target.isConnected) {
-    target.focus()
-    return
-  }
-  if (modId != null && screenRef.value) {
-    const fallback = Array.from(screenRef.value.querySelectorAll('[data-config-module-id]'))
-      .find((el) => el.dataset.configModuleId === String(modId))
-    fallback?.focus?.()
-  }
+const handleModuleCreated = () => {
+  fetchEventDetails()
 }
 
-watch(showModuleModal, (isOpen, wasOpen) => {
-  if (typeof document === 'undefined') return
-  if (isOpen && !wasOpen) {
-    if (!moduleModalTriggerEl) {
-      moduleModalTriggerEl = document.activeElement
-    }
-    if (addModuleDialogRef.value && !addModuleDialogRef.value.contains(document.activeElement)) {
-      addModuleDialogRef.value.focus?.()
-    }
-  } else if (!isOpen && wasOpen) {
-    const target = moduleModalTriggerEl
-    moduleModalTriggerEl = null
-    if (target && typeof target.focus === 'function' && target.isConnected) {
-      target.focus()
-    }
-  }
-}, { flush: 'post' })
-
-watch(showConfigModal, (isOpen, wasOpen) => {
-  if (typeof document === 'undefined') return
-  if (isOpen && !wasOpen) {
-    if (!configModalTriggerEl) {
-      configModalTriggerEl = document.activeElement
-      configModalTriggerModuleId = selectedModule.value?.id ?? null
-    }
-  } else if (!isOpen && wasOpen) {
-    restoreConfigFocus()
-  }
-}, { flush: 'post' })
-
-const handleGlobalKeydown = (event) => {
-  if (event.key === 'Escape' && showModuleModal.value && !event.defaultPrevented) {
-    event.preventDefault()
-    closeModuleModal()
-  }
-}
-
-watch(routeEventId, (newId, oldId) => {
-  if (newId === oldId) return
-  showModuleModal.value = false
-  showConfigModal.value = false
-  selectedModule.value = null
-  screensaverPreview.value = ''
-  eventLoadError.value = ''
-  currentEvent.value = readStoredEventForId(newId)
-  fetchEventDetails(newId)
-  fetchScreensaverConfig(newId)
-})
-
-onMounted(() => {
-  fetchEventDetails(routeEventId.value)
-  fetchScreensaverConfig(routeEventId.value)
-  if (typeof window !== 'undefined') {
-    window.addEventListener('keydown', handleGlobalKeydown)
-  }
-})
-
-onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('keydown', handleGlobalKeydown)
-  }
-})
-
-// Screensaver functions
-const fetchScreensaverConfig = async (targetId = routeEventId.value) => {
-  const eventId = targetId || currentEvent.value?.id
-  if (!eventId) return
-  
-  try {
-    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(eventId)}/screensaver`)
-    if (response.ok) {
-      const data = await response.json()
-      if (data.imageId && currentEvent.value && String(currentEvent.value.id) === String(eventId)) {
-        currentEvent.value.screensaverConfig = data
-        screensaverPreview.value = getImageUrl(data.imageId)
-      }
-    }
-  } catch (err) {
-    console.error('Error fetching screensaver config:', err)
-  }
-}
-
-const handleScreensaverUpload = async () => {
-  screensaverLoading.value = true
-  
-  try {
-    // Load screensavers from library
-    screensavers.value = await getScreensavers()
-    showLibrarySelector.value = true
-  } catch (err) {
-    console.error('Error loading screensavers:', err)
-    error('Failed to load screensavers from library')
-  } finally {
-    screensaverLoading.value = false
-  }
-}
-
-const selectScreensaver = async (screensaver) => {
-  if (!currentEvent.value?.id) return
-  try {
-    // Save screensaver config using the library screensaver's mediaId
-    const configResponse = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ imageId: screensaver.mediaId })
-    })
-
-    if (configResponse.ok) {
-      currentEvent.value.screensaverConfig = await configResponse.json()
-      screensaverPreview.value = screensaver.thumbnailUrl
-      showLibrarySelector.value = false
-      success(t('admin.details.toast.screensaver_updated'))
-    } else {
-      error('Failed to save screensaver config')
-    }
-  } catch (err) {
-    console.error('Error selecting screensaver:', err)
-    error('Failed to select screensaver')
-  }
-}
-
-const removeScreensaver = async () => {
-  if (!currentEvent.value?.id) return
-  try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/screensaver`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ imageId: '', imageUrl: '' })
-    })
-    
-    if (response.ok) {
-      currentEvent.value.screensaverConfig = null
-      screensaverPreview.value = ''
-      success(t('admin.details.toast.screensaver_removed'))
-    } else {
-      error('Failed to remove screensaver')
-    }
-  } catch (err) {
-    console.error('Error removing screensaver:', err)
-    error('Failed to remove screensaver image')
-  }
-}
-
+const isTogglingStatus = ref(false)
 const toggleStatus = async () => {
-  if (!currentEvent.value?.id) return
+  if (!currentEvent.value?.id || isTogglingStatus.value) return
+  // Guard against stale responses landing after the user switched events (L2).
+  const targetEventId = String(currentEvent.value.id)
+  const seq = eventFetchSeq
+  const nextActive = !currentEvent.value.isActive
+  isTogglingStatus.value = true
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/status`, {
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(targetEventId)}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ isActive: !currentEvent.value.isActive })
+      body: JSON.stringify({ isActive: nextActive })
     })
 
+    if (seq !== eventFetchSeq || String(currentEvent.value?.id || '') !== targetEventId) return
     if (response.ok) {
-      currentEvent.value.isActive = !currentEvent.value.isActive
+      currentEvent.value.isActive = nextActive
       writeStoredEvent(currentEvent.value)
-      success(t(`admin.status_${currentEvent.value.isActive ? 'active' : 'inactive'}`))
+      success(t(nextActive ? 'event_details.toast_event_started' : 'event_details.toast_event_stopped'))
     } else {
-      error('Failed to update status')
+      error(t('event_details.toast_status_failed'))
     }
   } catch (err) {
     console.error('Error updating status:', err)
-    error('Failed to update status')
+    error(t('event_details.toast_status_failed'))
+  } finally {
+    isTogglingStatus.value = false
   }
-}
-
-const getShareLink = () => {
-  if (!currentEvent.value) return ''
-  return `${window.location.origin}/?pin=${currentEvent.value.pin || currentEvent.value.id}`
 }
 
 const copyLink = () => {
   if (!currentEvent.value) return
-  const link = getShareLink()
-  if (!link) return
+  const link = `${window.location.origin}/?pin=${currentEvent.value.pin || currentEvent.value.id}`
   navigator.clipboard?.writeText(link)
   success(t('admin.details.toast.event_link_copied'))
 }
 
-const configureModule = (module, event) => {
-  if (typeof document !== 'undefined') {
-    configModalTriggerEl = event?.currentTarget || document.activeElement
-  }
-  configModalTriggerModuleId = module?.id ?? null
-  selectedModule.value = module
-  showConfigModal.value = true
+const editModule = (module) => {
+  if (!currentEvent.value?.id || !module?.id) return
+  router.push(`/admin/events/${encodeURIComponent(currentEvent.value.id)}/modules/${encodeURIComponent(module.id)}/edit`)
 }
 
-const closeConfigModal = () => {
-  showConfigModal.value = false
-  selectedModule.value = null
-}
-
-const hostQuiz = (module) => {
-  if (!currentEvent.value?.id) return
+const hostModule = (module) => {
+  if (!currentEvent.value?.id || !module?.id) return
+  const eventId = encodeURIComponent(currentEvent.value.id)
+  const moduleId = encodeURIComponent(module.id)
   if (module.type === 'teams') {
-    router.push({ name: 'teams-admin', params: { id: currentEvent.value.id }, query: { moduleId: module.id } })
+    router.push(`/admin/events/${eventId}/teams?moduleId=${moduleId}`)
     return
   }
-  if (module.type === 'wrong_pictures') {
-    router.push(`/wrong-pictures/${currentEvent.value.id}/${module.id}/host`)
-  } else if (module.type === 'simple_quiz') {
-    router.push(`/simple-quiz/${currentEvent.value.id}/${module.id}/host`)
-  } else {
-    router.push(`/quiz/${currentEvent.value.id}/${module.id}/host`)
-  }
-}
-
-const addModule = async () => {
-  if (!currentEvent.value?.id) return
-  if (!newModuleName.value.trim()) {
-    info(t('admin.messages.fill_fields'))
-    return
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({
-        type: selectedModuleType.value,
-        name: newModuleName.value,
-        data: {}
-      })
-    })
-
-    if (response.ok) {
-      await response.json()
-      fetchEventDetails()
-      showModuleModal.value = false
-      newModuleName.value = ''
-      success(t('admin.details.toast.module_added'))
-    } else {
-      error('Failed to add module')
-    }
-  } catch (err) {
-    console.error('Error adding module:', err)
-    error('Failed to add module')
-  }
+  router.push(`/admin/events/${eventId}/modules/${moduleId}/host`)
 }
 
 const toggleModuleStatus = async (module) => {
   if (!currentEvent.value?.id) return
-  
-  // If stopping a quiz/wrong_pictures module, reset the quiz session first
+  const targetEventId = String(currentEvent.value.id)
+  const seq = eventFetchSeq
+  const eId = encodeURIComponent(targetEventId)
+  const mId = encodeURIComponent(module.id)
+
   if (module.isActive && (module.type === 'quiz' || module.type === 'wrong_pictures' || module.type === 'simple_quiz')) {
     try {
       const resetPath = module.type === 'simple_quiz'
-        ? `${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/simple-quiz/reset`
-        : `${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/quiz/reset`
-      await fetch(resetPath, {
+        ? `${API_BASE_URL}/events/${eId}/modules/${mId}/simple-quiz/reset`
+        : `${API_BASE_URL}/events/${eId}/modules/${mId}/quiz/reset`
+      const resetRes = await fetch(resetPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }
       })
+      if (!resetRes.ok) {
+        // A live session that cannot be reset must not be silently flipped
+        // to inactive (L7c).
+        const msg = (await resetRes.text().catch(() => '')).trim()
+        error(msg || t('event_details.toast_module_status_failed'))
+        return
+      }
     } catch (err) {
       console.error('Error resetting quiz session:', err)
+      error(t('event_details.toast_module_status_failed'))
+      return
     }
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}/status`, {
+    const nextActive = !module.isActive
+    const response = await fetch(`${API_BASE_URL}/events/${eId}/modules/${mId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ isActive: !module.isActive })
+      body: JSON.stringify({ isActive: nextActive })
     })
 
     if (response.ok) {
-      await fetchEventDetails()
-      success(`Module ${!module.isActive ? 'started' : 'stopped'}`)
+      if (seq === eventFetchSeq && String(currentEvent.value?.id || '') === targetEventId) {
+        await fetchEventDetails()
+      }
+      success(t(nextActive ? 'event_details.toast_module_started' : 'event_details.toast_module_stopped'))
     } else {
-      error('Failed to update module status')
+      error(t('event_details.toast_module_status_failed'))
     }
   } catch (err) {
     console.error('Error updating module status:', err)
-    error('Failed to update module status')
+    error(t('event_details.toast_module_status_failed'))
   }
 }
 
 const deleteModule = async (module) => {
   if (!currentEvent.value?.id) return
-  if (!confirm(t('admin.confirm_delete'))) return
+  const confirmed = await confirm({
+    title: t('event_details.delete_module_title'),
+    message: t('event_details.delete_module_confirm', { name: module.name }),
+    confirmLabel: t('admin.details.delete'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (!confirmed) return
 
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${currentEvent.value.id}/modules/${module.id}`, {
+    const response = await fetch(`${API_BASE_URL}/events/${encodeURIComponent(currentEvent.value.id)}/modules/${encodeURIComponent(module.id)}`, {
       method: 'DELETE',
       headers: { ...getAuthHeaders() }
     })
 
     if (response.ok) {
-      success('Module deleted')
-      fetchEventDetails()
+      success(t('event_details.toast_module_deleted'))
+      await fetchEventDetails()
     } else {
-      error((await response.text()).trim() || 'Failed to delete module')
+      error((await response.text()).trim() || t('event_details.toast_module_delete_failed'))
     }
   } catch (err) {
     console.error('Error deleting module:', err)
-    error('Failed to delete module')
+    error(t('event_details.toast_module_delete_failed'))
   }
 }
 
 const goBack = () => {
-  router.push('/admin')
+  router.push('/admin/events')
 }
 
 const goToLibrary = () => {
-  router.push('/quiz/library')
+  const id = currentEvent.value?.id || routeEventId.value
+  if (id) {
+    router.push(`/admin/library/quizzes?returnTo=${encodeURIComponent(`/admin/events/${id}`)}`)
+    return
+  }
+  router.push('/admin/library/quizzes')
 }
 
 const goToDataView = () => {
   if (!currentEvent.value?.id) return
-  router.push(`/data/library?eventId=${currentEvent.value.id}`)
+  router.push(`/admin/events/${encodeURIComponent(currentEvent.value.id)}/data`)
 }
 
 const goToScreenManager = () => {
-  if (currentEvent.value?.id) {
-    router.push(`/admin/event/${currentEvent.value.id}/screen-manager`)
-  }
-}
-
-const goToTeams = () => {
-  if (currentEvent.value?.id) {
-    router.push(`/admin/event/${currentEvent.value.id}/teams`)
-  }
+  if (!currentEvent.value?.id) return
+  router.push(`/admin/events/${encodeURIComponent(currentEvent.value.id)}/projector`)
 }
 
 const copyProjectorLink = () => {
@@ -787,9 +557,8 @@ const copyProjectorLink = () => {
 <style scoped>
 .admin-details-screen {
   container: event-details / inline-size;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background-color: #121212;
+  min-height: 100%;
+  background-color: var(--admin-bg, #121212);
   scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -798,42 +567,15 @@ const copyProjectorLink = () => {
   box-sizing: border-box;
 }
 
-.language-switcher {
-  margin-inline-start: auto;
-}
-
-.language-switcher select {
-  background-color: #252525;
-  color: white;
-  border: 1px solid #333333;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  outline: none;
-  min-block-size: 38px;
-  font-size: 14px;
-}
-
-.header {
-  padding: 16px clamp(20px, 3vw, 40px) 20px;
-  background-color: #1E1E1E;
-  border-bottom: 1px solid #333;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+.event-header {
+  padding: 18px clamp(16px, 3vw, 40px);
+  background-color: var(--admin-surface, #1E1E1E);
+  border-bottom: 1px solid var(--admin-border, #333);
 }
 
 .header-content {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 1400px;
+  max-width: 1560px;
   margin: 0 auto;
-}
-
-.header-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .header-main {
@@ -849,14 +591,14 @@ const copyProjectorLink = () => {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  flex: 1 1 280px;
+  flex: 1 1 260px;
   min-inline-size: 0;
 }
 
 .event-title {
-  font-size: clamp(1.35rem, 1rem + 2.5vw, 2rem);
+  font-size: clamp(1.35rem, 1rem + 1.8vw, 1.85rem);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--admin-text, #ffffff);
   margin: 0;
   line-height: 1.2;
   text-wrap: balance;
@@ -865,12 +607,12 @@ const copyProjectorLink = () => {
 }
 
 .event-status {
-  padding: 8px 20px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   flex-shrink: 0;
 }
 
@@ -886,49 +628,39 @@ const copyProjectorLink = () => {
   border: 1px solid #f5c6cb;
 }
 
-.header-right {
+.event-subnav {
   display: flex;
-  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  gap: 8px;
 }
 
 .nav-button {
-  padding: 10px 18px;
+  padding: 8px 14px;
   min-block-size: 40px;
-  border: none;
+  border: 1px solid var(--admin-border-strong, #444);
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   text-decoration: none;
-  min-inline-size: 0;
+  white-space: nowrap;
 }
 
-.header-top .back-btn {
-  padding: 8px 16px;
-  font-size: 14px;
-  min-block-size: 38px;
+.subnav-tab.is-current {
+  background: var(--admin-primary-soft, #162e4d);
+  border-color: var(--admin-primary, #75b7ff);
+  color: var(--admin-primary, #75b7ff);
+  cursor: default;
 }
 
 .copy-link-label {
-  display: none;
-}
-
-.library-btn {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.library-btn:hover {
-  background-color: #45a049;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  display: inline;
 }
 
 .screen-manager-btn {
@@ -936,23 +668,9 @@ const copyProjectorLink = () => {
   color: white;
 }
 
-.screen-manager-btn:hover {
-  background-color: #FFA830;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
-}
-
 .copy-link-btn {
   background-color: #2196F3;
   color: white;
-  min-width: 50px;
-  justify-content: center;
-}
-
-.copy-link-btn:hover {
-  background-color: #1e88e5;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
 }
 
 .data-btn {
@@ -960,10 +678,9 @@ const copyProjectorLink = () => {
   color: white;
 }
 
-.data-btn:hover {
-  background-color: #8e24aa;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+.library-btn {
+  background-color: #4CAF50;
+  color: white;
 }
 
 .back-btn {
@@ -971,35 +688,43 @@ const copyProjectorLink = () => {
   color: white;
 }
 
-.back-btn:hover {
-  background-color: #546e7a;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(96, 125, 139, 0.3);
-}
-
 .scroll-content {
-  padding: 24px 24px 84px;
+  padding: 24px clamp(16px, 3vw, 24px) 64px;
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) minmax(400px, 2.5fr);
+  grid-template-columns: minmax(290px, 1fr) minmax(380px, 2.5fr);
   gap: 24px;
   max-width: 1600px;
   margin: 0 auto;
   align-items: start;
 }
 
+.event-state-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .card {
-  background-color: #1E1E1E;
+  background-color: var(--admin-surface, #1E1E1E);
   border-radius: 16px;
   padding: 24px;
-  border: 1px solid #333;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  border: 1px solid var(--admin-border, #333);
+  box-shadow: var(--admin-shadow, 0 2px 8px rgba(0, 0, 0, 0.2));
   min-inline-size: 0;
 }
 
 .event-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   min-inline-size: 0;
 }
 
@@ -1043,20 +768,37 @@ const copyProjectorLink = () => {
 .card-title {
   font-size: 18px;
   font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 4px;
+  color: var(--admin-text, #ffffff);
+  margin: 0 0 4px;
 }
 
 .card-description {
   font-size: 13px;
-  color: #666;
+  color: var(--admin-text-muted, #888);
+  margin: 0;
 }
 
 .sidebar-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   min-inline-size: 0;
+}
+
+.overview-primary-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.overview-collapsible {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.share-drawer-toggle {
+  display: none;
 }
 
 .info-group {
@@ -1068,32 +810,34 @@ const copyProjectorLink = () => {
 
 .label {
   font-size: 11px;
-  color: #666;
+  color: var(--admin-text-muted, #888);
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.5px;
+  margin: 0;
 }
 
 .value {
   font-size: 15px;
-  color: #FFF;
+  color: var(--admin-text, #FFF);
   overflow-wrap: break-word;
+  margin: 0;
   min-inline-size: 0;
 }
 
 .pin-display {
-  background-color: #000;
+  background-color: var(--admin-surface-subtle, #000);
   padding: 12px;
   border-radius: 8px;
   text-align: center;
-  border: 1px solid #333;
+  border: 1px solid var(--admin-border, #333);
 }
 
 .pin-text {
-  font-size: clamp(1.25rem, 0.9rem + 3vw, 1.75rem);
-  color: #FFF;
+  font-size: clamp(1.25rem, 0.9rem + 2vw, 1.75rem);
+  color: var(--admin-text, #FFF);
   font-weight: bold;
-  letter-spacing: clamp(2px, 0.8vw, 4px);
+  letter-spacing: clamp(2px, 0.6vw, 4px);
   font-family: monospace;
   overflow-wrap: anywhere;
 }
@@ -1109,7 +853,7 @@ const copyProjectorLink = () => {
 }
 
 .copy-btn {
-  margin-top: 8px;
+  margin-top: 6px;
   background-color: #333;
   padding: 10px 16px;
   border-radius: 8px;
@@ -1120,29 +864,23 @@ const copyProjectorLink = () => {
   font-size: 13px;
   border: 1px solid #444;
   cursor: pointer;
-  transition: background 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.copy-btn:hover {
-  background-color: #444;
-}
-
 .control-group {
-  margin-top: 10px;
-  padding-top: 20px;
-  border-top: 1px solid #2C2C2C;
+  padding-top: 16px;
+  border-top: 1px solid var(--admin-border, #2C2C2C);
 }
 
 .section-label {
   font-size: 12px;
   font-weight: 600;
-  color: #888;
-  margin-bottom: 12px;
+  color: var(--admin-text-muted, #888);
+  margin: 0 0 10px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
 }
 
 .action-button {
@@ -1169,184 +907,25 @@ const copyProjectorLink = () => {
 }
 
 .control-hint {
-  font-size: 11px;
-  color: #666;
-  margin-top: 8px;
-  text-align: center;
-}
-
-.screensaver-preview {
-  width: 100%;
-  height: 120px;
-  background: #1e1e1e;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.screensaver-preview img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.screensaver-upload {
-  margin-bottom: 12px;
-}
-
-.file-input {
-  display: none;
-}
-
-.file-label {
-  display: block;
-  padding: 12px;
-  background: #333;
-  color: white;
-  text-align: center;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.file-label:hover {
-  background: #444;
-}
-
-.delete-screensaver-btn {
-  background-color: #ff3b30 !important;
-  margin-top: 8px;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 12px;
-  z-index: 1000;
-  overscroll-behavior: contain;
-}
-
-.modal-content {
-  background-color: #1C1C1E;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #333;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: white;
-  font-size: 18px;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 20px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  min-block-size: 36px;
-  min-inline-size: 36px;
-}
-
-.close-btn:hover {
-  color: white;
-}
-
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.screensavers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 16px;
-}
-
-.screensaver-option {
-  cursor: pointer;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid transparent;
-  transition: border-color 0.2s;
-}
-
-.screensaver-option:hover {
-  border-color: #0A84FF;
-}
-
-.screensaver-option img {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-}
-
-.screensaver-name {
-  padding: 8px;
-  margin: 0;
   font-size: 12px;
-  color: white;
-  background: #2C2C2E;
+  color: var(--admin-text-muted, #888);
+  margin: 8px 0 0;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #888;
-}
-
-.empty-state .hint {
-  font-size: 14px;
-  margin-top: 8px;
 }
 
 .modules-card {
-  min-height: 400px;
+  min-height: 360px;
   min-inline-size: 0;
 }
 
 .modules-card .card-header {
-  flex-wrap: wrap;
-  gap: 10px;
   align-items: center;
 }
 
 .add-button {
   background-color: #007AFF;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 9px 16px;
+  border-radius: 999px;
   border: none;
   color: #FFF;
   font-size: 13px;
@@ -1361,7 +940,7 @@ const copyProjectorLink = () => {
 }
 
 .modules-list {
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .module-item {
@@ -1380,7 +959,7 @@ const copyProjectorLink = () => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 6px;
   min-inline-size: 0;
 }
 
@@ -1388,21 +967,36 @@ const copyProjectorLink = () => {
   font-size: 16px;
   font-weight: 600;
   color: #FFF;
+  margin: 0;
   overflow-wrap: break-word;
   min-inline-size: 0;
 }
 
-.module-type {
+.module-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.module-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
   font-size: 12px;
-  color: #888;
+  font-weight: 600;
+  background: var(--admin-surface, #1E1E1E);
+  border: 1px solid var(--admin-border, #3c3c40);
+  color: var(--admin-text-muted, #c5c5ca);
 }
 
 .module-status-badge {
   display: inline-block;
-  align-self: flex-start;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -1424,11 +1018,12 @@ const copyProjectorLink = () => {
 }
 
 .module-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 13px;
+  border-radius: 8px;
   border: none;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
+  min-block-size: 38px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1437,6 +1032,11 @@ const copyProjectorLink = () => {
 
 .module-btn.config-btn {
   background-color: #333;
+  color: #FFF;
+}
+
+.module-btn.host-btn {
+  background-color: #5E5CE6;
   color: #FFF;
 }
 
@@ -1454,284 +1054,169 @@ const copyProjectorLink = () => {
   background-color: #1c1c1e;
   color: #ff453a;
   border: 1px solid #ff453a;
-  margin-left: 8px;
-}
-
-.module-btn.delete-btn:hover {
-  background-color: rgba(255, 69, 58, 0.1);
 }
 
 .empty-modules {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 16px;
+  padding: 40px 16px;
   text-align: center;
 }
 
 .empty-modules-text {
-  color: #666;
+  color: var(--admin-text-muted, #666);
   font-size: 14px;
-}
-
-.add-module-container {
-  background-color: #1E1E1E;
-  border-radius: 16px;
-  padding: 24px;
-  width: calc(100% - 24px);
-  max-width: 420px;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  box-sizing: border-box;
-}
-
-.add-module-container:focus {
-  outline: none;
-}
-
-.add-module-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.form-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #FFF;
   margin: 0;
 }
 
-.input-label {
-  display: block;
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-.module-input {
-  background-color: #121212;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: white;
-  font-size: 16px;
-  width: 100%;
-  margin-bottom: 16px;
-}
-
-.module-btn.host-btn {
-  background-color: #5E5CE6;
-  color: #FFF;
-}
-
-.module-btn.projector-btn {
-  background-color: #FF9500;
-  color: #FFF;
-}
-
-.module-btn.projector-btn:hover {
-  background-color: #FFA830;
-}
-
-.module-btn.push-btn {
-  background-color: #30D158;
-  color: #FFF;
-}
-
-.module-btn.push-btn:hover {
-  background-color: #28cd41;
-}
-
-.dropdown-select {
-  background-color: #2C2C2E;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  color: #FFF;
-  font-size: 16px;
-  border: 1px solid #3A3A3C;
-  width: 100%;
-  appearance: none;
-}
-
-.dropdown {
-  background-color: #2C2C2E;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  color: #FFF;
-  font-size: 14px;
-}
-
-.add-module-button {
-  background-color: #007AFF;
-  padding: 14px;
-  border-radius: 8px;
-  border: none;
-  width: 100%;
-  color: #FFF;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.data-view-modal-content {
-  background-color: #1E1E1E;
-  border-radius: 16px;
-  padding: 24px;
-  width: 90%;
-  max-width: 1200px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow: hidden; /* Ensure content within modal respects its bounds */
-}
-
-.data-view-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-@container event-details (inline-size <= 900px) {
+@media (max-width: 960px) {
   .scroll-content {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 }
 
-@container event-details (inline-size <= 768px) {
-  .header {
-    padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+@media (max-width: 768px) {
+  .event-header {
+    padding: 14px 16px;
   }
 
-  .header-content {
-    gap: 12px;
-  }
-
-  .header-top .back-btn,
-  .header-top .language-switcher select {
-    min-block-size: 44px;
-  }
-
-  .header-main {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .event-info {
-    flex-wrap: wrap;
-    gap: 10px;
-    flex: none;
-  }
-
-  .header-right {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+  .event-subnav {
     width: 100%;
   }
 
-  .header-right .nav-button {
+  .event-subnav > * {
+    flex: 1 1 auto;
     min-block-size: 44px;
-    width: 100%;
-    min-width: 0;
-    padding: 10px 12px;
-    font-size: 14px;
-    line-height: 1.25;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .copy-link-label {
-    display: inline;
   }
 
   .scroll-content {
-    padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    padding: 16px 12px 64px;
     gap: 16px;
   }
 
-  .card {
-    padding: 18px;
-  }
-
-  .modules-card {
-    min-height: auto;
-  }
-}
-
-@container event-details (inline-size <= 640px) {
-  .module-item {
-    flex-direction: column;
-    align-items: stretch;
+  .event-sidebar {
+    padding: 14px 16px;
     gap: 12px;
   }
 
-  .module-actions {
+  .overview-desktop-header {
+    display: none;
+  }
+
+  .overview-primary-strip {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pin-group {
+    gap: 2px;
+  }
+
+  .pin-group .label {
+    font-size: 10px;
+  }
+
+  .pin-display {
+    padding: 6px 10px;
+  }
+
+  .pin-text {
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  .control-group {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .section-label,
+  .control-hint {
+    display: none;
+  }
+
+  .action-button {
+    min-block-size: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .share-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-block-size: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--admin-border-strong, #444);
+    border-radius: 8px;
+    background: var(--admin-surface-subtle, #252528);
+    color: var(--admin-text, #ffffff);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .overview-collapsible {
+    display: none;
+    padding-top: 14px;
+    border-top: 1px solid var(--admin-border, #333);
+  }
+
+  .overview-collapsible.is-open {
+    display: flex;
+  }
+
+  .modules-card {
+    padding: 18px 16px;
+    min-height: 0;
+  }
+
+  .add-button {
+    min-block-size: 44px;
+  }
+
+  .module-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .module-actions {
     width: 100%;
   }
 
   .module-btn {
+    flex: 1 1 auto;
     min-block-size: 44px;
-    width: 100%;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .module-btn.delete-btn {
-    margin-left: 0;
   }
 }
 
-.event-state-card {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 40px 24px;
-  text-align: center;
-}
+@media (max-width: 520px) {
+  .overview-primary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-.state-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.nav-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+  .pin-group {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
 }
 
 @media (pointer: coarse) {
   .nav-button,
-  .language-switcher select,
-  .copy-btn,
-  .action-button,
   .add-button,
   .module-btn,
-  .close-btn,
-  .module-input,
-  .dropdown-select,
-  .add-module-button {
+  .copy-btn,
+  .action-button,
+  .share-drawer-toggle {
     min-block-size: 44px;
-    min-inline-size: 44px;
   }
 }
 </style>

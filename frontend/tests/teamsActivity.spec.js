@@ -5,6 +5,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { createI18n } from 'vue-i18n'
 import en from '../src/locales/en.json'
 import TeamsActivityAdmin from '../src/components/TeamsActivityAdmin.vue'
+import { clearDialogQueue, resolveActiveDialog, useDialog } from '../src/composables/useDialog'
 import TeamsAdminScreen from '../src/views/TeamsAdminScreen.vue'
 import TeamsPlayerScreen from '../src/views/TeamsPlayerScreen.vue'
 import TeamsConfigFields from '../src/components/TeamsConfigFields.vue'
@@ -66,17 +67,19 @@ describe('Teams interfaces', () => {
     const completed = activity('completed')
     completed.awards = [{ id: 'award', teamId: 'blue', points: 20, recipients: ['anna'], createdAt: '2026-10-01T09:00:00Z' }]
     harness.data.state.value = { activity: completed, module: { ...module, isActive: false }, participants: [] }
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    const { activeDialog } = useDialog()
     wrapper = mount(TeamsActivityAdmin, { props: { eventId: 'event', module, modules: [module] }, global: { plugins: await plugins() } })
     expect(wrapper.find('.award-history').text()).toContain('Reopen activity to edit awards')
     expect(wrapper.findAll('button').some(button => button.text() === 'Undo award')).toBe(false)
     expect(wrapper.find('.reopen-action').classes()).toContain('primary')
     await wrapper.find('.reopen-action').trigger('click'); await flushPromises()
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('live and visible to players'))
+    expect(activeDialog.value?.message).toContain('live and visible to players')
+    resolveActiveDialog(false); await flushPromises()
     expect(harness.action).not.toHaveBeenCalled()
     await wrapper.find('.reopen-action').trigger('click'); await flushPromises()
+    resolveActiveDialog(true); await flushPromises()
     expect(harness.action).toHaveBeenCalledWith('event', 'relay', { action: 'reopen' })
-    confirm.mockRestore()
+    clearDialogQueue()
   })
   it.each(['setup', 'live', 'completed'])('has one primary header action for %s', async status => {
     harness.data.state.value = { activity: activity(status), participants: [] }

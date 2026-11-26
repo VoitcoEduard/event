@@ -4,11 +4,27 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/user/go-expo-sample/backend/database"
 	"github.com/user/go-expo-sample/backend/models"
 	"github.com/user/go-expo-sample/backend/services"
 )
+
+var errEmptyModuleName = errors.New("Module name cannot be empty")
+
+// trimModuleName normalizes an optional module rename, returning nil when the
+// request did not include one. Blank names are rejected.
+func trimModuleName(name *string) (*string, error) {
+	if name == nil {
+		return nil, nil
+	}
+	trimmed := strings.TrimSpace(*name)
+	if trimmed == "" {
+		return nil, errEmptyModuleName
+	}
+	return &trimmed, nil
+}
 
 func (h *Handler) AddModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
@@ -60,10 +76,16 @@ func (h *Handler) UpdateModuleStatus(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) PublishModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
+		Name *string        `json:"name"`
 		Data map[string]any `json:"data"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
+	name, err := trimModuleName(input.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := validateQuizRangesData(input.Data); err != nil {
@@ -71,7 +93,7 @@ func (h *Handler) PublishModule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	eventID, moduleID := r.PathValue("eventID"), r.PathValue("moduleID")
-	found, err := h.deps.Modules.Publish(r.Context(), eventID, moduleID, input.Data)
+	found, err := h.deps.Modules.PublishWithName(r.Context(), eventID, moduleID, name, input.Data)
 	if err != nil {
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
@@ -133,10 +155,16 @@ func (h *Handler) DeleteModule(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateModule(w http.ResponseWriter, r *http.Request) {
 	var input struct {
+		Name *string        `json:"name"`
 		Data map[string]any `json:"data"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeRequestError(w, err, http.StatusBadRequest)
+		return
+	}
+	name, err := trimModuleName(input.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := validateQuizRangesData(input.Data); err != nil {
@@ -144,11 +172,15 @@ func (h *Handler) UpdateModule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	eventID := r.PathValue("eventID")
-	if err := h.deps.Modules.UpdateData(r.Context(), eventID, r.PathValue("moduleID"), input.Data); err != nil {
+	if err := h.deps.Modules.Update(r.Context(), eventID, r.PathValue("moduleID"), name, input.Data); err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			http.Error(w, "Event or module not found", http.StatusNotFound)
+			return
+		}
 		writeRequestError(w, err, http.StatusInternalServerError)
 		return
 	}
-	if input.Data != nil {
+	if input.Data != nil || name != nil {
 		invalidateEventCache(eventID)
 	}
 	w.Header().Set("Content-Type", "application/json")

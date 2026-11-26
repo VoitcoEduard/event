@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import ScreenManagerScreen from '../src/views/ScreenManagerScreen.vue'
+import { clearDialogQueue, resolveActiveDialog, useDialog } from '../src/composables/useDialog'
 
 const { toastMock, routerMock } = vi.hoisted(() => ({
   toastMock: { success: vi.fn(), error: vi.fn() },
@@ -12,7 +13,9 @@ vi.mock('vue-router', () => ({
   useRouter: () => routerMock,
 }))
 
-vi.mock('vue-i18n', () => ({
+vi.mock('vue-i18n', async (importOriginal) => ({
+  // Keep createI18n available: the layout chain now imports src/i18n.js.
+  ...await importOriginal(),
   useI18n: () => ({ t: k => k }),
 }))
 
@@ -35,6 +38,7 @@ const mountOpts = {
   global: {
     mocks: { $t: k => k },
     stubs: {
+      RouterLink: true,
       AppIcon: true,
       QRCodeVue: {
         name: 'QRCodeVue',
@@ -138,7 +142,7 @@ describe('ScreenManagerScreen fixes (Bug #16)', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
     vi.stubGlobal('fetch', fetchMock)
-    vi.stubGlobal('prompt', vi.fn(() => 'My Template'))
+    const { activeDialog } = useDialog()
 
     wrapper = mount(ScreenManagerScreen, mountOpts)
     await flushPromises()
@@ -157,8 +161,12 @@ describe('ScreenManagerScreen fixes (Bug #16)', () => {
     expect(saveTplBtn).toBeTruthy()
     await saveTplBtn.trigger('click')
     await flushPromises()
+    expect(activeDialog.value?.type).toBe('prompt')
+    resolveActiveDialog('My Template')
+    await flushPromises()
     expect(toastMock.error).toHaveBeenCalledWith('screen_manager.editor.template_save_failed')
     expect(toastMock.success).not.toHaveBeenCalled()
+    clearDialogQueue()
   })
 
   it('surfaces error when fetchSlides or screen-state returns non-2xx', async () => {

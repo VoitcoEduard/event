@@ -738,12 +738,14 @@ func (h *Handler) GetSimpleQuizState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view := r.URL.Query().Get("view")
+	if view == "" {
+		// Default BEFORE authorization so a bare ?playerId=X request cannot
+		// bypass the player-secret check with an empty (admin) view.
+		view = "player"
+	}
 	playerID := r.URL.Query().Get("playerId")
 	if !h.authorizeSimpleQuizView(w, r, s, view, playerID) {
 		return
-	}
-	if view == "" {
-		view = "player"
 	}
 	writeJSON(w, publicSimpleQuizState(s, view, playerID))
 }

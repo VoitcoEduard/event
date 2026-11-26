@@ -339,6 +339,43 @@ func mergePreservedModuleData(existing, next map[string]any) map[string]any {
 }
 
 func (s *Store) PublishModule(ctx context.Context, eventID, moduleID string, data map[string]any) (bool, error) {
+	return s.PublishModuleWithName(ctx, eventID, moduleID, nil, data)
+}
+func (s *Store) PatchModule(ctx context.Context, eventID, moduleID string, data map[string]any) error {
+	if data == nil {
+		return nil
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	tag, err := s.Pool.Exec(ctx, `UPDATE modules SET data=data || $3::jsonb WHERE event_id=$1 AND id=$2`, eventID, moduleID, raw)
+	return affected(tag, err)
+}
+// UpdateModule atomically updates a module's name and/or data (merged shallowly
+// like PatchModule). A nil name or nil data leaves the respective column alone.
+func (s *Store) UpdateModule(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) error {
+	if name == nil && data == nil {
+		return nil
+	}
+	if name != nil && data == nil {
+		tag, err := s.Pool.Exec(ctx, `UPDATE modules SET name=$3 WHERE event_id=$1 AND id=$2`, eventID, moduleID, *name)
+		return affected(tag, err)
+	}
+	if name == nil && data != nil {
+		return s.PatchModule(ctx, eventID, moduleID, data)
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	tag, err := s.Pool.Exec(ctx, `UPDATE modules SET name=$3, data=data || $4::jsonb WHERE event_id=$1 AND id=$2`, eventID, moduleID, *name, raw)
+	return affected(tag, err)
+}
+
+// PublishModuleWithName publishes module data and optionally renames the module
+// in the same transaction, preserving manualScoreTarget and judgeToken.
+func (s *Store) PublishModuleWithName(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) (bool, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
 		return false, err
@@ -360,7 +397,12 @@ func (s *Store) PublishModule(ctx context.Context, eventID, moduleID string, dat
 	if err != nil {
 		return false, err
 	}
-	tag, err := tx.Exec(ctx, `UPDATE modules SET data=$3 WHERE event_id=$1 AND id=$2`, eventID, moduleID, raw)
+	var tag pgconn.CommandTag
+	if name != nil {
+		tag, err = tx.Exec(ctx, `UPDATE modules SET name=$3, data=$4 WHERE event_id=$1 AND id=$2`, eventID, moduleID, *name, raw)
+	} else {
+		tag, err = tx.Exec(ctx, `UPDATE modules SET data=$3 WHERE event_id=$1 AND id=$2`, eventID, moduleID, raw)
+	}
 	if err != nil {
 		return false, translate(err)
 	}
@@ -369,17 +411,7 @@ func (s *Store) PublishModule(ctx context.Context, eventID, moduleID string, dat
 	}
 	return tag.RowsAffected() > 0, nil
 }
-func (s *Store) PatchModule(ctx context.Context, eventID, moduleID string, data map[string]any) error {
-	if data == nil {
-		return nil
-	}
-	raw, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	tag, err := s.Pool.Exec(ctx, `UPDATE modules SET data=data || $3::jsonb WHERE event_id=$1 AND id=$2`, eventID, moduleID, raw)
-	return affected(tag, err)
-}
+
 func (s *Store) DeleteModule(ctx context.Context, eventID, moduleID string) (bool, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {

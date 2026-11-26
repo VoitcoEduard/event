@@ -19,7 +19,7 @@
   },
   "main": {
     "title": "Hello",
-    "subtitle": "Minimalist Design",
+    "subtitle": "Interactive Live Events",
     "connect_title": "Connect to Event",
     "connect_desc": "Enter the 6-digit PIN code to join the live event.",
     "pin_placeholder": "000000",
@@ -42,7 +42,9 @@
     "errors": {
       "incorrect": "Incorrect password. Please try again.",
       "failed": "Could not connect to server. Please try again."
-    }
+    },
+    "hide_password": "Hide password",
+    "show_password": "Show password"
   },
   "admin": {
     "title": "Event Admin",
@@ -56,6 +58,11 @@
     "update_btn": "Update Event",
     "create_btn": "Create Event",
     "upcoming_events": "Upcoming Events",
+    "events_heading": "Events",
+    "public_portal_link": "Player Join Portal",
+    "new_event_btn": "+ New Event",
+    "close_form_btn": "Close",
+    "name_required": "Please enter an event name.",
     "loading_events": "Loading events...",
     "status_active": "ACTIVE",
     "status_inactive": "INACTIVE",
@@ -65,10 +72,13 @@
     "no_events": "No events found. Create one above!",
     "back_to_main": "Back to Main",
     "confirm_delete": "Are you sure you want to delete this event?",
+    "delete_event_title": "Delete event?",
+    "confirm_delete_named": "Are you sure you want to delete \"{name}\"? All modules and event data will be permanently removed.",
     "messages": {
       "fill_fields": "Please fill in all fields",
       "created": "Event created successfully",
       "updated": "Event updated successfully",
+      "deleted": "Event deleted",
       "save_failed": "Failed to save event",
       "delete_failed": "Failed to delete event"
     },
@@ -128,6 +138,7 @@
   },
   "screen_manager": {
     "title": "Projector",
+    "breadcrumb": "Slides",
     "open_projector": "🖥️ Open Projector",
     "push_to_screen": "Push to Screen",
     "welcome_slide": "Welcome Slide",
@@ -138,14 +149,61 @@
     "live_preview": "Live Preview",
     "toast_pushed": "Successfully pushed to Projector",
     "editor": {
-      "title": "Slide Editor", "push_current": "Push Current Slide", "save_all": "Save All", "slides": "Slides", "add_custom_slide": "+ Add Custom Slide", "text": "Text", "properties": "Properties", "mobile_slides": "Slides", "mobile_properties": "Properties", "element": "Element", "text_content": "Text Content", "text_color": "Text Color", "font_size": "Font Size", "image": "Image", "select_image": "Select an Image", "delete_element": "Delete Element", "slide": "Slide", "name": "Name", "background_color": "Background Color", "background_image": "Background Image", "select_background": "Select Background", "clear_image": "Clear Image", "add_elements": "Add Elements", "add_text": "+ Add Text", "add_image": "+ Add Image", "add_qr": "+ Add QR Code", "template_options": "Template Options", "save_template": "Save as Template", "apply_template": "Apply Template", "no_templates": "No templates saved.", "template_name_prompt": "Enter a name for this template:", "template_saved": "Saved as template successfully", "template_save_failed": "Failed to save template", "apply_confirm": "Apply template \"{name}\"? This will overwrite the current slide.", "template_applied": "Template applied", "load_failed": "Failed to load slides", "saved": "Slides saved successfully", "save_failed": "Failed to save slides", "pushed": "Pushed to Big Screen", "push_failed": "Failed to push to screen", "new_custom_slide": "New Custom Slide", "delete_slide_confirm": "Delete this slide?"
+      "title": "Slide Editor",
+      "push_current": "Push Current Slide",
+      "save_all": "Save All",
+      "slides": "Slides",
+      "add_custom_slide": "+ Add Custom Slide",
+      "text": "Text",
+      "properties": "Properties",
+      "mobile_slides": "Slides",
+      "mobile_properties": "Properties",
+      "element": "Element",
+      "text_content": "Text Content",
+      "text_color": "Text Color",
+      "font_size": "Font Size",
+      "image": "Image",
+      "select_image": "Select an Image",
+      "delete_element": "Delete Element",
+      "slide": "Slide",
+      "name": "Name",
+      "background_color": "Background Color",
+      "background_image": "Background Image",
+      "select_background": "Select Background",
+      "clear_image": "Clear Image",
+      "add_elements": "Add Elements",
+      "add_text": "+ Add Text",
+      "add_image": "+ Add Image",
+      "add_qr": "+ Add QR Code",
+      "template_options": "Template Options",
+      "save_template": "Save as Template",
+      "apply_template": "Apply Template",
+      "no_templates": "No templates saved.",
+      "template_name_prompt": "Enter a name for this template:",
+      "template_saved": "Saved as template successfully",
+      "template_save_failed": "Failed to save template",
+      "apply_confirm": "Apply template \"{name}\"? This will overwrite the current slide.",
+      "template_applied": "Template applied",
+      "load_failed": "Failed to load slides",
+      "saved": "Slides saved successfully",
+      "save_failed": "Failed to save slides",
+      "pushed": "Pushed to Big Screen",
+      "push_failed": "Failed to push to screen",
+      "new_custom_slide": "New Custom Slide",
+      "delete_slide_confirm": "Delete this slide?",
+      "library_load_failed": "Failed to load library",
+      "new_text_default": "New Text",
+      "element_deselected": "{label} deselected"
     }
   },
   "library": {
     "title": "Library",
     "back_btn": "Back",
+    "back_to_event": "Back to Event",
     "language_label": "Interface language",
     "manage_templates": "Manage Templates",
+    "heading_templates": "Templates",
+    "heading_media": "Media Assets",
     "new_form": "+ New Form Template",
     "new_quiz": "+ New Quiz Template",
     "new_wrong_pictures": "+ New Wrong Pictures Template",
@@ -164,23 +222,85 @@
       "screensaver_hint": "Upload images to use as screensavers during quiz sessions.",
       "no_music": "No music tracks found.",
       "music_hint": "Upload audio files to play during quiz sessions.",
-      "no_templates": "No {type} templates found."
+      "no_templates": "No {type} templates found.",
+      "quizzes_hint": "Create reusable quiz templates to add to any event.",
+      "forms_hint": "Build reusable registration, feedback, or check-in forms.",
+      "wrong_pictures_hint": "Design visual spot-the-mistake challenges for your events."
     },
     "meta": {
       "added": "Added",
-      "questions": "{count} Questions",
-      "steps": "{count} Steps",
+      "questions": "{count} Questions | {count} Question | {count} Questions",
+      "steps": "{count} Steps | {count} Step | {count} Steps",
+      "rounds": "{count} Rounds | {count} Round | {count} Rounds",
       "no_desc": "No description"
     },
     "actions": {
       "export_btn": "Export",
+      "delete_title": "Delete item?",
       "delete_confirm": "Delete {name}?",
       "discard_confirm": "Discard changes?",
       "save_empty_confirm": "This template has no questions. Save it anyway?",
       "save_btn": "Save Template",
       "saving_btn": "Saving...",
       "template_name_placeholder": "Template Name",
-      "desc_placeholder": "Description (optional)"
+      "desc_placeholder": "Description (optional)",
+      "import_title": "Import template?",
+      "import_confirm": "Import \"{name}\" into your library?",
+      "import_btn": "Import",
+      "imported_suffix": "(Imported)",
+      "screensaver_name_label": "Screensaver Name",
+      "screensaver_name_placeholder": "e.g. Welcome Banner",
+      "track_name_label": "Track Name",
+      "track_name_placeholder": "e.g. Lobby Jazz",
+      "upload_btn": "Upload",
+      "media_name_required": "Please enter a name before uploading."
+    },
+    "toast": {
+      "load_templates_failed": "Failed to load templates.",
+      "load_screensavers_failed": "Failed to load screensavers.",
+      "load_tracks_failed": "Failed to load music tracks.",
+      "screensaver_uploaded": "Screensaver uploaded.",
+      "screensaver_upload_failed": "Failed to upload screensaver.",
+      "screensaver_delete_failed": "Failed to delete screensaver.",
+      "track_uploaded": "Track uploaded successfully.",
+      "track_upload_failed": "Failed to upload track.",
+      "track_deleted": "Track deleted.",
+      "track_delete_failed": "Failed to delete track.",
+      "template_deleted": "Template deleted.",
+      "template_delete_failed": "Failed to delete template.",
+      "template_exported": "Exported \"{name}\".",
+      "template_imported": "Template imported successfully.",
+      "template_import_failed": "Failed to import template.",
+      "invalid_template_file": "Invalid template file format.",
+      "invalid_json": "Error parsing JSON file."
+    }
+  },
+  "template_editor": {
+    "new_breadcrumb": "New Template",
+    "new_quiz_title": "New Quiz Template",
+    "new_form_title": "New Form Template",
+    "new_wrong_pictures_title": "New Wrong Pictures Template",
+    "edit_title": "Edit Template",
+    "untitled": "Untitled Template",
+    "back_to_library": "Back to Library",
+    "name_label": "Template Name",
+    "name_placeholder": "e.g. Friday Trivia Pack",
+    "description_label": "Description",
+    "description_placeholder": "Describe what this template is for (optional)",
+    "unsaved_badge": "Unsaved changes",
+    "save_empty_title": "Save empty template?",
+    "save_empty_form_confirm": "This form template has no steps. Save it anyway?",
+    "remove_question_title": "Delete question?",
+    "remove_question_confirm": "Are you sure you want to remove this question from the template?",
+    "validation_summary": "Please fix {count} validation issues before saving. | Please fix {count} validation issue before saving. | Please fix {count} validation issues before saving.",
+    "not_found": "Template not found.",
+    "unsupported_type": "This library tab does not use the template editor.",
+    "load_failed": "Failed to load template.",
+    "saved": "Template saved successfully.",
+    "save_failed": "Failed to save template.",
+    "retry": "Retry",
+    "errors": {
+      "name_required": "Please enter a template name."
     }
   },
   "data_library": {
@@ -205,7 +325,57 @@
       "total_score": "Total Score"
     },
     "scoring_note": "Only the latest completed run of each game counts. Manual adjustments are added separately. Teams activity awards give the full award to each recorded member; legacy team adjustments stay with the team.",
-    "modules": "Modules", "all_points": "All points", "show": "Show", "players": "Players", "teams": "Teams", "players_and_teams": "Players and teams", "manual_points_for": "Manual points for", "edit_hint": "Edit a player name and save the row. Choose a module to enter or correct points.", "manual_disabled": "Manual entry for {target} is disabled for this module. Previously saved points still count.", "spreadsheet": "Event points spreadsheet", "player": "Player", "team": "Team", "latest_game": "Latest game", "manual_adjustments": "Manual adjustments", "total_points": "Total points", "actions": "Actions", "save": "Save", "player_scores": "Player scores", "team_scores": "Team scores", "saving": "Saving…", "unsaved": "Unsaved changes — save each edited row", "up_to_date": "Up to date", "no_rows": "No {target} yet. Add them to the event before entering points.", "form_responses": "Form responses", "no_responses": "No responses yet."
+    "modules": "Modules",
+    "all_points": "All points",
+    "show": "Show",
+    "players": "Players",
+    "teams": "Teams",
+    "players_and_teams": "Players and teams",
+    "manual_points_for": "Manual points for",
+    "edit_hint": "Edit a player name and save the row. Choose a module to enter or correct points.",
+    "manual_disabled": "Manual entry for {target} is disabled for this module. Previously saved points still count.",
+    "spreadsheet": "Event points spreadsheet",
+    "player": "Player",
+    "team": "Team",
+    "latest_game": "Latest game",
+    "manual_adjustments": "Manual adjustments",
+    "total_points": "Total points",
+    "actions": "Actions",
+    "save": "Save",
+    "player_scores": "Player scores",
+    "team_scores": "Team scores",
+    "saving": "Saving…",
+    "unsaved": "Unsaved changes — save each edited row",
+    "up_to_date": "Up to date",
+    "no_rows": "No {target} yet. Add them to the event before entering points.",
+    "form_responses": "Form responses",
+    "no_responses": "No responses yet.",
+    "breadcrumb": "Data",
+    "page_title": "{name} — Data",
+    "players_count": "{count} player | {count} players",
+    "teams_count": "{count} team | {count} teams",
+    "aria": {
+      "player_name": "{name} player name",
+      "game_points": "{name} game points",
+      "manual_points": "{name} manual points"
+    },
+    "errors": {
+      "request_failed": "Request failed ({status})",
+      "open_from_event": "Open Data from an event to continue.",
+      "save_or_cancel_tab": "Save or cancel your edits before changing modules.",
+      "save_or_cancel_leave": "Save or cancel your edits before leaving.",
+      "invalid_player_name": "Enter a player name (up to 120 characters).",
+      "save_failed": "Could not finish saving: {message}",
+      "points_required": "Enter points; use 0 to clear a contribution.",
+      "points_integer": "Game scores must be whole numbers.",
+      "points_invalid": "Enter a valid number of points.",
+      "response_save_failed": "Response was not saved: {message}"
+    },
+    "notices": {
+      "row_saved": "Changes saved for {name}.",
+      "manual_target_saved": "Manual entry setting saved. Existing points are preserved.",
+      "response_saved": "Response saved."
+    }
   },
   "quiz_config": {
     "title": "Quiz Editor",
@@ -215,6 +385,7 @@
     "settings": {
       "bg_music": "Background Music",
       "none": "None",
+      "track_unavailable": "Previously selected track (unavailable)",
       "audio_output": "Audio Output",
       "projector_only": "Projector Only",
       "admin_only": "Admin Only",
@@ -248,7 +419,22 @@
       "number_required": "Correct answer for number question is required.",
       "mc_options": "All answer options must be filled for multiple choice questions.",
       "simple_text_required": "Text questions need question text or an image.",
-      "simple_points": "Text questions need positive points."
+      "simple_points": "Text questions need positive points.",
+      "points_positive": "Points must be greater than 0.",
+      "mc_min_answers": "Please provide at least {min} non-empty answer options.",
+      "correct_answer_required": "Please select a valid correct answer.",
+      "multi_select_min_correct": "Please mark at least {min} non-empty answers as correct.",
+      "cp_images_required": "Every image option must have an uploaded image.",
+      "tf_answer": "Please select True or False as the correct answer.",
+      "range_target_bounds": "Correct value must be between Min and Max values.",
+      "range_tolerance": "Tolerance must be 0 or greater.",
+      "wp_min_one": "Please add at least one round.",
+      "wp_title_required": "Round title or instructions are required.",
+      "wp_image_required": "Each round must have an uploaded image.",
+      "wp_targets_required": "Each round must have at least {min} target location defined.",
+      "wp_tolerance": "Tolerance percentage must be 0 or greater.",
+      "unknown_type": "Unsupported question type: {type}.",
+      "time_limit_invalid": "Time limit must be a whole number of seconds (0 or greater)."
     },
     "import": {
       "note_images": "Note: Images from imported files need to be re-uploaded",
@@ -277,7 +463,9 @@
         "correct_picture": "Correct Picture",
         "wrong_pictures": "Wrong Pictures",
         "number": "Number",
-        "simple_text": "Text Answer"
+        "simple_text": "Text Answer",
+        "multiple_choice": "Multiple Choice",
+        "single_select": "Single Select"
       },
       "type_descriptions": {
         "classic": "Standard multiple choice question with four options and one correct answer.",
@@ -338,7 +526,8 @@
         "placing_hint": "Click on image...",
         "no_targets": "No targets set.",
         "label_placeholder": "Label...",
-        "radius_label": "Radius:"
+        "radius_label": "Radius:",
+        "remove_target": "Remove target"
       },
       "no_limit": "No limit",
       "simple_text": {
@@ -388,7 +577,26 @@
   },
   "quiz_editor": {
     "empty_text": "Start by adding a question to your quiz!",
-    "add_question": "+ Add Question"
+    "add_question": "+ Add Question",
+    "add_classic": "+ Add Classic",
+    "add_other_type": "+ Other Type",
+    "move_up": "Move question up",
+    "move_down": "Move question down",
+    "correct_label": "Correct",
+    "outline_title": "Questions",
+    "untitled_question": "Untitled question",
+    "question_short": "Q{number}",
+    "has_errors": "Has validation errors",
+    "type_hints": {
+      "classic": "4 choices, 1 correct answer",
+      "multi_select": "Multiple correct choices",
+      "true_false": "Two choices: True or False",
+      "range": "Guess a number on a slider",
+      "number": "Exact numeric answer",
+      "correct_picture": "Pick the right image",
+      "wrong_pictures": "Spot targets on an image",
+      "simple_text": "Written answer, judge-marked"
+    }
   },
   "form_editor": {
     "empty_text": "Start by adding a question or message",
@@ -413,6 +621,12 @@
     "checkbox_label": "Select all that apply:",
     "welcome_msg": "Welcome to the form!",
     "delete_question": "Delete question",
+    "move_up": "Move step up",
+    "move_down": "Move step down",
+    "delete_step": "Delete step",
+    "delete_step_title": "Delete step?",
+    "delete_step_confirm": "Are you sure you want to delete this step from the form?",
+    "delete_step_btn": "Delete",
     "types": {
       "text": "Text",
       "number": "Number",
@@ -420,21 +634,34 @@
       "radio": "Radio",
       "checkbox": "Checkbox",
       "dropdown": "Dropdown"
-    }
+    },
+    "remove_answer": "Remove answer"
   },
   "image_uploader": {
     "remove": "✕ Remove",
     "alt_label": "Alt Text (for accessibility)",
     "alt_placeholder": "Describe the image...",
-    "click_drag": "Click or drag image here",
+    "click_drag": "Click, drag, or paste image here",
     "hint": "JPEG, PNG, GIF, WebP · Auto-compressed to WebP",
     "uploading": "Uploading...",
-    "error_upload": "Failed to upload image: {error}"
+    "error_upload": "Failed to upload image: {error}",
+    "change_image": "Change Image",
+    "remove_short": "Remove",
+    "paste_clipboard": "Paste from clipboard",
+    "paste_short": "Paste",
+    "paste_replace_title": "Replace image from clipboard",
+    "awaiting_paste_hint": "Ready — press Ctrl+V (⌘V on Mac) to paste",
+    "pasted_success": "Image pasted from clipboard",
+    "no_image_in_clipboard": "No image found in clipboard. Copy an image first.",
+    "paste_shortcut_fallback": "Clipboard access isn't available here — press Ctrl+V (⌘V on Mac) to paste.",
+    "paste_permission_denied": "Clipboard permission was denied — press Ctrl+V (⌘V on Mac) to paste.",
+    "clipboard_read_failed": "Could not read clipboard — press Ctrl+V (⌘V on Mac) to paste."
   },
   "image_options_editor": {
     "label": "Select the correct image (2-4 options)",
     "add_image": "+ Add Image",
-    "correct": "Correct"
+    "correct": "Correct",
+    "remove_option": "Remove option"
   },
   "event": {
     "no_data": "No event data found.",
@@ -520,7 +747,10 @@
       "toast": {
         "link_copied": "Projector link copied to clipboard!"
       },
-      "wrong_picture_title": "What is wrong with the picture?", "show_leaderboard": "Show Leaderboard", "question_of": "Question {current} of {total}"
+      "wrong_picture_title": "What is wrong with the picture?",
+      "show_leaderboard": "Show Leaderboard",
+      "question_of": "Question {current} of {total}",
+      "question_image_alt": "Question image"
     }
   },
   "projector": {
@@ -582,7 +812,11 @@
     "cancel": "Cancel",
     "loading": "Loading...",
     "data_btn": "📊 Data",
-    "close": "Close", "open": "Open", "previous": "Previous", "next": "Next"
+    "close": "Close",
+    "open": "Open",
+    "previous": "Previous",
+    "next": "Next",
+    "close_notification": "Close notification"
   },
   "simple_quiz": {
     "config": {
@@ -618,7 +852,11 @@
       "paused": "Paused — resume required",
       "confirm_end": "End answering? Players can no longer submit.",
       "confirm_publish": "Publish? Requires all answers graded.",
-      "reveal_hint": "Reveal needs a public answer and enabled setting."
+      "reveal_hint": "Reveal needs a public answer and enabled setting.",
+      "grading_ready": "Grading ready",
+      "event_identities": "Event identities",
+      "link_participant_aria": "Link {name} to an event participant",
+      "separate_score_row": "Separate score row"
     },
     "player": {
       "logo": "Simple Quiz!",
@@ -659,7 +897,9 @@
       "empty": "No answers yet. Grading can start while questions are active.",
       "next_pending": "Next pending takes its place after grading.",
       "missing_token": "Missing judge token.",
-      "notes": "Judge notes"
+      "notes": "Judge notes",
+      "question_all": "Q: all ({total})",
+      "points_short": "{points} pts"
     },
     "projector": {
       "join_title": "Join the Simple Quiz!",
@@ -786,5 +1026,176 @@
     "earned": "Individual points earned",
     "award_history": "Award history",
     "rank": "Rank"
+  },
+  "admin_shell": {
+    "brand": "Event Admin",
+    "nav_label": "Admin navigation",
+    "breadcrumb_label": "Breadcrumb",
+    "events": "Events",
+    "library": "Library",
+    "users": "Administrators",
+    "menu_open": "Open navigation menu",
+    "menu_close": "Close navigation menu"
+  },
+  "dialog": {
+    "confirm_title": "Confirm action",
+    "prompt_title": "Enter value",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close dialog"
+  },
+  "unsaved_changes": {
+    "title": "Unsaved changes",
+    "message": "You have unsaved changes. Leave without saving?",
+    "leave": "Leave",
+    "stay": "Stay"
+  },
+  "host": {
+    "back_to_event": "Back to Event",
+    "waiting_for_players": "Waiting for at least 1 player to join...",
+    "loading": "Loading host controls...",
+    "load_error": "Could not load module host view.",
+    "unsupported_module": "This module type does not have a live host screen.",
+    "edit_module": "Edit Module",
+    "retry": "Retry",
+    "copy_link_failed": "Failed to copy projector link",
+    "qr_alt": "QR code to join event with PIN {pin}",
+    "placeholder_module_editor": "Module Editor",
+    "placeholder_template_editor": "Template Editor"
+  },
+  "wrong_pictures": {
+    "empty_text": "Start by adding a round!",
+    "round_title": "Round {number}",
+    "instructions_label": "Round Title / Instructions",
+    "instructions_placeholder": "e.g., Find all 3 anachronisms in this photo",
+    "points": "Points",
+    "tolerance": "Tolerance %",
+    "time_limit": "Time (s)",
+    "show_count": "Show Count",
+    "add_round": "+ Add Round",
+    "remove_round": "Remove round",
+    "remove_round_title": "Remove round?",
+    "remove_round_confirm": "Are you sure you want to remove this round? This action cannot be undone.",
+    "move_up": "Move round up",
+    "move_down": "Move round down",
+    "image_required": "Please upload an image first to set wrong picture targets.",
+    "rounds_count": "{count} Rounds"
+  },
+  "event_details": {
+    "event_fallback": "Event",
+    "nav_label": "Event sections",
+    "tab_modules": "Modules",
+    "tab_slides": "Slides",
+    "tab_data": "Data",
+    "tab_library": "Library",
+    "copy_projector_link": "Copy Projector Link",
+    "share_qr_toggle": "Share & QR",
+    "edit_module": "Edit",
+    "host_module": "Host",
+    "delete_module_title": "Delete module?",
+    "delete_module_confirm": "Delete \"{name}\"? This removes the module and its configuration from the event.",
+    "toast_event_started": "Event started",
+    "toast_event_stopped": "Event stopped",
+    "toast_status_failed": "Failed to update event status",
+    "toast_module_started": "Module started",
+    "toast_module_stopped": "Module stopped",
+    "toast_module_status_failed": "Failed to update module status",
+    "toast_module_deleted": "Module deleted",
+    "toast_module_delete_failed": "Failed to delete module",
+    "retry": "Retry",
+    "module_types": {
+      "quiz": "Quiz",
+      "simple_quiz": "Simple Quiz",
+      "wrong_pictures": "Wrong Pictures",
+      "form": "Form",
+      "teams": "Teams"
+    },
+    "not_found": "Event not found",
+    "load_failed": "Failed to load event details"
+  },
+  "add_module": {
+    "title": "Add Module",
+    "step_label": "Step {step} of 2",
+    "choose_type": "Choose what kind of activity to add",
+    "change_type": "Change type",
+    "name_label": "Module Name",
+    "start_label": "Starting content",
+    "start_blank": "Start blank",
+    "from_template": "Copy from Library template",
+    "template_copy_note": "Creates an independent copy for this event.",
+    "search_templates": "Search templates…",
+    "no_matching_templates": "No matching templates found.",
+    "create_and_edit": "Create & Edit",
+    "creating": "Creating…",
+    "items_count_questions": "{count} questions | {count} question | {count} questions",
+    "items_count_steps": "{count} steps | {count} step | {count} steps",
+    "items_count_rounds": "{count} rounds | {count} round | {count} rounds",
+    "errors": {
+      "name_required": "Please enter a module name.",
+      "select_template": "Please select a template to copy.",
+      "templates_load_failed": "Failed to load templates.",
+      "create_failed": "Failed to create module."
+    },
+    "placeholders": {
+      "quiz": "e.g. Friday Trivia",
+      "simple_quiz": "e.g. Open Q&A Round",
+      "wrong_pictures": "e.g. Spot the Mistake",
+      "form": "e.g. Check-in Form",
+      "teams": "e.g. House Teams"
+    },
+    "types": {
+      "quiz": {
+        "title": "Quiz",
+        "desc": "Timed interactive quiz with leaderboard and multiple question types."
+      },
+      "simple_quiz": {
+        "title": "Simple Quiz",
+        "desc": "Written-answer rounds reviewed live by a host or judge."
+      },
+      "wrong_pictures": {
+        "title": "Wrong Pictures",
+        "desc": "Visual challenge where players tap mistakes inside an image."
+      },
+      "form": {
+        "title": "Form",
+        "desc": "Collect registrations, feedback, or custom participant inputs."
+      },
+      "teams": {
+        "title": "Teams",
+        "desc": "Organize players into teams and award collaborative points."
+      }
+    }
+  },
+  "module_editor": {
+    "untitled_module": "Untitled Module",
+    "name_placeholder": "Module name",
+    "save": "Save",
+    "host": "Host",
+    "more_actions": "More",
+    "unsaved_indicator": "Unsaved changes",
+    "loading": "Loading module editor...",
+    "load_error": "Failed to load module.",
+    "retry": "Retry",
+    "back_to_event": "Back to Event",
+    "quiz_settings": "Quiz Settings",
+    "audio_settings": "Audio Settings",
+    "load_json": "Load JSON",
+    "export_json": "Export JSON",
+    "save_template": "Save as Template",
+    "exported_json": "JSON exported.",
+    "import_invalid_format": "Invalid JSON format.",
+    "template_name_label": "Template Name",
+    "template_name_required": "Please enter a template name.",
+    "replace_title": "Replace current content?",
+    "confirm_replace_steps": "This will replace your current steps. Continue?",
+    "replace_confirm": "Replace",
+    "delete_question_title": "Delete question?",
+    "search_templates": "Search templates...",
+    "saved_success": "Module saved successfully!",
+    "save_error": "Failed to save module.",
+    "validation_banner": "{count} validation issue needs attention before saving. | {count} validation issues need attention before saving.",
+    "export_default_name": "Export",
+    "export_description": "Exported from event {eventId}",
+    "template_description": "Created from event {eventId}"
   }
 }

@@ -1,6 +1,17 @@
 <template>
   <div class="quiz-host-screen">
     <div class="bg-layer"></div>
+
+    <div class="host-topbar">
+      <div class="host-topbar-left">
+        <a :href="backToEventUrl" class="host-back-link" @click="goBackToEvent">
+          <AppIcon name="arrowLeft" :size="16" aria-hidden="true" />
+          <span>{{ $t('host.back_to_event') }}</span>
+        </a>
+        <span v-if="hostContextLabel" class="host-topbar-context">{{ hostContextLabel }}</span>
+      </div>
+      <AdminThemeToggle variant="inline" />
+    </div>
     
     <!-- LOBBY STATE -->
     <div v-if="gameState === 'lobby'" class="state-container lobby-container">
@@ -11,7 +22,14 @@
           <span class="pin-code">{{ pinCode }}</span>
         </div>
         <div class="qr-container">
-           <div class="qr-placeholder">{{ $t('quiz.host.qr_placeholder') }}</div>
+          <QRCodeVue
+            :value="qrCodeUrl"
+            :size="150"
+            level="H"
+            render-as="svg"
+            role="img"
+            :aria-label="$t('host.qr_alt', { pin: pinCode })"
+          />
         </div>
         <div class="lobby-actions">
             <button type="button" class="copy-link-btn" @click="copyProjectorLink">
@@ -35,6 +53,9 @@
         <button type="button" class="start-btn" @click="startQuiz" :disabled="players.length === 0">
           {{ $t('quiz.host.start_btn') }}
         </button>
+        <p v-if="players.length === 0" class="lobby-start-hint">
+          {{ $t('host.waiting_for_players') }}
+        </p>
       </div>
     </div>
 
@@ -53,7 +74,7 @@
           {{ timeRemaining }}
         </div>
         <div class="timer" v-else-if="gameState === 'question-presenting'" :style="explainTimeRemaining > 0 ? '' : 'font-size: 1.5rem'">
-          {{ explainTimeRemaining > 0 ? explainTimeRemaining : ($t('quiz.player.get_ready') || 'Ready!') }}
+          {{ explainTimeRemaining > 0 ? explainTimeRemaining : $t('quiz.player.get_ready') }}
         </div>
         <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
       </div>
@@ -93,7 +114,7 @@
             
             <!-- Image Background (if exists) -->
             <div v-if="questionImageUrl" class="question-image-container">
-               <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
+               <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image" decoding="async" loading="eager" />
                <div class="image-overlay-gradient"></div>
             </div>
 
@@ -120,7 +141,7 @@
             <div class="sbs-label sbs-label-min">
               {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
             </div>
-            <div class="sbs-hint">↕ Scroll to select</div>
+            <div class="sbs-hint">↕ {{ $t('quiz.host.range_to_answer') }}</div>
           </div>
           <template v-else-if="isNumber">
             <div class="number-host-view">
@@ -137,7 +158,7 @@
                 v-show="!isTrueFalse || idx < 2"
             >
                 <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" aria-hidden="true" />
-                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ isTrueFalse ? (idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false')) : answer }}</div>
             </div>
           </template>
         </div>
@@ -146,12 +167,12 @@
       <!-- Small Answer Counter in Corner -->
       <div class="answer-counter-widget">
           <div class="counter-value">{{ totalAnswered }}</div>
-          <div class="counter-label">Answers</div>
+          <div class="counter-label">{{ $t('quiz.host.answers_label') }}</div>
       </div>
       
       <div class="host-controls">
-         <button v-if="timeRemaining > 0" type="button" class="control-btn" @click="endQuestionEarly">Skip Timer</button>
-         <button v-else type="button" class="control-btn primary" @click="goToResults">Go to Results</button>
+         <button v-if="timeRemaining > 0" type="button" class="control-btn" @click="endQuestionEarly">{{ $t('quiz.host.skip_timer') }}</button>
+         <button v-else type="button" class="control-btn primary" @click="goToResults">{{ $t('quiz.host.go_to_results') }}</button>
       </div>
     </div>
 
@@ -159,7 +180,7 @@
     <div v-else-if="gameState === 'results'" class="state-container results-container-new">
        <div class="results-content-wrapper">
          <div class="question-header" style="margin-bottom: 1rem;">
-             <div class="results-mode-title">Question {{ currentQuestionIndex + 1 }} Results</div>
+             <div class="results-mode-title">{{ $t('quiz.host.results_title', { num: currentQuestionIndex + 1 }) }}</div>
              <!-- <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div> -->
          </div>
 
@@ -224,7 +245,7 @@
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
                 <div class="question-text-overlay">
@@ -256,7 +277,7 @@
             <div class="question-column">
               <div class="question-card" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image" decoding="async" loading="eager" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
                 <div class="question-text-overlay">
@@ -279,7 +300,7 @@
             <div class="question-column">
               <div class="question-card has-distribution" :class="{ 'has-image': !!questionImageUrl }">
                 <div v-if="questionImageUrl" class="question-image-container">
-                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || 'Question image'" class="question-image dimmed-image" decoding="async" loading="eager" />
+                  <img :src="questionImageUrl" :alt="currentQuestion?.imageAlt || $t('quiz.host.question_image_alt')" class="question-image dimmed-image" decoding="async" loading="eager" />
                   <div class="image-overlay-gradient"></div>
                 </div>
 
@@ -323,7 +344,7 @@
                   v-show="!isTrueFalse || idx < 2"
                 >
                   <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" aria-hidden="true" />
-                  <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                  <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ isTrueFalse ? (idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false')) : answer }}</div>
                   <AppIcon v-if="isAnswerCorrect(idx)" class="result-check-icon" name="check" :size="18" aria-hidden="true" />
                 </div>
             </div>
@@ -438,7 +459,7 @@
     
     <div v-if="showUnmuteButton" class="unmute-overlay">
         <button type="button" @click="enableAudio" class="unmute-btn">
-            🔊 Enable Sound
+            {{ $t('quiz.host.enable_sound') }}
         </button>
     </div>
 
@@ -448,6 +469,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import QRCodeVue from 'qrcode.vue'
 import { quizWS } from '../services/websocket'
 import { API_BASE_URL } from '../utils'
 import { getImageUrl } from '../services/media'
@@ -457,15 +479,31 @@ import { preloader } from '../utils/imagePreload'
 import { copyTextToClipboard } from '../utils/clipboard'
 import WrongPictureTargetCrop from '../components/WrongPictureTargetCrop.vue'
 import AppIcon from '../components/AppIcon.vue'
+import AdminThemeToggle from '../components/AdminThemeToggle.vue'
+
+const props = defineProps({
+  eventName: { type: String, default: '' },
+  moduleName: { type: String, default: '' }
+})
 
 const route = useRoute()
 const router = useRouter()
 const eventId = route.params.eventId
 const moduleId = route.params.moduleId
+const backToEventUrl = `/admin/events/${eventId}`
+const hostContextLabel = computed(() => [props.eventName, props.moduleName].filter(Boolean).join(' / '))
+const goBackToEvent = (event) => {
+  event?.preventDefault?.()
+  router.push(backToEventUrl)
+}
 
 // State
 const gameState = ref('lobby') 
 const pinCode = ref(eventId)
+const qrCodeUrl = computed(() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    return `${origin}/?pin=${pinCode.value}`
+})
 const players = ref([])
 const questions = ref([])
 const currentQuestionIndex = ref(0)
@@ -813,7 +851,7 @@ const exitQuiz = async () => {
     
     // Wait a bit to ensure message is sent before disconnecting
     await new Promise(resolve => setTimeout(resolve, 300))
-    router.push({ name: 'admin-event-details', params: { id: eventId } })
+    router.push(backToEventUrl)
     // Note: disconnect is handled by onUnmounted, don't call it here to avoid double-disconnect
 }
 
@@ -878,7 +916,7 @@ const copyProjectorLink = async () => {
     if (copied) {
         success(t('quiz.host.toast.link_copied'))
     } else {
-        showError('Failed to copy projector link')
+        showError(t('host.copy_link_failed'))
     }
 }
 
@@ -916,12 +954,15 @@ onMounted(async () => {
 
     // 2. Register handlers BEFORE connecting (server sends messages immediately)
     quizWS.on('cmd:error', (payload) => {
-        if (payload?.code === 'save_failed' || payload?.code === 'invalid_image_metadata') showError(payload.message)
+        if (['save_failed', 'invalid_image_metadata', 'quiz_finishing', 'start_failed'].includes(payload?.code) && payload?.message) {
+            showError(payload.message)
+        }
     })
 
     quizWS.on('cmd:state', (payload) => {
         // Handle state transitions from server
         const prevState = gameState.value
+        const prevIndex = currentQuestionIndex.value
         gameState.value = payload.state
         
         if (payload.currentIndex !== undefined) {
@@ -930,23 +971,22 @@ onMounted(async () => {
         
         // Handle transitions
         if (payload.state === 'question-active') {
-            // Restart timer when entering question state
-            if (prevState !== 'question-active' || payload.currentIndex !== currentQuestionIndex.value) {
+            // Restart timer when entering question state or advancing to a new question
+            if (prevState !== 'question-active' || (payload.currentIndex !== undefined && payload.currentIndex !== prevIndex)) {
                 startLocalTimer(currentQuestion.value?.timeLimit || 20)
             }
         } else if (payload.state === 'question-presenting') {
+            clearInterval(timerInterval)
             if (currentQuestionIndex.value === 0) {
                 displayedScores.value = {}
             }
             // Set time remaining to question time without starting timer
-            if (currentQuestion.value?.timeLimit) {
-                timeRemaining.value = currentQuestion.value.timeLimit
-            }
+            timeRemaining.value = currentQuestion.value?.timeLimit || 20
             startExplainTimer(payload.timeLimit || 5) // note: payload.timeLimit in cmd:state is the ExplainTime
             realTimeAnsweredCount.value = 0 // Reset for new question
             answerCounts.value = { 0: 0, 1: 0, 2: 0, 3: 0 } // Reset counts to zero
             playerSignals.value = [] // Reset slider player signals
-        } else if (payload.state === 'results') {
+        } else {
             clearInterval(timerInterval)
             clearInterval(explainTimerInterval)
         }

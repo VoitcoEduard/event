@@ -1,117 +1,150 @@
 <template>
-  <main class="data-page">
-    <header>
-      <button type="button" class="back-btn" @click="router.push(`/admin/event/${eventId}`)"><AppIcon name="arrowLeft" :size="18" aria-hidden="true" /> {{ t('data_library.back_to_event') }}</button>
-      <h1>{{ event?.name || 'Event' }} · Data</h1>
-      <button type="button" class="refresh-btn" :disabled="busy || loading || dirty" @click="load">{{ t('data_library.refresh_btn') }}</button>
-    </header>
-    <p class="scoring-note">{{ t('data_library.scoring_note') }}</p>
-    <p v-if="error" role="alert" class="error">{{ error }}</p>
-    <p v-if="notice" role="status" class="notice">{{ notice }}</p>
-    <p v-if="loading">{{ t('data_library.loading') }}</p>
-    <template v-else-if="event">
-      <nav :aria-label="t('data_library.modules')">
-        <button type="button" :class="{ active: activeTab === 'unified' }" :disabled="busy" @click="selectTab('unified')">{{ t('data_library.all_points') }}</button>
-        <button v-for="module in event.modules || []" :key="module.id" type="button" :disabled="busy" :class="{ active: activeTab === module.id }" @click="selectTab(module.id)">{{ module.name }}</button>
-      </nav>
-      <section class="toolbar">
-        <label>{{ t('data_library.show') }} <select v-model="target" :disabled="busy || dirty"><option value="players">{{ t('data_library.players') }}</option><option value="teams">{{ t('data_library.teams') }}</option></select></label>
-        <label v-if="selectedModule">{{ t('data_library.manual_points_for') }}
-          <select :value="manualTarget(selectedModule)" :disabled="busy || dirty" @change="saveTarget($event.target.value)">
-            <option value="players">{{ t('data_library.players') }}</option><option value="teams">{{ t('data_library.teams') }}</option><option value="both">{{ t('data_library.players_and_teams') }}</option>
-          </select>
-        </label>
-        <span class="record-count">{{ rows.length }} {{ target }}</span>
-      </section>
-      <p class="sheet-hint" v-if="!selectedModule">{{ t('data_library.edit_hint') }}</p>
-      <p class="sheet-hint" v-else-if="!allowsManual(selectedModule, target)">{{ t('data_library.manual_disabled', { target: target === 'players' ? t('data_library.players') : t('data_library.teams') }) }}</p>
-      <div class="table-shell">
-        <div class="table-wrap" role="region" :aria-label="t('data_library.spreadsheet')" tabindex="0">
-          <table>
-            <thead><tr><th class="row-number" scope="col">#</th><th class="name-cell" scope="col">{{ target === 'players' ? t('data_library.player') : t('data_library.team') }}</th>
-              <template v-for="module in visibleModules" :key="module.id">
-                <th v-if="target === 'players' && isGame(module)" scope="col" class="score-heading">{{ module.name }}<span>{{ t('data_library.latest_game') }}</span></th>
-                <th v-if="module.type === 'teams'" scope="col" class="score-heading">{{ module.name }}<span>{{ t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score') }}</span></th>
-                <th scope="col" class="score-heading">{{ module.name }}<span>{{ t('data_library.manual_adjustments') }}</span></th>
-              </template><th scope="col" class="total-cell">{{ t('data_library.total_points') }}</th><th scope="col" class="actions-cell">{{ t('data_library.actions') }}</th>
-            </tr></thead>
-            <tbody><tr v-for="(row, index) in rows" :key="row.id" :class="{ edited: hasDraft(row) }">
-              <td class="row-number" data-label="#">{{ index + 1 }}</td>
-              <th scope="row" class="name-cell" :title="row.id"><input v-if="target === 'players' && row.registered" :aria-label="`${row.name} player name`" :disabled="busy" :value="drafts[row.id]?.name ?? row.name" @input="setDraft(row, 'name', $event.target.value)" /><span v-else>{{ row.name }}</span><small>{{ row.id }}</small></th>
-              <template v-for="module in visibleModules" :key="module.id">
-                <td v-if="target === 'players' && isGame(module)" :data-label="`${module.name} · ${t('data_library.latest_game')}`">
-                  <input v-if="selectedModule && isEditableGameScore(module) && row.game[module.id] !== undefined" :aria-label="`${row.name} game points`" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
-                  <span v-else>{{ row.game[module.id] ?? '—' }}</span>
-                </td>
-                <td v-if="module.type === 'teams'" :data-label="`${module.name} · ${t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score')}`">{{ row.awards[module.id] ?? 0 }}</td>
-                <td :data-label="`${module.name} · ${t('data_library.manual_adjustments')}`"><input v-if="selectedModule && row.registered && allowsManual(module, target)" :aria-label="`${row.name} manual points`" type="number" step="any" :disabled="busy" :value="draft(row, 'manual')" @input="setDraft(row, 'manual', $event.target.value)" /><span v-else>{{ row.manual[module.id] ?? 0 }}</span></td>
-              </template>
-              <td class="total-cell" :data-label="t('data_library.total_points')"><strong>{{ row.total }}</strong></td>
-              <td class="actions-cell" :data-label="t('data_library.actions')"><button type="button" :disabled="busy || !hasDraft(row)" @click="saveRow(row)">{{ t('data_library.save') }}</button><button v-if="hasDraft(row)" type="button" :disabled="busy" @click="delete drafts[row.id]">{{ t('common.cancel') }}</button></td>
-            </tr></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="sheet-status"><span>{{ selectedModule?.name || t('data_library.all_points') }} · {{ target === 'players' ? t('data_library.player_scores') : t('data_library.team_scores') }}</span><span>{{ busy ? t('data_library.saving') : dirty ? t('data_library.unsaved') : t('data_library.up_to_date') }}</span></div>
-      <p v-if="!rows.length">{{ t('data_library.no_rows', { target: target === 'players' ? t('data_library.players') : t('data_library.teams') }) }}</p>
-      <section v-if="selectedModule?.type === 'teams'">
-        <h2>{{ t('teams_module.standings') }}</h2>
-        <p><router-link :to="{ name: 'teams-admin', params: { id: eventId }, query: { moduleId: selectedModule.id } }">{{ t('teams_module.manage_teams') }}</router-link></p>
-        <article v-for="(result, resultIndex) in responses" :key="resultIndex">
-          <p v-if="result.status">{{ t(`teams_module.${result.status}`) }}</p>
-          <div class="table-shell">
-            <div class="table-wrap"><table><thead><tr><th>{{ t('teams_module.rank') }}</th><th>{{ t('teams_module.team_name') }}</th><th>{{ t('teams_module.team_score') }}</th><th>{{ t('teams_module.members') }}</th></tr></thead><tbody><tr v-for="team in result.teams || []" :key="team.id"><td :data-label="t('teams_module.rank')">{{ team.rank ?? '—' }}</td><td :data-label="t('teams_module.team_name')">{{ team.name }}</td><td :data-label="t('teams_module.team_score')">{{ team.score ?? '—' }}</td><td :data-label="t('teams_module.members')">{{ team.members?.map(member => member.nickname).join(', ') }}</td></tr></tbody></table></div>
-          </div>
-          <h3>{{ t('teams_module.award_history') }}</h3><div v-for="award in result.awards || []" :key="award.id" class="result-award"><strong>{{ award.points > 0 ? '+' : '' }}{{ award.points }}</strong> · {{ result.teams?.find(team => team.id === award.teamId)?.name }} · {{ award.reason }} · {{ award.recipients.length }} {{ t('teams_module.members') }}</div>
-        </article>
-      </section>
-      <section v-if="selectedModule?.type === 'form'">
-        <h2>{{ t('data_library.form_responses') }}</h2>
-        <p v-if="!responses.length">{{ t('data_library.no_responses') }}</p>
-        <article v-for="response in responses" :key="response.id">
-          <h3>{{ response.userId }}</h3>
-          <label v-for="(value, key) in response.data" :key="key">{{ fieldLabel(key) }}
-            <input :value="typeof value === 'object' ? JSON.stringify(value) : value" :disabled="busy || typeof value === 'object'" @change="saveResponse(response, key, $event.target.value)" />
-          </label>
-        </article>
-      </section>
+  <AdminLayout :breadcrumbs="breadcrumbs">
+    <template #actions>
+      <button
+        type="button"
+        class="data-refresh-btn"
+        :disabled="busy || loading || dirty"
+        @click="load"
+      >
+        {{ t('data_library.refresh_btn') }}
+      </button>
     </template>
-  </main>
+
+    <main class="data-page">
+      <header class="data-page-header">
+        <h1>{{ t('data_library.page_title', { name: event?.name || t('event_details.event_fallback') }) }}</h1>
+      </header>
+      <p class="scoring-note">{{ t('data_library.scoring_note') }}</p>
+      <p v-if="error" role="alert" class="error">{{ error }}</p>
+      <p v-if="notice" role="status" class="notice">{{ notice }}</p>
+      <p v-if="loading">{{ t('data_library.loading') }}</p>
+      <template v-else-if="event">
+        <nav class="data-tabs" :aria-label="t('data_library.modules')">
+          <button type="button" :class="{ active: activeTab === 'unified' }" :disabled="busy" @click="selectTab('unified')">{{ t('data_library.all_points') }}</button>
+          <button v-for="module in event.modules || []" :key="module.id" type="button" :disabled="busy" :class="{ active: activeTab === module.id }" @click="selectTab(module.id)">{{ module.name }}</button>
+        </nav>
+        <section class="toolbar">
+          <label>{{ t('data_library.show') }} <select v-model="target" :disabled="busy || dirty"><option value="players">{{ t('data_library.players') }}</option><option value="teams">{{ t('data_library.teams') }}</option></select></label>
+          <label v-if="selectedModule">{{ t('data_library.manual_points_for') }}
+            <select :value="manualTarget(selectedModule)" :disabled="busy || dirty" @change="saveTarget($event.target.value)">
+              <option value="players">{{ t('data_library.players') }}</option><option value="teams">{{ t('data_library.teams') }}</option><option value="both">{{ t('data_library.players_and_teams') }}</option>
+            </select>
+          </label>
+          <span class="record-count">{{ t(target === 'players' ? 'data_library.players_count' : 'data_library.teams_count', { count: rows.length }, rows.length) }}</span>
+        </section>
+        <p class="sheet-hint" v-if="!selectedModule">{{ t('data_library.edit_hint') }}</p>
+        <p class="sheet-hint" v-else-if="!allowsManual(selectedModule, target)">{{ t('data_library.manual_disabled', { target: target === 'players' ? t('data_library.players') : t('data_library.teams') }) }}</p>
+
+        <template v-if="rows.length">
+          <div class="table-shell">
+            <div class="table-wrap" role="region" :aria-label="t('data_library.spreadsheet')" tabindex="0">
+              <table>
+                <thead><tr><th class="row-number" scope="col">#</th><th class="name-cell" scope="col">{{ target === 'players' ? t('data_library.player') : t('data_library.team') }}</th>
+                  <template v-for="module in visibleModules" :key="module.id">
+                    <th v-if="target === 'players' && isGame(module)" scope="col" class="score-heading">{{ module.name }}<span>{{ t('data_library.latest_game') }}</span></th>
+                    <th v-if="module.type === 'teams'" scope="col" class="score-heading">{{ module.name }}<span>{{ t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score') }}</span></th>
+                    <th scope="col" class="score-heading">{{ module.name }}<span>{{ t('data_library.manual_adjustments') }}</span></th>
+                  </template><th scope="col" class="total-cell">{{ t('data_library.total_points') }}</th><th scope="col" class="actions-cell">{{ t('data_library.actions') }}</th>
+                </tr></thead>
+                <tbody><tr v-for="(row, index) in rows" :key="row.id" :class="{ edited: hasDraft(row) }">
+                  <td class="row-number" data-label="#">{{ index + 1 }}</td>
+                  <th scope="row" class="name-cell" :title="row.id"><input v-if="target === 'players' && row.registered" :aria-label="t('data_library.aria.player_name', { name: row.name })" :disabled="busy" :value="drafts[row.id]?.name ?? row.name" @input="setDraft(row, 'name', $event.target.value)" /><span v-else>{{ row.name }}</span><small>{{ row.id }}</small></th>
+                  <template v-for="module in visibleModules" :key="module.id">
+                    <td v-if="target === 'players' && isGame(module)" :data-label="`${module.name} · ${t('data_library.latest_game')}`">
+                      <input v-if="selectedModule && isEditableGameScore(module) && row.game[module.id] !== undefined" :aria-label="t('data_library.aria.game_points', { name: row.name })" type="number" step="1" :disabled="busy" :value="draft(row, 'game')" @input="setDraft(row, 'game', $event.target.value)" />
+                      <span v-else>{{ row.game[module.id] ?? '—' }}</span>
+                    </td>
+                    <td v-if="module.type === 'teams'" :data-label="`${module.name} · ${t(target === 'players' ? 'teams_module.earned' : 'teams_module.team_score')}`">{{ row.awards[module.id] ?? 0 }}</td>
+                    <td :data-label="`${module.name} · ${t('data_library.manual_adjustments')}`"><input v-if="selectedModule && row.registered && allowsManual(module, target)" :aria-label="t('data_library.aria.manual_points', { name: row.name })" type="number" step="any" :disabled="busy" :value="draft(row, 'manual')" @input="setDraft(row, 'manual', $event.target.value)" /><span v-else>{{ row.manual[module.id] ?? 0 }}</span></td>
+                  </template>
+                  <td class="total-cell" :data-label="t('data_library.total_points')"><strong>{{ row.total }}</strong></td>
+                  <td class="actions-cell" :data-label="t('data_library.actions')"><button type="button" :disabled="busy || !hasDraft(row)" @click="saveRow(row)">{{ t('data_library.save') }}</button><button v-if="hasDraft(row)" type="button" :disabled="busy" @click="delete drafts[row.id]">{{ t('common.cancel') }}</button></td>
+                </tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="sheet-status"><span>{{ selectedModule?.name || t('data_library.all_points') }} · {{ target === 'players' ? t('data_library.player_scores') : t('data_library.team_scores') }}</span><span>{{ busy ? t('data_library.saving') : dirty ? t('data_library.unsaved') : t('data_library.up_to_date') }}</span></div>
+        </template>
+        <p v-else class="empty-rows-note">{{ t('data_library.no_rows', { target: target === 'players' ? t('data_library.players') : t('data_library.teams') }) }}</p>
+
+        <section v-if="selectedModule?.type === 'teams'">
+          <h2>{{ t('teams_module.standings') }}</h2>
+          <p><router-link :to="`/admin/events/${encodeURIComponent(eventId)}/teams?moduleId=${encodeURIComponent(selectedModule.id)}`">{{ t('teams_module.manage_teams') }}</router-link></p>
+          <article v-for="(result, resultIndex) in responses" :key="resultIndex">
+            <p v-if="result.status">{{ t(`teams_module.${result.status}`) }}</p>
+            <div class="table-shell">
+              <div class="table-wrap"><table><thead><tr><th>{{ t('teams_module.rank') }}</th><th>{{ t('teams_module.team_name') }}</th><th>{{ t('teams_module.team_score') }}</th><th>{{ t('teams_module.members') }}</th></tr></thead><tbody><tr v-for="team in result.teams || []" :key="team.id"><td :data-label="t('teams_module.rank')">{{ team.rank ?? '—' }}</td><td :data-label="t('teams_module.team_name')">{{ team.name }}</td><td :data-label="t('teams_module.team_score')">{{ team.score ?? '—' }}</td><td :data-label="t('teams_module.members')">{{ team.members?.map(member => member.nickname).join(', ') }}</td></tr></tbody></table></div>
+            </div>
+            <h3>{{ t('teams_module.award_history') }}</h3><div v-for="award in result.awards || []" :key="award.id" class="result-award"><strong>{{ award.points > 0 ? '+' : '' }}{{ award.points }}</strong> · {{ result.teams?.find(team => team.id === award.teamId)?.name }} · {{ award.reason }} · {{ award.recipients.length }} {{ t('teams_module.members') }}</div>
+          </article>
+        </section>
+        <section v-if="selectedModule?.type === 'form'">
+          <h2>{{ t('data_library.form_responses') }}</h2>
+          <p v-if="!responses.length">{{ t('data_library.no_responses') }}</p>
+          <article v-for="response in responses" :key="response.id">
+            <h3>{{ response.userId }}</h3>
+            <label v-for="(value, key) in response.data" :key="key">{{ fieldLabel(key) }}
+              <input :value="typeof value === 'object' ? JSON.stringify(value) : value" :disabled="busy || typeof value === 'object'" @change="saveResponse(response, key, $event.target.value)" />
+            </label>
+          </article>
+        </section>
+      </template>
+    </main>
+  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, computed, watch, getCurrentInstance } from 'vue'
-import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
+import { useRoute, onBeforeRouteUpdate } from 'vue-router'
 import { API_BASE_URL, getAuthHeaders } from '../utils'
-import AppIcon from '../components/AppIcon.vue'
+import AdminLayout from '../components/AdminLayout.vue'
 import { extractLabel } from '../utils/labelExtractor'
 import { isGame, isEditableGameScore, manualTarget, allowsManual, scoreRows, parsePoints } from '../utils/eventScores'
-const route = useRoute(), router = useRouter()
+import { useUnsavedChanges } from '../composables/useUnsavedChanges'
+
+const route = useRoute()
 const instance = getCurrentInstance()
 const t = (...args) => instance?.appContext.config.globalProperties.$t?.(...args) ?? args[0]
-const eventId = computed(() => route.query.eventId)
+
+const eventId = computed(() => {
+  const raw = route.params?.eventId ?? route.params?.id ?? route.query?.eventId
+  if (Array.isArray(raw)) return raw[0] ? String(raw[0]) : ''
+  return raw ? String(raw) : ''
+})
+
 const event = ref(null), participants = ref([]), teams = ref([]), scores = ref({}), responses = ref([])
 const loading = ref(false), busy = ref(false), error = ref(''), notice = ref(''), activeTab = ref('unified'), target = ref('players'), drafts = ref({})
 const selectedModule = computed(() => event.value?.modules?.find(m => m.id === activeTab.value))
 const visibleModules = computed(() => selectedModule.value ? [selectedModule.value] : event.value?.modules || [])
 const rows = computed(() => event.value ? scoreRows(event.value, participants.value, teams.value, scores.value, target.value, activeTab.value) : [])
 const dirty = computed(() => Object.keys(drafts.value).length > 0)
+
+const breadcrumbs = computed(() => [
+  { label: t('admin_shell.events'), to: '/admin/events' },
+  {
+    label: event.value?.name || t('event_details.event_fallback'),
+    to: eventId.value ? `/admin/events/${encodeURIComponent(eventId.value)}` : '/admin/events'
+  },
+  { label: t('data_library.breadcrumb') }
+])
+
 let generation = 0
 const path = suffix => `/events/${encodeURIComponent(eventId.value)}${suffix}`
 const modulePath = () => path(`/modules/${encodeURIComponent(activeTab.value)}`)
 async function request(url, method = 'GET', body) {
   const response = await fetch(`${API_BASE_URL}${url}`, { method, headers: { ...getAuthHeaders(), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) })
-  if (!response.ok) throw new Error((await response.text()) || `Request failed (${response.status})`)
+  if (!response.ok) throw new Error((await response.text()) || t('data_library.errors.request_failed', { status: response.status }))
   return response.status === 204 ? null : response.json()
 }
 async function load() {
   const current = ++generation
   loading.value = true; error.value = ''; drafts.value = {}; event.value = null
   try {
-    if (!eventId.value) throw new Error('Open Data from an event to continue.')
-    const [e, p, t, s] = await Promise.all([request(path('')), request(path('/participants')), request(path('/teams')), request(path('/scores'))])
+    if (!eventId.value) throw new Error(t('data_library.errors.open_from_event'))
+    const [e, p, pt, s] = await Promise.all([request(path('')), request(path('/participants')), request(path('/teams')), request(path('/scores'))])
     if (current !== generation) return
-    event.value = e; participants.value = p || []; teams.value = t || []; scores.value = s
+    event.value = e; participants.value = p || []; teams.value = pt || []; scores.value = s
     if (!e.modules?.some(m => m.id === activeTab.value)) activeTab.value = 'unified'
     await loadResponses()
   } catch (err) { if (current === generation) error.value = err.message }
@@ -125,7 +158,7 @@ async function loadResponses() {
   if (activeTab.value === tab) responses.value = result.responses || []
 }
 async function selectTab(id) {
-  if (Object.keys(drafts.value).length) { error.value = 'Save or cancel your edits before changing modules.'; return }
+  if (Object.keys(drafts.value).length) { error.value = t('data_library.errors.save_or_cancel_tab'); return }
   activeTab.value = id; error.value = ''; notice.value = ''
   try { await loadResponses() } catch (err) { error.value = err.message }
 }
@@ -144,7 +177,7 @@ async function saveRow(row) {
     const game = values.game === undefined || !isEditableGameScore(selectedModule.value) ? undefined : parsePoints(values.game, true)
     const manual = values.manual === undefined ? undefined : parsePoints(values.manual)
     const name = values.name === undefined ? undefined : values.name.trim()
-    if (name !== undefined && (!name || name.length > 120)) throw new Error('Enter a player name (up to 120 characters).')
+    if (name !== undefined && (!name || name.length > 120)) throw new Error(t('data_library.errors.invalid_player_name'))
     if (name !== undefined) {
       await request(path(`/participants/${encodeURIComponent(row.id)}/name`), 'POST', { displayName: name })
       delete values.name
@@ -160,9 +193,13 @@ async function saveRow(row) {
     delete drafts.value[row.id]
     await refreshScores()
     await loadResponses()
-    notice.value = `Changes saved for ${name ?? row.name}.`
+    notice.value = t('data_library.notices.row_saved', { name: name ?? row.name })
   } catch (err) {
-    error.value = `Could not finish saving: ${err.message}`
+    const code = err?.code
+    const message = ['points_required', 'points_integer', 'points_invalid'].includes(code)
+      ? t(`data_library.errors.${code}`)
+      : err.message
+    error.value = t('data_library.errors.save_failed', { message })
     try { await refreshScores() } catch { /* Keep the original save error visible. */ }
   } finally { busy.value = false }
 }
@@ -171,7 +208,7 @@ async function saveTarget(value) {
   try {
     await request(modulePath() + '/manual-score-target', 'PUT', { target: value })
     selectedModule.value.data = { ...selectedModule.value.data, manualScoreTarget: value }; drafts.value = {}
-    notice.value = 'Manual entry setting saved. Existing points are preserved.'
+    notice.value = t('data_library.notices.manual_target_saved')
   } catch (err) { error.value = err.message } finally { busy.value = false }
 }
 function fieldLabel(key) {
@@ -188,21 +225,37 @@ async function saveResponse(response, key, value) {
       await refreshScores()
     }
     await request(modulePath() + `/responses/${encodeURIComponent(response.id)}`, 'PUT', { data })
-    response.data = data; notice.value = 'Response saved.'
-  } catch (err) { error.value = `Response was not saved: ${err.message}`; try { await loadResponses() } catch { /* Preserve save error. */ } }
+    response.data = data; notice.value = t('data_library.notices.response_saved')
+  } catch (err) { error.value = t('data_library.errors.response_save_failed', { message: err.message }); try { await loadResponses() } catch { /* Preserve save error. */ } }
   finally { busy.value = false }
 }
-function canNavigate() {
-  if (busy.value || dirty.value) { error.value = 'Save or cancel your edits before leaving.'; return false }
-  return true
-}
-onBeforeRouteLeave(canNavigate)
-onBeforeRouteUpdate(canNavigate)
+const { confirmLeave } = useUnsavedChanges(computed(() => busy.value || dirty.value), {
+  onConfirm: () => { drafts.value = {} }
+})
+onBeforeRouteUpdate(async () => confirmLeave())
 watch(target, () => { drafts.value = {}; notice.value = '' })
 watch(eventId, load, { immediate: true })
 </script>
 
 <style scoped>
+.data-refresh-btn {
+  min-height: 38px;
+  padding: 6px 14px;
+  border: 1px solid var(--admin-border-strong, #c8ced8);
+  border-radius: 8px;
+  background: var(--admin-surface, #ffffff);
+  color: var(--admin-text, #101828);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.data-refresh-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .data-page {
   --page: #292c30;
   --sheet: #33373b;
@@ -212,10 +265,9 @@ watch(eventId, load, { immediate: true })
   container: data-page / inline-size;
   box-sizing: border-box;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100%;
   scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-  padding: 24px max(28px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(28px, env(safe-area-inset-left, 0px));
+  padding: 20px max(28px, env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(28px, env(safe-area-inset-left, 0px));
   background: var(--page);
   color: var(--ink);
   color-scheme: dark;
@@ -223,24 +275,17 @@ watch(eventId, load, { immediate: true })
   line-height: 1.45;
 }
 .data-page *, .data-page *::before, .data-page *::after { box-sizing: border-box; }
-header {
+.data-page-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   padding: 12px 16px;
   background: var(--sheet);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
-header button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-header button svg { flex-shrink: 0; }
 h1 {
   flex: 1;
   min-inline-size: 0;
@@ -252,7 +297,15 @@ h1 {
   text-wrap: balance;
 }
 p { color: var(--muted); margin: 12px 0; text-wrap: pretty; overflow-wrap: break-word; }
-.scoring-note { font-size: 12px; margin: 0 0 20px; max-width: 1000px; }
+.scoring-note { font-size: 12px; margin: 0 0 18px; max-width: 1000px; }
+.empty-rows-note {
+  padding: 18px 16px;
+  border: 1px dashed var(--admin-border, #50575e);
+  border-radius: 8px;
+  background: var(--admin-surface, var(--sheet));
+  color: var(--admin-text-muted, var(--muted));
+  margin-top: 12px;
+}
 .data-page button, .data-page select, .data-page input {
   font: inherit;
   color: var(--ink);
@@ -268,19 +321,28 @@ p { color: var(--muted); margin: 12px 0; text-wrap: pretty; overflow-wrap: break
 .data-page button:hover:not(:disabled) { background: #444b52; border-color: #68737d; }
 .data-page button:disabled { color: #8e979f; background: transparent; border-color: #454a50; cursor: default; }
 .data-page :is(button, select, input, .table-wrap):focus-visible { outline: 2px solid #91acbf; outline-offset: 2px; }
-nav {
+.data-tabs {
   display: flex;
   align-items: end;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 6px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
-  padding: 6px 6px 0;
+  padding: 6px 8px 0;
   border: 1px solid #50575f;
   border-radius: 8px 8px 0 0;
+  background-image:
+    linear-gradient(to right, var(--admin-surface, var(--sheet)) 30%, transparent),
+    linear-gradient(to left, var(--admin-surface, var(--sheet)) 30%, transparent),
+    linear-gradient(to right, rgba(0, 0, 0, 0.16), transparent),
+    linear-gradient(to left, rgba(0, 0, 0, 0.16), transparent);
+  background-position: left center, right center, left center, right center;
+  background-size: 28px 100%, 28px 100%, 14px 100%, 14px 100%;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
 }
-.data-page nav button {
+.data-page .data-tabs button {
   flex: none;
   white-space: nowrap;
   min-block-size: 44px;
@@ -290,7 +352,7 @@ nav {
   padding: 9px 16px;
   color: #b4bcc4;
 }
-.data-page nav button.active { background: #383d42; color: #d8e4ec; border-color: #50575f; border-bottom-color: #383d42; box-shadow: inset 0 2px #90a8b8; font-weight: 600; }
+.data-page .data-tabs button.active { background: #383d42; color: #d8e4ec; border-color: #50575f; border-bottom-color: #383d42; box-shadow: inset 0 2px #90a8b8; font-weight: 600; }
 :global(html[data-admin-appearance="true"] main.data-page nav button) {
   background: transparent !important;
   border-color: transparent !important;
@@ -331,7 +393,6 @@ label { display: inline-flex; align-items: center; gap: 9px; color: var(--muted,
   container: data-table / inline-size;
   overflow: auto;
   max-height: 65vh;
-  min-height: 160px;
   background: var(--sheet);
   border: 1px solid #50575e;
   scrollbar-color: #626c75 #30353a;
@@ -382,23 +443,53 @@ article h3:not(:first-child) { margin-top: 18px; }
 article label { margin: 4px 16px 4px 0; }
 .data-page article input { width: 240px; max-width: 100%; min-inline-size: 0; }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
+  .data-refresh-btn {
+    width: 100%;
+    min-block-size: 44px;
+  }
+
   .data-page {
-    padding: max(14px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(84px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    padding: 14px max(12px, env(safe-area-inset-right, 0px)) calc(64px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  }
+
+  .data-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding: 8px;
+    gap: 6px;
+    background-image: none;
+  }
+
+  .data-page .data-tabs button {
+    border-radius: 8px;
+    border: 1px solid var(--admin-border, #50575f);
+  }
+
+  .data-page button,
+  .data-page select,
+  .data-page input,
+  .data-page .actions-cell button,
+  .data-page td input[type="number"],
+  .data-page .name-cell input {
+    min-block-size: 44px;
+    min-height: 44px;
+  }
+
+  .data-page a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
   }
 }
 
 @container data-page (inline-size <= 700px) {
-  header {
+  .data-page-header {
     gap: 10px;
     flex-wrap: wrap;
     padding: 12px;
   }
-  header button { min-block-size: 44px; }
-  .refresh-btn { margin-left: auto; }
   h1 {
-    order: 3;
-    flex: 1 0 100%;
     font-size: clamp(18px, 4.8vw, 22px);
   }
   .name-cell { width: 155px; }
@@ -442,7 +533,6 @@ article label { margin: 4px 16px 4px 0; }
   }
 }
 
-/* A container cannot query itself, so .table-shell queries the wrapper width for .table-wrap. */
 @container data-table-shell (inline-size < 640px) {
   .table-wrap,
   :global(html[data-admin-appearance="true"] main.data-page .table-shell .table-wrap) {
@@ -591,7 +681,7 @@ article label { margin: 4px 16px 4px 0; }
   .data-page td input[type="number"] {
     width: min(140px, 45%);
     height: auto;
-    min-height: 40px;
+    min-height: 44px;
     font-size: 16px;
     padding: 6px 10px;
     border-color: var(--admin-border-strong, #50575f);
@@ -605,8 +695,8 @@ article label { margin: 4px 16px 4px 0; }
     gap: 8px;
   }
   .data-page .actions-cell button {
-    min-block-size: 40px;
-    min-height: 40px;
+    min-block-size: 44px;
+    min-height: 44px;
     font-size: 13px;
     padding: 6px 14px;
     margin-right: 0;

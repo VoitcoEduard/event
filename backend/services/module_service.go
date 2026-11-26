@@ -38,6 +38,14 @@ func (s *ModuleService) Publish(ctx context.Context, eventID, moduleID string, d
 	return s.Repo.Publish(ctx, eventID, moduleID, data)
 }
 
+func (s *ModuleService) PublishWithName(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) (bool, error) {
+	return s.Repo.PublishWithName(ctx, eventID, moduleID, name, data)
+}
+
+func (s *ModuleService) Update(ctx context.Context, eventID, moduleID string, name *string, data map[string]any) error {
+	return s.Repo.Update(ctx, eventID, moduleID, name, data)
+}
+
 func (s *ModuleService) SubmitResponse(ctx context.Context, eventID, moduleID string, response *models.Response) error {
 	response.EventID = eventID
 	response.ModuleID = moduleID

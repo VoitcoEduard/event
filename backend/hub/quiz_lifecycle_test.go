@@ -107,13 +107,26 @@ func TestQuizTransitionFiresAndUpdatesWindow(t *testing.T) {
 
 func TestShutdownRejectsRegistrationsAndCancelsTimers(t *testing.T) {
 	h, _ := presentingHub(t)
-	h.simpleQuizSessions["m"] = &models.SimpleQuizSession{ModuleID: "m", EventID: "e"}
-	h.scheduleSimpleQuizAutoLock("m", time.Now().Add(time.Hour).Unix())
+	now := time.Now().UTC()
+	h.SetSimpleQuiz(&models.SimpleQuizSession{
+		ModuleID: "m", EventID: "e", CreatedAt: now, QuestionOpenedAt: now,
+		Status: models.SimpleQuizStateQuestionOpen, DeadlineUnix: now.Add(time.Hour).Unix(),
+	})
+	h.mu.RLock()
+	if len(h.simpleQuizTimers) != 1 {
+		h.mu.RUnlock()
+		t.Fatal("expected an armed simple-quiz timer before shutdown")
+	}
+	h.mu.RUnlock()
 	h.Shutdown()
 	if h.Register(&Client{send: make(chan []byte, 1)}) {
 		t.Fatal("registration accepted after shutdown")
 	}
-	h.scheduleSimpleQuizAutoLock("m", time.Now().Add(time.Hour).Unix())
+	// A late reconcile (e.g. an in-flight handler) must not re-arm timers on a
+	// shut-down hub.
+	if s := h.GetSimpleQuiz("m"); s != nil {
+		h.reconcileSimpleQuizTimer(s)
+	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if len(h.quizTimers) != 0 || len(h.simpleQuizTimers) != 0 || len(h.clients) != 0 {
@@ -124,9 +137,19 @@ func TestShutdownRejectsRegistrationsAndCancelsTimers(t *testing.T) {
 func TestForgetEventSessionsClearsModuleDataAndWaitsForWriters(t *testing.T) {
 	h, _ := presentingHub(t)
 	h.CreateSession("other", "other-event")
-	h.simpleQuizSessions["m"] = &models.SimpleQuizSession{ModuleID: "m", EventID: "e"}
+	now := time.Now().UTC()
+	open := &models.SimpleQuizSession{
+		ModuleID: "m", EventID: "e", CreatedAt: now, QuestionOpenedAt: now,
+		Status: models.SimpleQuizStateQuestionOpen, DeadlineUnix: now.Add(time.Hour).Unix(),
+	}
+	h.SetSimpleQuiz(open)
+	h.mu.RLock()
+	if h.simpleQuizTimers["m"] == nil {
+		h.mu.RUnlock()
+		t.Fatal("expected an armed simple-quiz timer before eviction")
+	}
+	h.mu.RUnlock()
 	h.simpleQuizUndo["m"] = map[string][]simpleQuizUndoEntry{"judge": {{AnswerID: "answer"}}}
-	h.scheduleSimpleQuizAutoLock("m", time.Now().Add(time.Hour).Unix())
 	old := h.quizTimers["m"]
 	lock := h.simpleLock("m")
 	lock.Lock()
@@ -146,9 +169,13 @@ func TestForgetEventSessionsClearsModuleDataAndWaitsForWriters(t *testing.T) {
 		t.Fatal("session eviction deadlocked")
 	}
 	h.activateQuizQuestion("m", old)
-	// A handler that finished opening a question before deletion may try to arm
-	// its timer late; it must not recreate runtime entries for a deleted module.
-	h.scheduleSimpleQuizAutoLock("m", time.Now().Add(time.Hour).Unix())
+	// A handler that finished opening a question before deletion may try to
+	// arm or fire its timer late; it must not recreate runtime entries for a
+	// deleted module.
+	if s := h.GetSimpleQuiz("m"); s != nil {
+		h.reconcileSimpleQuizTimer(s)
+	}
+	h.autoLockSimpleQuiz("m", 1, now, now, 0, open.DeadlineUnix)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.sessions["m"] != nil || h.simpleQuizSessions["m"] != nil || h.simpleQuizUndo["m"] != nil || h.quizTimers["m"] != nil || h.simpleQuizTimers["m"] != nil {

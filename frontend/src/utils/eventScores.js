@@ -31,8 +31,15 @@ export function scoreRows(event, participants, teams, scores, target, moduleId =
 }
 
 export function parsePoints(value, integer = false) {
-  if (String(value).trim() === '') throw new Error('Enter points; use 0 to clear a contribution.')
+  if (String(value).trim() === '') {
+    throw Object.assign(new Error('Enter points; use 0 to clear a contribution.'), { code: 'points_required' })
+  }
   const points = Number(value)
-  if (!Number.isFinite(points) || (integer && !Number.isSafeInteger(points))) throw new Error(integer ? 'Game scores must be whole numbers.' : 'Enter a valid number of points.')
+  if (!Number.isFinite(points) || (integer && !Number.isSafeInteger(points))) {
+    if (integer && Number.isFinite(points)) {
+      throw Object.assign(new Error('Game scores must be whole numbers.'), { code: 'points_integer' })
+    }
+    throw Object.assign(new Error('Enter a valid number of points.'), { code: 'points_invalid' })
+  }
   return points
 }

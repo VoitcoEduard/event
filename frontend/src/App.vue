@@ -1,8 +1,8 @@
 <template>
   <div class="app-container" :class="{ 'admin-app-container': adminAppearanceActive }">
     <router-view />
-    <AdminThemeToggle v-if="adminAppearanceActive" />
     <Toast />
+    <AppDialogHost />
   </div>
 </template>
 
@@ -11,7 +11,7 @@ import { onMounted } from 'vue'
 import { API_BASE_URL, getUserId } from './utils'
 import { safeSessionGet, safeSessionSet } from './utils/storage'
 import Toast from './components/Toast.vue'
-import AdminThemeToggle from './components/AdminThemeToggle.vue'
+import AppDialogHost from './components/AppDialogHost.vue'
 import { useAdminTheme } from './composables/useAdminTheme'
 
 const { adminAppearanceActive } = useAdminTheme()

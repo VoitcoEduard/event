@@ -1,5 +1,5 @@
 <template>
-  <div class="form-editor">
+  <div class="form-editor" :class="{ 'form-editor--page-flow': pageFlow }">
     <div class="scroll-content">
       <div v-if="localTimeline.length === 0" class="empty-state">
         <AppIcon class="empty-icon" name="edit" :size="42" aria-hidden="true" />
@@ -19,7 +19,8 @@
                 class="action-icon"
                 @click="moveStep(index, 'up')"
                 :disabled="index === 0"
-                aria-label="Move step up"
+                :title="$t('form_editor.move_up')"
+                :aria-label="$t('form_editor.move_up')"
               >
                 <AppIcon name="chevronUp" :size="16" aria-hidden="true" />
               </button>
@@ -28,7 +29,8 @@
                 class="action-icon"
                 @click="moveStep(index, 'down')"
                 :disabled="index === localTimeline.length - 1"
-                aria-label="Move step down"
+                :title="$t('form_editor.move_down')"
+                :aria-label="$t('form_editor.move_down')"
               >
                 <AppIcon name="chevronDown" :size="16" aria-hidden="true" />
               </button>
@@ -36,7 +38,8 @@
                 type="button"
                 class="action-icon delete-btn"
                 @click="removeStep(step.id)"
-                aria-label="Delete step"
+                :title="$t('form_editor.delete_step')"
+                :aria-label="$t('form_editor.delete_step')"
               >
                 <AppIcon name="trash" :size="16" aria-hidden="true" />
               </button>
@@ -98,7 +101,7 @@
                         type="button"
                         class="remove-answer-btn"
                         @click="removeAnswer(step.id, answerIndex)"
-                        aria-label="Remove answer"
+                        :aria-label="$t('form_editor.remove_answer')"
                       >
                         <AppIcon name="close" :size="14" aria-hidden="true" />
                       </button>
@@ -161,7 +164,7 @@
           </div>
         </div>
       </div>
-      <div style="height: 100px;"></div>
+      <div class="modal-bottom-spacer"></div>
     </div>
 
     <div class="action-bar">
@@ -181,11 +184,14 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { extractLabel } from '../utils/labelExtractor'
+import { useDialog } from '../composables/useDialog'
 import AppIcon from './AppIcon.vue'
 
 const { t } = useI18n()
+const { confirm: confirmDialog } = useDialog()
 const props = defineProps({
-  timeline: { type: Array, default: () => [] }
+  timeline: { type: Array, default: () => [] },
+  pageFlow: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:timeline'])
@@ -196,7 +202,8 @@ const localTimeline = ref([])
 // template or opening the modal). Deep-watching props and also emitting deep
 // changes back would create an infinite reactive loop.
 watch(() => props.timeline, (newVal) => {
-  localTimeline.value = JSON.parse(JSON.stringify(newVal))
+  if (newVal === localTimeline.value) return
+  localTimeline.value = JSON.parse(JSON.stringify(newVal || []))
 }, { immediate: true })
 
 // Helper: emit the current localTimeline to the parent after each mutation.
@@ -294,8 +301,15 @@ const removeAnswer = (stepId, answerIndex) => {
   emitTimeline()
 }
 
-const removeStep = (id) => {
-  if (!confirm(t('library.actions.discard_confirm'))) return
+const removeStep = async (id) => {
+  const confirmed = await confirmDialog({
+    title: t('form_editor.delete_step_title'),
+    message: t('form_editor.delete_step_confirm'),
+    confirmLabel: t('form_editor.delete_step_btn'),
+    cancelLabel: t('common.cancel'),
+    destructive: true
+  })
+  if (!confirmed) return
   localTimeline.value = localTimeline.value.filter(step => step.id !== id)
   emitTimeline()
 }
@@ -335,10 +349,24 @@ const moveStep = (index, direction) => {
 .scroll-content {
   flex: 1;
   min-height: 0;
+  overflow-y: visible;
+  padding: 0 0 24px;
+}
+
+.modal-bottom-spacer {
+  display: none;
+}
+
+.form-editor:not(.form-editor--page-flow) .scroll-content {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 20px;
   padding-bottom: 80px;
+}
+
+.form-editor:not(.form-editor--page-flow) .modal-bottom-spacer {
+  display: block;
+  height: 100px;
 }
 
 .empty-state {
@@ -535,8 +563,25 @@ const moveStep = (index, direction) => {
 .add-question { background-color: rgba(0, 122, 255, 0.1); color: #007AFF; }
 .add-message { background-color: rgba(255, 159, 10, 0.1); color: #FF9F0A; }
 
+:global(html[data-admin-appearance="true"] .form-editor .action-bar) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+}
+
+:global(html[data-admin-appearance="true"] .form-editor .add-btn.add-question) {
+  background: var(--admin-primary-solid) !important;
+  border-color: var(--admin-primary-solid) !important;
+  color: #fff !important;
+}
+
+:global(html[data-admin-appearance="true"] .form-editor .add-btn.add-message) {
+  background: var(--admin-warning-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--admin-warning) 35%, var(--admin-border)) !important;
+  color: var(--admin-warning) !important;
+}
+
 @container form-editor (inline-size <= 540px) {
-  .scroll-content {
+  .form-editor:not(.form-editor--page-flow) .scroll-content {
     padding: 12px;
     padding-bottom: 84px;
   }

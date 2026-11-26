@@ -40,7 +40,7 @@ export async function convertToWebP(file, maxWidth = 1200, quality = 0.85) {
           }
           const webpFile = new File(
             [blob],
-            file.name.replace(/\.[^.]+$/, '') + '.webp',
+            (file.name || 'image').replace(/\.[^.]+$/, '') + '.webp',
             { type: 'image/webp' }
           )
           resolve(webpFile)

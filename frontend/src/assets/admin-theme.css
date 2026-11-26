@@ -116,9 +116,19 @@ html[data-admin-appearance="true"] :focus-visible {
   box-shadow: var(--admin-shadow);
 }
 
+.admin-theme-control.admin-theme-control--inline {
+  position: static;
+  z-index: auto;
+  right: auto;
+  bottom: auto;
+  box-shadow: none;
+  background: var(--admin-surface-subtle);
+}
+
 .admin-theme-option {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   min-height: 34px;
   padding: 7px 10px;
@@ -128,10 +138,34 @@ html[data-admin-appearance="true"] :focus-visible {
   color: var(--admin-text-muted);
   font-size: 13px;
   font-weight: 650;
+  cursor: pointer;
 }
 
 .admin-theme-option:hover { background: var(--admin-surface-hover); color: var(--admin-text); }
 .admin-theme-option.active { background: var(--admin-primary-soft); color: var(--admin-primary); }
+
+@media (max-width: 768px), (pointer: coarse) {
+  .admin-theme-option {
+    min-height: 44px;
+  }
+}
+
+html[data-admin-appearance="true"] .admin-theme-control .admin-theme-option {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--admin-text-muted) !important;
+  box-shadow: none !important;
+}
+
+html[data-admin-appearance="true"] .admin-theme-control .admin-theme-option:hover {
+  background: var(--admin-surface-hover) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-appearance="true"] .admin-theme-control .admin-theme-option.active {
+  background: var(--admin-primary-soft) !important;
+  color: var(--admin-primary) !important;
+}
 
 html[data-admin-appearance="true"] :is(
   .admin-screen, .admin-details-screen, .access-page, .login-page,
@@ -661,17 +695,19 @@ html[data-admin-appearance="true"] :is(
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
 ) .upload-zone {
+  border-style: dashed !important;
+  border-width: 2px !important;
   border-color: var(--admin-border-strong) !important;
 }
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) .upload-zone:hover:not(.disabled) {
+) .upload-zone:hover:not(:disabled) {
   background: var(--admin-surface-hover) !important;
   border-color: var(--admin-primary) !important;
 }
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) .upload-zone.drag-over {
+) :is(.upload-zone.drag-over, .upload-zone.awaiting-paste) {
   background: var(--admin-primary-soft) !important;
   border-color: var(--admin-primary) !important;
 }
@@ -893,7 +929,7 @@ html[data-admin-appearance="true"] :is(
 
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn) {
+) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .paste-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn) {
   background: var(--admin-surface-subtle) !important;
   border: 1px solid var(--admin-border-strong) !important;
   color: var(--admin-text) !important;
@@ -901,7 +937,7 @@ html[data-admin-appearance="true"] :is(
 }
 html[data-admin-appearance="true"] :is(
   .library-screen, .modal-container, .dialog, .modal-content, .library-modal, .teams-config-modal
-) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn):hover:not(:disabled) {
+) :is(.move-btn, .action-icon, .close-button, .icon-button, .library-btn, .copy-btn, .change-btn, .paste-btn, .dialog-close-btn, .dialog-btn.cancel, .cancel-btn):hover:not(:disabled) {
   background: var(--admin-surface-hover) !important;
 }
 
@@ -1169,6 +1205,18 @@ html[data-admin-appearance="true"] .quiz-host-screen .control-btn:not(.primary) 
   border: 1px solid var(--admin-border-strong) !important;
   color: var(--admin-text) !important;
 }
+html[data-admin-appearance="true"] .quiz-host-screen .host-back-link {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .host-back-link:hover {
+  background: var(--admin-surface-hover) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.host-topbar-context, .lobby-start-hint) {
+  color: var(--admin-text-muted) !important;
+}
 
 /* Preserve authored slide/media content in the editor. */
 html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content, .slide-preview, .element-preview, .screensaver-preview) {
@@ -1176,7 +1224,7 @@ html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content,
 }
 
 @media (max-width: 900px) {
-  .admin-theme-control {
+  .admin-theme-control:not(.admin-theme-control--inline) {
     right: max(12px, env(safe-area-inset-right, 0px));
     bottom: max(12px, env(safe-area-inset-bottom, 0px));
   }
@@ -1193,6 +1241,6 @@ html[data-admin-appearance="true"] .screen-manager :is(.canvas, .canvas-content,
 }
 
 @media (max-width: 480px) {
-  .admin-theme-option { padding: 8px; }
-  .admin-theme-option span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .admin-theme-control:not(.admin-theme-control--inline) .admin-theme-option { padding: 8px; }
+  .admin-theme-control:not(.admin-theme-control--inline) .admin-theme-option span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 }

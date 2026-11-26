@@ -1,15 +1,18 @@
 <template>
   <div class="login-page">
-    <div class="language-switcher">
-      <select v-model="$i18n.locale" :aria-label="$t('library.language_label')" @change="changeLanguage">
-        <option value="en">English</option>
-        <option value="ru">Русский</option>
-        <option value="ro">Română</option>
-      </select>
+    <div class="login-utility-strip">
+      <div class="language-switcher">
+        <select v-model="$i18n.locale" :aria-label="$t('library.language_label')" @change="changeLanguage">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+          <option value="ro">Română</option>
+        </select>
+      </div>
+      <AdminThemeToggle variant="inline" />
     </div>
     <main class="login-card">
       <div class="login-logo">
-        <img src="/brand-mark.svg" width="48" height="48" alt="Event Operations" />
+        <img src="/brand-mark.svg" width="48" height="48" :alt="$t('admin_shell.brand')" />
       </div>
       <h1 class="login-title">{{ $t('login.title') }}</h1>
       <p class="login-subtitle">{{ mode === 'google' ? $t('auth.googleSubtitle') : $t('login.subtitle') }}</p>
@@ -31,7 +34,7 @@
             type="button"
             class="toggle-pw"
             @click="showPassword = !showPassword"
-            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-label="showPassword ? $t('login.hide_password') : $t('login.show_password')"
             :aria-pressed="showPassword"
           >
             <AppIcon :name="showPassword ? 'eyeOff' : 'eye'" :size="18" aria-hidden="true" />
@@ -56,6 +59,7 @@ import { API_BASE_URL } from '../utils/index.js'
 import { safeLocalRemove, safeLocalSet } from '../utils/storage.js'
 import { loadAuthMode, loadSession } from '../session.js'
 import AppIcon from '../components/AppIcon.vue'
+import AdminThemeToggle from '../components/AdminThemeToggle.vue'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -119,10 +123,21 @@ async function handleLogin() {
   position: relative;
 }
 
-.language-switcher {
+.login-utility-strip {
   position: absolute;
   top: max(16px, env(safe-area-inset-top, 0px));
   right: max(16px, env(safe-area-inset-right, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.language-switcher {
+  display: flex;
+  align-items: center;
 }
 
 .language-switcher select {
@@ -133,7 +148,7 @@ async function handleLogin() {
   border-radius: 8px;
   cursor: pointer;
   outline: none;
-  min-block-size: 36px;
+  min-block-size: 38px;
 }
 
 .login-card {
@@ -320,10 +335,14 @@ async function handleLogin() {
   to { transform: rotate(360deg); }
 }
 
-@media (pointer: coarse) {
+@media (max-width: 768px), (pointer: coarse) {
   .language-switcher select {
     min-block-size: 44px;
     min-inline-size: 44px;
+  }
+
+  .login-utility-strip :deep(.admin-theme-option) {
+    min-block-size: 44px;
   }
 
   .input-group input {

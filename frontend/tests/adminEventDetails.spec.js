@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import AdminEventDetailsScreen from '../src/views/AdminEventDetailsScreen.vue'
+import en from '../src/locales/en.json'
+
+function lookupEn(key) {
+  return key.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), en) ?? key
+}
 
 const mockRoute = reactive({ params: { id: 'evt-1' } })
 const mockRouter = { push: vi.fn() }
@@ -12,8 +17,10 @@ vi.mock('vue-router', () => ({
   useRouter: () => mockRouter,
 }))
 
-vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: k => k, locale: { value: 'en' } }),
+vi.mock('vue-i18n', async (importOriginal) => ({
+  // Keep createI18n available: the layout chain now imports src/i18n.js.
+  ...await importOriginal(),
+  useI18n: () => ({ t: lookupEn, locale: { value: 'en' } }),
 }))
 
 vi.mock('../src/composables/useToast', () => ({
@@ -35,13 +42,10 @@ const mountOpts = {
   global: {
     mocks: { $t: k => k, $i18n: { locale: 'en' } },
     stubs: {
+      RouterLink: true,
       QRCodeVue: true,
       AppIcon: true,
-      FormModuleConfig: true,
-      QuizModuleConfig: true,
-      WrongPicturesModuleConfig: true,
-      SimpleQuizModuleConfig: true,
-      TeamsModuleConfig: true,
+      AddModuleModal: true,
     },
   },
 }

@@ -24,10 +24,10 @@ test('all locales define library.actions.save_empty_confirm distinct from discar
   }
 })
 
-test('QuizLibraryScreen saveTemplate prompts save_empty_confirm instead of discard_confirm (Bug #17)', () => {
-  const sfc = src('src/views/QuizLibraryScreen.vue')
+test('AdminTemplateEditorScreen saveTemplate prompts save_empty_confirm instead of discard_confirm (Bug #17)', () => {
+  const sfc = src('src/views/AdminTemplateEditorScreen.vue')
   const saveFnMatch = sfc.match(/const saveTemplate = async \(\) => \{[\s\S]*?\n\}/)
-  assert.ok(saveFnMatch, 'saveTemplate function must exist in QuizLibraryScreen.vue')
+  assert.ok(saveFnMatch, 'saveTemplate function must exist in AdminTemplateEditorScreen.vue')
   const saveFn = saveFnMatch[0]
   assert.match(saveFn, /library\.actions\.save_empty_confirm/)
   assert.doesNotMatch(saveFn, /library\.actions\.discard_confirm/)

@@ -3,7 +3,7 @@
     <div class="bg-glow"></div>
 
     <div class="language-switcher">
-      <select v-model="$i18n.locale" @change="changeLanguage">
+      <select v-model="$i18n.locale" :aria-label="$t('library.language_label')" @change="changeLanguage">
         <option value="en">English</option>
         <option value="ru">Русский</option>
         <option value="ro">Română</option>
@@ -129,7 +129,7 @@ const handleConnect = async () => {
 }
 
 const goToAdmin = () => {
-  router.push('/admin')
+  router.push('/admin/events')
 }
 </script>
 
@@ -171,8 +171,8 @@ const goToAdmin = () => {
 
 .language-switcher select {
   background-color: #1a1a1f;
-  color: #aaa;
-  border: 1px solid #2a2a35;
+  color: #e4e4e7;
+  border: 1px solid #3f3f4e;
   padding: 7px 12px;
   border-radius: 8px;
   font-size: 13px;
@@ -226,7 +226,7 @@ const goToAdmin = () => {
 
 .subtitle {
   font-size: 12px;
-  color: #555;
+  color: #a1a1aa;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -257,7 +257,7 @@ const goToAdmin = () => {
 
 .card-text {
   font-size: 14px;
-  color: #666;
+  color: #b4b8c2;
   text-align: center;
   margin-bottom: 28px;
   line-height: 1.6;
@@ -292,7 +292,7 @@ const goToAdmin = () => {
 }
 
 .input::placeholder {
-  color: #363640;
+  color: #8b8b96;
   letter-spacing: 4px;
   font-size: 20px;
 }
@@ -302,7 +302,7 @@ const goToAdmin = () => {
   bottom: -20px;
   right: 0;
   font-size: 11px;
-  color: #444;
+  color: #9ca3af;
   font-weight: 600;
 }
 
@@ -362,18 +362,30 @@ const goToAdmin = () => {
 
 /* Admin link */
 .admin-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 12px 20px;
   background: none;
   border: none;
-  color: #444;
-  font-size: 13px;
+  border-radius: 8px;
+  color: #b4b8c2;
+  font-size: 14px;
   font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .admin-link:hover {
-  color: #888;
+  color: #ffffff;
+}
+
+.admin-link:focus-visible {
+  outline: 2px solid #75b7ff;
+  outline-offset: 2px;
 }
 
 /* Spinner */

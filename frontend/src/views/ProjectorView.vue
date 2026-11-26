@@ -181,7 +181,7 @@
                 v-show="!isTrueFalse || idx < 2"
               >
                 <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" />
-                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ isTrueFalse ? (idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false')) : answer }}</div>
               </div>
             </template>
           </div>
@@ -410,7 +410,7 @@
                 v-show="!isTrueFalse || idx < 2"
               >
                 <AppIcon class="answer-icon" :name="getShapeIcon(idx)" :size="28" />
-                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ answer }}</div>
+                <div class="answer-text" :style="{ fontSize: getAnswerFontSize(answer) }">{{ isTrueFalse ? (idx === 0 ? $t('quiz.player.true') : $t('quiz.player.false')) : answer }}</div>
                 <AppIcon v-if="isAnswerCorrect(idx)" class="result-check-icon" name="check" :size="18" />
               </div>
           </div>

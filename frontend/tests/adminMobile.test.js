@@ -20,23 +20,25 @@ const ADMIN_VIEWS = [
   'QuizHostScreen.vue',
   'SimpleQuizHostScreen.vue',
   'SimpleQuizJudgeScreen.vue',
-  'QuizLibraryScreen.vue'
+  'QuizLibraryScreen.vue',
+  'AdminModuleEditorScreen.vue',
+  'AdminTemplateEditorScreen.vue'
 ]
 
 const ADMIN_COMPONENTS = [
+  'AdminLayout.vue',
+  'AdminThemeToggle.vue',
+  'AppDialogHost.vue',
+  'AddModuleModal.vue',
   'Toast.vue',
   'FormEditor.vue',
-  'FormModuleConfig.vue',
   'QuizEditor.vue',
   'QuizQuestionEditor.vue',
   'QuestionTypeSelector.vue',
   'ImageOptionEditor.vue',
   'ImageUploader.vue',
   'CoordinatePicker.vue',
-  'QuizModuleConfig.vue',
-  'WrongPicturesModuleConfig.vue',
-  'SimpleQuizModuleConfig.vue',
-  'TeamsModuleConfig.vue',
+  'WrongPicturesEditor.vue',
   'TeamsConfigFields.vue',
   'TeamsActivityAdmin.vue'
 ]
@@ -68,14 +70,17 @@ test('admin-theme.css layers theme control below modals, sets scroll-padding/ove
   assert.doesNotMatch(themeCss, /\.data-page[^{]*\{[^}]*overflow-x:\s*hidden/s)
 })
 
-test('Toast.vue anchors .toast-container at the top on mobile viewports', () => {
+test('Toast.vue positions .toast-container top-right on desktop and bottom on mobile with non-blocking container pointer-events', () => {
   const { descriptor, errors } = parse(src('src/components/Toast.vue'))
   assert.deepEqual(errors, [])
 
   const styles = descriptor.styles.map((s) => s.content).join('\n')
+  assert.match(styles, /\.toast-container\s*\{[^}]*top:\s*76px\s*;[^}]*right:\s*20px\s*;[^}]*pointer-events:\s*none\s*;/s)
+  assert.match(styles, /\.toast\s*\{[^}]*pointer-events:\s*auto\s*;/s)
+
   const mobileBlock = styles.match(/@media\s*\(max-width:\s*640px\)\s*\{([\s\S]*?)\n\}/)
   assert.ok(mobileBlock, 'Toast.vue must define a @media (max-width: 640px) block')
-  assert.match(mobileBlock[1], /\.toast-container\s*\{[^}]*top:\s*[^;]+;[^}]*bottom:\s*auto\s*;/s)
+  assert.match(mobileBlock[1], /\.toast-container\s*\{[^}]*top:\s*auto\s*;[^}]*bottom:\s*max\(16px,\s*env\(safe-area-inset-bottom[^;]+\)\s*;/s)
 })
 
 test('DataLibraryScreen.vue uses container-driven stacked cards and locales define clean admin mobile strings', () => {
@@ -194,13 +199,12 @@ test('no SFC in views/ or components/ places a descendant selector outside :glob
   }
 })
 
-test('ScreenManagerScreen.vue uses library.back_btn alongside arrowLeft icon and teams-activity.css themes .teams-notice', () => {
+test('ScreenManagerScreen.vue wraps in AdminLayout with breadcrumbs and teams-activity.css themes .teams-notice', () => {
   const { descriptor, errors } = parse(src('src/views/ScreenManagerScreen.vue'))
   assert.deepEqual(errors, [])
 
   const template = descriptor.template?.content || ''
-  assert.match(template, /<AppIcon\s+name="arrowLeft"/)
-  assert.match(template, /\$t\('library\.back_btn'\)/)
+  assert.match(template, /<AdminLayout\b[^>]*:breadcrumbs=/)
   assert.doesNotMatch(template, /\$t\('admin\.details\.back_btn'\)/)
 
   const teamsCss = src('src/styles/teams-activity.css')

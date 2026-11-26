@@ -211,15 +211,6 @@ func (h *QuizHub) BroadcastSimpleQuiz(moduleID string) {
 	})
 }
 
-func (h *QuizHub) scheduleSimpleQuizAutoLock(moduleID string, deadlineUnix int64) {
-	h.mu.RLock()
-	s := h.simpleQuizSessions[moduleID]
-	h.mu.RUnlock()
-	if s != nil {
-		h.reconcileSimpleQuizTimer(s)
-	}
-}
-
 func (h *QuizHub) reconcileSimpleQuizTimer(s *models.SimpleQuizSession) {
 	moduleID := s.ModuleID
 	h.mu.Lock()
