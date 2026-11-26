@@ -638,6 +638,28 @@ const getPreviewTextColor = (element, slide) => {
   return rawColor
 }
 
+const normalizeWelcomeSlideUrls = (slideList) => {
+  if (!Array.isArray(slideList) || typeof window === 'undefined') return
+  const pin = eventPin.value || eventId.value
+  if (!pin) return
+  const joinUrl = `${window.location.origin}/?pin=${pin}`
+  for (const slide of slideList) {
+    if (!slide || slide.type !== 'welcome' || !Array.isArray(slide.elements)) continue
+    for (const el of slide.elements) {
+      if (!el) continue
+      const trimmed = typeof el.content === 'string' ? el.content.trim() : ''
+      if (el.type === 'qr') {
+        el.content = joinUrl
+      } else if (
+        el.type === 'text' &&
+        (String(el.id || '').startsWith('default-welcome-url-') || /^https?:\/\/[^/\s]+\/\?pin=.+$/.test(trimmed))
+      ) {
+        el.content = joinUrl
+      }
+    }
+  }
+}
+
 const fetchEventMeta = async () => {
   if (!eventId.value) return
   try {
@@ -648,6 +670,7 @@ const fetchEventMeta = async () => {
       const data = await res.json()
       eventPin.value = data?.pin || ''
       eventName.value = data?.name || ''
+      normalizeWelcomeSlideUrls(slides.value)
     }
   } catch (err) {
     console.error(err)
@@ -665,6 +688,7 @@ const fetchSlides = async () => {
       return
     }
     slides.value = await res.json()
+    normalizeWelcomeSlideUrls(slides.value)
     if (slides.value.length > 0 && !activeSlideId.value) {
       activeSlideId.value = slides.value[0].id
     }
@@ -783,6 +807,7 @@ const addElement = (type) => {
   if (type === 'qr') {
     newEl.width = 15
     newEl.height = 25
+    newEl.content = qrCodeValue.value
   }
 
   if (!activeSlide.value.elements) activeSlide.value.elements = []

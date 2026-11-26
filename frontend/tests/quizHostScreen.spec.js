@@ -441,3 +441,64 @@ describe('QuizHostScreen cmd:error surfacing (M1)', () => {
     expect(toastMock.error).not.toHaveBeenCalled()
   })
 })
+
+describe('QuizHostScreen UX audit regressions (L3, L4)', () => {
+  it('passes players.length to quiz.host.players and formats word units with a space (1969 year) vs symbol units (50%)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: async () => ({
+        pin: '4321',
+        modules: [{
+          id: 'm1',
+          data: {
+            questions: [
+              {
+                text: 'Moon landing year',
+                type: 'range',
+                rangeConfig: { minValue: 1950, maxValue: 2000, step: 1, unit: 'year', decimalPlaces: 0 },
+                correctValue: 1969,
+              },
+              {
+                text: 'Humidity',
+                type: 'range',
+                rangeConfig: { minValue: 0, maxValue: 100, step: 1, unit: '%', decimalPlaces: 0 },
+                correctValue: 50,
+              },
+            ],
+          },
+        }],
+      }),
+    })))
+
+    const tCalls = []
+    wrapper = mount(QuizHostScreen, {
+      global: {
+        mocks: {
+          $t: (k, arg) => {
+            tCalls.push([k, arg])
+            return k
+          },
+        },
+        stubs: { AppIcon: true, WrongPictureTargetCrop: true, AdminThemeToggle: true },
+      },
+    })
+    await flushPromises()
+
+    mockQuizWS.emit('state:update', { players: { p1: { id: 'p1', nickname: 'Alpha', score: 0 } } })
+    await flushPromises()
+    expect(tCalls.some(([k, arg]) => k === 'quiz.host.players' && arg === 1)).toBe(true)
+
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0 })
+    await flushPromises()
+    expect(wrapper.find('.sbs-label-max').text()).toBe('2000 year')
+    expect(wrapper.find('.sbs-label-min').text()).toBe('1950 year')
+
+    mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 0 })
+    await flushPromises()
+    expect(wrapper.find('.srt-value').text()).toBe('1969 year')
+
+    mockQuizWS.emit('cmd:state', { state: 'results', currentIndex: 1 })
+    await flushPromises()
+    expect(wrapper.find('.srt-value').text()).toBe('50%')
+  })
+})

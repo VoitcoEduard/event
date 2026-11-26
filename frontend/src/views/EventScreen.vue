@@ -8,9 +8,9 @@
         </button>
         <div class="language-switcher-container">
           <select v-model="$i18n.locale" @change="changeLanguage" class="lang-select">
-            <option value="en">EN</option>
-            <option value="ru">RU</option>
-            <option value="ro">RO</option>
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="ro">Română</option>
           </select>
         </div>
       </div>
@@ -34,6 +34,7 @@
           :module="selectedModule"
           :event-id="currentEvent.id"
           :user-id="userId"
+          :is-onboarding="Boolean(selectedModule?.data?.mandatoryOnEntry && selectedModule?.name === 'Welcome')"
           @complete="handleModuleComplete"
         />
       </div>
@@ -215,7 +216,7 @@ const fetchEvent = async () => {
         // Filter out completed modules that should be hidden
         activeModules.value = active.filter(m => {
           if (m.data?.hideAfterCompletion) {
-            try { return localStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
+            try { return sessionStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
           }
           return true
         })
@@ -233,7 +234,7 @@ const fetchEvent = async () => {
         if (!selectedModule.value && !routeModuleId) {
             const mandatoryModule = active.find(m => {
               if (!m.data?.mandatoryOnEntry) return false
-              try { return localStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
+              try { return sessionStorage.getItem(`completed_module_${m.id}`) !== 'true' } catch { return true }
             })
             if (mandatoryModule) {
                selectModule(mandatoryModule)
@@ -348,15 +349,16 @@ const handleModuleComplete = async (data) => {
     }
   }
 	if (selectedModule.value) {
-    try { localStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true') } catch { /* Storage may be disabled. */ }
+    try { sessionStorage.setItem(`completed_module_${selectedModule.value.id}`, 'true') } catch { /* Storage may be disabled. */ }
   }
+	const isWelcomeOnboarding = Boolean(selectedModule.value?.data?.mandatoryOnEntry && selectedModule.value?.name === 'Welcome')
 	clearCompletionTimer()
   completionTimer = setTimeout(() => {
     completionTimer = null
 	if (stopped) return
     selectedModule.value = null
     fetchEvent() // Refresh immediately
-  }, 2000)
+  }, isWelcomeOnboarding ? 600 : 2000)
 }
 
 const goToMain = () => {
@@ -422,13 +424,12 @@ const goToMain = () => {
 }
 
 .top-controls {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 14px 20px 8px;
+  flex-shrink: 0;
   z-index: 100;
 }
 
@@ -485,13 +486,20 @@ const goToMain = () => {
   }
 }
 
+@media (min-width: 768px) {
+  .responsive-wrapper {
+    max-width: 680px;
+    max-height: 920px;
+  }
+}
+
 .content {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 24px;
-  padding-top: 64px;
+  padding: 12px 24px 24px;
   overflow: hidden;
 }
 
@@ -778,14 +786,16 @@ const goToMain = () => {
 /* ── Transitions ── */
 .module-view {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .module-header {
-  padding: 16px;
+  padding: 10px 20px 14px;
   border-bottom: 1px solid var(--border-solid);
+  flex-shrink: 0;
 }
 
 .back-link {

@@ -223,4 +223,31 @@ describe('ScreenManagerScreen fixes (Bug #16)', () => {
     expect(qrStub.exists()).toBe(true)
     expect(qrStub.attributes('data-value')).toBe(`${window.location.origin}/?pin=789012`)
   })
+
+  it('normalizes stale localhost:8080 welcome slide URL text elements to window.location.origin (H4)', async () => {
+    const staleSlide = {
+      id: 'default-welcome-evt-42',
+      type: 'welcome',
+      name: 'Welcome',
+      backgroundColor: '#1A1A1D',
+      elements: [
+        { id: 'default-welcome-qr-evt-42', type: 'qr', x: 15, y: 25, width: 25, height: 45, content: 'http://localhost:8080/?pin=789012' },
+        { id: 'default-welcome-url-evt-42', type: 'text', x: 45, y: 50, width: 45, height: 10, content: 'http://localhost:8080/?pin=789012' },
+      ],
+    }
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (url === '/api/events/evt-42') {
+        return Promise.resolve({ ok: true, json: async () => ({ id: 'evt-42', pin: '789012' }) })
+      }
+      if (url === '/api/events/evt-42/slides') {
+        return Promise.resolve({ ok: true, json: async () => [structuredClone(staleSlide)] })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+
+    wrapper = mount(ScreenManagerScreen, mountOpts)
+    await flushPromises()
+
+    expect(wrapper.find('.el-text').text()).toBe(`${window.location.origin}/?pin=789012`)
+  })
 })

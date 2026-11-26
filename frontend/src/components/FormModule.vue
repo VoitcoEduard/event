@@ -2,9 +2,9 @@
   <div class="form-module">
     <div v-if="completed" class="completed-view">
       <AppIcon class="success-icon" name="check" :size="34" />
-      <h2 class="completed-title">{{ $t('form_module.completed_title') }}</h2>
-      <p class="completed-text">{{ $t('form_module.completed_text') }}</p>
-      <p class="completed-sub">{{ $t('form_module.completed_sub') }}</p>
+      <h2 class="completed-title">{{ isOnboarding ? $t('form_module.welcome_completed_title') : $t('form_module.completed_title') }}</h2>
+      <p class="completed-text">{{ isOnboarding ? $t('form_module.welcome_completed_text') : $t('form_module.completed_text') }}</p>
+      <p v-if="!isOnboarding" class="completed-sub">{{ $t('form_module.completed_sub') }}</p>
     </div>
 
     <template v-else-if="currentStep">
@@ -192,7 +192,8 @@ const { t } = useI18n()
 const props = defineProps({
   module: { type: Object, required: true },
   eventId: { type: String, required: true },
-  userId: { type: String, required: true }
+  userId: { type: String, required: true },
+  isOnboarding: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['complete'])
@@ -407,7 +408,7 @@ const handleSubmit = async () => {
 
 /* ── Step counter ── */
 .step-counter {
-  color: #444;
+  color: #a8a8be;
   margin-bottom: 20px;
   font-size: 11px;
   font-weight: 700;
@@ -479,7 +480,7 @@ const handleSubmit = async () => {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-.field-input::placeholder { color: #363640; }
+.field-input::placeholder { color: #9494ab; opacity: 1; }
 
 /* ── Selection options (radio + checkbox) ── */
 .selection-options {
@@ -668,14 +669,14 @@ const handleSubmit = async () => {
 
 .completed-text {
   font-size: 16px;
-  color: #888;
+  color: #c7c7d8;
   margin-bottom: 6px;
   line-height: 1.5;
 }
 
 .completed-sub {
   font-size: 13px;
-  color: #444;
+  color: #a1a1b5;
   font-style: italic;
 }
 
@@ -685,7 +686,7 @@ const handleSubmit = async () => {
   align-items: center;
   justify-content: center;
   flex: 1;
-  color: #444;
+  color: #a8a8be;
   font-size: 14px;
 }
 

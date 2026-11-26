@@ -219,3 +219,69 @@ describe('QuizPlayerScreen edge cases (Bug #9)', () => {
     expect(questionCache.has(0)).toBe(false)
   })
 })
+
+describe('QuizPlayerScreen UX audit regressions (H1, L10, L11)', () => {
+  it('renders currentQuestion.text on classic, range, and number active questions and shows lobby waiting explanation', async () => {
+    wrapper = mount(QuizPlayerScreen, mountOpts)
+    await flushPromises()
+
+    // L10: Lobby shows waiting-for-host explanation
+    expect(wrapper.find('.lobby-wait-msg').exists()).toBe(true)
+    expect(wrapper.find('.lobby-wait-msg').text()).toBe('quiz.player.waiting_for_host')
+
+    mockQuizWS.emit('data:batch', {
+      batchIndex: 0,
+      totalBatches: 1,
+      startIndex: 0,
+      runId: 'run-1',
+      questions: [
+        { id: 'q1', type: 'classic', text: 'What is the capital of France?', answers: ['Paris', 'Lyon'] },
+        { id: 'q2', type: 'range', text: 'When was the moon landing?', rangeConfig: { minValue: 1950, maxValue: 2000, step: 1, unit: 'year' } },
+        { id: 'q3', type: 'number', text: 'How many continents?' },
+      ],
+    })
+
+    // H1: classic
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 0, runId: 'run-1', timeLimit: 20 })
+    await flushPromises()
+    expect(wrapper.find('.player-question-text').text()).toBe('What is the capital of France?')
+
+    // H1: range
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 1, runId: 'run-1', timeLimit: 20 })
+    await flushPromises()
+    expect(wrapper.find('.range-container .player-question-text').text()).toBe('When was the moon landing?')
+
+    // H1: number
+    mockQuizWS.emit('cmd:state', { state: 'question-active', currentIndex: 2, runId: 'run-1', timeLimit: 20 })
+    await flushPromises()
+    expect(wrapper.find('.number-container .player-question-text').text()).toBe('How many continents?')
+  })
+
+  it('formats ordinal rank as 1st, 2nd, 11th in leaderboard and finished states (L11)', async () => {
+    wrapper = mount(QuizPlayerScreen, mountOpts)
+    await flushPromises()
+
+    mockQuizWS.emit('state:update', {
+      players: { p1: { id: 'p1', nickname: 'Alice', score: 500 } },
+      rank: 1,
+    })
+    mockQuizWS.emit('cmd:state', { state: 'leaderboard', currentIndex: 0, runId: 'run-1' })
+    await flushPromises()
+    expect(wrapper.find('.rank-badge-large .rank-num').text()).toBe('1st')
+
+    mockQuizWS.emit('state:update', {
+      players: { p1: { id: 'p1', nickname: 'Alice', score: 500 } },
+      rank: 2,
+    })
+    await flushPromises()
+    expect(wrapper.find('.rank-badge-large .rank-num').text()).toBe('2nd')
+
+    mockQuizWS.emit('state:update', {
+      players: { p1: { id: 'p1', nickname: 'Alice', score: 500 } },
+      rank: 11,
+    })
+    mockQuizWS.emit('cmd:state', { state: 'finished', currentIndex: 0, runId: 'run-1' })
+    await flushPromises()
+    expect(wrapper.find('.final-rank-badge .rank-num').text()).toBe('11th')
+  })
+})

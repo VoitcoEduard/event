@@ -16,12 +16,12 @@ let temporaryUserId = ''
 
 export const setUserId = (id) => {
   temporaryUserId = id
-  try { localStorage.setItem('userId', id) } catch { /* Keep this page usable without storage. */ }
+  try { sessionStorage.setItem('userId', id) } catch { /* Keep this page usable without storage. */ }
 }
 
 export const getUserId = () => {
   let userId = ''
-  try { userId = localStorage.getItem('userId') || '' } catch { /* Storage may be disabled. */ }
+  try { userId = sessionStorage.getItem('userId') || '' } catch { /* Storage may be disabled. */ }
   if (userId) return userId
   if (!temporaryUserId) setUserId(newUUID())
   return temporaryUserId
@@ -41,20 +41,23 @@ const temporaryParticipantSecrets = new Map()
 
 export const setParticipantSecret = (eventId, secret) => {
   temporaryParticipantSecrets.set(eventId, secret)
-  try { localStorage.setItem(`participantSecret:${eventId}`, secret) } catch { /* Keep it for this page. */ }
+  try { sessionStorage.setItem(`participantSecret:${eventId}`, secret) } catch { /* Keep it for this page. */ }
 }
 
 export const getParticipantSecret = (eventId) => {
-  try { return localStorage.getItem(`participantSecret:${eventId}`) || temporaryParticipantSecrets.get(eventId) || '' }
+  try { return sessionStorage.getItem(`participantSecret:${eventId}`) || temporaryParticipantSecrets.get(eventId) || '' }
   catch { return temporaryParticipantSecrets.get(eventId) || '' }
 }
 
+let temporaryUserName = ''
+
 export const getUserName = () => {
-  try { return localStorage.getItem('userName') || '' } catch { return '' }
+  try { return sessionStorage.getItem('userName') || temporaryUserName } catch { return temporaryUserName }
 }
 
 export const setUserName = (name) => {
-  try { localStorage.setItem('userName', name) } catch { /* Storage may be disabled. */ }
+  temporaryUserName = name
+  try { sessionStorage.setItem('userName', name) } catch { /* Storage may be disabled. */ }
 }
 
 // --- Auth helpers ---

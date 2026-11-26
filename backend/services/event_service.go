@@ -163,15 +163,55 @@ func defaultSlidesForEvent(event *models.Event) []models.Slide {
 // GetSlides is strictly read-only: if slides have never been saved (nil), it
 // computes default slides in memory without writing to the database; if an
 // admin explicitly saved slides (including an empty slice []), it returns them as-is.
+// When PUBLIC_BASE_URL is configured, stale origins in default welcome QR/URL
+// elements are normalized in memory to match the public portal origin.
 func (s *EventService) GetSlides(ctx context.Context, id string) ([]models.Slide, error) {
 	event, err := s.db().Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	if event.Slides != nil {
-		return event.Slides, nil
+		return normalizeDefaultWelcomeSlides(event, event.Slides), nil
 	}
 	return defaultSlidesForEvent(event), nil
+}
+
+func normalizeDefaultWelcomeSlides(event *models.Event, slides []models.Slide) []models.Slide {
+	baseURL := strings.TrimRight(os.Getenv("PUBLIC_BASE_URL"), "/")
+	if baseURL == "" || len(slides) == 0 {
+		return slides
+	}
+	pin := event.Pin
+	if pin == "" {
+		pin = event.ID
+	}
+	joinURL := baseURL + "/?pin=" + pin
+	pinSuffix := "/?pin=" + pin
+
+	out := make([]models.Slide, len(slides))
+	copy(out, slides)
+	for i := range out {
+		if out[i].Type != "welcome" && out[i].ID != "default-welcome-"+event.ID {
+			continue
+		}
+		if len(out[i].Elements) == 0 {
+			continue
+		}
+		elems := make([]models.CanvasElement, len(out[i].Elements))
+		copy(elems, out[i].Elements)
+		for j := range elems {
+			el := &elems[j]
+			isDefaultQR := el.ID == "default-welcome-qr-"+event.ID
+			isDefaultURL := el.ID == "default-welcome-url-"+event.ID
+			isPinQR := el.Type == "qr" && (el.Content == "" || strings.HasSuffix(el.Content, pinSuffix))
+			isPinURLText := el.Type == "text" && strings.HasPrefix(strings.TrimSpace(el.Content), "http") && strings.HasSuffix(strings.TrimSpace(el.Content), pinSuffix)
+			if isDefaultQR || isDefaultURL || isPinQR || isPinURLText {
+				el.Content = joinURL
+			}
+		}
+		out[i].Elements = elems
+	}
+	return out
 }
 
 func (s *EventService) SaveSlides(ctx context.Context, id string, slides []models.Slide) error {

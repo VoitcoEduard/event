@@ -27,7 +27,7 @@
           class="correct-marker"
           :style="{ bottom: correctPercentage + '%' }"
         >
-          <div class="correct-tag">{{ formatNumber(correctValue) }}{{ unit }}</div>
+          <div class="correct-tag">{{ formatWithUnit(correctValue, unit) }}</div>
         </div>
 
         <!-- Thumb -->
@@ -102,6 +102,13 @@ const hasInteracted = ref(false)
 const formatNumber = (n) => {
   if (n === null || n === undefined || !Number.isFinite(Number(n))) return ''
   return Number(n).toFixed(props.decimalPlaces)
+}
+const formatWithUnit = (n, unit) => {
+  const formatted = formatNumber(n)
+  if (!formatted) return ''
+  const cleanUnit = typeof unit === 'string' ? unit.trim() : ''
+  if (!cleanUnit) return formatted
+  return /^[%°'"′″]/.test(cleanUnit) ? `${formatted}${cleanUnit}` : `${formatted} ${cleanUnit}`
 }
 const formattedValue = computed(() => formatNumber(props.modelValue))
 
@@ -267,7 +274,7 @@ const onWheel = (e) => {
 /* ── Tick scale ────────────────────────────────────────────────── */
 .scale-col {
   position: relative;
-  width: 44px;
+  width: 56px;
 }
 
 .tick-row {
@@ -280,29 +287,29 @@ const onWheel = (e) => {
 }
 
 .tick-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.3);
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.8);
   text-align: right;
-  min-width: 28px;
+  min-width: 36px;
   transition: color 0.2s;
 }
-.tick-label.active { color: rgba(255,255,255,0.9); }
+.tick-label.active { color: #ffffff; }
 
 .tick-mark {
-  width: 8px;
+  width: 10px;
   height: 2px;
   border-radius: 1px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.45);
   transition: background 0.2s;
 }
-.tick-mark.active { background: rgba(255,255,255,0.75); }
+.tick-mark.active { background: #ffffff; }
 
 /* ── Track bar ─────────────────────────────────────────────────── */
 .track-bar {
   position: relative;
   width: 6px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.24);
   border-radius: 6px;
   flex-shrink: 0;
 }
@@ -371,7 +378,7 @@ const onWheel = (e) => {
 .value-unit {
   font-size: 16px;
   font-weight: 600;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.85);
   letter-spacing: 0.03em;
 }
 

@@ -40,7 +40,8 @@
         <h2 class="waiting-text">{{ $t('quiz.player.you_are_in') }}</h2>
         <div class="nickname-display">{{ nickname }}</div>
         <p class="status-msg">{{ $t('quiz.player.see_name') }}</p>
-        <div class="loader"></div>
+        <div class="loader" aria-hidden="true"></div>
+        <p class="lobby-wait-msg" role="status">{{ $t('quiz.player.waiting_for_host') }}</p>
       </div>
     </div>
 
@@ -139,8 +140,11 @@
       v-else-if="state === States.QUESTION_ACTIVE && isRange"
       class="state-container range-container"
     >
-      <div class="question-info">
-        <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+      <div class="question-prompt-bar">
+        <div class="question-info">
+          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+        </div>
+        <h2 v-if="currentQuestion?.text" class="player-question-text">{{ currentQuestion.text }}</h2>
       </div>
 
       <div class="range-question-content">
@@ -171,8 +175,11 @@
       v-else-if="state === States.QUESTION_ACTIVE && isNumber"
       class="state-container number-container"
     >
-      <div class="question-info">
-        <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+      <div class="question-prompt-bar">
+        <div class="question-info">
+          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+        </div>
+        <h2 v-if="currentQuestion?.text" class="player-question-text">{{ currentQuestion.text }}</h2>
       </div>
 
       <div class="number-question-content">
@@ -203,8 +210,11 @@
 
     <!-- QUESTION/ANSWER STATE (Generic/Multiple Choice) -->
     <div v-else-if="state === States.QUESTION_ACTIVE" class="state-container question-container">
-      <div class="question-info">
-         <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+      <div class="question-prompt-bar">
+        <div class="question-info">
+          <div class="q-number">{{ currentQuestionIndex + 1 }}</div>
+        </div>
+        <h2 v-if="currentQuestion?.text" class="player-question-text">{{ currentQuestion.text }}</h2>
       </div>
 
       <!-- Multi-select mode hint -->
@@ -228,7 +238,7 @@
          >
             <!-- Multi-select checkbox corner indicator -->
             <div v-if="isMultiSelect" class="ms-checkbox" :class="{ 'ms-checked': isSelected(idx) }">
-              <AppIcon v-if="isSelected(idx)" name="check" :size="14" />
+              <AppIcon v-if="isSelected(idx)" name="check" :size="18" />
             </div>
             <div class="answer-btn-layout" :class="{ 'row-layout': isTrueFalse }">
                <AppIcon class="shape-icon" :name="shape" :size="28" />
@@ -299,7 +309,7 @@
           <AppIcon class="leaderboard-icon" name="trophy" :size="72" />
           <h2 class="leaderboard-title">{{ $t('quiz.player.leaderboard', 'Leaderboard') }}</h2>
           <div class="rank-badge-large">
-             <span class="rank-num">{{ rank }}</span>
+             <span class="rank-num">{{ formattedRank }}</span>
              <span class="rank-label">{{ $t('quiz.player.place') }}</span>
           </div>
           <div class="score-display">
@@ -313,7 +323,7 @@
        <div class="finished-content">
           <h1>{{ $t('quiz.player.quiz_over') }}</h1>
           <div class="final-rank-badge">
-             <span class="rank-num">{{ rank }}</span>
+             <span class="rank-num">{{ formattedRank }}</span>
              <span class="rank-label">{{ $t('quiz.player.place') }}</span>
           </div>
           <p class="final-score">{{ $t('quiz.player.final_score', { score: score }) }}</p>
@@ -382,6 +392,18 @@ const hasSubmitted = ref(false)
 const isCorrect = ref(false)
 const currentPoints = ref(0)
 const rank = ref(0)
+const formattedRank = computed(() => {
+    const n = Number(rank.value)
+    if (!Number.isInteger(n) || n <= 0) return '—'
+    if (locale.value === 'en') {
+        const mod100 = n % 100
+        if (mod100 >= 11 && mod100 <= 13) return `${n}th`
+        const suffix = { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'
+        return `${n}${suffix}`
+    }
+    if (locale.value === 'ru') return `${n}-е`
+    return `${n}`
+})
 const timeRemaining = ref(5)
 const explainTimeRemaining = ref(0)
 const numberValue = ref(null)
@@ -992,14 +1014,20 @@ onUnmounted(() => {
 }
 
 .lang-select {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(15, 23, 42, 0.72);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
     padding: 6px 10px;
     border-radius: 8px;
     font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
     outline: none;
+    backdrop-filter: blur(8px);
+}
+.lang-select option {
+    background: #1e1b4b;
+    color: #ffffff;
 }
 
 .state-container {
@@ -1073,6 +1101,13 @@ onUnmounted(() => {
     margin: 20px 0;
 }
 
+.lobby-wait-msg {
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
 .loader {
     width: 40px;
     height: 40px;
@@ -1106,14 +1141,27 @@ onUnmounted(() => {
 /* QUESTION */
 .question-container {
     justify-content: flex-end; /* Buttons at bottom usually */
-    padding-bottom: env(safe-area-inset-bottom, 10px);
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+    padding: 56px 16px max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+.question-prompt-bar {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    margin: 0 auto 10px;
 }
 
 .question-info {
-    position: absolute;
-    top: 20px;
-    left: 20px;
+    position: static;
+    flex-shrink: 0;
     background: white;
     color: black;
     width: 40px;
@@ -1124,6 +1172,19 @@ onUnmounted(() => {
     justify-content: center;
     font-weight: bold;
     z-index: 2;
+}
+
+.player-question-text {
+    margin: 0;
+    flex: 1;
+    font-size: clamp(1rem, 2.4vw, 1.35rem);
+    font-weight: 800;
+    line-height: 1.3;
+    color: #ffffff;
+    text-align: left;
+    overflow-wrap: break-word;
+    max-height: 22vh;
+    overflow-y: auto;
 }
 
 /* ── Multi-select hint pill ─────────────────────────────────── */
@@ -1158,6 +1219,8 @@ onUnmounted(() => {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
     padding: 8px;
     box-sizing: border-box;
     flex: 1;
@@ -1183,14 +1246,14 @@ onUnmounted(() => {
 /* Rounded + outlined feel — distinctly different from flat single-choice */
 .answer-btn.multi-btn {
     border-radius: 14px;
-    border: 3px solid rgba(255, 255, 255, 0.25);
+    border: 3px solid rgba(255, 255, 255, 0.35);
     box-shadow: 0 4px 0 rgba(0,0,0,0.2), inset 0 0 0 0 transparent;
-    opacity: 0.82;
+    opacity: 0.9;
     transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.1s;
 }
 .answer-btn.multi-btn.selected {
-    border-color: #fff;
-    box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 0 0 3px rgba(255,255,255,0.4);
+    border: 4px solid #ffffff;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.65), 0 6px 16px rgba(0,0,0,0.35);
     opacity: 1;
     transform: translateY(-2px);
 }
@@ -1198,27 +1261,28 @@ onUnmounted(() => {
 /* ── Checkbox corner indicator ──────────────────────────────── */
 .ms-checkbox {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    border: 2.5px solid rgba(255,255,255,0.55);
-    background: rgba(0,0,0,0.25);
+    top: 10px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 2.5px solid #ffffff;
+    background: rgba(15, 23, 42, 0.58);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 900;
-    color: #000;
-    transition: background 0.15s, border-color 0.15s;
+    color: #0f172a;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     z-index: 2;
     line-height: 1;
 }
 .ms-checkbox.ms-checked {
-    background: #fff;
-    border-color: #fff;
-    color: #000;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
 
 .answer-btn-layout {
@@ -1260,7 +1324,9 @@ onUnmounted(() => {
 .color-1 { background-color: #0A84FF; }
 .color-2 { background-color: #FFD60A; }
 .color-2 .shape-icon,
-.color-3 .shape-icon { color: #172033; }
+.color-3 .shape-icon,
+.color-2 .answer-text,
+.color-3 .answer-text { color: #172033; }
 .color-3 { background-color: #32D74B; }
 
 .dimmed { opacity: 0.45; }
@@ -1346,7 +1412,7 @@ onUnmounted(() => {
     font-weight: 900;
     letter-spacing: -0.5px;
     text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    animation: fadeSlideUp 0.4s 0.3s ease both;
+    animation: fadeSlideUp 0.25s 0.05s ease both;
 }
 
 @keyframes fadeSlideUp {
@@ -1359,7 +1425,7 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    animation: fadeSlideUp 0.4s 0.45s ease both;
+    animation: fadeSlideUp 0.25s 0.1s ease both;
 }
 
 .score-delta {
@@ -1408,7 +1474,17 @@ onUnmounted(() => {
     font-weight: 700;
     font-size: 1.1rem;
     margin-bottom: 20px;
-    animation: fadeSlideUp 0.4s 0.75s ease both;
+    animation: fadeSlideUp 0.25s 0.15s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .result-content,
+    .result-icon,
+    .result-title,
+    .score-summary,
+    .footer-score {
+        animation: none;
+    }
 }
 
 /* FINISHED */
@@ -1438,7 +1514,7 @@ onUnmounted(() => {
     60% {transform: translateY(-10px);}
 }
 
-.rank-num { font-size: 4rem; font-weight: 900; line-height: 1; }
+.rank-num { font-size: 3.1rem; font-weight: 900; line-height: 1; text-transform: uppercase; }
 .rank-label { font-size: 1rem; font-weight: 600; text-transform: uppercase; }
 
 .exit-btn {
@@ -1582,9 +1658,8 @@ onUnmounted(() => {
 }
 
 .range-container {
-  justify-content: center;
-  padding: 20px;
-  padding-top: 64px; /* extra clearance for slider — most collision-prone */
+  justify-content: flex-start;
+  padding: 56px 16px max(env(safe-area-inset-bottom, 0px), 16px);
 }
 
 /* CORRECT PICTURE STYLES */
@@ -1714,7 +1789,7 @@ onUnmounted(() => {
 
 .range-question-content {
   width: 100%;
-  max-width: 480px;
+  max-width: 600px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1805,8 +1880,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 20px;
+  justify-content: flex-start;
+  padding: 56px 16px max(env(safe-area-inset-bottom, 0px), 16px);
 }
 
 .number-question-content {
@@ -1816,6 +1891,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 24px;
   align-items: center;
+  margin: auto 0;
 }
 
 .number-input-wrapper {
@@ -1824,8 +1900,8 @@ onUnmounted(() => {
 
 .number-answer-input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid rgba(255, 255, 255, 0.45);
   border-radius: 16px;
   padding: 20px;
   color: white;
@@ -1839,12 +1915,13 @@ onUnmounted(() => {
 
 .number-answer-input:focus {
   border-color: #0A84FF;
-  background: rgba(10, 132, 255, 0.1);
-  box-shadow: 0 0 20px rgba(10, 132, 255, 0.2);
+  background: rgba(10, 132, 255, 0.18);
+  box-shadow: 0 0 20px rgba(10, 132, 255, 0.25);
 }
 
 .number-answer-input::placeholder {
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.72);
+  opacity: 1;
   font-size: 1.2rem;
   font-weight: 500;
 }
@@ -1859,11 +1936,11 @@ onUnmounted(() => {
 .number-submit-btn {
   width: 100%;
   padding: 18px;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 1.2rem;
   font-weight: 800;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.42);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1871,11 +1948,17 @@ onUnmounted(() => {
   letter-spacing: 1px;
 }
 
+.number-submit-btn:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
 .number-submit-btn.active {
-  background: #32D74B;
+  background: #16a34a;
   color: white;
-  border-color: #32D74B;
-  box-shadow: 0 8px 16px rgba(50, 215, 75, 0.3);
+  border-color: #22c55e;
+  opacity: 1;
+  box-shadow: 0 8px 16px rgba(22, 163, 74, 0.35);
 }
 
 .number-submit-btn:active:not(:disabled) {

@@ -27,7 +27,7 @@
         <p v-if="judgeToken" class="judge-url">{{ judgeUrl }}</p>
       </div>
       <div class="players-area">
-        <div class="players-count"><span><AppIcon name="teams" :size="18" aria-hidden="true" /> {{ playersCount }}</span> {{ $t('simple_quiz.host.players') }}</div>
+        <div class="players-count"><span><AppIcon name="teams" :size="18" aria-hidden="true" /> {{ playersCount }}</span> {{ $t('simple_quiz.host.players', playersCount) }}</div>
         <div class="players-grid">
           <div v-for="p in playerList" :key="p.playerId" class="player-chip">{{ p.nickname }}</div>
         </div>

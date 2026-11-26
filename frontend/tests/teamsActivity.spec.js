@@ -20,7 +20,9 @@ beforeEach(() => {
   harness.data = { state: ref(null), loading: ref(false), disconnected: ref(false), error: ref(''), load: vi.fn().mockResolvedValue(undefined) }
   harness.action.mockResolvedValue({})
   const storage = new Map([['userId', 'device'], ['userName', 'Anna']])
-  vi.stubGlobal('localStorage', { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) })
+  const storageStub = { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) }
+  vi.stubGlobal('localStorage', storageStub)
+  vi.stubGlobal('sessionStorage', storageStub)
 })
 afterEach(() => { wrapper?.unmount(); wrapper = null; vi.unstubAllGlobals() })
 async function plugins() {

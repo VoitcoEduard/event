@@ -40,7 +40,7 @@
       
       <div class="players-area">
         <div class="players-count">
-          <span><AppIcon name="teams" :size="18" aria-hidden="true" /> {{ players.length }}</span> {{ $t('quiz.host.players') }}
+          <span><AppIcon name="teams" :size="18" aria-hidden="true" /> {{ players.length }}</span> {{ $t('quiz.host.players', players.length) }}
         </div>
         <div class="players-grid">
           <div v-for="player in players" :key="player.id" class="player-chip">
@@ -76,7 +76,13 @@
         <div class="timer" v-else-if="gameState === 'question-presenting'" :style="explainTimeRemaining > 0 ? '' : 'font-size: 1.5rem'">
           {{ explainTimeRemaining > 0 ? explainTimeRemaining : $t('quiz.player.get_ready') }}
         </div>
-        <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
+        <div class="question-header-right">
+          <div class="answer-counter-widget">
+            <div class="counter-value">{{ totalAnswered }}</div>
+            <div class="counter-label">{{ $t('quiz.host.answers_label') }}</div>
+          </div>
+          <div class="question-counter">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</div>
+        </div>
       </div>
 
       <!-- New Two-Column Layout -->
@@ -130,7 +136,7 @@
         <div class="answers-column">
           <div v-if="isRange" class="range-projector-view">
             <div class="sbs-label sbs-label-max">
-              {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
+              {{ formatWithUnit(currentQuestion?.rangeConfig?.maxValue, currentQuestion?.rangeConfig?.unit) }}
             </div>
             <div class="sbs-track">
               <div class="sbs-track-fill sbs-fill-anim"></div>
@@ -139,7 +145,7 @@
               </div>
             </div>
             <div class="sbs-label sbs-label-min">
-              {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
+              {{ formatWithUnit(currentQuestion?.rangeConfig?.minValue, currentQuestion?.rangeConfig?.unit) }}
             </div>
             <div class="sbs-hint">↕ {{ $t('quiz.host.range_to_answer') }}</div>
           </div>
@@ -162,12 +168,6 @@
             </div>
           </template>
         </div>
-      </div>
-      
-      <!-- Small Answer Counter in Corner -->
-      <div class="answer-counter-widget">
-          <div class="counter-value">{{ totalAnswered }}</div>
-          <div class="counter-label">{{ $t('quiz.host.answers_label') }}</div>
       </div>
       
       <div class="host-controls">
@@ -257,17 +257,17 @@
               <div class="range-result-timeline">
                 <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
                   <AppIcon class="srt-check" name="check" :size="18" aria-hidden="true" />
-                  <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</span>
+                  <span class="srt-value">{{ formatWithUnit(currentQuestion?.correctValue, currentQuestion?.rangeConfig?.unit) }}</span>
                 </div>
-                <div class="srt-label srt-label-max">{{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}</div>
+                <div class="srt-label srt-label-max">{{ formatWithUnit(currentQuestion?.rangeConfig?.maxValue, currentQuestion?.rangeConfig?.unit) }}</div>
                 <div class="srt-track">
                   <div class="srt-fill" :style="{ height: revealCorrect ? correctMarkerPercentage + '%' : '0%' }"></div>
                   <div class="srt-marker" :class="{ 'srt-marker-reveal': revealCorrect }" :style="{ bottom: correctMarkerPercentage + '%' }">
                     <div class="srt-marker-line"></div>
-                    <div class="srt-marker-bubble">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</div>
+                    <div class="srt-marker-bubble">{{ formatWithUnit(currentQuestion?.correctValue, currentQuestion?.rangeConfig?.unit) }}</div>
                   </div>
                 </div>
-                <div class="srt-label srt-label-min">{{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}</div>
+                <div class="srt-label srt-label-min">{{ formatWithUnit(currentQuestion?.rangeConfig?.minValue, currentQuestion?.rangeConfig?.unit) }}</div>
               </div>
             </div>
           </div>
@@ -664,6 +664,14 @@ const getAnswerFontSize = (answerText) => {
 const formatNumber = (num, decimals = 0) => {
     if (num === undefined || num === null) return ''
     return Number(num).toFixed(decimals).replace(/\.0+$/, '')
+}
+
+const formatWithUnit = (num, unit, decimals = 0) => {
+    const formatted = formatNumber(num, decimals)
+    if (!formatted) return ''
+    const cleanUnit = typeof unit === 'string' ? unit.trim() : ''
+    if (!cleanUnit) return formatted
+    return /^[%°'"′″]/.test(cleanUnit) ? `${formatted}${cleanUnit}` : `${formatted} ${cleanUnit}`
 }
 
 const topPlayers = computed(() => {

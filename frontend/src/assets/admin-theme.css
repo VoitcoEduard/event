@@ -331,6 +331,20 @@ html[data-admin-appearance="true"] .admin-details-screen :is(.screen-manager-btn
   border-color: color-mix(in srgb, var(--admin-primary) 38%, var(--admin-border)) !important;
   color: color-mix(in srgb, var(--admin-primary) 76%, var(--admin-text)) !important;
 }
+html[data-admin-appearance="true"] .admin-details-screen .event-subnav .nav-button:not(.is-current) {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen .event-subnav .nav-button:not(.is-current):hover:not(:disabled) {
+  background: var(--admin-surface-hover) !important;
+}
+html[data-admin-appearance="true"] .admin-details-screen .nav-button.subnav-tab.is-current {
+  background: var(--admin-primary-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--admin-primary) 55%, var(--admin-border)) !important;
+  color: var(--admin-primary) !important;
+  font-weight: 700 !important;
+}
 html[data-admin-appearance="true"] .admin-details-screen :is(.start-button, .module-btn.start-button) {
   background: var(--admin-success-solid) !important;
   border-color: var(--admin-success-solid) !important;
@@ -1154,12 +1168,118 @@ html[data-admin-appearance="true"] .quiz-host-screen .bg-layer {
 html[data-admin-appearance="true"] .quiz-host-screen :is(.state-container, .lobby-content, .question-container, .results-container, .leaderboard-container) {
   color: var(--admin-text) !important;
 }
-html[data-admin-appearance="true"] .quiz-host-screen :is(.pin-display, .player-card, .question-card, .answer-option, .control-panel, .result-card, .leaderboard-row) {
+html[data-admin-appearance="true"] .quiz-host-screen :is(.pin-display, .player-card, .question-card, .answer-option, .control-panel, .leaderboard-row) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border) !important;
   color: var(--admin-text) !important;
   box-shadow: var(--admin-shadow) !important;
   backdrop-filter: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .results-container-new {
+  background: var(--admin-bg) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .results-mode-title {
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked {
+  background: var(--admin-surface) !important;
+  color: var(--admin-text) !important;
+  box-shadow: var(--admin-shadow) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.color-0,
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.color-false {
+  border-color: #e11d48 !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.color-1,
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.color-true {
+  border-color: #0a84ff !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.color-2 {
+  border-color: #d97706 !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.color-3 {
+  border-color: #16a34a !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked :is(.answer-text, .answer-icon) {
+  color: var(--admin-text) !important;
+  text-shadow: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.result-correct {
+  background: var(--admin-success-soft) !important;
+  border-color: var(--admin-success) !important;
+  color: var(--admin-text) !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 0 2px var(--admin-success) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.result-correct :is(.answer-text, .answer-icon) {
+  color: var(--admin-text) !important;
+  text-shadow: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.result-correct .result-check-icon {
+  color: var(--admin-success) !important;
+  filter: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.result-wrong {
+  background: var(--admin-surface-subtle) !important;
+  border-color: var(--admin-border) !important;
+  opacity: 0.72 !important;
+  filter: grayscale(35%) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .answer-card-stacked.result-wrong :is(.answer-text, .answer-icon) {
+  color: var(--admin-text-muted) !important;
+  text-shadow: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .question-card:not(.has-image) :is(.dist-count, .dist-icon) {
+  color: var(--admin-text) !important;
+  text-shadow: none !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .number-host-view {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: 16px;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .nh-label {
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .number-result-card {
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-success) !important;
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .nr-value {
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .nr-label {
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .nr-check {
+  color: var(--admin-success) !important;
+  background: var(--admin-success-soft) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.range-projector-view, .range-result-timeline) {
+  background: var(--admin-surface) !important;
+  border: 1px solid var(--admin-border) !important;
+  border-radius: 16px;
+  padding: 20px 16px;
+  box-shadow: var(--admin-shadow) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.sbs-label, .srt-label) {
+  color: var(--admin-text) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .sbs-hint {
+  color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.sbs-track, .srt-track) {
+  background: var(--admin-border-strong) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .sbs-thumb {
+  background: var(--admin-surface) !important;
+  border: 2px solid var(--admin-primary) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen .sbs-thumb-lines span {
+  background: var(--admin-text-muted) !important;
 }
 html[data-admin-appearance="true"] .quiz-host-screen :is(
   .unmute-btn, .copy-link-btn, .player-chip, .timer, .range-instruction-view,
@@ -1216,6 +1336,31 @@ html[data-admin-appearance="true"] .quiz-host-screen .host-back-link:hover {
 }
 html[data-admin-appearance="true"] .quiz-host-screen :is(.host-topbar-context, .lobby-start-hint) {
   color: var(--admin-text-muted) !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.leaderboard-container, .final-container) {
+  color-scheme: only dark;
+  color: #ffffff !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.lb-trophy, .final-trophy, .fp-crown) {
+  color: #FFD700 !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.lb-badge-1, .fp-first .fp-avatar) {
+  color: #FFD700 !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.lb-badge-2, .fp-second .fp-avatar) {
+  color: #E2E8F0 !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.lb-badge-3, .fp-third .fp-avatar) {
+  color: #F59E0B !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.lb-subtitle, .final-subtitle) {
+  color: #CBD5E1 !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.lb-player-name, .fp-name, .final-rest-name) {
+  color: #ffffff !important;
+}
+html[data-admin-appearance="true"] .quiz-host-screen :is(.final-rest-rank, .final-rest-score) {
+  color: #CBD5E1 !important;
 }
 
 /* Preserve authored slide/media content in the editor. */

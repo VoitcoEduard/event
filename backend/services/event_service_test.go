@@ -105,3 +105,47 @@ func TestGetSlidesIsReadOnlyAndPreservesExplicitEmptySlides(t *testing.T) {
 		t.Fatalf("Create did not initialize default slides: %+v", created.Slides)
 	}
 }
+
+func TestGetSlidesNormalizesDefaultWelcomeOriginToPublicBaseURL(t *testing.T) {
+	t.Setenv("PUBLIC_BASE_URL", "http://localhost:8081")
+	ctx := context.Background()
+	store := &mockEventStore{
+		events: map[string]*models.Event{
+			"evt-1": {
+				ID:  "evt-1",
+				Pin: "777613",
+				Slides: []models.Slide{
+					{
+						ID:   "default-welcome-evt-1",
+						Type: "welcome",
+						Name: "Welcome",
+						Elements: []models.CanvasElement{
+							{ID: "default-welcome-qr-evt-1", Type: "qr", Content: "http://localhost:8080/?pin=777613"},
+							{ID: "default-welcome-url-evt-1", Type: "text", Content: "http://localhost:8080/?pin=777613"},
+							{ID: "default-welcome-pin-evt-1", Type: "text", Content: "PIN: 777613"},
+						},
+					},
+				},
+			},
+		},
+	}
+	svc := &EventService{store: store}
+
+	slides, err := svc.GetSlides(ctx, "evt-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "http://localhost:8081/?pin=777613"
+	if got := slides[0].Elements[0].Content; got != want {
+		t.Fatalf("QR content = %q, want %q", got, want)
+	}
+	if got := slides[0].Elements[1].Content; got != want {
+		t.Fatalf("URL text content = %q, want %q", got, want)
+	}
+	if got := slides[0].Elements[2].Content; got != "PIN: 777613" {
+		t.Fatalf("PIN text unexpectedly changed to %q", got)
+	}
+	if len(store.setSlidesLog) != 0 {
+		t.Fatalf("GetSlides mutated DB via SetSlides (%d calls)", len(store.setSlidesLog))
+	}
+}

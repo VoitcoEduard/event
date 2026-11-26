@@ -74,7 +74,7 @@
         
         <div class="players-area">
           <div class="players-count">
-            <span><AppIcon name="teams" :size="18" /> {{ players.length }}</span> {{ $t('quiz.host.players') }}
+            <span><AppIcon name="teams" :size="18" /> {{ players.length }}</span> {{ $t('quiz.host.players', players.length) }}
           </div>
           <div class="players-grid">
             <div v-for="player in players" :key="player.id" class="player-chip">
@@ -148,7 +148,7 @@
             <div v-if="isRange" class="range-projector-view">
               <!-- Min / Max labels -->
               <div class="sbs-label sbs-label-max">
-                {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
+                {{ formatWithUnit(currentQuestion?.rangeConfig?.maxValue, currentQuestion?.rangeConfig?.unit) }}
               </div>
 
               <!-- The track -->
@@ -161,7 +161,7 @@
               </div>
 
               <div class="sbs-label sbs-label-min">
-                {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
+                {{ formatWithUnit(currentQuestion?.rangeConfig?.minValue, currentQuestion?.rangeConfig?.unit) }}
               </div>
 
               <div class="sbs-hint">↕ Scroll to select</div>
@@ -304,11 +304,11 @@
               <!-- Big correct value badge -->
               <div class="srt-correct-badge" :class="{ 'srt-reveal': revealCorrect }">
                 <AppIcon class="srt-check" name="check" :size="18" />
-                <span class="srt-value">{{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}</span>
+                <span class="srt-value">{{ formatWithUnit(currentQuestion?.correctValue, currentQuestion?.rangeConfig?.unit) }}</span>
               </div>
 
               <div class="srt-label srt-label-max">
-                {{ formatNumber(currentQuestion?.rangeConfig?.maxValue) }}{{ currentQuestion?.rangeConfig?.unit }}
+                {{ formatWithUnit(currentQuestion?.rangeConfig?.maxValue, currentQuestion?.rangeConfig?.unit) }}
               </div>
 
               <!-- Track with animated marker -->
@@ -326,13 +326,13 @@
                 >
                   <div class="srt-marker-line"></div>
                   <div class="srt-marker-bubble">
-                    {{ formatNumber(currentQuestion?.correctValue) }}{{ currentQuestion?.rangeConfig?.unit }}
+                    {{ formatWithUnit(currentQuestion?.correctValue, currentQuestion?.rangeConfig?.unit) }}
                   </div>
                 </div>
               </div>
 
               <div class="srt-label srt-label-min">
-                {{ formatNumber(currentQuestion?.rangeConfig?.minValue) }}{{ currentQuestion?.rangeConfig?.unit }}
+                {{ formatWithUnit(currentQuestion?.rangeConfig?.minValue, currentQuestion?.rangeConfig?.unit) }}
               </div>
             </div>
           </div>
@@ -773,6 +773,14 @@ const getAnswerFontSize = (answerText) => {
 const formatNumber = (num, decimals = 0) => {
   if (num === undefined || num === null) return ''
   return Number(num).toFixed(decimals).replace(/\.0+$/, '')
+}
+
+const formatWithUnit = (num, unit, decimals = 0) => {
+  const formatted = formatNumber(num, decimals)
+  if (!formatted) return ''
+  const cleanUnit = typeof unit === 'string' ? unit.trim() : ''
+  if (!cleanUnit) return formatted
+  return /^[%°'"′″]/.test(cleanUnit) ? `${formatted}${cleanUnit}` : `${formatted} ${cleanUnit}`
 }
 
 const topPlayers = computed(() => {

@@ -365,8 +365,7 @@ p { color: var(--muted); margin: 12px 0; text-wrap: pretty; overflow-wrap: break
 :global(html[data-admin-appearance="true"] main.data-page nav button.active) {
   background: var(--admin-primary-soft) !important;
   color: var(--admin-primary) !important;
-  border-color: color-mix(in srgb, var(--admin-primary) 30%, var(--admin-border)) !important;
-  border-bottom-color: transparent !important;
+  border: 1px solid color-mix(in srgb, var(--admin-primary) 45%, var(--admin-border)) !important;
   box-shadow: inset 0 2px 0 var(--admin-primary) !important;
   font-weight: 600;
 }

@@ -87,6 +87,7 @@
     align-items: center;
     width: 100%;
     padding: 20px;
+    box-sizing: border-box;
 }
 
 .host-topbar {
@@ -281,6 +282,12 @@
     height: 10vh;
 }
 
+.question-header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
 .timer {
     font-size: 2.5rem;
     font-weight: 900;
@@ -309,12 +316,14 @@
     gap: 30px;
     margin-top: 20px;
     min-height: 0;
+    min-width: 0;
     width: 100%;
+    box-sizing: border-box;
 }
 
 /* LEFT COLUMN: Question Card - 60% */
 .question-column {
-    flex: 0 0 60%;
+    flex: 3 1 0;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -597,7 +606,8 @@
 
 /* RIGHT COLUMN: Stacked Answers - 40% */
 .answers-column {
-    flex: 0 0 40%;
+    flex: 2 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -614,6 +624,8 @@
     transition: transform 0.2s, box-shadow 0.2s;
     flex: 1;
     min-height: 80px;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .answer-card-stacked:hover {
@@ -640,22 +652,21 @@
 
 /* Answer Count Widget */
 .answer-counter-widget {
-    position: absolute;
-    bottom: 80px;
-    right: 30px;
+    position: static;
     background: #2C2C2E;
-    padding: 15px 25px;
+    padding: 8px 16px;
     border-radius: 12px;
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
     box-shadow: 0 0 15px rgba(0,0,0,0.5);
     z-index: 10;
     border: 2px solid #555;
 }
 
 .counter-value {
-    font-size: 2.5rem;
+    font-size: 1.5rem;
     font-weight: 900;
     line-height: 1;
 }
@@ -664,7 +675,7 @@
     font-size: 0.8rem;
     text-transform: uppercase;
     opacity: 0.7;
-    margin-top: 5px;
+    margin-top: 0;
 }
 
 .color-0 { background: #000; border-color: #FF3B30; box-shadow: 0 4px 15px rgba(255,59,48,0.3); }
@@ -702,6 +713,8 @@
     gap: 30px;
     align-items: stretch;
     flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .number-result-card {
@@ -1324,6 +1337,7 @@
 
 .lb-trophy {
     font-size: 2.5rem;
+    color: #FFD700;
     filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6));
     animation: trophyPulse 2s ease-in-out infinite;
 }
@@ -1346,7 +1360,7 @@
 
 .lb-subtitle {
     font-size: 0.85rem;
-    color: #888;
+    color: #cbd5e1;
     margin-top: 4px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -1485,6 +1499,7 @@
 
 .final-trophy {
     font-size: 2.5rem;
+    color: #FFD700;
     filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
     animation: trophyPulse 2s ease-in-out infinite;
 }
@@ -1501,7 +1516,7 @@
 
 .final-subtitle {
     font-size: 0.9rem;
-    color: #aaa;
+    color: #cbd5e1;
     text-transform: uppercase;
     letter-spacing: 0.15em;
     margin: 0;
@@ -1534,6 +1549,7 @@
 
 .fp-crown {
     font-size: 1.8rem;
+    color: #FFD700;
     animation: crownFloat 2s ease-in-out infinite;
     filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
 }
@@ -1955,8 +1971,11 @@
 .range-results-new {
   display: flex;
   flex-direction: row;
+  gap: 30px;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .range-result-timeline {
   display: flex;
