@@ -33,8 +33,8 @@ func (m *mockEventStore) List(_ context.Context) ([]models.Event, error) { retur
 func (m *mockEventStore) Update(_ context.Context, _ string, _ *models.Event) error {
 	return nil
 }
-func (m *mockEventStore) Delete(_ context.Context, _ string) error                   { return nil }
-func (m *mockEventStore) SetStatus(_ context.Context, _ string, _ bool) error        { return nil }
+func (m *mockEventStore) Delete(_ context.Context, _ string) error            { return nil }
+func (m *mockEventStore) SetStatus(_ context.Context, _ string, _ bool) error { return nil }
 func (m *mockEventStore) SetScreensaver(_ context.Context, _ string, _ models.ScreensaverConfig) error {
 	return nil
 }

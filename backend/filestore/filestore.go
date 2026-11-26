@@ -37,8 +37,8 @@ type Upload struct {
 	Width        int
 	Height       int
 	Data         []byte
-	Kind string
-	Name string
+	Kind         string
+	Name         string
 }
 type Result struct {
 	Media  postgres.MediaRecord

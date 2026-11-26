@@ -320,6 +320,7 @@ func (s *Store) SetModuleActive(ctx context.Context, eventID, moduleID string, a
 	tag, err := s.Pool.Exec(ctx, `UPDATE modules SET is_active=$3 WHERE event_id=$1 AND id=$2`, eventID, moduleID, active)
 	return tag.RowsAffected() > 0, translate(err)
 }
+
 var preservedModuleDataKeys = []string{"manualScoreTarget", "judgeToken"}
 
 func mergePreservedModuleData(existing, next map[string]any) map[string]any {

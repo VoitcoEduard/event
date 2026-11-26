@@ -19,8 +19,8 @@ type QuizQuestion struct {
 	ImageOptions       []ImageOption       `json:"imageOptions"`
 	WrongPictureConfig *WrongPictureConfig `json:"wrongPictureConfig"`
 	CorrectNumber      int                 `json:"correctNumber"`
-	JudgeNotes        string `json:"judgeNotes,omitempty"`
-	CorrectAnswerText string `json:"correctAnswerText,omitempty"`
+	JudgeNotes         string              `json:"judgeNotes,omitempty"`
+	CorrectAnswerText  string              `json:"correctAnswerText,omitempty"`
 }
 
 type RangeConfig struct {
@@ -36,7 +36,6 @@ type ScoringConfig struct {
 	MaxPoints      int     `json:"maxPoints"`
 	Tolerance      float64 `json:"tolerance"`
 	PartialPercent float64 `json:"partialPercent"`
-
 }
 
 type WrongPictureTarget struct {
@@ -76,8 +75,8 @@ type QuizModuleData struct {
 	BackgroundMusicURL string         `json:"backgroundMusicUrl"`
 	BackgroundMusicID  string         `json:"backgroundMusicId"`
 	AudioOutput        string         `json:"audioOutput"`
-	AllowAnswerReveal bool   `json:"allowAnswerReveal,omitempty"`
-	JudgeToken        string `json:"judgeToken,omitempty"`
+	AllowAnswerReveal  bool           `json:"allowAnswerReveal,omitempty"`
+	JudgeToken         string         `json:"judgeToken,omitempty"`
 }
 
 type Player struct {
@@ -126,14 +125,14 @@ type QuestionBatch struct {
 }
 
 type QuizSession struct {
-	RunID         string             `json:"-"`
-	EventID       string             `json:"eventId"`
-	ModuleID      string             `json:"moduleId"`
-	CurrentIndex  int                `json:"currentIndex"`
-	State         string             `json:"state"`
-	Players       map[string]*Player `json:"players"`
-	PlayerSignals []PlayerSignal     `json:"playerSignals"`
-	AnswerCounts  map[int]int        `json:"answerCounts"`
+	RunID               string              `json:"-"`
+	EventID             string              `json:"eventId"`
+	ModuleID            string              `json:"moduleId"`
+	CurrentIndex        int                 `json:"currentIndex"`
+	State               string              `json:"state"`
+	Players             map[string]*Player  `json:"players"`
+	PlayerSignals       []PlayerSignal      `json:"playerSignals"`
+	AnswerCounts        map[int]int         `json:"answerCounts"`
 	AnsweredPlayerIDs   map[string]struct{} `json:"-"`
 	Streaks             map[string]int      `json:"-"`
 	WrongPictureAspects map[int]float64     `json:"-"`

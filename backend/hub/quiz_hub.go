@@ -85,14 +85,14 @@ type QuizHub struct {
 	eventByModule   func(context.Context, string) (*models.Event, error)
 	teamsByEvent    func(context.Context, string) ([]models.Team, error)
 	saveTeams       func(string, string, string) (*models.TeamResult, error)
-	clients map[*Client]bool
-	closed  bool
+	clients         map[*Client]bool
+	closed          bool
 
-	sessions map[string]*models.QuizSession
+	sessions   map[string]*models.QuizSession
 	quizTimers map[string]*quizTransition
 
-	simpleQuizSessions map[string]*models.SimpleQuizSession
-	simpleQuizUndo map[string]map[string][]simpleQuizUndoEntry
+	simpleQuizSessions        map[string]*models.SimpleQuizSession
+	simpleQuizUndo            map[string]map[string][]simpleQuizUndoEntry
 	simpleQuizTimers          map[string]*time.Timer
 	simpleQuizTimerGeneration map[string]uint64
 
@@ -437,7 +437,7 @@ func publicBatchMessage(batch models.QuestionBatch, currentIndex, totalQuestions
 	payload := map[string]any{
 		"batchIndex": batch.BatchIndex, "totalBatches": batch.TotalBatches,
 		"totalQuestions": totalQuestions,
-		"startIndex": currentIndex, "endIndex": currentIndex,
+		"startIndex":     currentIndex, "endIndex": currentIndex,
 		"nextBatchAt": currentIndex, "questions": questions,
 	}
 	if runID != "" {

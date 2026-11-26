@@ -9,7 +9,7 @@ import (
 
 var (
 	eventResponseCache = cache.New(15 * time.Second)
-	eventsListCache = cache.New(2 * time.Second)
+	eventsListCache    = cache.New(2 * time.Second)
 )
 
 func CloseEventCaches() {
