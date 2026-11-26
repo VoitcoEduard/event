@@ -10,8 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@handsontable/vue3": "^18.1.2",
-    "handsontable": "^18.1.2",
     "qrcode.vue": "^3.11.0",
     "vue": "^3.5.45",
     "vue-i18n": "^11.4.22",
